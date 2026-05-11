@@ -134,7 +134,10 @@ function Dashboard() {
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">
           <Progress value={progress} className="h-1" />
-          <div className="text-xs text-muted-foreground mt-1">{progressText}</div>
+          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+            <span>{progressText}</span>
+            {dataSource && !busy && <DataSourceBadge source={dataSource} />}
+          </div>
         </div>
       )}
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
