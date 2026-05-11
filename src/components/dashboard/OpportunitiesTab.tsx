@@ -102,7 +102,7 @@ export function OpportunitiesTab({
           const mb = matches.get(kb);
           // Sort exact > parent > none, then by total $
           const score = (m?: IncumbentMatch) =>
-            (m?.confidence === "exact" ? 2 : m?.confidence === "parent" ? 1 : 0) * 1e15
+            (m?.confidence === "exact" ? 3 : m?.confidence === "parent" ? 2 : m?.confidence === "fuzzy" ? 1 : 0) * 1e15
             + (m?.totalAmount ?? 0);
           const sa = score(ma), sb = score(mb);
           return dir === "asc" ? sa - sb : sb - sa;
@@ -222,10 +222,16 @@ function IncumbentCell({ m }: { m?: IncumbentMatch }) {
   if (!m || m.confidence === "none") {
     return <span className="inline-flex items-center gap-1 text-muted-foreground"><Sparkles className="w-3 h-3" />New</span>;
   }
-  const label = m.confidence === "exact" ? "Recompete" : "Follow-on (IDV)";
+  const label = m.confidence === "exact"
+    ? "Recompete"
+    : m.confidence === "parent"
+      ? "Follow-on (IDV)"
+      : `Possible recompete${m.similarity ? ` (${Math.round(m.similarity * 100)}%)` : ""}`;
   const color = m.confidence === "exact"
     ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-    : "bg-blue-500/15 text-blue-600 dark:text-blue-400";
+    : m.confidence === "parent"
+      ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
+      : "bg-violet-500/15 text-violet-600 dark:text-violet-400";
   return (
     <Tooltip>
       <TooltipTrigger asChild>
