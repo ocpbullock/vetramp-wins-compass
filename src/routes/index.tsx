@@ -10,6 +10,7 @@ import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
 import { ProposalModal } from "@/components/dashboard/ProposalModal";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
+import { DataSourceBadge } from "@/components/dashboard/DataSourceBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -36,6 +37,11 @@ function Dashboard() {
   const [tab, setTab] = useState("opportunities");
   const [proposeOpp, setProposeOpp] = useState<SamOpportunity | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<
+    | { kind: "cache"; fetchedAt: string; supersetCount?: number; requestedCount: number }
+    | { kind: "fresh"; fetchedAt: string }
+    | null
+  >(null);
   const log = useLogStore((s) => s.log);
 
   async function runSearch(input: SearchInput) {
@@ -45,6 +51,7 @@ function Dashboard() {
     setAwards([]);
     setHistoricalTotal(undefined);
     setSearchedNaics(input.naicsCodes);
+    setDataSource(null);
     try {
       const cacheKey = makeCacheKey(input);
       const cached = input.forceRefresh ? null : await readCache(cacheKey, input);
@@ -55,6 +62,13 @@ function Dashboard() {
         setHistoricalTotal(h?.page_metadata?.total);
         setProgress(100);
         setProgressText("Loaded from cache");
+        const cachedNaics = (cached.naics_codes as string[]) ?? [];
+        setDataSource({
+          kind: "cache",
+          fetchedAt: cached.created_at as string,
+          supersetCount: cachedNaics.length > input.naicsCodes.length ? cachedNaics.length : undefined,
+          requestedCount: input.naicsCodes.length,
+        });
         toast.success("Loaded from shared cache (24h TTL) — use Force refresh to bypass");
         setBusy(false);
         return;
@@ -96,6 +110,7 @@ function Dashboard() {
 
       setProgress(100);
       setProgressText("Done");
+      setDataSource({ kind: "fresh", fetchedAt: new Date().toISOString() });
     } catch (e: any) {
       log("error", e.message);
       toast.error(e.message);
@@ -120,7 +135,10 @@ function Dashboard() {
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">
           <Progress value={progress} className="h-1" />
-          <div className="text-xs text-muted-foreground mt-1">{progressText}</div>
+          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+            <span>{progressText}</span>
+            {dataSource && !busy && <DataSourceBadge source={dataSource} />}
+          </div>
         </div>
       )}
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
