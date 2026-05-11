@@ -123,15 +123,17 @@ Deno.serve(async (req) => {
       return r;
     });
 
+    const returned = flat.slice(0, maxResults);
+
     return new Response(
       JSON.stringify({
-        results: flat.slice(0, maxResults),
+        results: returned,
         page_metadata: {
           total: totalReported ?? all.length,
-          fetched: flat.length,
-          hasNext: lastMeta?.hasNext ?? false,
+          fetched: returned.length,
+          hasNext: (totalReported ?? all.length) > returned.length,
           chunks: chunks.length,
-          truncated: all.length >= maxResults,
+          truncated: (totalReported ?? all.length) > returned.length,
         },
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
