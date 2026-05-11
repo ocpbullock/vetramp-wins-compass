@@ -160,5 +160,5 @@ export async function writeCache(payload: {
     },
     { onConflict: "cache_key" },
   );
-  useLogStore.getState().log("info", `↳ cache written (4h TTL)`);
+  useLogStore.getState().log("info", `↳ cache written (24h TTL)`);
 }
