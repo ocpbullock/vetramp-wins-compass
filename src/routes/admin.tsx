@@ -77,7 +77,11 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
   const setStatusFn = useServerFn(setUserStatus);
   const deleteUserFn = useServerFn(deleteUser);
 
-  const { data, isLoading } = useQuery({ queryKey: ["admin-users"], queryFn: () => fetchUsers() });
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["admin-users"],
+    queryFn: () => fetchUsers(),
+    retry: false,
+  });
 
   const roleMut = useMutation({
     mutationFn: (vars: { userId: string; role: "admin" | "member" }) => setRoleFn({ data: vars }),
@@ -96,6 +100,8 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
   });
 
   if (isLoading) return <div className="text-sm text-muted-foreground p-4">Loading users…</div>;
+  if (isError) return <Card className="p-6 text-sm text-destructive">Could not load users: {(error as Error)?.message ?? "permission denied"}</Card>;
+  const users = data?.users ?? [];
 
   return (
     <Card className="p-0 overflow-hidden">
@@ -111,7 +117,7 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {data?.users.map((u) => {
+          {users.map((u) => {
             const isSelf = u.userId === currentUserId;
             return (
               <TableRow key={u.userId}>
@@ -191,7 +197,12 @@ function InvitesPanel() {
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "member">("member");
 
-  const { data, isLoading } = useQuery({ queryKey: ["admin-invites"], queryFn: () => fetchInvites() });
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["admin-invites"],
+    queryFn: () => fetchInvites(),
+    retry: false,
+  });
+  const invites = data?.invites ?? [];
 
   const inviteMut = useMutation({
     mutationFn: (vars: { email: string; role: "admin" | "member" }) =>
@@ -256,6 +267,8 @@ function InvitesPanel() {
         </div>
         {isLoading ? (
           <div className="p-4 text-sm text-muted-foreground">Loading…</div>
+        ) : isError ? (
+          <div className="p-4 text-sm text-destructive">Could not load invitations: {(error as Error)?.message ?? "permission denied"}</div>
         ) : (
           <Table>
             <TableHeader>
@@ -269,10 +282,10 @@ function InvitesPanel() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.invites.length === 0 && (
+              {invites.length === 0 && (
                 <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">No invitations yet.</TableCell></TableRow>
               )}
-              {data?.invites.map((inv) => {
+              {invites.map((inv) => {
                 const expired = inv.status === "pending" && new Date(inv.expires_at) < new Date();
                 const variant = inv.status === "accepted" ? "default" : inv.status === "cancelled" ? "secondary" : expired ? "destructive" : "outline";
                 const label = expired ? "expired" : inv.status;
