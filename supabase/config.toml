@@ -20,3 +20,9 @@ verify_jwt = false
 
 [functions.vendor-profile]
 verify_jwt = false
+
+[functions.generate-proposal-section]
+verify_jwt = false
+
+[functions.sam-attachments]
+verify_jwt = true
