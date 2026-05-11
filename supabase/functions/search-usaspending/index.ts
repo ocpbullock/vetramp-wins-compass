@@ -121,11 +121,19 @@ Deno.serve(async (req) => {
       seen.add(key);
       return true;
     }).map((r: any) => {
+      const out = { ...r };
       const n = r?.NAICS;
       if (n && typeof n === "object") {
-        return { ...r, NAICS: n.code ?? "", NAICS_Description: n.description ?? "" };
+        out.NAICS = n.code ?? "";
+        out.NAICS_Description = n.description ?? "";
       }
-      return r;
+      // USAspending returns the PSC code under `psc_code`; mirror it into
+      // "Product or Service Code" so client-side incumbent matching can
+      // index by that single canonical key.
+      if (!out["Product or Service Code"] && r.psc_code) {
+        out["Product or Service Code"] = r.psc_code;
+      }
+      return out;
     });
 
     const returned = flat.slice(0, maxResults);
