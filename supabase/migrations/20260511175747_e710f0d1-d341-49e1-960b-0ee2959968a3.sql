@@ -1,0 +1,1 @@
+DELETE FROM public.cached_searches WHERE opportunities IS NULL OR jsonb_array_length(opportunities) = 0;
