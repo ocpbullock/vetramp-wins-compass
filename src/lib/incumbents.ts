@@ -47,18 +47,20 @@ function intersectionCount(a: Set<string>, b: Set<string>): number {
 }
 
 export type IncumbentMatch = {
-  confidence: "exact" | "parent" | "fuzzy" | "frequent" | "none";
+  confidence: "exact" | "parent" | "psc" | "fuzzy" | "frequent" | "none";
   awards: HistoricalAward[];
   topRecipient?: string;
   totalAmount?: number;
   latestEndDate?: string;
   similarity?: number;
+  popExpiringSoon?: boolean; // any matched award PoP ends within ±9mo of opp deadline
   diagnostics?: {
     triedKeys: string[];
     matchedKey?: string;
     bucketSize: number;
     candidatesAfterTitle: number;
     note?: string;
+    pscMatched?: string;
   };
 };
 
@@ -66,11 +68,14 @@ export type IncumbentIndex = {
   byPiid: Map<string, HistoricalAward[]>;
   byParent: Map<string, HistoricalAward[]>;
   byAgencyNaics: Map<string, HistoricalAward[]>;
+  byAgencyPsc: Map<string, HistoricalAward[]>;
   titleTokens: WeakMap<HistoricalAward, Set<string>>;
 };
 
 const TITLE_JACCARD_FLOOR = 0.30;
 const TITLE_MIN_OVERLAP = 2;
+const PSC_TITLE_MIN_OVERLAP = 1; // PSC is a strong signal — relax title bar
+const POP_PROXIMITY_MS = 1000 * 60 * 60 * 24 * 270; // ±9 months
 
 /**
  * Match a SAM opportunity against the historical award set to find the
@@ -79,9 +84,13 @@ const TITLE_MIN_OVERLAP = 2;
  * Tiers (high → low confidence):
  *  - "exact"    → solicitation # matches award PIID directly
  *  - "parent"   → solicitation # matches an award's Parent Award ID (IDV)
- *  - "fuzzy"    → same sub-agency + NAICS + ≥30% title token overlap (≥2 shared tokens)
- *  - "frequent" → same sub-agency + NAICS + a single recipient appears ≥2x
- *                 in the bucket (likely re-compete cycle)
+ *  - "psc"      → same sub-agency + same PSC + ≥1 shared title token
+ *  - "fuzzy"    → same sub-agency + NAICS + ≥30% title token overlap (≥2 shared)
+ *  - "frequent" → same sub-agency + NAICS + a single recipient appears ≥3x
+ *                 and holds ≥40% of bucket value (likely re-compete cycle)
+ *
+ * popExpiringSoon flag is set when any matched award's End Date lands within
+ * ±9 months of the opportunity's response deadline — a strong recompete cue.
  */
 export function matchIncumbent(
   opp: SamOpportunity,
@@ -98,21 +107,54 @@ export function matchIncumbent(
       ...(sol ? idx.byPiid.get(sol) ?? [] : []),
       ...(awardNum ? idx.byPiid.get(awardNum) ?? [] : []),
     ];
-    if (exact.length > 0) return summarize("exact", exact);
+    if (exact.length > 0) return decorate(summarize("exact", exact), opp);
 
     const parent = sol ? idx.byParent.get(sol) ?? [] : [];
-    if (parent.length > 0) return summarize("parent", parent);
+    if (parent.length > 0) return decorate(summarize("parent", parent), opp);
   }
 
-  // Try every sub-agency segment, not just the second-to-last.
-  // SAM's fullParentPathName: "DEPT OF DEFENSE.DEPT OF THE ARMY.US ARMY CORPS OF ENGINEERS.OFFICE.."
-  // USAspending's sub-agency may be the bureau ("DEPT OF THE ARMY") or the command — try all.
   const path = (opp.fullParentPathName || "")
     .split(".")
     .map((s) => normAgency(s))
     .filter(Boolean);
   const naics = (opp.naicsCode || "").trim();
+  const psc = (opp.classificationCode || "").trim().toUpperCase();
   const triedKeys: string[] = [];
+
+  // ---- PSC tier: agency + PSC bucket, light title sanity check ----
+  if (psc && path.length > 0) {
+    for (const seg of path) {
+      const key = `${seg}|PSC:${psc}`;
+      triedKeys.push(key);
+      const bucket = idx.byAgencyPsc.get(key);
+      if (!bucket || bucket.length === 0) continue;
+      const oppTokens = tokens(opp.title);
+      const scored = bucket
+        .map((a) => {
+          let at = idx.titleTokens.get(a);
+          if (!at) {
+            at = tokens(a["Description"]);
+            idx.titleTokens.set(a, at);
+          }
+          return { a, sim: jaccard(oppTokens, at), overlap: intersectionCount(oppTokens, at) };
+        })
+        .filter((x) => x.overlap >= PSC_TITLE_MIN_OVERLAP)
+        .sort((x, y) => y.sim - x.sim);
+      // If there's any signal at all, take it. PSC + same agency is rare enough.
+      const picks = scored.length > 0 ? scored.slice(0, 5).map((s) => s.a) : bucket.slice(0, 5);
+      const m = summarize("psc", picks);
+      m.similarity = scored[0]?.sim;
+      m.diagnostics = {
+        triedKeys, matchedKey: key, bucketSize: bucket.length,
+        candidatesAfterTitle: scored.length,
+        pscMatched: psc,
+        note: scored.length === 0 ? "PSC+agency match (no title overlap)" : undefined,
+      };
+      return decorate(m, opp);
+    }
+  }
+
+  // ---- NAICS tier (existing behavior) ----
   let bucket: HistoricalAward[] = [];
   let matchedKey: string | undefined;
 
@@ -153,12 +195,9 @@ export function matchIncumbent(
         triedKeys, matchedKey, bucketSize: bucket.length,
         candidatesAfterTitle: scored.length,
       };
-      return m;
+      return decorate(m, opp);
     }
 
-    // Tier 4: frequent-vendor heuristic — only fire when one recipient
-    // clearly dominates the agency+NAICS bucket (≥3 awards AND ≥40% of value).
-    // Otherwise the bucket just reflects a busy NAICS at a busy agency.
     const bucketTotal = bucket.reduce((s, x) => s + (Number(x["Award Amount"]) || 0), 0);
     const byRecipient = new Map<string, HistoricalAward[]>();
     for (const a of bucket) {
@@ -181,7 +220,7 @@ export function matchIncumbent(
         candidatesAfterTitle: 0,
         note: `dominant vendor (${repeat[0].arr.length} awards, ${Math.round(100 * repeat[0].total / Math.max(bucketTotal, 1))}% of bucket value)`,
       };
-      return m;
+      return decorate(m, opp);
     }
   }
 
@@ -192,10 +231,25 @@ export function matchIncumbent(
   };
 }
 
+/** Adds the PoP-expiring-soon flag based on opportunity response deadline. */
+function decorate(m: IncumbentMatch, opp: SamOpportunity): IncumbentMatch {
+  const deadlineStr = opp.responseDeadLine || opp.postedDate;
+  if (!deadlineStr || m.awards.length === 0) return m;
+  const deadline = new Date(deadlineStr).getTime();
+  if (!Number.isFinite(deadline)) return m;
+  const expiring = m.awards.some((a) => {
+    const end = a["End Date"] ? new Date(a["End Date"]).getTime() : NaN;
+    return Number.isFinite(end) && Math.abs(end - deadline) <= POP_PROXIMITY_MS;
+  });
+  if (expiring) m.popExpiringSoon = true;
+  return m;
+}
+
 export function buildIndex(awards: HistoricalAward[]): IncumbentIndex {
   const byPiid = new Map<string, HistoricalAward[]>();
   const byParent = new Map<string, HistoricalAward[]>();
   const byAgencyNaics = new Map<string, HistoricalAward[]>();
+  const byAgencyPsc = new Map<string, HistoricalAward[]>();
   const titleTokens = new WeakMap<HistoricalAward, Set<string>>();
   for (const a of awards) {
     const p = normPiid(a["Award ID"]);
@@ -214,22 +268,28 @@ export function buildIndex(awards: HistoricalAward[]): IncumbentIndex {
     const naicsCode = typeof naics === "string"
       ? naics.split(" ")[0].trim()
       : (naics?.code || "");
-    if (!naicsCode) continue;
-    // Index by both sub-agency and top-tier (awarding agency) so SAM-side
-    // lookups can probe at any level of the hierarchy.
+    const psc = (a["Product or Service Code"] || "").trim().toUpperCase();
     const buckets = new Set<string>();
     const sub = normAgency(a["Awarding Sub Agency"]);
     if (sub) buckets.add(sub);
     const top = normAgency((a as any)["Awarding Agency"]);
     if (top) buckets.add(top);
     for (const seg of buckets) {
-      const key = `${seg}|${naicsCode}`;
-      const arr = byAgencyNaics.get(key) ?? [];
-      arr.push(a);
-      byAgencyNaics.set(key, arr);
+      if (naicsCode) {
+        const key = `${seg}|${naicsCode}`;
+        const arr = byAgencyNaics.get(key) ?? [];
+        arr.push(a);
+        byAgencyNaics.set(key, arr);
+      }
+      if (psc) {
+        const key = `${seg}|PSC:${psc}`;
+        const arr = byAgencyPsc.get(key) ?? [];
+        arr.push(a);
+        byAgencyPsc.set(key, arr);
+      }
     }
   }
-  return { byPiid, byParent, byAgencyNaics, titleTokens };
+  return { byPiid, byParent, byAgencyNaics, byAgencyPsc, titleTokens };
 }
 
 function summarize(
