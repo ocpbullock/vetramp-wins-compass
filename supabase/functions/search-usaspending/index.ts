@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
         "Contract Award Type",
         "Parent Award ID",
         "Product or Service Code",
+        "psc_code",
         "psc_description",
         "Place of Performance State Code",
         "Place of Performance City Code",
