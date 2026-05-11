@@ -13,6 +13,7 @@ export type SearchInput = {
   postedFrom: string;
   postedTo: string;
   keyword: string;
+  forceRefresh?: boolean;
 };
 
 const today = format(new Date(), "yyyy-MM-dd");
@@ -92,6 +93,14 @@ export function SearchControls({
         >
           <Search className="w-4 h-4 mr-2" />
           {busy ? "Searching..." : "Search"}
+        </Button>
+        <Button
+          disabled={busy || naics.length === 0}
+          variant="outline"
+          onClick={() => onSearch({ naicsCodes: naics, postedFrom: from, postedTo: to, keyword, forceRefresh: true })}
+          title="Bypass cache and refetch from APIs"
+        >
+          {busy ? "..." : "Force refresh"}
         </Button>
       </div>
     </div>
