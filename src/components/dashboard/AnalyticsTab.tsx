@@ -52,7 +52,7 @@ export function AnalyticsTab({ awards }: { awards: HistoricalAward[] }) {
         <h3 className="text-sm font-semibold mb-3">Agency Distribution</h3>
         <ResponsiveContainer width="100%" height={300}>
           <PieChart>
-            <Pie data={agencyDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={(e) => e.name.slice(0, 20)}>
+            <Pie data={agencyDist} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={90} label={(e: any) => String(e.name ?? "").slice(0, 20)}>
               {agencyDist.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
             </Pie>
             <Tooltip />
