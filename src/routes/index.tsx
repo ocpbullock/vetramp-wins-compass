@@ -9,7 +9,7 @@ import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
 import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
-import { ProposalModal } from "@/components/dashboard/ProposalModal";
+import { supabase } from "@/integrations/supabase/client";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
 import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
