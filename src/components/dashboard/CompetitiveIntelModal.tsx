@@ -89,6 +89,7 @@ export function CompetitiveIntelModal({
             const confLabel =
               localMatch.confidence === "exact" ? "EXACT PIID MATCH" :
               localMatch.confidence === "parent" ? "PARENT IDV MATCH" :
+              localMatch.confidence === "frequent" ? "FREQUENT VENDOR" :
               `TITLE MATCH${localMatch.similarity ? ` (${Math.round(localMatch.similarity * 100)}%)` : ""}`;
             const top = localMatch.awards[0];
             const others = [...new Set(localMatch.awards.slice(1, 6).map(a => a["Recipient Name"]).filter(Boolean))] as string[];
