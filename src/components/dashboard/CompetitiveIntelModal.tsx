@@ -23,15 +23,23 @@ function daysUntil(iso?: string) {
 }
 
 export function CompetitiveIntelModal({
-  opp, onClose, onVendor,
+  opp, awards, onClose, onVendor,
 }: {
   opp: SamOpportunity | null;
+  awards: HistoricalAward[];
   onClose: () => void;
   onVendor: (recipientId: string, name: string) => void;
 }) {
   const [data, setData] = useState<CompetitiveIntel | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Authoritative match against the cached historical award set —
+  // same logic that powers the "Top incumbent" tooltip on the Opportunities tab.
+  const localMatch = useMemo(
+    () => (opp ? matchIncumbent(opp, awards) : null),
+    [opp, awards],
+  );
 
   useEffect(() => {
     if (!opp) { setData(null); setError(null); return; }
