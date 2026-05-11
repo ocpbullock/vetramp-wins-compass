@@ -102,7 +102,7 @@ export function OpportunitiesTab({
           const mb = matches.get(kb);
           // Sort exact > parent > none, then by total $
           const score = (m?: IncumbentMatch) =>
-            (m?.confidence === "exact" ? 2 : m?.confidence === "parent" ? 1 : 0) * 1e15
+            (m?.confidence === "exact" ? 3 : m?.confidence === "parent" ? 2 : m?.confidence === "fuzzy" ? 1 : 0) * 1e15
             + (m?.totalAmount ?? 0);
           const sa = score(ma), sb = score(mb);
           return dir === "asc" ? sa - sb : sb - sa;
