@@ -1,26 +1,156 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { Header } from "@/components/dashboard/Header";
+import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
+import { StatCards } from "@/components/dashboard/StatCards";
+import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
+import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
+import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
+import { LogsTab } from "@/components/dashboard/LogsTab";
+import { ProposalModal } from "@/components/dashboard/ProposalModal";
+import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Progress } from "@/components/ui/progress";
+import {
+  searchSam, searchUsaspending, makeCacheKey, readCache, writeCache,
+  type SamOpportunity, type HistoricalAward,
+} from "@/lib/api";
+import { useLogStore } from "@/lib/log-store";
+import { toast } from "sonner";
 
-export const Route = createFileRoute("/")({
-  component: Index,
-});
+export const Route = createFileRoute("/")({ component: Dashboard });
 
-// IMPORTANT: Replace this placeholder. For sites with multiple pages (About, Services, Contact, etc.),
-// create separate route files (about.tsx, services.tsx, contact.tsx) — don't put all pages in this file.
-function PlaceholderIndex() {
+function Dashboard() {
+  const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
+
+  const [opps, setOpps] = useState<SamOpportunity[]>([]);
+  const [awards, setAwards] = useState<HistoricalAward[]>([]);
+  const [historicalTotal, setHistoricalTotal] = useState<number | undefined>();
+  const [busy, setBusy] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [progressText, setProgressText] = useState("");
+  const [tab, setTab] = useState("opportunities");
+  const [proposeOpp, setProposeOpp] = useState<SamOpportunity | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
+  const log = useLogStore((s) => s.log);
+
+  async function runSearch(input: SearchInput) {
+    setBusy(true);
+    setProgress(0);
+    setOpps([]);
+    setAwards([]);
+    setHistoricalTotal(undefined);
+    try {
+      const cacheKey = makeCacheKey(input);
+      const cached = await readCache(cacheKey);
+      if (cached) {
+        setOpps((cached.opportunities as any) ?? []);
+        const h = cached.historical as any;
+        setAwards(h?.results ?? []);
+        setHistoricalTotal(h?.page_metadata?.total);
+        setProgress(100);
+        setProgressText("Loaded from cache");
+        toast.success("Loaded from shared cache");
+        setBusy(false);
+        return;
+      }
+
+      setProgressText(`Fetching SAM.gov opportunities (${input.naicsCodes.length} NAICS)...`);
+      setProgress(10);
+      const samRes = await searchSam(input);
+      setOpps(samRes.opportunities);
+      setProgress(60);
+
+      setProgressText("Fetching USAspending historical awards...");
+      const usaRes = await searchUsaspending({
+        naicsCodes: input.naicsCodes,
+        startDate: input.postedFrom,
+        endDate: input.postedTo,
+        keyword: input.keyword,
+        limit: 100,
+      });
+      setAwards(usaRes.results ?? []);
+      setHistoricalTotal(usaRes.page_metadata?.total);
+      setProgress(95);
+
+      const totalObligated = (usaRes.results ?? []).reduce((s, a) => s + (Number(a["Award Amount"]) || 0), 0);
+      await writeCache({
+        cacheKey,
+        naicsCodes: input.naicsCodes,
+        dateFrom: input.postedFrom,
+        dateTo: input.postedTo,
+        keyword: input.keyword,
+        opportunities: samRes.opportunities,
+        historical: usaRes,
+        summary: { activeOpps: samRes.opportunities.length, totalObligated },
+      });
+
+      setProgress(100);
+      setProgressText("Done");
+    } catch (e: any) {
+      log("error", e.message);
+      toast.error(e.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const stats = useMemo(() => {
+    const activeOpps = opps.filter((o) => !o.type?.toLowerCase().includes("award")).length;
+    const awardNotices = opps.filter((o) => o.type?.toLowerCase().includes("award")).length;
+    const totalObligated = awards.reduce((s, a) => s + (Number(a["Award Amount"]) || 0), 0);
+    return { activeOpps, awardNotices, historicalCount: awards.length, totalObligated };
+  }, [opps, awards]);
+
+  if (loading || !user) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
+    <div className="min-h-screen bg-background">
+      <Header />
+      <SearchControls onSearch={runSearch} busy={busy} />
+      {(busy || progressText) && (
+        <div className="max-w-[1400px] mx-auto px-6 pt-3">
+          <Progress value={progress} className="h-1" />
+          <div className="text-xs text-muted-foreground mt-1">{progressText}</div>
+        </div>
+      )}
+      <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
+        <StatCards
+          activeOpps={stats.activeOpps}
+          awardNotices={stats.awardNotices}
+          historicalCount={stats.historicalCount}
+          historicalTotal={historicalTotal}
+          totalObligated={stats.totalObligated}
+          onSelect={setTab}
+        />
+
+        <Tabs value={tab} onValueChange={setTab}>
+          <TabsList>
+            <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
+            <TabsTrigger value="historical">Historical Awards</TabsTrigger>
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="logs">Logs</TabsTrigger>
+          </TabsList>
+          <TabsContent value="opportunities" className="mt-4">
+            <OpportunitiesTab opportunities={opps} onPropose={setProposeOpp} />
+          </TabsContent>
+          <TabsContent value="historical" className="mt-4">
+            <HistoricalTab awards={awards} onDetails={setDetailId} />
+          </TabsContent>
+          <TabsContent value="analytics" className="mt-4">
+            <AnalyticsTab awards={awards} />
+          </TabsContent>
+          <TabsContent value="logs" className="mt-4">
+            <LogsTab />
+          </TabsContent>
+        </Tabs>
+      </main>
+
+      <ProposalModal opp={proposeOpp} onClose={() => setProposeOpp(null)} />
+      <AwardDetailModal id={detailId} onClose={() => setDetailId(null)} />
     </div>
   );
-}
-
-function Index() {
-  return <PlaceholderIndex />;
 }

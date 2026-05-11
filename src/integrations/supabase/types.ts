@@ -14,7 +14,141 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      cached_searches: {
+        Row: {
+          cache_key: string
+          created_at: string
+          date_from: string | null
+          date_to: string | null
+          expires_at: string
+          historical: Json | null
+          id: string
+          keyword: string | null
+          naics_codes: string[]
+          opportunities: Json | null
+          summary: Json | null
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          date_from?: string | null
+          date_to?: string | null
+          expires_at: string
+          historical?: Json | null
+          id?: string
+          keyword?: string | null
+          naics_codes: string[]
+          opportunities?: Json | null
+          summary?: Json | null
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          date_from?: string | null
+          date_to?: string | null
+          expires_at?: string
+          historical?: Json | null
+          id?: string
+          keyword?: string | null
+          naics_codes?: string[]
+          opportunities?: Json | null
+          summary?: Json | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          display_name: string | null
+          email: string | null
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          display_name?: string | null
+          email?: string | null
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      proposal_drafts: {
+        Row: {
+          agency: string | null
+          created_at: string
+          draft_content: string | null
+          id: string
+          naics_code: string | null
+          opportunity_title: string | null
+          response_deadline: string | null
+          solicitation_number: string
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agency?: string | null
+          created_at?: string
+          draft_content?: string | null
+          id?: string
+          naics_code?: string | null
+          opportunity_title?: string | null
+          response_deadline?: string | null
+          solicitation_number: string
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agency?: string | null
+          created_at?: string
+          draft_content?: string | null
+          id?: string
+          naics_code?: string | null
+          opportunity_title?: string | null
+          response_deadline?: string | null
+          solicitation_number?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_preferences: {
+        Row: {
+          created_at: string
+          default_date_range_months: number
+          default_naics: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          default_date_range_months?: number
+          default_naics?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          default_date_range_months?: number
+          default_naics?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
