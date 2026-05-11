@@ -289,10 +289,10 @@ function ProposalPipeline() {
             <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} />
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
-            <ComingSoon title="Customer Intelligence (Phase 2)" description="Auto-research the end-user unit, facility, technology environment, predecessor contract, and evaluation criteria. For now, capture freeform notes that will feed the proposal generator." fieldLabel="Customer intel notes (free text)" value={proposal.customer_intel?.notes || ""} onSave={(v) => patchProposal({ customer_intel: { ...(proposal.customer_intel || {}), notes: v } })} />
+            <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} />
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
-            <ComingSoon title="Compliance Matrix (Phase 2)" description="Auto-parse the SOW/PWS to extract every 'shall' requirement and build a traceability matrix. For now, paste a freeform compliance summary that the generator will reference." fieldLabel="Compliance notes / requirements list" value={proposal.compliance_matrix?.notes || ""} onSave={(v) => patchProposal({ compliance_matrix: { ...(proposal.compliance_matrix || {}), notes: v } })} />
+            <ComplianceStep proposal={proposal} attachments={attachments} onPatch={patchProposal} />
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
             <ComingSoon title="Solution Design (Phase 3)" description="Build staffing, technical approach, management plan, transition timeline, and price strategy with AI assistance. For now, capture freeform solution notes." fieldLabel="Solution design notes" value={proposal.technical_approach?.notes || ""} onSave={(v) => patchProposal({ technical_approach: { ...(proposal.technical_approach || {}), notes: v } })} />
