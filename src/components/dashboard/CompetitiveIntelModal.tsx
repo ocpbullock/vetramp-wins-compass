@@ -23,10 +23,11 @@ function daysUntil(iso?: string) {
 }
 
 export function CompetitiveIntelModal({
-  opp, awards, onClose, onVendor,
+  opp, awards, userNaics, onClose, onVendor,
 }: {
   opp: SamOpportunity | null;
   awards: HistoricalAward[];
+  userNaics: string[];
   onClose: () => void;
   onVendor: (recipientId: string, name: string) => void;
 }) {
@@ -40,6 +41,28 @@ export function CompetitiveIntelModal({
     () => (opp ? matchIncumbent(opp, awards) : null),
     [opp, awards],
   );
+
+  // How many awards in the user's cached history are at this opportunity's
+  // sub-agency (any path segment match). Drives the Agency Experience score.
+  const userAgencyAwardCount = useMemo(() => {
+    if (!opp) return 0;
+    const segs = (opp.fullParentPathName || "")
+      .split(".")
+      .map((s) =>
+        s.toLowerCase()
+          .replace(/[.,]/g, " ")
+          .replace(/\b(department|dept|of|the|us|u\.s\.)\b/g, " ")
+          .replace(/\s+/g, " ")
+          .trim(),
+      )
+      .filter(Boolean);
+    if (segs.length === 0) return 0;
+    return awards.filter((a) => {
+      const sub = (a["Awarding Sub Agency"] || "").toLowerCase();
+      const top = ((a as any)["Awarding Agency"] || "").toLowerCase();
+      return segs.some((seg) => seg && (sub.includes(seg) || top.includes(seg)));
+    }).length;
+  }, [opp, awards]);
 
   useEffect(() => {
     if (!opp) { setData(null); setError(null); return; }
