@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Trophy, Building2, Calendar } from "lucide-react";
-import { type SamOpportunity, getCompetitiveIntel, type CompetitiveIntel } from "@/lib/api";
+import { type SamOpportunity, type HistoricalAward, getCompetitiveIntel, type CompetitiveIntel } from "@/lib/api";
 import { shortAgency } from "@/lib/contracts";
+import { matchIncumbent } from "@/lib/incumbents";
 import { BidScorecard } from "./BidScorecard";
 
 function fmtUsd(n?: number | null) {
