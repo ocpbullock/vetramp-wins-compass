@@ -112,6 +112,7 @@ export function CompetitiveIntelModal({
             const confLabel =
               localMatch.confidence === "exact" ? "EXACT PIID MATCH" :
               localMatch.confidence === "parent" ? "PARENT IDV MATCH" :
+              localMatch.confidence === "psc" ? `PSC MATCH${localMatch.diagnostics?.pscMatched ? ` (${localMatch.diagnostics.pscMatched})` : ""}` :
               localMatch.confidence === "frequent" ? "FREQUENT VENDOR" :
               `TITLE MATCH${localMatch.similarity ? ` (${Math.round(localMatch.similarity * 100)}%)` : ""}`;
             const top = localMatch.awards[0];
@@ -121,6 +122,7 @@ export function CompetitiveIntelModal({
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
                   <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">LIKELY INCUMBENT</Badge>
                   <Badge variant="outline" className="text-[10px]">{confLabel}</Badge>
+                  {localMatch.popExpiringSoon && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400">⏰ PoP EXPIRING ±9mo</Badge>}
                   <span className="text-[11px] text-muted-foreground">{localMatch.awards.length} prior award{localMatch.awards.length !== 1 ? "s" : ""}</span>
                 </div>
                 <div className="text-base font-semibold">{localMatch.topRecipient}</div>
