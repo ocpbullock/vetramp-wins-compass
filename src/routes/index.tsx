@@ -46,6 +46,8 @@ function Dashboard() {
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
   const [proposeOpp, setProposeOpp] = useState<SamOpportunity | null>(null);
+  const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
+  const [vendor, setVendor] = useState<{ id: string; name: string } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<
     | { kind: "cache"; fetchedAt: string; supersetCount?: number; requestedCount: number }
