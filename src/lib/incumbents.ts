@@ -77,7 +77,7 @@ export function matchIncumbent(
   }
 
   // Tier 3: fuzzy match by sub-agency + NAICS + title token overlap
-  const subAgency = (opp.subTier || opp.fullParentPathName || "").toLowerCase();
+  const subAgency = (opp.fullParentPathName || "").toLowerCase();
   const naics = (opp.naicsCode || "").trim();
   if (subAgency && naics) {
     const key = `${subAgency}|${naics}`;
