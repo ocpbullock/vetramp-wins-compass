@@ -26,6 +26,14 @@ function Dashboard() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
+  // Auto-restore last search from localStorage on mount (cache hit = instant).
+  const didAutoLoad = useRef(false);
+  useEffect(() => {
+    if (didAutoLoad.current || loading || !user || !lastInput) return;
+    didAutoLoad.current = true;
+    runSearch(lastInput);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
 
   const [opps, setOpps] = useState<SamOpportunity[]>([]);
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
