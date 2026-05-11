@@ -29,6 +29,7 @@ function Dashboard() {
   const [opps, setOpps] = useState<SamOpportunity[]>([]);
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
   const [historicalTotal, setHistoricalTotal] = useState<number | undefined>();
+  const [searchedNaics, setSearchedNaics] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
