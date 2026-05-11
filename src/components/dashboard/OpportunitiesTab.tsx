@@ -49,9 +49,10 @@ export function OpportunitiesTab({
       if (q && !(o.title?.toLowerCase().includes(q) || o.solicitationNumber?.toLowerCase().includes(q))) return false;
       if (agency !== "__all__" && shortAgency(o.fullParentPathName) !== agency) return false;
       if (type !== "__all__" && o.type !== type) return false;
+      if (searchedNaics.length > 0 && o.naicsCode && !activeNaics.has(o.naicsCode)) return false;
       return true;
     });
-  }, [opportunities, search, agency, type]);
+  }, [opportunities, search, agency, type, activeNaics, searchedNaics]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
