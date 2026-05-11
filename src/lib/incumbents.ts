@@ -156,9 +156,10 @@ export function matchIncumbent(
       return m;
     }
 
-    // Tier 4: frequent-vendor heuristic — if a single recipient holds multiple
-    // awards in the agency+NAICS bucket, treat the largest holder as a likely
-    // re-compete candidate. Lower confidence, but better than nothing.
+    // Tier 4: frequent-vendor heuristic — only fire when one recipient
+    // clearly dominates the agency+NAICS bucket (≥3 awards AND ≥40% of value).
+    // Otherwise the bucket just reflects a busy NAICS at a busy agency.
+    const bucketTotal = bucket.reduce((s, x) => s + (Number(x["Award Amount"]) || 0), 0);
     const byRecipient = new Map<string, HistoricalAward[]>();
     for (const a of bucket) {
       const r = a["Recipient Name"] || "(unknown)";
@@ -167,16 +168,18 @@ export function matchIncumbent(
       byRecipient.set(r, arr);
     }
     const repeat = [...byRecipient.entries()]
-      .filter(([, arr]) => arr.length >= 2)
-      .sort((a, b) =>
-        b[1].reduce((s, x) => s + (Number(x["Award Amount"]) || 0), 0) -
-        a[1].reduce((s, x) => s + (Number(x["Award Amount"]) || 0), 0));
+      .map(([name, arr]) => ({
+        name, arr,
+        total: arr.reduce((s, x) => s + (Number(x["Award Amount"]) || 0), 0),
+      }))
+      .filter((x) => x.arr.length >= 3 && (bucketTotal === 0 || x.total / bucketTotal >= 0.40))
+      .sort((a, b) => b.total - a.total);
     if (repeat.length > 0) {
-      const m = summarize("frequent", repeat[0][1]);
+      const m = summarize("frequent", repeat[0].arr);
       m.diagnostics = {
         triedKeys, matchedKey, bucketSize: bucket.length,
         candidatesAfterTitle: 0,
-        note: `frequent vendor (${repeat[0][1].length} awards in bucket)`,
+        note: `dominant vendor (${repeat[0].arr.length} awards, ${Math.round(100 * repeat[0].total / Math.max(bucketTotal, 1))}% of bucket value)`,
       };
       return m;
     }
