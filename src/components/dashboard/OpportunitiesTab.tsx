@@ -1,28 +1,36 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, FileSignature, ArrowUpDown } from "lucide-react";
 import {
   badgeClassForType, isProposable, shortAgency,
-  type SET_ASIDE_MAP,
 } from "@/lib/contracts";
 import { type SamOpportunity } from "@/lib/api";
+import { NaicsFilterChips } from "./NaicsFilterChips";
 
 type SortKey = "title" | "agency" | "naics" | "type" | "posted" | "deadline";
 
 export function OpportunitiesTab({
   opportunities,
+  searchedNaics = [],
   onPropose,
 }: {
   opportunities: SamOpportunity[];
+  searchedNaics?: string[];
   onPropose: (o: SamOpportunity) => void;
 }) {
   const [search, setSearch] = useState("");
   const [agency, setAgency] = useState("__all__");
   const [type, setType] = useState("__all__");
+  const [activeNaics, setActiveNaics] = useState<Set<string>>(new Set(searchedNaics));
   const [sort, setSort] = useState<SortKey>("posted");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
+
+  // Reset NAICS filter whenever a new search runs
+  useEffect(() => {
+    setActiveNaics(new Set(searchedNaics));
+  }, [searchedNaics.join(",")]);
 
   const agencies = useMemo(() => {
     const s = new Set<string>();
