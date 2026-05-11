@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, ArrowUpDown, Info } from "lucide-react";
 import { mapSetAside } from "@/lib/contracts";
 import type { HistoricalAward } from "@/lib/api";
+import { NaicsFilterChips } from "./NaicsFilterChips";
 
 type SortKey = "desc" | "recipient" | "agency" | "naics" | "amount" | "date";
 
@@ -13,17 +14,24 @@ const fmtMoney = (n: any) =>
 
 export function HistoricalTab({
   awards,
+  searchedNaics = [],
   onDetails,
 }: {
   awards: HistoricalAward[];
+  searchedNaics?: string[];
   onDetails: (id: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const [agency, setAgency] = useState("__all__");
   const [vendor, setVendor] = useState("__all__");
   const [setAside, setSetAside] = useState("__all__");
+  const [activeNaics, setActiveNaics] = useState<Set<string>>(new Set(searchedNaics));
   const [sort, setSort] = useState<SortKey>("amount");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
+
+  useEffect(() => {
+    setActiveNaics(new Set(searchedNaics));
+  }, [searchedNaics.join(",")]);
 
   const agencies = useMemo(() => Array.from(new Set(awards.map((a) => a["Awarding Agency"]).filter(Boolean) as string[])).sort(), [awards]);
   const vendors = useMemo(() => Array.from(new Set(awards.map((a) => a["Recipient Name"]).filter(Boolean) as string[])).sort(), [awards]);
