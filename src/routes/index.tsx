@@ -151,7 +151,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <SearchControls onSearch={runSearch} busy={busy} />
+      <SearchControls onSearch={runSearch} busy={busy} initial={lastInput ?? undefined} />
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">
           <Progress value={progress} className="h-1" />
