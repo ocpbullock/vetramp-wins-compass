@@ -38,7 +38,7 @@ Deno.serve(async (req) => {
         "Contract Award Type",
         "Parent Award ID",
       ],
-      sort: "Action Date",
+      sort: "Start Date",
       order: "desc",
       limit: 100,
     };
