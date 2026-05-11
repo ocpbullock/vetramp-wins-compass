@@ -98,6 +98,67 @@ export async function getAwardDetail(generatedInternalId: string) {
   return data;
 }
 
+export type CompeteVendor = {
+  recipientId: string | null;
+  name: string;
+  awards: number;
+  totalValue: number;
+  avgValue: number;
+  mostRecent: string;
+  setAside: string;
+};
+
+export type CompetitiveIntel = {
+  incumbent: {
+    top: null | {
+      vendor: string; recipientId: string | null; piid: string;
+      value: number; popStart: string | null; popEnd: string | null;
+      naics: string | null; description: string | null; generatedInternalId: string | null;
+    };
+    alternates: any[];
+  };
+  agencyHistory: {
+    agencyName: string; totalContracts: number; totalValue: number; avgValue: number;
+    vendors: CompeteVendor[];
+  };
+  marketLandscape: {
+    setAside: string | null; totalVendors: number; totalContracts: number;
+    totalValue: number; avgValue: number; vendors: CompeteVendor[];
+  };
+  scorecard: {
+    naicsMatch: string; setAsideMatch: string; agencyExperience: string;
+    incumbentRisk: string; contractSize: string; competitionLevel: string;
+    timeline: string; overall: string;
+  };
+  cachedAt: string;
+  fromCache: boolean;
+};
+
+export async function getCompetitiveIntel(input: {
+  solicitationNumber?: string;
+  agency: string;
+  naicsCode: string;
+  setAside?: string;
+  postedDate?: string;
+  responseDeadLine?: string;
+}) {
+  logCall(`competitive-intel ${input.naicsCode}`);
+  const { data, error } = await supabase.functions.invoke("competitive-intel", { body: input });
+  if (error) { logErr("competitive-intel", error.message); throw error; }
+  logOk("competitive-intel", data?.fromCache ? "cache hit" : "fresh");
+  return data as CompetitiveIntel;
+}
+
+export async function getVendorProfile(recipientId: string) {
+  logCall(`vendor-profile ${recipientId.slice(0, 12)}`);
+  const { data, error } = await supabase.functions.invoke("vendor-profile", {
+    body: { recipientId },
+  });
+  if (error) { logErr("vendor-profile", error.message); throw error; }
+  logOk("vendor-profile", `${data?.summary?.totalContracts ?? 0} contracts`);
+  return data;
+}
+
 export async function getAnalytics(input: {
   naicsCodes: string[];
   startDate: string;
