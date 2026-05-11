@@ -26,3 +26,9 @@ verify_jwt = false
 
 [functions.sam-attachments]
 verify_jwt = true
+
+[functions.customer-intel]
+verify_jwt = false
+
+[functions.parse-sow]
+verify_jwt = true
