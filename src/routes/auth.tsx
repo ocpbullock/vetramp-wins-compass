@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { lovable } from "@/integrations/lovable";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,13 @@ function AuthPage() {
     if (error) toast.error(error.message);
     else toast.success("Account created — check your email to confirm.");
   }
+  async function handleGoogle() {
+    setBusy(true);
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
+    if (result.error) { toast.error("Google sign-in failed"); setBusy(false); return; }
+    if (result.redirected) return;
+    navigate({ to: "/" });
+  }
   async function handleMagicLink() {
     if (!email) { toast.error("Enter email first"); return; }
     setBusy(true);
@@ -56,6 +64,10 @@ function AuthPage() {
           <h1 className="text-2xl font-bold">Federal Contracts Dashboard</h1>
           <p className="text-sm text-muted-foreground mt-1">VetRamp · SDVOSB</p>
         </div>
+        <Button type="button" variant="outline" disabled={busy} className="w-full mb-4" onClick={handleGoogle}>
+          Continue with Google
+        </Button>
+        <div className="relative mb-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">or</span></div></div>
         <Tabs defaultValue="signin">
           <TabsList className="grid grid-cols-2 w-full">
             <TabsTrigger value="signin">Sign in</TabsTrigger>
