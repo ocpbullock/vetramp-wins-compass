@@ -233,7 +233,16 @@ export function CompetitiveIntelModal({
         {/* Section E — Bid/No-Bid Scorecard */}
         <section className="space-y-2">
           <h3 className="text-sm font-semibold">Bid / No-Bid Scorecard</h3>
-          {loading ? <Skeleton className="h-48" /> : data ? <BidScorecard data={data} /> : null}
+          {loading ? <Skeleton className="h-48" /> : data ? (
+            <BidScorecard
+              data={data}
+              userNaics={userNaics}
+              userAgencyAwardCount={userAgencyAwardCount}
+              oppNaics={opp?.naicsCode ?? ""}
+              oppSetAside={opp?.typeOfSetAside || undefined}
+              responseDeadLine={opp?.responseDeadLine}
+            />
+          ) : null}
         </section>
 
         <div className="flex justify-between items-center text-[11px] text-muted-foreground">
