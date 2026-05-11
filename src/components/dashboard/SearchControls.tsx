@@ -17,7 +17,10 @@ export type SearchInput = {
 };
 
 const today = format(new Date(), "yyyy-MM-dd");
-const yearAgo = format(subYears(new Date(), 1), "yyyy-MM-dd");
+// Default to a 36-month window: USAspending uses the full range for historical
+// award matching (better incumbent/recompete detection), and the SAM edge
+// function auto-clamps the opportunities query to its 1-year hard limit.
+const defaultFrom = format(subYears(new Date(), 3), "yyyy-MM-dd");
 
 export function SearchControls({
   initial,
