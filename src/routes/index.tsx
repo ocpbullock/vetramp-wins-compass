@@ -47,7 +47,7 @@ function Dashboard() {
     setSearchedNaics(input.naicsCodes);
     try {
       const cacheKey = makeCacheKey(input);
-      const cached = input.forceRefresh ? null : await readCache(cacheKey);
+      const cached = input.forceRefresh ? null : await readCache(cacheKey, input);
       if (cached) {
         setOpps((cached.opportunities as any) ?? []);
         const h = cached.historical as any;
