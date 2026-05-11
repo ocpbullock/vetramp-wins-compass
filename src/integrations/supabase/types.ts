@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      cached_competitive_intel: {
+        Row: {
+          agency: string | null
+          cache_key: string
+          created_at: string
+          expires_at: string
+          id: string
+          naics_code: string | null
+          payload: Json
+          set_aside: string | null
+        }
+        Insert: {
+          agency?: string | null
+          cache_key: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          naics_code?: string | null
+          payload: Json
+          set_aside?: string | null
+        }
+        Update: {
+          agency?: string | null
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          naics_code?: string | null
+          payload?: Json
+          set_aside?: string | null
+        }
+        Relationships: []
+      }
       cached_searches: {
         Row: {
           cache_key: string
