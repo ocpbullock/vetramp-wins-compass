@@ -44,7 +44,7 @@ export function HistoricalTab({
       if (agency !== "__all__" && a["Awarding Agency"] !== agency) return false;
       if (vendor !== "__all__" && a["Recipient Name"] !== vendor) return false;
       if (setAside !== "__all__" && a["Type of Set Aside"] !== setAside) return false;
-      if (searchedNaics.length > 0 && a["NAICS Code"] && !activeNaics.has(a["NAICS Code"])) return false;
+      if (searchedNaics.length > 0 && a.NAICS && !activeNaics.has(a.NAICS)) return false;
       return true;
     });
   }, [awards, search, agency, vendor, setAside, activeNaics, searchedNaics]);
@@ -57,7 +57,7 @@ export function HistoricalTab({
         case "desc": av = a.Description || ""; bv = b.Description || ""; break;
         case "recipient": av = a["Recipient Name"] || ""; bv = b["Recipient Name"] || ""; break;
         case "agency": av = a["Awarding Agency"] || ""; bv = b["Awarding Agency"] || ""; break;
-        case "naics": av = a["NAICS Code"] || ""; bv = b["NAICS Code"] || ""; break;
+        case "naics": av = a.NAICS || ""; bv = b.NAICS || ""; break;
         case "amount": av = Number(a["Award Amount"]) || 0; bv = Number(b["Award Amount"]) || 0; break;
         case "date": av = a["Start Date"] || ""; bv = b["Start Date"] || ""; break;
       }
@@ -121,7 +121,7 @@ export function HistoricalTab({
                 </td>
                 <td className="text-xs">{a["Recipient Name"]}</td>
                 <td className="text-xs">{a["Awarding Agency"]}</td>
-                <td className="font-mono text-xs">{a["NAICS Code"]}</td>
+                <td className="font-mono text-xs">{a.NAICS}</td>
                 <td>{a["Type of Set Aside"] && <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-badge-setaside text-purple-900">{mapSetAside(a["Type of Set Aside"])}</span>}</td>
                 <td className="font-semibold text-money">{fmtMoney(a["Award Amount"])}</td>
                 <td className="text-xs">{a["Start Date"]?.slice(0, 10)}</td>

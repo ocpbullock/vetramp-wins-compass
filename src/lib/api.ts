@@ -20,12 +20,13 @@ export type SamOpportunity = {
 export type HistoricalAward = {
   "Award ID"?: string;
   "Recipient Name"?: string;
+  "Recipient UEI"?: string;
   "Award Amount"?: number;
   "Awarding Agency"?: string;
   "Awarding Sub Agency"?: string;
   "Start Date"?: string;
   "End Date"?: string;
-  "NAICS Code"?: string;
+  NAICS?: string;
   Description?: string;
   generated_internal_id?: string;
   "Type of Set Aside"?: string;
