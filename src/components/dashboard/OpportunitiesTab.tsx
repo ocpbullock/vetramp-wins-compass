@@ -203,11 +203,16 @@ export function OpportunitiesTab({
                     <td className="text-xs">{o.responseDeadLine?.slice(0, 10)}</td>
                     <td className="font-mono text-xs">{o.solicitationNumber}</td>
                     <td>
-                      {isProposable(o.type) && (
-                        <Button size="sm" onClick={() => onPropose(o)} className="bg-money text-money-foreground hover:bg-money/90">
-                          <FileSignature className="w-3 h-3 mr-1" /> Propose
+                      <div className="flex gap-1">
+                        <Button size="sm" variant="outline" onClick={() => onCompete(o)} className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">
+                          <Swords className="w-3 h-3 mr-1" /> Compete
                         </Button>
-                      )}
+                        {isProposable(o.type) && (
+                          <Button size="sm" onClick={() => onPropose(o)} className="bg-money text-money-foreground hover:bg-money/90">
+                            <FileSignature className="w-3 h-3 mr-1" /> Propose
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
