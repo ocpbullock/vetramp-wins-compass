@@ -10,6 +10,8 @@ import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
 import { ProposalModal } from "@/components/dashboard/ProposalModal";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
+import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
+import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { DataSourceBadge } from "@/components/dashboard/DataSourceBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
@@ -44,6 +46,8 @@ function Dashboard() {
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
   const [proposeOpp, setProposeOpp] = useState<SamOpportunity | null>(null);
+  const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
+  const [vendor, setVendor] = useState<{ id: string; name: string } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [dataSource, setDataSource] = useState<
     | { kind: "cache"; fetchedAt: string; supersetCount?: number; requestedCount: number }
@@ -179,7 +183,7 @@ function Dashboard() {
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
           <TabsContent value="opportunities" className="mt-4">
-            <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} onPropose={setProposeOpp} />
+            <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} onPropose={setProposeOpp} onCompete={setCompeteOpp} />
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab awards={awards} searchedNaics={searchedNaics} onDetails={setDetailId} />
@@ -195,6 +199,17 @@ function Dashboard() {
 
       <ProposalModal opp={proposeOpp} onClose={() => setProposeOpp(null)} />
       <AwardDetailModal id={detailId} onClose={() => setDetailId(null)} />
+      <CompetitiveIntelModal
+        opp={competeOpp}
+        onClose={() => setCompeteOpp(null)}
+        onVendor={(id, name) => setVendor({ id, name })}
+      />
+      <VendorDetailDrawer
+        recipientId={vendor?.id ?? null}
+        vendorName={vendor?.name ?? null}
+        searchedNaics={searchedNaics}
+        onClose={() => setVendor(null)}
+      />
     </div>
   );
 }

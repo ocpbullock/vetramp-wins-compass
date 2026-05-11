@@ -14,3 +14,9 @@ verify_jwt = false
 
 [functions.generate-proposal]
 verify_jwt = false
+
+[functions.competitive-intel]
+verify_jwt = false
+
+[functions.vendor-profile]
+verify_jwt = false

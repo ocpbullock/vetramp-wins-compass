@@ -1,78 +1,70 @@
-# Federal Contracts Dashboard — Build Plan
+## Competitive Intelligence Module
 
-A multi-user app for VetRamp to find federal opportunities, analyze historical awards, and generate AI proposal drafts.
+A new module that, for any open SAM.gov opportunity, surfaces the likely incumbent, who the agency typically awards to, the set-aside competitive landscape, teaming candidates, and a transparent bid/no-bid scorecard — all powered by the USAspending API already in use.
 
-## Phase 1 — Backend Foundation (Lovable Cloud)
+### Phase 1 — Core (this build)
 
-1. **Enable Lovable Cloud** (auth, Postgres, edge functions, AI Gateway).
-2. **Database schema** (migration):
-   - `cached_searches` — shared 4-hour TTL cache keyed by hash of search params.
-   - `proposal_drafts` — per-user, RLS on `user_id`.
-   - `user_preferences` — per-user defaults.
-3. **Secrets**: request `SAM_GOV_API_KEY` from the user. (`LOVABLE_API_KEY` is auto-provisioned for AI.)
-4. **Edge functions** (Supabase):
-   - `search-sam` — loops through NAICS codes (one per request), 500ms delay, server-side API key, returns merged + deduped opportunities.
-   - `search-usaspending` — POST proxy to `/spending_by_award/`.
-   - `usaspending-detail` — GET `/awards/{id}/`.
-   - `usaspending-analytics` — calls `spending_over_time` + `spending_by_category`.
-   - `generate-proposal` — calls Lovable AI Gateway (gemini-3-flash-preview) with the full VetRamp proposal prompt; saves draft.
+Ships the highest-value pieces end-to-end so it's usable today.
 
-## Phase 2 — Auth & App Shell
+1. **Database**
+   - New table `cached_competitive_intel` (cache_key, agency, naics, set_aside, payload jsonb, expires_at). 24h TTL. RLS: authenticated read/write.
 
-- Email/password + magic link via Supabase Auth.
-- `/auth` page (login/signup), `/` protected dashboard.
-- Header with title, subtitle, user avatar, logout.
-- React Query with `staleTime: 4h`, fetch only on Search click.
+2. **Edge function `competitive-intel`**
+   Input: `{ solicitationNumber, agency, naicsCode, setAside, postedDate }`
+   Runs three USAspending queries in parallel against `/api/v2/search/spending_by_award/`:
+   - **Incumbent search** — same sub-agency + NAICS, period-of-performance ending within ±18 months of posted date, sorted by End Date desc. Also matches PIID office-prefix when extractable from solicitation number.
+   - **Agency history** — same sub-agency (fallback top-tier) + NAICS, last 3 years, aggregated client-side by `recipient_id` → vendor rollup (awards, total $, avg $, most recent, set-aside).
+   - **Market landscape** — NAICS + set_aside_type_codes nationwide, last 3 years, aggregated by recipient.
+   Computes a deterministic **bid/no-bid scorecard** (NAICS / set-aside / agency exp / incumbent / size / competition / timeline → overall).
+   Writes to `cached_competitive_intel`. Returns the structured payload from the spec.
 
-## Phase 3 — Search Controls
+3. **Edge function `vendor-profile`**
+   Input: `{ recipientId }` (or vendorName fallback). Calls `/api/v2/recipient/{id}/` + a filtered `spending_by_award` to return vendor profile + contract history + NAICS/agency rollups.
 
-- Sticky search bar:
-  - NAICS multi-select grouped (Computer/IT, Software/Cloud, Telecom, Consulting, Hardware).
-  - Quick buttons: Select All / Clear / IT Only.
-  - Default selection: 541511, 541512, 541513, 541519.
-  - Date range pickers (default last 12 months).
-  - Optional keyword.
-  - Search button (primary blue).
-- Progress bar with status text during multi-NAICS fetch.
-- 4 stat cards (Active Opps, Award Notices, Historical Awards, Total Obligated).
+4. **UI: "Compete" button + Modal**
+   - Amber `Compete` button next to existing green `Propose` button on every row of the Opportunities table (all notice types).
+   - `CompetitiveIntelModal` (max-w 1000px) with skeleton-loaded sections rendered in parallel:
+     - Header: title, sol#, agency, NAICS, set-aside, deadline countdown (orange ≤14d, red ≤3d).
+     - **Section A — Incumbent**: top candidate card (vendor, PIID, value, PoP, NAICS) + up to 2 alternates, or "Open Field" empty state.
+     - **Section B — Agency Award History**: stat strip + ranked vendors table (clickable names) + top-10 bar chart (recharts).
+     - **Section E — Bid/No-Bid Scorecard**: factor table with ✅/⚠️/❌ + overall verdict.
+   - Vendor names anywhere open the **VendorDetailDrawer** (right-side, 400px): profile header, portfolio totals, NAICS/agency rollups, contract history table, and overlap assessment vs. user's searched NAICS.
 
-## Phase 4 — Tabs
+5. **API client + caching**
+   - `searchCompetitiveIntel()` and `getVendorProfile()` in `src/lib/api.ts`, both routed through edge functions, with the existing log-store integration.
+   - Edge function checks cache before calling USAspending.
 
-1. **Active Opportunities** — filterable/sortable table, color-coded type badges, links to SAM.gov, "Propose" button on Solicitation/Sources Sought/Combined/Presol only.
-2. **Historical Awards** — filterable table, set-aside code mapping, "Details" modal hitting USAspending award detail endpoint.
-3. **Analytics** — Recharts: top vendors (horizontal bar), agency distribution (doughnut), monthly obligations (vertical bar).
-4. **Logs** — monospace timestamped log of API calls/errors/cache events, color coded.
+### Phase 2 — Deferred (follow-up)
 
-## Phase 5 — Proposal Generator
+Sections C (Set-Aside Landscape callout), D (Teaming Opportunities), and the dashboard-level **Competitive Intel tab** (market overview cards, top-competitors-across-NAICS table, agency heatmap, set-aside donut). Phase 1 already fetches the underlying data, so Phase 2 is mostly UI + one extra aggregation function.
 
-- Full-screen modal opened by Propose button.
-- Pre-fills opportunity context + hardcoded VetRamp company info into AI prompt (the full prompt in the spec).
-- Streamed AI generation via Lovable AI.
-- Actions: Copy, Download .docx (using `docx` lib), Save Draft (to `proposal_drafts`).
+### Technical Notes
 
-## Phase 6 — Caching
+- **Agency matching**: extract the most specific segment of SAM's `fullParentPathName` after splitting on `.`, query USAspending as `tier: "subtier"`; if zero results, retry with the top-tier segment as `tier: "toptier"`.
+- **Incumbent PIID prefix**: regex `^([A-Z0-9]{6})` on solicitationNumber → match against USAspending `Award ID` startsWith. Combined with PoP-end-date proximity to posted date.
+- **Vendor dedupe**: aggregate by `recipient_id` (stable), display the most recent name variant.
+- **Scorecard rules** (deterministic, transparent):
+  - NAICS: ✅ in 541511–541519, ⚠️ in 5415xx, else ❌
+  - Set-aside: ✅ SDVOSBC/VSA/VSB, ⚠️ SBA/WOSB/EDWOSB/HZC, ❌ unrestricted/8A/8AN
+  - Agency experience: derived from existing user awards prop (none in Phase 1 → ❌, with neutral copy)
+  - Incumbent: ✅ none, ⚠️ small (<$2M), ❌ large
+  - Size: ✅ if agency-NAICS avg ∈ $500K–$10M
+  - Competition: ✅ <5 vendors, ⚠️ 5–15, ❌ >15
+  - Timeline: from `responseDeadLine` (✅ >14d, ⚠️ 7–14, ❌ <7)
+- **Caching**: edge-function side, key `${subAgency}|${naics}|${setAside||"none"}`, 24h TTL.
+- **No new secrets**: USAspending is keyless. SAM.gov flow is unchanged.
 
-- React Query 4h staleTime in browser.
-- `cached_searches` table: edge functions check cache first, write on miss.
+### Files
 
-## Phase 7 — Design
+- migration: `cached_competitive_intel` table + RLS
+- new: `supabase/functions/competitive-intel/index.ts`
+- new: `supabase/functions/vendor-profile/index.ts`
+- update: `supabase/config.toml` (verify_jwt=false for both)
+- new: `src/components/dashboard/CompetitiveIntelModal.tsx`
+- new: `src/components/dashboard/VendorDetailDrawer.tsx`
+- new: `src/components/dashboard/BidScorecard.tsx`
+- update: `src/lib/api.ts` — add `searchCompetitiveIntel`, `getVendorProfile`, types
+- update: `src/components/dashboard/OpportunitiesTab.tsx` — Compete button + modal wiring
+- update: `src/routes/index.tsx` — modal/drawer state if needed at page level
 
-- White cards on `#f8f9fa`, blue primary `#2563eb`, money green `#059669`.
-- System font stack, professional, responsive.
-- Tokens defined in `src/styles.css` using oklch.
-
-## Technical Notes
-
-- SAM.gov requires server-side key + sequential per-NAICS requests (10 req / 5 min limit).
-- USAspending public but proxied for consistency + logging.
-- All API calls logged into Logs tab via a Zustand log store.
-- Set-aside code map: SBA→Small Business, SDVOSBC→SDVOSB, WOSBSS→WOSB, 8A→8(a), HZC→HUBZone, VSA→VOSB, ISBEE→Econ. Disadvantaged WOSB, SBP→Small Business.
-- Propose button gating: notice types `k` (Combined Synopsis/Solicitation), `o` (Solicitation), `r` (Sources Sought), `p` (Presolicitation) only.
-
-## Scope for First Version
-
-I'll deliver Phases 1–5 fully working in this turn. Some polish (e.g., advanced team view, magic link UI niceties) can iterate after.
-
-## Open question
-
-I need one secret from you to make SAM.gov work: a free API key from https://api.data.gov. I'll prompt for it after enabling Cloud.
+Approve to proceed with Phase 1.
