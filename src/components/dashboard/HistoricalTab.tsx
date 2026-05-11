@@ -44,9 +44,10 @@ export function HistoricalTab({
       if (agency !== "__all__" && a["Awarding Agency"] !== agency) return false;
       if (vendor !== "__all__" && a["Recipient Name"] !== vendor) return false;
       if (setAside !== "__all__" && a["Type of Set Aside"] !== setAside) return false;
+      if (searchedNaics.length > 0 && a["NAICS Code"] && !activeNaics.has(a["NAICS Code"])) return false;
       return true;
     });
-  }, [awards, search, agency, vendor, setAside]);
+  }, [awards, search, agency, vendor, setAside, activeNaics, searchedNaics]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
