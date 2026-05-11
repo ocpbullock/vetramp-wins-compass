@@ -89,6 +89,27 @@ export type Database = {
         }
         Relationships: []
       }
+      company_profile: {
+        Row: {
+          id: string
+          profile_data: Json
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          profile_data: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          profile_data?: Json
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -118,6 +139,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      proposal_attachments: {
+        Row: {
+          file_type: string | null
+          filename: string
+          id: string
+          parsed_content: string | null
+          proposal_id: string
+          size_bytes: number | null
+          source: string | null
+          storage_path: string
+          uploaded_at: string
+        }
+        Insert: {
+          file_type?: string | null
+          filename: string
+          id?: string
+          parsed_content?: string | null
+          proposal_id: string
+          size_bytes?: number | null
+          source?: string | null
+          storage_path: string
+          uploaded_at?: string
+        }
+        Update: {
+          file_type?: string | null
+          filename?: string
+          id?: string
+          parsed_content?: string | null
+          proposal_id?: string
+          size_bytes?: number | null
+          source?: string | null
+          storage_path?: string
+          uploaded_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_attachments_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposal_drafts: {
         Row: {
@@ -158,6 +223,108 @@ export type Database = {
           status?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      proposals: {
+        Row: {
+          agency: string | null
+          clearance_requirement: string | null
+          compliance_gaps: number | null
+          compliance_matrix: Json | null
+          contract_type: string | null
+          created_at: string
+          customer_intel: Json | null
+          customer_intel_verified: boolean | null
+          estimated_value: number | null
+          id: string
+          management_approach: Json | null
+          naics_code: string | null
+          notice_id: string | null
+          opportunity_data: Json | null
+          opportunity_title: string | null
+          opportunity_type: string | null
+          pop_base_months: number | null
+          pop_option_months: number | null
+          price_strategy: Json | null
+          readiness_score: number | null
+          response_deadline: string | null
+          sections: Json | null
+          set_aside: string | null
+          solicitation_number: string
+          staffing_plan: Json | null
+          status: string
+          technical_approach: Json | null
+          transition_plan: Json | null
+          updated_at: string
+          user_id: string
+          user_notes: string | null
+        }
+        Insert: {
+          agency?: string | null
+          clearance_requirement?: string | null
+          compliance_gaps?: number | null
+          compliance_matrix?: Json | null
+          contract_type?: string | null
+          created_at?: string
+          customer_intel?: Json | null
+          customer_intel_verified?: boolean | null
+          estimated_value?: number | null
+          id?: string
+          management_approach?: Json | null
+          naics_code?: string | null
+          notice_id?: string | null
+          opportunity_data?: Json | null
+          opportunity_title?: string | null
+          opportunity_type?: string | null
+          pop_base_months?: number | null
+          pop_option_months?: number | null
+          price_strategy?: Json | null
+          readiness_score?: number | null
+          response_deadline?: string | null
+          sections?: Json | null
+          set_aside?: string | null
+          solicitation_number: string
+          staffing_plan?: Json | null
+          status?: string
+          technical_approach?: Json | null
+          transition_plan?: Json | null
+          updated_at?: string
+          user_id: string
+          user_notes?: string | null
+        }
+        Update: {
+          agency?: string | null
+          clearance_requirement?: string | null
+          compliance_gaps?: number | null
+          compliance_matrix?: Json | null
+          contract_type?: string | null
+          created_at?: string
+          customer_intel?: Json | null
+          customer_intel_verified?: boolean | null
+          estimated_value?: number | null
+          id?: string
+          management_approach?: Json | null
+          naics_code?: string | null
+          notice_id?: string | null
+          opportunity_data?: Json | null
+          opportunity_title?: string | null
+          opportunity_type?: string | null
+          pop_base_months?: number | null
+          pop_option_months?: number | null
+          price_strategy?: Json | null
+          readiness_score?: number | null
+          response_deadline?: string | null
+          sections?: Json | null
+          set_aside?: string | null
+          solicitation_number?: string
+          staffing_plan?: Json | null
+          status?: string
+          technical_approach?: Json | null
+          transition_plan?: Json | null
+          updated_at?: string
+          user_id?: string
+          user_notes?: string | null
         }
         Relationships: []
       }

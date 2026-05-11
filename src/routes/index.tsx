@@ -9,7 +9,7 @@ import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
 import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
-import { ProposalModal } from "@/components/dashboard/ProposalModal";
+import { supabase } from "@/integrations/supabase/client";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
 import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
@@ -48,7 +48,23 @@ function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
-  const [proposeOpp, setProposeOpp] = useState<SamOpportunity | null>(null);
+  async function handlePropose(o: SamOpportunity) {
+    if (!user) return;
+    const { data, error } = await (supabase as any).from("proposals").insert({
+      user_id: user.id,
+      solicitation_number: o.solicitationNumber || o.noticeId || "unknown",
+      notice_id: o.noticeId,
+      opportunity_title: o.title,
+      agency: o.fullParentPathName,
+      naics_code: o.naicsCode,
+      set_aside: o.setAside || o.typeOfSetAside,
+      response_deadline: o.responseDeadLine || null,
+      opportunity_data: o,
+      status: "intake",
+    }).select("id").single();
+    if (error) { toast.error(error.message); return; }
+    navigate({ to: "/proposals/$proposalId", params: { proposalId: data.id } });
+  }
   const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
   const [vendor, setVendor] = useState<{ id: string; name: string } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
@@ -189,7 +205,7 @@ function Dashboard() {
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
           <TabsContent value="opportunities" className="mt-4">
-            <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} onPropose={setProposeOpp} onCompete={setCompeteOpp} />
+            <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} onPropose={handlePropose} onCompete={setCompeteOpp} />
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab awards={awards} searchedNaics={searchedNaics} onDetails={setDetailId} />
@@ -203,7 +219,7 @@ function Dashboard() {
         </Tabs>
       </main>
 
-      <ProposalModal opp={proposeOpp} onClose={() => setProposeOpp(null)} />
+      
       <AwardDetailModal id={detailId} onClose={() => setDetailId(null)} />
       <CompetitiveIntelModal
         opp={competeOpp}
