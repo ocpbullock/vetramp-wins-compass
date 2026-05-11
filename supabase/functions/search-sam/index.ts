@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
       const code = naicsCodes[i];
       const params = new URLSearchParams({
         api_key: apiKey,
-        naicsCode: code,
+        ncode: code, // SAM.gov NAICS filter param is `ncode`, not `naicsCode`
         postedFrom: from,
         postedTo: to,
         limit: "200",
