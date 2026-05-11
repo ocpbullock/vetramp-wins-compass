@@ -13,6 +13,7 @@ export type SearchInput = {
   postedFrom: string;
   postedTo: string;
   keyword: string;
+  forceRefresh?: boolean;
 };
 
 const today = format(new Date(), "yyyy-MM-dd");
