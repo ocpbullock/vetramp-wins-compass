@@ -10,6 +10,7 @@ export type SamOpportunity = {
   postedDate?: string;
   responseDeadLine?: string;
   naicsCode?: string;
+  classificationCode?: string; // PSC
   uiLink?: string;
   description?: string;
   setAside?: string;
@@ -32,6 +33,10 @@ export type HistoricalAward = {
   "Type of Set Aside"?: string;
   "Contract Award Type"?: string;
   "Parent Award ID"?: string;
+  "Product or Service Code"?: string;
+  psc_description?: string;
+  "Place of Performance State Code"?: string;
+  "Place of Performance City Code"?: string;
 };
 
 function logCall(name: string) {
@@ -182,6 +187,7 @@ export function makeCacheKey(input: {
   historicalFrom?: string;
 }) {
   return [
+    "v2", // bump when fetched fields/shape change
     [...input.naicsCodes].sort().join(","),
     input.postedFrom,
     input.postedTo,

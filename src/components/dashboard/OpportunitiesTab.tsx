@@ -104,7 +104,8 @@ export function OpportunitiesTab({
           const mb = matches.get(kb);
           // Sort exact > parent > none, then by total $
           const score = (m?: IncumbentMatch) =>
-            (m?.confidence === "exact" ? 3 : m?.confidence === "parent" ? 2 : m?.confidence === "fuzzy" ? 1 : 0) * 1e15
+            (m?.confidence === "exact" ? 4 : m?.confidence === "parent" ? 3 : m?.confidence === "psc" ? 2 : m?.confidence === "fuzzy" ? 1 : 0) * 1e15
+            + (m?.popExpiringSoon ? 5e14 : 0)
             + (m?.totalAmount ?? 0);
           const sa = score(ma), sb = score(mb);
           return dir === "asc" ? sa - sb : sb - sa;
@@ -233,18 +234,23 @@ function IncumbentCell({ m }: { m?: IncumbentMatch }) {
     ? "Recompete"
     : m.confidence === "parent"
       ? "Follow-on (IDV)"
-      : `Possible recompete${m.similarity ? ` (${Math.round(m.similarity * 100)}%)` : ""}`;
+      : m.confidence === "psc"
+        ? "Likely recompete (PSC)"
+        : `Possible recompete${m.similarity ? ` (${Math.round(m.similarity * 100)}%)` : ""}`;
   const color = m.confidence === "exact"
     ? "bg-amber-500/15 text-amber-600 dark:text-amber-400"
     : m.confidence === "parent"
       ? "bg-blue-500/15 text-blue-600 dark:text-blue-400"
-      : "bg-violet-500/15 text-violet-600 dark:text-violet-400";
+      : m.confidence === "psc"
+        ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+        : "bg-violet-500/15 text-violet-600 dark:text-violet-400";
   return (
     <Tooltip>
       <TooltipTrigger asChild>
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium cursor-help ${color}`}>
           <Repeat className="w-3 h-3" />
           <span className="truncate max-w-[160px]">{m.topRecipient}</span>
+          {m.popExpiringSoon && <span title="Prior PoP expiring near this deadline" className="ml-0.5">⏰</span>}
         </span>
       </TooltipTrigger>
       <TooltipContent className="max-w-sm text-xs">
@@ -252,6 +258,8 @@ function IncumbentCell({ m }: { m?: IncumbentMatch }) {
         <div>Top incumbent: <span className="font-medium">{m.topRecipient}</span></div>
         <div>Total prior obligations: <span className="font-mono">{fmtUsd(m.totalAmount)}</span></div>
         {m.latestEndDate && <div>Latest end date: {m.latestEndDate}</div>}
+        {m.popExpiringSoon && <div className="text-amber-600 dark:text-amber-400 mt-1">⏰ Prior PoP ends within ±9mo of this deadline — strong recompete signal</div>}
+        {m.diagnostics?.pscMatched && <div className="text-muted-foreground mt-1">PSC: {m.diagnostics.pscMatched}</div>}
       </TooltipContent>
     </Tooltip>
   );
