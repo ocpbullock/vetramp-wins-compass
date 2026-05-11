@@ -67,7 +67,7 @@ Deno.serve(async (req) => {
     const PAGE_SIZE = 100;
     const all: any[] = [];
     let lastMeta: any = null;
-    let totalReported = 0;
+    let totalReported: number | undefined;
 
     for (const chunk of [...chunks].reverse()) {
       if (all.length >= maxResults) break;
@@ -99,7 +99,9 @@ Deno.serve(async (req) => {
         const results = json.results || [];
         all.push(...results);
         lastMeta = json.page_metadata;
-        if (page === 1 && typeof json.page_metadata?.total === "number") totalReported += json.page_metadata.total;
+        if (page === 1 && typeof json.page_metadata?.total === "number") {
+          totalReported = (totalReported ?? 0) + json.page_metadata.total;
+        }
         const hasNext = json.page_metadata?.hasNext;
         if (!hasNext || results.length === 0 || all.length >= maxResults) break;
       }
