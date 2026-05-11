@@ -45,9 +45,10 @@ Deno.serve(async (req) => {
     if (keyword) baseBody.filters.keywords = [keyword];
 
     // USAspending caps each request at 100 rows. Loop pages until we hit
-    // maxResults or run out of data. Cap at 50 pages (=5000 awards) for safety.
+    // maxResults or run out of data. USAspending hard-caps result windows
+    // around 10,000 (page * limit), so 100 pages * 100 rows is the ceiling.
     const PAGE_SIZE = 100;
-    const HARD_PAGE_LIMIT = Math.min(50, Math.ceil(maxResults / PAGE_SIZE));
+    const HARD_PAGE_LIMIT = Math.min(100, Math.ceil(maxResults / PAGE_SIZE));
     const all: any[] = [];
     let lastMeta: any = null;
     let totalReported: number | undefined;
