@@ -147,16 +147,18 @@ export async function readCache(
   //    naics_codes contains every requested code. Lets users pull a wide NAICS
   //    range once, then drill down without re-fetching.
   if (!input) return null;
-  const { data: candidates } = await supabase
+  const kw = (input.keyword || "").trim();
+  let q = supabase
     .from("cached_searches")
     .select("*")
     .eq("date_from", input.postedFrom)
     .eq("date_to", input.postedTo)
-    .eq("keyword", (input.keyword || "").trim() || null)
     .contains("naics_codes", input.naicsCodes)
     .gt("expires_at", new Date().toISOString())
     .order("created_at", { ascending: false })
     .limit(1);
+  q = kw ? q.eq("keyword", kw) : q.is("keyword", null);
+  const { data: candidates } = await q;
   const hit = candidates?.[0];
   if (hit) {
     useLogStore.getState().log(
