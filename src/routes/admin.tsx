@@ -267,6 +267,8 @@ function InvitesPanel() {
         </div>
         {isLoading ? (
           <div className="p-4 text-sm text-muted-foreground">Loading…</div>
+        ) : isError ? (
+          <div className="p-4 text-sm text-destructive">Could not load invitations: {(error as Error)?.message ?? "permission denied"}</div>
         ) : (
           <Table>
             <TableHeader>
@@ -280,10 +282,10 @@ function InvitesPanel() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {data?.invites.length === 0 && (
+              {invites.length === 0 && (
                 <TableRow><TableCell colSpan={6} className="text-center text-sm text-muted-foreground py-8">No invitations yet.</TableCell></TableRow>
               )}
-              {data?.invites.map((inv) => {
+              {invites.map((inv) => {
                 const expired = inv.status === "pending" && new Date(inv.expires_at) < new Date();
                 const variant = inv.status === "accepted" ? "default" : inv.status === "cancelled" ? "secondary" : expired ? "destructive" : "outline";
                 const label = expired ? "expired" : inv.status;
