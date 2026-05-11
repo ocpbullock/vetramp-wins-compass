@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Trophy, Building2, Calendar } from "lucide-react";
-import { type SamOpportunity, getCompetitiveIntel, type CompetitiveIntel } from "@/lib/api";
+import { type SamOpportunity, type HistoricalAward, getCompetitiveIntel, type CompetitiveIntel } from "@/lib/api";
 import { shortAgency } from "@/lib/contracts";
+import { matchIncumbent } from "@/lib/incumbents";
 import { BidScorecard } from "./BidScorecard";
 
 function fmtUsd(n?: number | null) {
@@ -22,15 +23,23 @@ function daysUntil(iso?: string) {
 }
 
 export function CompetitiveIntelModal({
-  opp, onClose, onVendor,
+  opp, awards, onClose, onVendor,
 }: {
   opp: SamOpportunity | null;
+  awards: HistoricalAward[];
   onClose: () => void;
   onVendor: (recipientId: string, name: string) => void;
 }) {
   const [data, setData] = useState<CompetitiveIntel | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Authoritative match against the cached historical award set —
+  // same logic that powers the "Top incumbent" tooltip on the Opportunities tab.
+  const localMatch = useMemo(
+    () => (opp ? matchIncumbent(opp, awards) : null),
+    [opp, awards],
+  );
 
   useEffect(() => {
     if (!opp) { setData(null); setError(null); return; }
@@ -73,13 +82,44 @@ export function CompetitiveIntelModal({
 
         {error && <div className="text-sm text-destructive p-3 border border-destructive/30 rounded">{error}</div>}
 
-        {/* Section A — Incumbent */}
+        {/* Section A — Incumbent (prefers local match against cached historical set) */}
         <section className="space-y-2">
           <h3 className="text-sm font-semibold flex items-center gap-2"><Trophy className="w-4 h-4" />Likely Incumbent</h3>
-          {loading ? <Skeleton className="h-24" /> : !data ? null : data.incumbent.top ? (
+          {localMatch && localMatch.confidence !== "none" ? (() => {
+            const confLabel =
+              localMatch.confidence === "exact" ? "EXACT PIID MATCH" :
+              localMatch.confidence === "parent" ? "PARENT IDV MATCH" :
+              `TITLE MATCH${localMatch.similarity ? ` (${Math.round(localMatch.similarity * 100)}%)` : ""}`;
+            const top = localMatch.awards[0];
+            const others = [...new Set(localMatch.awards.slice(1, 6).map(a => a["Recipient Name"]).filter(Boolean))] as string[];
+            return (
+              <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                  <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">LIKELY INCUMBENT</Badge>
+                  <Badge variant="outline" className="text-[10px]">{confLabel}</Badge>
+                  <span className="text-[11px] text-muted-foreground">{localMatch.awards.length} prior award{localMatch.awards.length !== 1 ? "s" : ""}</span>
+                </div>
+                <div className="text-base font-semibold">{localMatch.topRecipient}</div>
+                <div className="text-xs text-muted-foreground mt-1 grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1">
+                  <div><span className="opacity-60">Top PIID:</span> <span className="font-mono">{top?.["Award ID"]}</span></div>
+                  <div><span className="opacity-60">Total value:</span> <span className="font-mono">{fmtUsd(localMatch.totalAmount)}</span></div>
+                  <div><span className="opacity-60">PoP end:</span> {top?.["End Date"]?.slice(0, 10) ?? localMatch.latestEndDate?.slice(0, 10)}</div>
+                  <div><span className="opacity-60">Sub-agency:</span> {top?.["Awarding Sub Agency"] ?? "—"}</div>
+                </div>
+                {others.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-border/60 space-y-1">
+                    <div className="text-[11px] uppercase opacity-60">Other recipients on these awards</div>
+                    {others.map((n, i) => <div key={i} className="text-xs">{n}</div>)}
+                  </div>
+                )}
+              </div>
+            );
+          })() : loading ? <Skeleton className="h-24" /> : !data ? null : data.incumbent.top ? (
             <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
-              <div className="flex items-center gap-2 mb-1">
-                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">LIKELY INCUMBENT</Badge>
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">CANDIDATE</Badge>
+                <Badge variant="outline" className="text-[10px]">USASPENDING HEURISTIC</Badge>
+                <span className="text-[11px] text-muted-foreground">Not in your cached historical set — lower confidence</span>
               </div>
               <button
                 className="text-base font-semibold hover:underline text-left"

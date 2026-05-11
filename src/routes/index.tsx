@@ -201,6 +201,7 @@ function Dashboard() {
       <AwardDetailModal id={detailId} onClose={() => setDetailId(null)} />
       <CompetitiveIntelModal
         opp={competeOpp}
+        awards={awards}
         onClose={() => setCompeteOpp(null)}
         onVendor={(id, name) => setVendor({ id, name })}
       />
