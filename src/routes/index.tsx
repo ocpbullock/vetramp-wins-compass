@@ -109,6 +109,7 @@ function Dashboard() {
 
       setProgress(100);
       setProgressText("Done");
+      setDataSource({ kind: "fresh", fetchedAt: new Date().toISOString() });
     } catch (e: any) {
       log("error", e.message);
       toast.error(e.message);
