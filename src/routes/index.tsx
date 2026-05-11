@@ -61,6 +61,13 @@ function Dashboard() {
         setHistoricalTotal(h?.page_metadata?.total);
         setProgress(100);
         setProgressText("Loaded from cache");
+        const cachedNaics = (cached.naics_codes as string[]) ?? [];
+        setDataSource({
+          kind: "cache",
+          fetchedAt: cached.created_at as string,
+          supersetCount: cachedNaics.length > input.naicsCodes.length ? cachedNaics.length : undefined,
+          requestedCount: input.naicsCodes.length,
+        });
         toast.success("Loaded from shared cache (24h TTL) — use Force refresh to bypass");
         setBusy(false);
         return;
