@@ -4,7 +4,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, FileSignature, ArrowUpDown, Repeat, Sparkles } from "lucide-react";
+import { ExternalLink, FileSignature, ArrowUpDown, Repeat, Sparkles, Swords } from "lucide-react";
 import {
   badgeClassForType, isProposable, shortAgency,
 } from "@/lib/contracts";
