@@ -48,7 +48,8 @@ function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
-  const [proposeOpp, setProposeOpp] = useState<SamOpportunity | null>(null);
+  const [_unused, setProposeOppLegacy] = useState<SamOpportunity | null>(null);
+  void _unused; void setProposeOppLegacy;
   const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
   const [vendor, setVendor] = useState<{ id: string; name: string } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
