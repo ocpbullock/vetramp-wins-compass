@@ -50,6 +50,7 @@ function Dashboard() {
     setAwards([]);
     setHistoricalTotal(undefined);
     setSearchedNaics(input.naicsCodes);
+    setDataSource(null);
     try {
       const cacheKey = makeCacheKey(input);
       const cached = input.forceRefresh ? null : await readCache(cacheKey, input);
