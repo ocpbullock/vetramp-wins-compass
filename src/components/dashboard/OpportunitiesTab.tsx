@@ -259,7 +259,7 @@ function IncumbentCell({ m }: { m?: IncumbentMatch }) {
       <TooltipTrigger asChild>
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium cursor-help ${color}`}>
           <Repeat className="w-3 h-3" />
-          <span className="truncate max-w-[160px]">{m.topRecipient}</span>
+          <span className="truncate max-w-[110px]">{m.topRecipient}</span>
           {m.popExpiringSoon && <span title="Prior PoP expiring near this deadline" className="ml-0.5">⏰</span>}
         </span>
       </TooltipTrigger>
