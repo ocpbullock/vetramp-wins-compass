@@ -62,6 +62,9 @@ function Dashboard() {
     setSearchedNaics(input.naicsCodes);
     setDataSource(null);
     try {
+      // Persist (sans forceRefresh) so the next page load can restore + auto-hit cache
+      const { forceRefresh: _fr, ...persisted } = input;
+      try { localStorage.setItem("dashboard:lastSearch", JSON.stringify(persisted)); } catch {}
       const cacheKey = makeCacheKey(input);
       const cached = input.forceRefresh ? null : await readCache(cacheKey, input);
       if (cached) {
