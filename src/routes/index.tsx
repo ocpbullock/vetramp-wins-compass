@@ -202,6 +202,7 @@ function Dashboard() {
       <CompetitiveIntelModal
         opp={competeOpp}
         awards={awards}
+        userNaics={searchedNaics}
         onClose={() => setCompeteOpp(null)}
         onVendor={(id, name) => setVendor({ id, name })}
       />
