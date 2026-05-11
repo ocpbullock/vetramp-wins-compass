@@ -38,16 +38,16 @@ Deno.serve(async (req) => {
         "Contract Award Type",
         "Parent Award ID",
       ],
-      sort: "Award Amount",
+      sort: "Action Date",
       order: "desc",
       limit: 100,
     };
     if (keyword) baseBody.filters.keywords = [keyword];
 
     // USAspending caps each request at 100 rows. Loop pages until we hit
-    // maxResults or run out of data. Cap at 20 pages (=2000 awards) for safety.
+    // maxResults or run out of data. Cap at 50 pages (=5000 awards) for safety.
     const PAGE_SIZE = 100;
-    const HARD_PAGE_LIMIT = Math.min(20, Math.ceil(maxResults / PAGE_SIZE));
+    const HARD_PAGE_LIMIT = Math.min(50, Math.ceil(maxResults / PAGE_SIZE));
     const all: any[] = [];
     let lastMeta: any = null;
     let totalReported: number | undefined;
