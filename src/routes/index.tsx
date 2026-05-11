@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/dashboard/Header";
 import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
@@ -26,6 +26,14 @@ function Dashboard() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
+  // Auto-restore last search from localStorage on mount (cache hit = instant).
+  const didAutoLoad = useRef(false);
+  useEffect(() => {
+    if (didAutoLoad.current || loading || !user || !lastInput) return;
+    didAutoLoad.current = true;
+    runSearch(lastInput);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, user]);
 
   const [opps, setOpps] = useState<SamOpportunity[]>([]);
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
@@ -42,6 +50,15 @@ function Dashboard() {
     | { kind: "fresh"; fetchedAt: string }
     | null
   >(null);
+  const [lastInput, setLastInput] = useState<SearchInput | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("dashboard:lastSearch");
+      return raw ? (JSON.parse(raw) as SearchInput) : null;
+    } catch {
+      return null;
+    }
+  });
   const log = useLogStore((s) => s.log);
 
   async function runSearch(input: SearchInput) {
@@ -53,6 +70,9 @@ function Dashboard() {
     setSearchedNaics(input.naicsCodes);
     setDataSource(null);
     try {
+      // Persist (sans forceRefresh) so the next page load can restore + auto-hit cache
+      const { forceRefresh: _fr, ...persisted } = input;
+      try { localStorage.setItem("dashboard:lastSearch", JSON.stringify(persisted)); } catch {}
       const cacheKey = makeCacheKey(input);
       const cached = input.forceRefresh ? null : await readCache(cacheKey, input);
       if (cached) {
@@ -131,7 +151,7 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <SearchControls onSearch={runSearch} busy={busy} />
+      <SearchControls onSearch={runSearch} busy={busy} initial={lastInput ?? undefined} />
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">
           <Progress value={progress} className="h-1" />
