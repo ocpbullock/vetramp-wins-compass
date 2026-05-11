@@ -199,6 +199,17 @@ function Dashboard() {
 
       <ProposalModal opp={proposeOpp} onClose={() => setProposeOpp(null)} />
       <AwardDetailModal id={detailId} onClose={() => setDetailId(null)} />
+      <CompetitiveIntelModal
+        opp={competeOpp}
+        onClose={() => setCompeteOpp(null)}
+        onVendor={(id, name) => setVendor({ id, name })}
+      />
+      <VendorDetailDrawer
+        recipientId={vendor?.id ?? null}
+        vendorName={vendor?.name ?? null}
+        searchedNaics={searchedNaics}
+        onClose={() => setVendor(null)}
+      />
     </div>
   );
 }
