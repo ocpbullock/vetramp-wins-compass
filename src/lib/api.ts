@@ -145,7 +145,7 @@ export async function writeCache(payload: {
   historical: any;
   summary: any;
 }) {
-  const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   await supabase.from("cached_searches").upsert(
     {
       cache_key: payload.cacheKey,
