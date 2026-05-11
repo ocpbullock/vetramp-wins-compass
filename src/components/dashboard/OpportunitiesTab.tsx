@@ -30,11 +30,13 @@ export function OpportunitiesTab({
   awards = [],
   searchedNaics = [],
   onPropose,
+  onCompete,
 }: {
   opportunities: SamOpportunity[];
   awards?: HistoricalAward[];
   searchedNaics?: string[];
   onPropose: (o: SamOpportunity) => void;
+  onCompete: (o: SamOpportunity) => void;
 }) {
   const [search, setSearch] = useState("");
   const [agency, setAgency] = useState("__all__");
