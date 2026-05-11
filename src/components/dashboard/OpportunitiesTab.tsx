@@ -184,34 +184,44 @@ export function OpportunitiesTab({
                 const m = matches.get((o.solicitationNumber ?? o.noticeId ?? "") as string);
                 return (
                   <tr key={key}>
-                    <td className="max-w-md">
+                    <td className="max-w-[320px]">
                       {o.uiLink ? (
-                        <a href={o.uiLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                          {o.title}
-                          <ExternalLink className="w-3 h-3" />
+                        <a href={o.uiLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-start gap-1 line-clamp-2">
+                          <span className="line-clamp-2">{o.title}</span>
+                          <ExternalLink className="w-3 h-3 mt-0.5 shrink-0" />
                         </a>
-                      ) : <span>{o.title}</span>}
+                      ) : <span className="line-clamp-2">{o.title}</span>}
                     </td>
                     <td className="text-xs">{shortAgency(o.fullParentPathName)}</td>
                     <td className="font-mono text-xs">{o.naicsCode}</td>
                     <td>
-                      <span className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${badgeClassForType(o.type)}`}>{o.type}</span>
+                      <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${badgeClassForType(o.type)}`}>{o.type}</span>
                     </td>
                     <td className="text-xs">
                       <IncumbentCell m={m} />
                     </td>
-                    <td className="text-xs">{o.postedDate?.slice(0, 10)}</td>
-                    <td className="text-xs">{o.responseDeadLine?.slice(0, 10)}</td>
+                    <td className="text-xs whitespace-nowrap">{o.postedDate?.slice(0, 10)}</td>
+                    <td className="text-xs whitespace-nowrap">{o.responseDeadLine?.slice(0, 10)}</td>
                     <td className="font-mono text-xs">{o.solicitationNumber}</td>
                     <td>
                       <div className="flex gap-1">
-                        <Button size="sm" variant="outline" onClick={() => onCompete(o)} className="border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">
-                          <Swords className="w-3 h-3 mr-1" /> Compete
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="icon" variant="outline" onClick={() => onCompete(o)} className="h-7 w-7 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">
+                              <Swords className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Compete</TooltipContent>
+                        </Tooltip>
                         {isProposable(o.type) && (
-                          <Button size="sm" onClick={() => onPropose(o)} className="bg-money text-money-foreground hover:bg-money/90">
-                            <FileSignature className="w-3 h-3 mr-1" /> Propose
-                          </Button>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="icon" onClick={() => onPropose(o)} className="h-7 w-7 bg-money text-money-foreground hover:bg-money/90">
+                                <FileSignature className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Propose</TooltipContent>
+                          </Tooltip>
                         )}
                       </div>
                     </td>
@@ -249,7 +259,7 @@ function IncumbentCell({ m }: { m?: IncumbentMatch }) {
       <TooltipTrigger asChild>
         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium cursor-help ${color}`}>
           <Repeat className="w-3 h-3" />
-          <span className="truncate max-w-[160px]">{m.topRecipient}</span>
+          <span className="truncate max-w-[110px]">{m.topRecipient}</span>
           {m.popExpiringSoon && <span title="Prior PoP expiring near this deadline" className="ml-0.5">⏰</span>}
         </span>
       </TooltipTrigger>

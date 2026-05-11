@@ -144,8 +144,8 @@
 
   /* Table styling */
   .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-  .data-table th { text-align: left; padding: 10px 12px; background: var(--color-secondary); border-bottom: 1px solid var(--color-border); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; }
-  .data-table td { padding: 10px 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
+  .data-table th { text-align: left; padding: 8px 8px; background: var(--color-secondary); border-bottom: 1px solid var(--color-border); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; }
+  .data-table td { padding: 8px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
   .data-table tr:nth-child(even) td { background: oklch(0.985 0.005 247); }
   .data-table tr:hover td { background: oklch(0.96 0.03 250); }
 }
