@@ -8,7 +8,7 @@ Deno.serve(async (req) => {
       startDate,
       endDate,
       keyword,
-      maxResults = 5000,
+      maxResults = 10000,
     } = await req.json();
 
     const baseBody: any = {
