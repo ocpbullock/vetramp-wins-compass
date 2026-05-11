@@ -26,8 +26,9 @@ import { format } from "date-fns";
 export const Route = createFileRoute("/admin")({ component: AdminPage });
 
 function AdminPage() {
-  const { user, loading, isAdmin } = useAuth();
+  const { user, session, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const accessToken = session?.access_token;
 
   useEffect(() => {
     if (loading) return;
@@ -38,7 +39,7 @@ function AdminPage() {
     }
   }, [user, loading, isAdmin, navigate]);
 
-  if (loading || !user || !isAdmin) {
+  if (loading || !user || !isAdmin || !accessToken) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
   }
 
@@ -62,15 +63,19 @@ function AdminPage() {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="invites">Invitations</TabsTrigger>
           </TabsList>
-          <TabsContent value="users" className="mt-4"><UsersPanel currentUserId={user.id} /></TabsContent>
-          <TabsContent value="invites" className="mt-4"><InvitesPanel /></TabsContent>
+          <TabsContent value="users" className="mt-4"><UsersPanel currentUserId={user.id} accessToken={accessToken} /></TabsContent>
+          <TabsContent value="invites" className="mt-4"><InvitesPanel accessToken={accessToken} /></TabsContent>
         </Tabs>
       </main>
     </div>
   );
 }
 
-function UsersPanel({ currentUserId }: { currentUserId: string }) {
+function authHeaders(accessToken: string) {
+  return { Authorization: `Bearer ${accessToken}` };
+}
+
+function UsersPanel({ currentUserId, accessToken }: { currentUserId: string; accessToken: string }) {
   const qc = useQueryClient();
   const fetchUsers = useServerFn(listUsers);
   const setRoleFn = useServerFn(setUserRole);
@@ -78,23 +83,25 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
   const deleteUserFn = useServerFn(deleteUser);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin-users"],
-    queryFn: () => fetchUsers(),
+    queryKey: ["admin-users", accessToken],
+    queryFn: () => fetchUsers({ headers: authHeaders(accessToken) }),
     retry: false,
   });
 
   const roleMut = useMutation({
-    mutationFn: (vars: { userId: string; role: "admin" | "member" }) => setRoleFn({ data: vars }),
+    mutationFn: (vars: { userId: string; role: "admin" | "member" }) =>
+      setRoleFn({ data: vars, headers: authHeaders(accessToken) }),
     onSuccess: () => { toast.success("Role updated."); qc.invalidateQueries({ queryKey: ["admin-users"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
   const statusMut = useMutation({
-    mutationFn: (vars: { userId: string; status: "active" | "deactivated" }) => setStatusFn({ data: vars }),
+    mutationFn: (vars: { userId: string; status: "active" | "deactivated" }) =>
+      setStatusFn({ data: vars, headers: authHeaders(accessToken) }),
     onSuccess: () => { toast.success("Status updated."); qc.invalidateQueries({ queryKey: ["admin-users"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
   const deleteMut = useMutation({
-    mutationFn: (userId: string) => deleteUserFn({ data: { userId } }),
+    mutationFn: (userId: string) => deleteUserFn({ data: { userId }, headers: authHeaders(accessToken) }),
     onSuccess: () => { toast.success("User removed."); qc.invalidateQueries({ queryKey: ["admin-users"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -187,7 +194,7 @@ function UsersPanel({ currentUserId }: { currentUserId: string }) {
   );
 }
 
-function InvitesPanel() {
+function InvitesPanel({ accessToken }: { accessToken: string }) {
   const qc = useQueryClient();
   const fetchInvites = useServerFn(listInvites);
   const inviteFn = useServerFn(inviteUser);
@@ -198,15 +205,15 @@ function InvitesPanel() {
   const [role, setRole] = useState<"admin" | "member">("member");
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["admin-invites"],
-    queryFn: () => fetchInvites(),
+    queryKey: ["admin-invites", accessToken],
+    queryFn: () => fetchInvites({ headers: authHeaders(accessToken) }),
     retry: false,
   });
   const invites = data?.invites ?? [];
 
   const inviteMut = useMutation({
     mutationFn: (vars: { email: string; role: "admin" | "member" }) =>
-      inviteFn({ data: { ...vars, origin: window.location.origin } }),
+      inviteFn({ data: { ...vars, origin: window.location.origin }, headers: authHeaders(accessToken) }),
     onSuccess: (res) => {
       if (res.warning) toast.warning(`Invite created. Email note: ${res.warning}`);
       else toast.success("Invitation sent.");
@@ -216,7 +223,8 @@ function InvitesPanel() {
     onError: (e: Error) => toast.error(e.message),
   });
   const resendMut = useMutation({
-    mutationFn: (id: string) => resendFn({ data: { id, origin: window.location.origin } }),
+    mutationFn: (id: string) =>
+      resendFn({ data: { id, origin: window.location.origin }, headers: authHeaders(accessToken) }),
     onSuccess: (res) => {
       if (res.warning) toast.warning(`Resent. Email note: ${res.warning}`);
       else toast.success("Invitation resent.");
@@ -225,7 +233,7 @@ function InvitesPanel() {
     onError: (e: Error) => toast.error(e.message),
   });
   const cancelMut = useMutation({
-    mutationFn: (id: string) => cancelFn({ data: { id } }),
+    mutationFn: (id: string) => cancelFn({ data: { id }, headers: authHeaders(accessToken) }),
     onSuccess: () => { toast.success("Invitation cancelled."); qc.invalidateQueries({ queryKey: ["admin-invites"] }); },
     onError: (e: Error) => toast.error(e.message),
   });
