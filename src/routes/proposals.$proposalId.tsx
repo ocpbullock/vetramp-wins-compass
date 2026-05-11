@@ -298,7 +298,7 @@ function ProposalPipeline() {
             <ComingSoon title="Solution Design (Phase 3)" description="Build staffing, technical approach, management plan, transition timeline, and price strategy with AI assistance. For now, capture freeform solution notes." fieldLabel="Solution design notes" value={proposal.technical_approach?.notes || ""} onSave={(v) => patchProposal({ technical_approach: { ...(proposal.technical_approach || {}), notes: v } })} />
           </TabsContent>
           <TabsContent value="generate" className="mt-4 space-y-4">
-            <GenerateStep proposal={proposal} sectionGen={sectionGen} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id, content) => {
+            <GenerateStep proposal={proposal} sectionGen={sectionGen} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
               const wc = content.split(/\s+/).filter(Boolean).length;
               const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
               patchProposal({ sections: next });
