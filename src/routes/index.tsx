@@ -10,6 +10,8 @@ import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
 import { ProposalModal } from "@/components/dashboard/ProposalModal";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
+import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
+import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { DataSourceBadge } from "@/components/dashboard/DataSourceBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
