@@ -47,7 +47,7 @@ function Dashboard() {
     setSearchedNaics(input.naicsCodes);
     try {
       const cacheKey = makeCacheKey(input);
-      const cached = await readCache(cacheKey);
+      const cached = input.forceRefresh ? null : await readCache(cacheKey);
       if (cached) {
         setOpps((cached.opportunities as any) ?? []);
         const h = cached.historical as any;
@@ -55,9 +55,13 @@ function Dashboard() {
         setHistoricalTotal(h?.page_metadata?.total);
         setProgress(100);
         setProgressText("Loaded from cache");
-        toast.success("Loaded from shared cache (24h TTL)");
+        toast.success("Loaded from shared cache (24h TTL) — use Force refresh to bypass");
         setBusy(false);
         return;
+      }
+      if (input.forceRefresh) {
+        log("info", "Force refresh: bypassing cache");
+        toast.info("Bypassing cache — fetching fresh data");
       }
 
       setProgressText(`Fetching SAM.gov opportunities (${input.naicsCodes.length} NAICS)...`);
