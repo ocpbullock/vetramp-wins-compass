@@ -76,7 +76,7 @@ function Dashboard() {
         startDate: input.postedFrom,
         endDate: input.postedTo,
         keyword: input.keyword,
-        maxResults: 1000,
+        maxResults: 10000,
       });
       setAwards(usaRes.results ?? []);
       setHistoricalTotal(usaRes.page_metadata?.total);
