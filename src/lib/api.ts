@@ -30,6 +30,8 @@ export type HistoricalAward = {
   Description?: string;
   generated_internal_id?: string;
   "Type of Set Aside"?: string;
+  "Contract Award Type"?: string;
+  "Parent Award ID"?: string;
 };
 
 function logCall(name: string) {

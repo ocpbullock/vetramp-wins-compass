@@ -141,7 +141,7 @@ function Dashboard() {
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
           <TabsContent value="opportunities" className="mt-4">
-            <OpportunitiesTab opportunities={opps} searchedNaics={searchedNaics} onPropose={setProposeOpp} />
+            <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} onPropose={setProposeOpp} />
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab awards={awards} searchedNaics={searchedNaics} onDetails={setDetailId} />
