@@ -1,70 +1,81 @@
-## Competitive Intelligence Module
+## Goal
 
-A new module that, for any open SAM.gov opportunity, surfaces the likely incumbent, who the agency typically awards to, the set-aside competitive landscape, teaming candidates, and a transparent bid/no-bid scorecard — all powered by the USAspending API already in use.
+Add a role-based admin system on top of the existing Supabase auth so you can share the app with your team. Two roles: `admin` and `member`. Admins get a `/admin` panel for user management and email invites; members only see permitted UI.
 
-### Phase 1 — Core (this build)
+## 1. Database (migration)
 
-Ships the highest-value pieces end-to-end so it's usable today.
+Create a proper roles table (kept separate from `profiles` to avoid privilege-escalation patterns) plus an invites table.
 
-1. **Database**
-   - New table `cached_competitive_intel` (cache_key, agency, naics, set_aside, payload jsonb, expires_at). 24h TTL. RLS: authenticated read/write.
+- **enum** `app_role`: `admin`, `member`
+- **table** `user_roles`: `user_id` (FK to auth.users, cascade delete), `role`, unique on (user_id, role)
+- **table** `user_invites`: `email`, `role`, `invited_by`, `token` (uuid), `status` (`pending` | `accepted` | `cancelled`), `expires_at`, `created_at`
+- **column on `profiles`**: `status` (`active` | `deactivated`, default `active`)
+- **security-definer function** `public.has_role(_user_id uuid, _role app_role) returns bool` — used everywhere instead of subqueries against `user_roles` (prevents recursive RLS).
+- **trigger update** to `handle_new_user`: on first signup, also insert a `member` row into `user_roles`. If a matching pending invite exists for the email, upgrade to the invite's role and mark the invite `accepted`.
+- **RLS**:
+  - `user_roles`: members read their own row; admins read/insert/update/delete all (via `has_role(auth.uid(),'admin')`).
+  - `user_invites`: admins only.
+  - `profiles`: keep current view-all policy; add admin-only update for `status`.
+- **First admin bootstrap**: after migration, manually promote your current account by inserting a row into `user_roles`. I'll do this via the data tool once you confirm which email is the founding admin.
 
-2. **Edge function `competitive-intel`**
-   Input: `{ solicitationNumber, agency, naicsCode, setAside, postedDate }`
-   Runs three USAspending queries in parallel against `/api/v2/search/spending_by_award/`:
-   - **Incumbent search** — same sub-agency + NAICS, period-of-performance ending within ±18 months of posted date, sorted by End Date desc. Also matches PIID office-prefix when extractable from solicitation number.
-   - **Agency history** — same sub-agency (fallback top-tier) + NAICS, last 3 years, aggregated client-side by `recipient_id` → vendor rollup (awards, total $, avg $, most recent, set-aside).
-   - **Market landscape** — NAICS + set_aside_type_codes nationwide, last 3 years, aggregated by recipient.
-   Computes a deterministic **bid/no-bid scorecard** (NAICS / set-aside / agency exp / incumbent / size / competition / timeline → overall).
-   Writes to `cached_competitive_intel`. Returns the structured payload from the spec.
+## 2. Auth context
 
-3. **Edge function `vendor-profile`**
-   Input: `{ recipientId }` (or vendorName fallback). Calls `/api/v2/recipient/{id}/` + a filtered `spending_by_award` to return vendor profile + contract history + NAICS/agency rollups.
+Extend `src/lib/auth.tsx` to also load `role` and `status` after sign-in:
+- expose `role: 'admin' | 'member' | null`, `isAdmin: boolean`, `status`
+- if `status === 'deactivated'`, force sign-out with a toast
 
-4. **UI: "Compete" button + Modal**
-   - Amber `Compete` button next to existing green `Propose` button on every row of the Opportunities table (all notice types).
-   - `CompetitiveIntelModal` (max-w 1000px) with skeleton-loaded sections rendered in parallel:
-     - Header: title, sol#, agency, NAICS, set-aside, deadline countdown (orange ≤14d, red ≤3d).
-     - **Section A — Incumbent**: top candidate card (vendor, PIID, value, PoP, NAICS) + up to 2 alternates, or "Open Field" empty state.
-     - **Section B — Agency Award History**: stat strip + ranked vendors table (clickable names) + top-10 bar chart (recharts).
-     - **Section E — Bid/No-Bid Scorecard**: factor table with ✅/⚠️/❌ + overall verdict.
-   - Vendor names anywhere open the **VendorDetailDrawer** (right-side, 400px): profile header, portfolio totals, NAICS/agency rollups, contract history table, and overlap assessment vs. user's searched NAICS.
+## 3. Routes & access control
 
-5. **API client + caching**
-   - `searchCompetitiveIntel()` and `getVendorProfile()` in `src/lib/api.ts`, both routed through edge functions, with the existing log-store integration.
-   - Edge function checks cache before calling USAspending.
+- `/admin` — new route, gated. If not signed in → `/auth`. If signed in but not admin → `/` with a toast.
+- `/accept-invite?token=...` — public route. Validates the token, asks the user to set a password, signs them up, links them to the invite email, marks invite accepted.
+- Existing `/` dashboard stays accessible to both roles. Header shows an "Admin" link only when `isAdmin`.
 
-### Phase 2 — Deferred (follow-up)
+## 4. Admin panel UI (`src/routes/admin.tsx` + `src/components/admin/*`)
 
-Sections C (Set-Aside Landscape callout), D (Teaming Opportunities), and the dashboard-level **Competitive Intel tab** (market overview cards, top-competitors-across-NAICS table, agency heatmap, set-aside donut). Phase 1 already fetches the underlying data, so Phase 2 is mostly UI + one extra aggregation function.
+Two tabs:
 
-### Technical Notes
+**Users tab**
+- Table: Name · Email · Role · Status · Joined
+- Row actions: Promote to admin / Demote to member, Deactivate / Reactivate, Remove user
+- "Remove" calls a server function that deletes the auth user (service-role) and cascades
 
-- **Agency matching**: extract the most specific segment of SAM's `fullParentPathName` after splitting on `.`, query USAspending as `tier: "subtier"`; if zero results, retry with the top-tier segment as `tier: "toptier"`.
-- **Incumbent PIID prefix**: regex `^([A-Z0-9]{6})` on solicitationNumber → match against USAspending `Award ID` startsWith. Combined with PoP-end-date proximity to posted date.
-- **Vendor dedupe**: aggregate by `recipient_id` (stable), display the most recent name variant.
-- **Scorecard rules** (deterministic, transparent):
-  - NAICS: ✅ in 541511–541519, ⚠️ in 5415xx, else ❌
-  - Set-aside: ✅ SDVOSBC/VSA/VSB, ⚠️ SBA/WOSB/EDWOSB/HZC, ❌ unrestricted/8A/8AN
-  - Agency experience: derived from existing user awards prop (none in Phase 1 → ❌, with neutral copy)
-  - Incumbent: ✅ none, ⚠️ small (<$2M), ❌ large
-  - Size: ✅ if agency-NAICS avg ∈ $500K–$10M
-  - Competition: ✅ <5 vendors, ⚠️ 5–15, ❌ >15
-  - Timeline: from `responseDeadLine` (✅ >14d, ⚠️ 7–14, ❌ <7)
-- **Caching**: edge-function side, key `${subAgency}|${naics}|${setAside||"none"}`, 24h TTL.
-- **No new secrets**: USAspending is keyless. SAM.gov flow is unchanged.
+**Invites tab**
+- "Invite member" form: email + role
+- Pending invites table: Email · Role · Invited by · Sent · Expires
+- Row actions: Resend (re-send email, bump expiry), Cancel
 
-### Files
+## 5. Invite email flow
 
-- migration: `cached_competitive_intel` table + RLS
-- new: `supabase/functions/competitive-intel/index.ts`
-- new: `supabase/functions/vendor-profile/index.ts`
-- update: `supabase/config.toml` (verify_jwt=false for both)
-- new: `src/components/dashboard/CompetitiveIntelModal.tsx`
-- new: `src/components/dashboard/VendorDetailDrawer.tsx`
-- new: `src/components/dashboard/BidScorecard.tsx`
-- update: `src/lib/api.ts` — add `searchCompetitiveIntel`, `getVendorProfile`, types
-- update: `src/components/dashboard/OpportunitiesTab.tsx` — Compete button + modal wiring
-- update: `src/routes/index.tsx` — modal/drawer state if needed at page level
+Use Lovable's built-in auth email infrastructure. Two pieces:
+- Server function `inviteUser({ email, role })` (admin-only, uses service role): creates a `user_invites` row, then calls `supabase.auth.admin.inviteUserByEmail(email, { redirectTo: '<origin>/accept-invite?token=...' })`. Supabase sends the email; the recipient lands on `/accept-invite` to set a password.
+- `/accept-invite` page completes signup. The DB trigger reads the pending invite for that email and assigns the right role automatically.
 
-Approve to proceed with Phase 1.
+If you want branded invite emails, we can scaffold custom auth email templates in a follow-up — not required for the system to work.
+
+## 6. Server functions (`src/lib/admin.functions.ts`)
+
+All `.middleware([requireSupabaseAuth])` + an `assertAdmin(context)` helper that calls `has_role`:
+- `listUsers()` — joins profiles + roles + auth.users (via admin client) for created_at + last_sign_in
+- `setUserRole({ userId, role })`
+- `setUserStatus({ userId, status })`
+- `deleteUser({ userId })`
+- `inviteUser({ email, role })`
+- `listInvites()`, `resendInvite({ id })`, `cancelInvite({ id })`
+
+## 7. UI gating helpers
+
+- `<AdminOnly>` wrapper component
+- `useRole()` hook reading from auth context
+- Header gets a conditional "Admin" link
+
+## Out of scope (ask if you want)
+
+- Per-feature/per-resource permissions beyond admin/member
+- Audit log of admin actions
+- Branded invite email templates (we can scaffold after)
+- SSO / multi-tenant orgs
+
+## Open questions
+
+1. Confirm the email of the **first admin** — I'll promote that account immediately after the migration so you're not locked out of `/admin`.
+2. When an admin "removes" a user, should their data (proposal_drafts, etc.) be deleted too, or just the auth account? Default I'll use: delete the auth user, cascade their personal rows.
