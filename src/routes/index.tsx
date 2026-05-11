@@ -36,6 +36,11 @@ function Dashboard() {
   const [tab, setTab] = useState("opportunities");
   const [proposeOpp, setProposeOpp] = useState<SamOpportunity | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [dataSource, setDataSource] = useState<
+    | { kind: "cache"; fetchedAt: string; supersetCount?: number; requestedCount: number }
+    | { kind: "fresh"; fetchedAt: string }
+    | null
+  >(null);
   const log = useLogStore((s) => s.log);
 
   async function runSearch(input: SearchInput) {
