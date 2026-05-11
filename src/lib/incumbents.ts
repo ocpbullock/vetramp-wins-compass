@@ -293,7 +293,7 @@ export function buildIndex(awards: HistoricalAward[]): IncumbentIndex {
 }
 
 function summarize(
-  confidence: "exact" | "parent" | "fuzzy" | "frequent",
+  confidence: "exact" | "parent" | "psc" | "fuzzy" | "frequent",
   awards: HistoricalAward[],
 ): IncumbentMatch {
   const totals = new Map<string, number>();
