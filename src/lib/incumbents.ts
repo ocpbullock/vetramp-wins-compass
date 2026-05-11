@@ -5,6 +5,16 @@ export function normPiid(s?: string | null): string {
   return (s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+/** Normalize an agency name for fuzzy bucket matching. */
+function normAgency(s?: string | null): string {
+  return (s || "")
+    .toLowerCase()
+    .replace(/[.,]/g, " ")
+    .replace(/\b(department|dept|of|the|us|u\.s\.)\b/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 const STOPWORDS = new Set([
   "the","a","an","of","for","and","or","to","in","on","with","by","at","from",
   "services","service","support","solutions","contract","task","order","idiq",
@@ -30,13 +40,26 @@ function jaccard(a: Set<string>, b: Set<string>): number {
   return inter / (a.size + b.size - inter);
 }
 
+function intersectionCount(a: Set<string>, b: Set<string>): number {
+  let n = 0;
+  for (const t of a) if (b.has(t)) n++;
+  return n;
+}
+
 export type IncumbentMatch = {
-  confidence: "exact" | "parent" | "fuzzy" | "none";
+  confidence: "exact" | "parent" | "fuzzy" | "frequent" | "none";
   awards: HistoricalAward[];
   topRecipient?: string;
   totalAmount?: number;
   latestEndDate?: string;
   similarity?: number;
+  diagnostics?: {
+    triedKeys: string[];
+    matchedKey?: string;
+    bucketSize: number;
+    candidatesAfterTitle: number;
+    note?: string;
+  };
 };
 
 export type IncumbentIndex = {
@@ -46,14 +69,19 @@ export type IncumbentIndex = {
   titleTokens: WeakMap<HistoricalAward, Set<string>>;
 };
 
+const TITLE_JACCARD_FLOOR = 0.30;
+const TITLE_MIN_OVERLAP = 2;
+
 /**
  * Match a SAM opportunity against the historical award set to find the
  * incumbent contractor.
  *
- * Tiers:
- *  - "exact"  → opp.solicitationNumber matches award PIID directly
- *  - "parent" → opp.solicitationNumber matches an award's Parent Award ID (IDV)
- *  - "fuzzy"  → same sub-agency + NAICS + ≥40% title token overlap (Jaccard)
+ * Tiers (high → low confidence):
+ *  - "exact"    → solicitation # matches award PIID directly
+ *  - "parent"   → solicitation # matches an award's Parent Award ID (IDV)
+ *  - "fuzzy"    → same sub-agency + NAICS + ≥30% title token overlap (≥2 shared tokens)
+ *  - "frequent" → same sub-agency + NAICS + a single recipient appears ≥2x
+ *                 in the bucket (likely re-compete cycle)
  */
 export function matchIncumbent(
   opp: SamOpportunity,
@@ -76,39 +104,89 @@ export function matchIncumbent(
     if (parent.length > 0) return summarize("parent", parent);
   }
 
-  // Tier 3: fuzzy match by sub-agency + NAICS + title token overlap
-  // fullParentPathName is "DEPT OF X.SUB AGENCY.OFFICE..." — use last segment as sub-agency
-  const path = (opp.fullParentPathName || "").split(".").map((s) => s.trim()).filter(Boolean);
-  const subAgency = (path[path.length - 2] || path[path.length - 1] || "").toLowerCase();
+  // Try every sub-agency segment, not just the second-to-last.
+  // SAM's fullParentPathName: "DEPT OF DEFENSE.DEPT OF THE ARMY.US ARMY CORPS OF ENGINEERS.OFFICE.."
+  // USAspending's sub-agency may be the bureau ("DEPT OF THE ARMY") or the command — try all.
+  const path = (opp.fullParentPathName || "")
+    .split(".")
+    .map((s) => normAgency(s))
+    .filter(Boolean);
   const naics = (opp.naicsCode || "").trim();
-  if (subAgency && naics) {
-    const key = `${subAgency}|${naics}`;
-    const candidates = idx.byAgencyNaics.get(key) ?? [];
-    if (candidates.length > 0) {
-      const oppTokens = tokens(opp.title);
-      if (oppTokens.size >= 2) {
-        const scored = candidates
-          .map((a) => {
-            let at = idx.titleTokens.get(a);
-            if (!at) {
-              at = tokens(a["Description"]);
-              idx.titleTokens.set(a, at);
-            }
-            return { a, sim: jaccard(oppTokens, at) };
-          })
-          .filter((x) => x.sim >= 0.4)
-          .sort((x, y) => y.sim - x.sim);
-        if (scored.length > 0) {
-          const top = scored.slice(0, 5);
-          const m = summarize("fuzzy", top.map((s) => s.a));
-          m.similarity = top[0].sim;
-          return m;
-        }
+  const triedKeys: string[] = [];
+  let bucket: HistoricalAward[] = [];
+  let matchedKey: string | undefined;
+
+  if (naics && path.length > 0) {
+    for (const seg of path) {
+      const key = `${seg}|${naics}`;
+      triedKeys.push(key);
+      const hit = idx.byAgencyNaics.get(key);
+      if (hit && hit.length > 0) {
+        bucket = hit;
+        matchedKey = key;
+        break;
       }
     }
   }
 
-  return { confidence: "none", awards: [] };
+  if (bucket.length > 0) {
+    const oppTokens = tokens(opp.title);
+    let scored: { a: HistoricalAward; sim: number; overlap: number }[] = [];
+    if (oppTokens.size >= 2) {
+      scored = bucket
+        .map((a) => {
+          let at = idx.titleTokens.get(a);
+          if (!at) {
+            at = tokens(a["Description"]);
+            idx.titleTokens.set(a, at);
+          }
+          return { a, sim: jaccard(oppTokens, at), overlap: intersectionCount(oppTokens, at) };
+        })
+        .filter((x) => x.sim >= TITLE_JACCARD_FLOOR && x.overlap >= TITLE_MIN_OVERLAP)
+        .sort((x, y) => y.sim - x.sim);
+    }
+    if (scored.length > 0) {
+      const top = scored.slice(0, 5);
+      const m = summarize("fuzzy", top.map((s) => s.a));
+      m.similarity = top[0].sim;
+      m.diagnostics = {
+        triedKeys, matchedKey, bucketSize: bucket.length,
+        candidatesAfterTitle: scored.length,
+      };
+      return m;
+    }
+
+    // Tier 4: frequent-vendor heuristic — if a single recipient holds multiple
+    // awards in the agency+NAICS bucket, treat the largest holder as a likely
+    // re-compete candidate. Lower confidence, but better than nothing.
+    const byRecipient = new Map<string, HistoricalAward[]>();
+    for (const a of bucket) {
+      const r = a["Recipient Name"] || "(unknown)";
+      const arr = byRecipient.get(r) ?? [];
+      arr.push(a);
+      byRecipient.set(r, arr);
+    }
+    const repeat = [...byRecipient.entries()]
+      .filter(([, arr]) => arr.length >= 2)
+      .sort((a, b) =>
+        b[1].reduce((s, x) => s + (Number(x["Award Amount"]) || 0), 0) -
+        a[1].reduce((s, x) => s + (Number(x["Award Amount"]) || 0), 0));
+    if (repeat.length > 0) {
+      const m = summarize("frequent", repeat[0][1]);
+      m.diagnostics = {
+        triedKeys, matchedKey, bucketSize: bucket.length,
+        candidatesAfterTitle: 0,
+        note: `frequent vendor (${repeat[0][1].length} awards in bucket)`,
+      };
+      return m;
+    }
+  }
+
+  return {
+    confidence: "none",
+    awards: [],
+    diagnostics: { triedKeys, matchedKey, bucketSize: bucket.length, candidatesAfterTitle: 0 },
+  };
 }
 
 export function buildIndex(awards: HistoricalAward[]): IncumbentIndex {
@@ -129,13 +207,20 @@ export function buildIndex(awards: HistoricalAward[]): IncumbentIndex {
       arr.push(a);
       byParent.set(pa, arr);
     }
-    const sub = (a["Awarding Sub Agency"] || "").toLowerCase();
     const naics = (a as any)["NAICS"];
     const naicsCode = typeof naics === "string"
       ? naics.split(" ")[0].trim()
       : (naics?.code || "");
-    if (sub && naicsCode) {
-      const key = `${sub}|${naicsCode}`;
+    if (!naicsCode) continue;
+    // Index by both sub-agency and top-tier (awarding agency) so SAM-side
+    // lookups can probe at any level of the hierarchy.
+    const buckets = new Set<string>();
+    const sub = normAgency(a["Awarding Sub Agency"]);
+    if (sub) buckets.add(sub);
+    const top = normAgency((a as any)["Awarding Agency"]);
+    if (top) buckets.add(top);
+    for (const seg of buckets) {
+      const key = `${seg}|${naicsCode}`;
       const arr = byAgencyNaics.get(key) ?? [];
       arr.push(a);
       byAgencyNaics.set(key, arr);
@@ -145,10 +230,9 @@ export function buildIndex(awards: HistoricalAward[]): IncumbentIndex {
 }
 
 function summarize(
-  confidence: "exact" | "parent" | "fuzzy",
+  confidence: "exact" | "parent" | "fuzzy" | "frequent",
   awards: HistoricalAward[],
 ): IncumbentMatch {
-  // Aggregate by recipient, pick the one with the highest total $.
   const totals = new Map<string, number>();
   for (const a of awards) {
     const r = a["Recipient Name"] || "(unknown)";

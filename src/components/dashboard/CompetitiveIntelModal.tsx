@@ -89,6 +89,7 @@ export function CompetitiveIntelModal({
             const confLabel =
               localMatch.confidence === "exact" ? "EXACT PIID MATCH" :
               localMatch.confidence === "parent" ? "PARENT IDV MATCH" :
+              localMatch.confidence === "frequent" ? "FREQUENT VENDOR" :
               `TITLE MATCH${localMatch.similarity ? ` (${Math.round(localMatch.similarity * 100)}%)` : ""}`;
             const top = localMatch.awards[0];
             const others = [...new Set(localMatch.awards.slice(1, 6).map(a => a["Recipient Name"]).filter(Boolean))] as string[];
@@ -110,6 +111,11 @@ export function CompetitiveIntelModal({
                   <div className="mt-3 pt-3 border-t border-border/60 space-y-1">
                     <div className="text-[11px] uppercase opacity-60">Other recipients on these awards</div>
                     {others.map((n, i) => <div key={i} className="text-xs">{n}</div>)}
+                  </div>
+                )}
+                {localMatch.diagnostics && (
+                  <div className="mt-3 pt-2 border-t border-border/40 text-[10px] font-mono opacity-50">
+                    bucket: {localMatch.diagnostics.matchedKey ?? "—"} · {localMatch.diagnostics.bucketSize} awards · {localMatch.diagnostics.candidatesAfterTitle} title-matched{localMatch.diagnostics.note ? ` · ${localMatch.diagnostics.note}` : ""}
                   </div>
                 )}
               </div>
