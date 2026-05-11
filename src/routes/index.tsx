@@ -219,7 +219,7 @@ function Dashboard() {
         </Tabs>
       </main>
 
-      <ProposalModal opp={proposeOpp} onClose={() => setProposeOpp(null)} />
+      
       <AwardDetailModal id={detailId} onClose={() => setDetailId(null)} />
       <CompetitiveIntelModal
         opp={competeOpp}
