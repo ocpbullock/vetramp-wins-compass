@@ -16,7 +16,17 @@ Deno.serve(async (req) => {
     if (!apiKey) throw new Error("SAM_GOV_API_KEY not configured");
 
     const { naicsCodes, postedFrom, postedTo, keyword } = await req.json();
-    const from = fmtDate(postedFrom);
+    // SAM.gov requires the date range to be strictly less than 1 year.
+    // If the caller sent exactly 1 year (or more), nudge `from` forward.
+    let fromIso = postedFrom;
+    const fromMs = new Date(postedFrom).getTime();
+    const toMs = new Date(postedTo).getTime();
+    const oneYearMs = 365 * 24 * 60 * 60 * 1000;
+    if (toMs - fromMs >= oneYearMs) {
+      const adjusted = new Date(toMs - oneYearMs + 24 * 60 * 60 * 1000);
+      fromIso = adjusted.toISOString().slice(0, 10);
+    }
+    const from = fmtDate(fromIso);
     const to = fmtDate(postedTo);
 
     const all: any[] = [];
