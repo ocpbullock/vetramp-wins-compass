@@ -77,9 +77,19 @@ Deno.serve(async (req) => {
       if (!hasNext || results.length === 0 || all.length >= maxResults) break;
     }
 
+    // Flatten NAICS object → string code so the client can filter, sort,
+    // render, and match incumbents on a plain value.
+    const flat = all.map((r: any) => {
+      const n = r?.NAICS;
+      if (n && typeof n === "object") {
+        return { ...r, NAICS: n.code ?? "", NAICS_Description: n.description ?? "" };
+      }
+      return r;
+    });
+
     return new Response(
       JSON.stringify({
-        results: all.slice(0, maxResults),
+        results: flat.slice(0, maxResults),
         page_metadata: {
           total: totalReported ?? all.length,
           fetched: all.length,
