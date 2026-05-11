@@ -44,6 +44,7 @@ function Dashboard() {
     setOpps([]);
     setAwards([]);
     setHistoricalTotal(undefined);
+    setSearchedNaics(input.naicsCodes);
     try {
       const cacheKey = makeCacheKey(input);
       const cached = await readCache(cacheKey);
@@ -54,7 +55,7 @@ function Dashboard() {
         setHistoricalTotal(h?.page_metadata?.total);
         setProgress(100);
         setProgressText("Loaded from cache");
-        toast.success("Loaded from shared cache");
+        toast.success("Loaded from shared cache (24h TTL)");
         setBusy(false);
         return;
       }
@@ -65,13 +66,13 @@ function Dashboard() {
       setOpps(samRes.opportunities);
       setProgress(60);
 
-      setProgressText("Fetching USAspending historical awards...");
+      setProgressText("Fetching USAspending historical awards (paginating)...");
       const usaRes = await searchUsaspending({
         naicsCodes: input.naicsCodes,
         startDate: input.postedFrom,
         endDate: input.postedTo,
         keyword: input.keyword,
-        limit: 100,
+        maxResults: 1000,
       });
       setAwards(usaRes.results ?? []);
       setHistoricalTotal(usaRes.page_metadata?.total);
