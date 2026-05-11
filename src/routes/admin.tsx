@@ -28,6 +28,7 @@ export const Route = createFileRoute("/admin")({ component: AdminPage });
 function AdminPage() {
   const { user, session, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const accessToken = session?.access_token;
 
   useEffect(() => {
     if (loading) return;
@@ -38,7 +39,7 @@ function AdminPage() {
     }
   }, [user, loading, isAdmin, navigate]);
 
-  if (loading || !user || !isAdmin) {
+  if (loading || !user || !isAdmin || !accessToken) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
   }
 
@@ -62,8 +63,8 @@ function AdminPage() {
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="invites">Invitations</TabsTrigger>
           </TabsList>
-          <TabsContent value="users" className="mt-4"><UsersPanel currentUserId={user.id} accessToken={session.access_token} /></TabsContent>
-          <TabsContent value="invites" className="mt-4"><InvitesPanel accessToken={session.access_token} /></TabsContent>
+          <TabsContent value="users" className="mt-4"><UsersPanel currentUserId={user.id} accessToken={accessToken} /></TabsContent>
+          <TabsContent value="invites" className="mt-4"><InvitesPanel accessToken={accessToken} /></TabsContent>
         </Tabs>
       </main>
     </div>
