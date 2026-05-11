@@ -35,6 +35,8 @@ Deno.serve(async (req) => {
         "Description",
         "generated_internal_id",
         "Type of Set Aside",
+        "Contract Award Type",
+        "Parent Award ID",
       ],
       sort: "Award Amount",
       order: "desc",
