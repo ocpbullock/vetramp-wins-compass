@@ -127,15 +127,44 @@ export function makeCacheKey(input: {
   ].join("|");
 }
 
-export async function readCache(cacheKey: string) {
-  const { data } = await supabase
+export async function readCache(
+  cacheKey: string,
+  input?: { naicsCodes: string[]; postedFrom: string; postedTo: string; keyword?: string },
+) {
+  // 1. Exact match (fast path)
+  const exact = await supabase
     .from("cached_searches")
     .select("*")
     .eq("cache_key", cacheKey)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
-  if (data) useLogStore.getState().log("success", `↻ cache hit ${cacheKey.slice(0, 60)}`);
-  return data;
+  if (exact.data) {
+    useLogStore.getState().log("success", `↻ cache hit (exact) ${cacheKey.slice(0, 60)}`);
+    return exact.data;
+  }
+
+  // 2. Superset match: a previous search covering the same dates/keyword whose
+  //    naics_codes contains every requested code. Lets users pull a wide NAICS
+  //    range once, then drill down without re-fetching.
+  if (!input) return null;
+  const { data: candidates } = await supabase
+    .from("cached_searches")
+    .select("*")
+    .eq("date_from", input.postedFrom)
+    .eq("date_to", input.postedTo)
+    .eq("keyword", (input.keyword || "").trim() || null)
+    .contains("naics_codes", input.naicsCodes)
+    .gt("expires_at", new Date().toISOString())
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const hit = candidates?.[0];
+  if (hit) {
+    useLogStore.getState().log(
+      "success",
+      `↻ cache hit (superset of ${(hit.naics_codes as string[]).length} NAICS)`,
+    );
+  }
+  return hit ?? null;
 }
 
 export async function writeCache(payload: {
