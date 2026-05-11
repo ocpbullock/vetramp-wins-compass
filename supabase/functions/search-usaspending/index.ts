@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     let lastMeta: any = null;
     let totalReported = 0;
 
-    for (const chunk of chunks.toReversed()) {
+    for (const chunk of [...chunks].reverse()) {
       if (all.length >= maxResults) break;
       const chunkBody = {
         ...baseBody,
