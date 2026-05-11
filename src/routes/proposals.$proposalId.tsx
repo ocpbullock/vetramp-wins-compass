@@ -501,3 +501,209 @@ function GenerateStep({ proposal, sectionGen, onGenerate, onGenerateAll, onPatch
     </div>
   );
 }
+
+function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
+  const [busy, setBusy] = useState(false);
+  const intel = proposal.customer_intel || {};
+  const [notes, setNotes] = useState<string>(intel.notes || "");
+
+  async function research() {
+    setBusy(true);
+    try {
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/customer-intel`;
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        body: JSON.stringify({
+          opportunity: proposal.opportunity_data ?? {
+            title: proposal.opportunity_title, solicitationNumber: proposal.solicitation_number,
+            agency: proposal.agency, naicsCode: proposal.naics_code, setAside: proposal.set_aside,
+            responseDeadLine: proposal.response_deadline, type: proposal.opportunity_type,
+          },
+          companyProfile,
+          extraNotes: notes || undefined,
+        }),
+      });
+      const j = await r.json();
+      if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
+      const merged = { ...intel, ...j.intel, notes };
+      await onPatch({ customer_intel: merged });
+      toast.success("Customer intelligence drafted");
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  }
+
+  const list = (label: string, items?: string[]) => items?.length ? (
+    <div><div className="text-xs font-semibold mb-1">{label}</div><ul className="text-xs space-y-1 list-disc list-inside text-muted-foreground">{items.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
+  ) : null;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div className="lg:col-span-1 space-y-3">
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-base">Run AI research</CardTitle><CardDescription className="text-xs">Profiles the buyer, recent contracts, evaluation signals, and win themes.</CardDescription></CardHeader>
+          <CardContent className="space-y-2">
+            <Label className="text-xs">Optional context to bias research</Label>
+            <Textarea rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. 'I think the incumbent is XYZ', 'KO is Jane Smith', anything from prior conversations…" />
+            <Button onClick={research} disabled={busy} size="sm" className="w-full">
+              {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
+              {busy ? "Researching…" : intel.customer_summary ? "Re-run research" : "Run research"}
+            </Button>
+            <div className="flex items-center gap-2 pt-2">
+              <input id="verified" type="checkbox" checked={!!proposal.customer_intel_verified} onChange={(e) => onPatch({ customer_intel_verified: e.target.checked })} />
+              <Label htmlFor="verified" className="text-xs">I have reviewed this intel</Label>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <Card className="lg:col-span-2">
+        <CardHeader className="pb-2"><CardTitle className="text-base">Customer profile</CardTitle></CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          {!intel.customer_summary && <div className="text-muted-foreground text-xs">No intel yet. Click "Run research".</div>}
+          {intel.customer_summary && <p className="text-sm leading-relaxed">{intel.customer_summary}</p>}
+          <div className="grid grid-cols-2 gap-3 text-xs">
+            {intel.end_user_unit && <div><div className="text-muted-foreground">End-user unit</div><div>{intel.end_user_unit}</div></div>}
+            {intel.parent_command && <div><div className="text-muted-foreground">Parent command</div><div>{intel.parent_command}</div></div>}
+            {intel.location && <div><div className="text-muted-foreground">Location</div><div>{intel.location}</div></div>}
+            {intel.predecessor_contract?.incumbent && <div><div className="text-muted-foreground">Incumbent</div><div>{intel.predecessor_contract.incumbent} {intel.predecessor_contract.value && `· ${intel.predecessor_contract.value}`}</div></div>}
+          </div>
+          {list("Mission priorities", intel.mission_priorities)}
+          {list("Technology environment", intel.technology_environment)}
+          {list("Evaluation signals", intel.evaluation_signals)}
+          {list("Recommended win themes", intel.win_themes)}
+          {list("Risks", intel.risks)}
+          {intel.key_personnel?.length > 0 && (
+            <div><div className="text-xs font-semibold mb-1">Key personnel</div>
+              <div className="space-y-1 text-xs">{intel.key_personnel.map((p: any, i: number) => <div key={i} className="border border-border rounded px-2 py-1"><span className="font-semibold">{p.name}</span> — {p.role} {p.notes && <span className="text-muted-foreground">· {p.notes}</span>}</div>)}</div>
+            </div>
+          )}
+          {intel.citations?.length > 0 && (
+            <div className="border-t border-border pt-2">
+              <div className="text-xs font-semibold mb-1">Sources</div>
+              <ul className="text-xs space-y-0.5 text-muted-foreground">{intel.citations.map((c: string, i: number) => <li key={i} className="truncate"><a href={c} target="_blank" rel="noreferrer" className="text-primary hover:underline">{c}</a></li>)}</ul>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ComplianceStep({ proposal, attachments, onPatch }: any) {
+  const [busy, setBusy] = useState(false);
+  const matrix = proposal.compliance_matrix || {};
+  const reqs: any[] = matrix.requirements || [];
+
+  async function parse() {
+    if (attachments.length === 0) { toast.error("Upload the SOW/PWS first on the Intake step"); return; }
+    setBusy(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-sow`;
+      toast.info("Parsing solicitation documents… this can take a minute");
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token}` },
+        body: JSON.stringify({ proposalId: proposal.id }),
+      });
+      const j = await r.json();
+      if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
+      // refresh proposal compliance from response
+      await onPatch({ compliance_matrix: j.matrix, compliance_gaps: (j.matrix.requirements || []).filter((x: any) => !x.proposal_section).length });
+      toast.success(`Extracted ${j.matrix.requirements?.length ?? 0} requirements`);
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+  }
+
+  function exportMatrixCsv() {
+    const rows = [["Req ID", "Source", "Type", "Category", "Requirement", "Proposal Section", "Notes"]];
+    for (const r of reqs) rows.push([r.req_id, r.source_section, r.type, r.category || "", r.requirement_text, r.proposal_section, r.notes || ""]);
+    const csv = rows.map((row) => row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = `compliance-matrix-${proposal.solicitation_number}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  const byType: Record<string, number> = {};
+  for (const r of reqs) byType[r.type] = (byType[r.type] || 0) + 1;
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2 flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Compliance matrix</CardTitle>
+            <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments.</CardDescription>
+          </div>
+          <div className="flex gap-2">
+            {reqs.length > 0 && <Button onClick={exportMatrixCsv} variant="outline" size="sm"><Download className="w-4 h-4 mr-1" />Export CSV</Button>}
+            <Button onClick={parse} disabled={busy} size="sm">
+              {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
+              {busy ? "Parsing…" : reqs.length > 0 ? "Re-parse documents" : "Parse documents"}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {attachments.length === 0 && (
+            <div className="text-xs text-muted-foreground border border-dashed border-border rounded p-3"><AlertTriangle className="w-3 h-3 inline mr-1 text-yellow-500" />No attachments uploaded yet. Go to the Intake step to upload the SOW/PWS.</div>
+          )}
+          {matrix.summary && <p className="text-sm mb-3 leading-relaxed">{matrix.summary}</p>}
+          {reqs.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-3 text-xs">
+              <Badge variant="outline">{reqs.length} requirements</Badge>
+              {Object.entries(byType).map(([t, n]) => <Badge key={t} variant="secondary">{t}: {n}</Badge>)}
+              {proposal.compliance_gaps > 0 && <Badge className="bg-destructive">{proposal.compliance_gaps} unmapped</Badge>}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {matrix.evaluation_factors?.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Section M — Evaluation factors</CardTitle></CardHeader>
+          <CardContent className="space-y-2 text-xs">
+            {matrix.evaluation_factors.map((f: any, i: number) => (
+              <div key={i} className="border border-border rounded px-2 py-1.5"><span className="font-semibold">{f.factor}</span>{f.weight && <Badge variant="outline" className="ml-2 text-[10px]">{f.weight}</Badge>}{f.description && <div className="text-muted-foreground mt-0.5">{f.description}</div>}</div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {matrix.submission_instructions?.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Section L — Submission instructions</CardTitle></CardHeader>
+          <CardContent><ul className="text-xs space-y-1 list-disc list-inside text-muted-foreground">{matrix.submission_instructions.map((s: string, i: number) => <li key={i}>{s}</li>)}{matrix.page_limits?.map((p: string, i: number) => <li key={`p${i}`} className="text-foreground">{p}</li>)}</ul></CardContent>
+        </Card>
+      )}
+
+      {reqs.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2"><CardTitle className="text-sm">Requirements traceability</CardTitle></CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead className="bg-muted text-muted-foreground"><tr>
+                  <th className="text-left p-2 font-medium">ID</th>
+                  <th className="text-left p-2 font-medium">Source</th>
+                  <th className="text-left p-2 font-medium">Type</th>
+                  <th className="text-left p-2 font-medium">Requirement</th>
+                  <th className="text-left p-2 font-medium">Maps to</th>
+                </tr></thead>
+                <tbody>
+                  {reqs.map((r: any) => (
+                    <tr key={r.req_id} className="border-t border-border align-top">
+                      <td className="p-2 font-mono text-[10px]">{r.req_id}</td>
+                      <td className="p-2 whitespace-nowrap">{r.source_section}</td>
+                      <td className="p-2"><Badge variant="outline" className="text-[10px]">{r.type}</Badge></td>
+                      <td className="p-2 max-w-[480px]">{r.requirement_text}</td>
+                      <td className="p-2 whitespace-nowrap">{r.proposal_section ? <Badge variant="secondary" className="text-[10px]">{r.proposal_section}</Badge> : <Badge className="bg-destructive text-[10px]">unmapped</Badge>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
