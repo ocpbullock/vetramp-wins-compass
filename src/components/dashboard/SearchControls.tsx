@@ -32,7 +32,7 @@ export function SearchControls({
   busy: boolean;
 }) {
   const [naics, setNaics] = useState<string[]>(initial?.naicsCodes ?? DEFAULT_NAICS);
-  const [from, setFrom] = useState(initial?.postedFrom ?? yearAgo);
+  const [from, setFrom] = useState(initial?.postedFrom ?? defaultFrom);
   const [to, setTo] = useState(initial?.postedTo ?? today);
   const [keyword, setKeyword] = useState(initial?.keyword ?? "");
 
