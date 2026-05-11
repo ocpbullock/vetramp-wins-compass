@@ -17,9 +17,8 @@ export type SearchInput = {
 };
 
 const today = format(new Date(), "yyyy-MM-dd");
-// Default to a 36-month window: USAspending uses the full range for historical
-// award matching (better incumbent/recompete detection), and the SAM edge
-// function auto-clamps the opportunities query to its 1-year hard limit.
+// Default remains a 36-month UI window for continuity; the dashboard applies
+// a separate 5-year historical award lookback for recompete matching.
 const defaultFrom = format(subYears(new Date(), 3), "yyyy-MM-dd");
 
 export function SearchControls({
@@ -79,7 +78,7 @@ export function SearchControls({
         <div>
           <Label className="text-xs">From</Label>
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mt-1" />
-          <div className="text-[10px] text-muted-foreground mt-1">SAM clamps to 1y · USAspending uses full range</div>
+          <div className="text-[10px] text-muted-foreground mt-1">SAM clamps to 1y · awards use 5y lookback</div>
         </div>
         <div>
           <Label className="text-xs">To</Label>

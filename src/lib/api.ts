@@ -179,18 +179,20 @@ export function makeCacheKey(input: {
   postedFrom: string;
   postedTo: string;
   keyword?: string;
+  historicalFrom?: string;
 }) {
   return [
     [...input.naicsCodes].sort().join(","),
     input.postedFrom,
     input.postedTo,
+    input.historicalFrom || input.postedFrom,
     (input.keyword || "").trim().toLowerCase(),
   ].join("|");
 }
 
 export async function readCache(
   cacheKey: string,
-  input?: { naicsCodes: string[]; postedFrom: string; postedTo: string; keyword?: string },
+  input?: { naicsCodes: string[]; postedFrom: string; postedTo: string; keyword?: string; historicalFrom?: string },
 ) {
   // 1. Exact match (fast path)
   const exact = await supabase
@@ -219,6 +221,7 @@ export async function readCache(
     .order("created_at", { ascending: false })
     .limit(1);
   q = kw ? q.eq("keyword", kw) : q.is("keyword", null);
+  if (input.historicalFrom) q = q.filter("summary->>historicalFrom", "eq", input.historicalFrom);
   const { data: candidates } = await q;
   const hit = candidates?.[0];
   if (hit) {
@@ -235,6 +238,7 @@ export async function writeCache(payload: {
   naicsCodes: string[];
   dateFrom: string;
   dateTo: string;
+  historicalFrom?: string;
   keyword?: string;
   opportunities: any;
   historical: any;
@@ -250,7 +254,7 @@ export async function writeCache(payload: {
       keyword: payload.keyword || null,
       opportunities: payload.opportunities,
       historical: payload.historical,
-      summary: payload.summary,
+      summary: { ...payload.summary, historicalFrom: payload.historicalFrom },
       expires_at: expiresAt,
     },
     { onConflict: "cache_key" },

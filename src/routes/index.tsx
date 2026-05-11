@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
 import { Header } from "@/components/dashboard/Header";
 import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
@@ -23,6 +24,8 @@ import { useLogStore } from "@/lib/log-store";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
+
+const historicalLookbackFrom = () => format(subYears(new Date(), 5), "yyyy-MM-dd");
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -77,8 +80,10 @@ function Dashboard() {
       // Persist (sans forceRefresh) so the next page load can restore + auto-hit cache
       const { forceRefresh: _fr, ...persisted } = input;
       try { localStorage.setItem("dashboard:lastSearch", JSON.stringify(persisted)); } catch {}
-      const cacheKey = makeCacheKey(input);
-      const cached = input.forceRefresh ? null : await readCache(cacheKey, input);
+      const historicalFrom = historicalLookbackFrom();
+      const cacheInput = { ...input, historicalFrom };
+      const cacheKey = makeCacheKey(cacheInput);
+      const cached = input.forceRefresh ? null : await readCache(cacheKey, cacheInput);
       if (cached) {
         setOpps((cached.opportunities as any) ?? []);
         const h = cached.historical as any;
@@ -108,10 +113,10 @@ function Dashboard() {
       setOpps(samRes.opportunities);
       setProgress(60);
 
-      setProgressText("Fetching USAspending historical awards (paginating)...");
+      setProgressText("Fetching USAspending historical awards (5-year lookback, paginating)...");
       const usaRes = await searchUsaspending({
         naicsCodes: input.naicsCodes,
-        startDate: input.postedFrom,
+        startDate: historicalFrom,
         endDate: input.postedTo,
         keyword: input.keyword,
         maxResults: 10000,
@@ -126,6 +131,7 @@ function Dashboard() {
         naicsCodes: input.naicsCodes,
         dateFrom: input.postedFrom,
         dateTo: input.postedTo,
+        historicalFrom,
         keyword: input.keyword,
         opportunities: samRes.opportunities,
         historical: usaRes,
