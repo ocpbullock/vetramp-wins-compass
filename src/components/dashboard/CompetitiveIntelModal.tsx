@@ -111,7 +111,11 @@ export function CompetitiveIntelModal({
                   <div className="mt-3 pt-3 border-t border-border/60 space-y-1">
                     <div className="text-[11px] uppercase opacity-60">Other recipients on these awards</div>
                     {others.map((n, i) => <div key={i} className="text-xs">{n}</div>)}
+                {localMatch.diagnostics && (
+                  <div className="mt-3 pt-2 border-t border-border/40 text-[10px] font-mono opacity-50">
+                    bucket: {localMatch.diagnostics.matchedKey ?? "—"} · {localMatch.diagnostics.bucketSize} awards · {localMatch.diagnostics.candidatesAfterTitle} title-matched{localMatch.diagnostics.note ? ` · ${localMatch.diagnostics.note}` : ""}
                   </div>
+                )}
                 )}
               </div>
             );
