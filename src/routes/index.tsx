@@ -42,6 +42,15 @@ function Dashboard() {
     | { kind: "fresh"; fetchedAt: string }
     | null
   >(null);
+  const [lastInput, setLastInput] = useState<SearchInput | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const raw = localStorage.getItem("dashboard:lastSearch");
+      return raw ? (JSON.parse(raw) as SearchInput) : null;
+    } catch {
+      return null;
+    }
+  });
   const log = useLogStore((s) => s.log);
 
   async function runSearch(input: SearchInput) {
