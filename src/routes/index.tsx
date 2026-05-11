@@ -29,6 +29,7 @@ function Dashboard() {
   const [opps, setOpps] = useState<SamOpportunity[]>([]);
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
   const [historicalTotal, setHistoricalTotal] = useState<number | undefined>();
+  const [searchedNaics, setSearchedNaics] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
@@ -43,6 +44,7 @@ function Dashboard() {
     setOpps([]);
     setAwards([]);
     setHistoricalTotal(undefined);
+    setSearchedNaics(input.naicsCodes);
     try {
       const cacheKey = makeCacheKey(input);
       const cached = await readCache(cacheKey);
@@ -53,7 +55,7 @@ function Dashboard() {
         setHistoricalTotal(h?.page_metadata?.total);
         setProgress(100);
         setProgressText("Loaded from cache");
-        toast.success("Loaded from shared cache");
+        toast.success("Loaded from shared cache (24h TTL)");
         setBusy(false);
         return;
       }
@@ -64,13 +66,13 @@ function Dashboard() {
       setOpps(samRes.opportunities);
       setProgress(60);
 
-      setProgressText("Fetching USAspending historical awards...");
+      setProgressText("Fetching USAspending historical awards (paginating)...");
       const usaRes = await searchUsaspending({
         naicsCodes: input.naicsCodes,
         startDate: input.postedFrom,
         endDate: input.postedTo,
         keyword: input.keyword,
-        limit: 100,
+        maxResults: 1000,
       });
       setAwards(usaRes.results ?? []);
       setHistoricalTotal(usaRes.page_metadata?.total);
@@ -135,10 +137,10 @@ function Dashboard() {
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
           <TabsContent value="opportunities" className="mt-4">
-            <OpportunitiesTab opportunities={opps} onPropose={setProposeOpp} />
+            <OpportunitiesTab opportunities={opps} searchedNaics={searchedNaics} onPropose={setProposeOpp} />
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
-            <HistoricalTab awards={awards} onDetails={setDetailId} />
+            <HistoricalTab awards={awards} searchedNaics={searchedNaics} onDetails={setDetailId} />
           </TabsContent>
           <TabsContent value="analytics" className="mt-4">
             <AnalyticsTab awards={awards} />

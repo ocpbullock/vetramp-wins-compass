@@ -64,17 +64,22 @@ export async function searchUsaspending(input: {
   startDate: string;
   endDate: string;
   keyword?: string;
-  limit?: number;
-  page?: number;
+  maxResults?: number;
 }) {
-  logCall(`USAspending awards`);
+  logCall(`USAspending awards (up to ${input.maxResults ?? 1000})`);
   const { data, error } = await supabase.functions.invoke("search-usaspending", { body: input });
   if (error) {
     logErr("search-usaspending", error.message);
     throw error;
   }
-  logOk("search-usaspending", `${data?.results?.length ?? 0} of ${data?.page_metadata?.total ?? "?"} awards`);
-  return data as { results: HistoricalAward[]; page_metadata: { total: number; page: number; hasNext: boolean } };
+  logOk(
+    "search-usaspending",
+    `${data?.results?.length ?? 0} of ${data?.page_metadata?.total ?? "?"} awards${data?.page_metadata?.truncated ? " (truncated)" : ""}`,
+  );
+  return data as {
+    results: HistoricalAward[];
+    page_metadata: { total: number; fetched: number; hasNext: boolean; truncated: boolean };
+  };
 }
 
 export async function getAwardDetail(generatedInternalId: string) {
@@ -140,7 +145,7 @@ export async function writeCache(payload: {
   historical: any;
   summary: any;
 }) {
-  const expiresAt = new Date(Date.now() + 4 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   await supabase.from("cached_searches").upsert(
     {
       cache_key: payload.cacheKey,
@@ -155,5 +160,5 @@ export async function writeCache(payload: {
     },
     { onConflict: "cache_key" },
   );
-  useLogStore.getState().log("info", `↳ cache written (4h TTL)`);
+  useLogStore.getState().log("info", `↳ cache written (24h TTL)`);
 }

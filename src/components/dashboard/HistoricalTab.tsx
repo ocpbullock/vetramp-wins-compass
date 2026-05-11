@@ -1,10 +1,11 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, ArrowUpDown, Info } from "lucide-react";
 import { mapSetAside } from "@/lib/contracts";
 import type { HistoricalAward } from "@/lib/api";
+import { NaicsFilterChips } from "./NaicsFilterChips";
 
 type SortKey = "desc" | "recipient" | "agency" | "naics" | "amount" | "date";
 
@@ -13,17 +14,24 @@ const fmtMoney = (n: any) =>
 
 export function HistoricalTab({
   awards,
+  searchedNaics = [],
   onDetails,
 }: {
   awards: HistoricalAward[];
+  searchedNaics?: string[];
   onDetails: (id: string) => void;
 }) {
   const [search, setSearch] = useState("");
   const [agency, setAgency] = useState("__all__");
   const [vendor, setVendor] = useState("__all__");
   const [setAside, setSetAside] = useState("__all__");
+  const [activeNaics, setActiveNaics] = useState<Set<string>>(new Set(searchedNaics));
   const [sort, setSort] = useState<SortKey>("amount");
   const [dir, setDir] = useState<"asc" | "desc">("desc");
+
+  useEffect(() => {
+    setActiveNaics(new Set(searchedNaics));
+  }, [searchedNaics.join(",")]);
 
   const agencies = useMemo(() => Array.from(new Set(awards.map((a) => a["Awarding Agency"]).filter(Boolean) as string[])).sort(), [awards]);
   const vendors = useMemo(() => Array.from(new Set(awards.map((a) => a["Recipient Name"]).filter(Boolean) as string[])).sort(), [awards]);
@@ -36,9 +44,10 @@ export function HistoricalTab({
       if (agency !== "__all__" && a["Awarding Agency"] !== agency) return false;
       if (vendor !== "__all__" && a["Recipient Name"] !== vendor) return false;
       if (setAside !== "__all__" && a["Type of Set Aside"] !== setAside) return false;
+      if (searchedNaics.length > 0 && a["NAICS Code"] && !activeNaics.has(a["NAICS Code"])) return false;
       return true;
     });
-  }, [awards, search, agency, vendor, setAside]);
+  }, [awards, search, agency, vendor, setAside, activeNaics, searchedNaics]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -65,6 +74,7 @@ export function HistoricalTab({
 
   return (
     <div className="space-y-3">
+      <NaicsFilterChips searched={searchedNaics} active={activeNaics} onChange={setActiveNaics} />
       <div className="flex flex-wrap gap-2">
         <Input placeholder="Search description or award ID..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
         <Select value={agency} onValueChange={setAgency}>
