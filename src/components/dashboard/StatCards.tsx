@@ -26,9 +26,10 @@ export function StatCards(p: Props) {
       icon: History, tab: "historical", color: "text-violet-600",
     },
     { label: "Total Obligated", value: fmtMoney(p.totalObligated), icon: DollarSign, tab: "historical", color: "text-money" },
+    { label: "Works in Progress", value: (p.inProgressCount ?? 0).toLocaleString(), icon: FileEdit, tab: "in-progress", color: "text-amber-600" },
   ];
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
       {cards.map((c) => (
         <Card
           key={c.label}
