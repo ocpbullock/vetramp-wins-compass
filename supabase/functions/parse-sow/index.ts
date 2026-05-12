@@ -44,6 +44,26 @@ const MATRIX_SCHEMA = {
     submission_instructions: { type: "array", items: { type: "string" } },
     page_limits: { type: "array", items: { type: "string" } },
     summary: { type: "string", description: "1-2 paragraph executive summary of what's required and how to win." },
+    capture_details: {
+      type: "object",
+      description: "Intake fields extracted from the solicitation. Leave a field empty/null if not clearly stated in the documents — do NOT guess.",
+      properties: {
+        opportunity_title: { type: "string" },
+        agency: { type: "string", description: "Issuing agency / command / office." },
+        solicitation_number: { type: "string" },
+        naics_code: { type: "string" },
+        set_aside: { type: "string", description: "e.g. 'Total Small Business', '8(a)', 'SDVOSB', 'HUBZone', 'Unrestricted'." },
+        contract_type: { type: "string", description: "e.g. 'FFP', 'T&M', 'CPFF', 'IDIQ', 'BPA'." },
+        estimated_value: { type: "number", description: "Total estimated contract value in USD if stated." },
+        pop_base_months: { type: "integer", description: "Base period of performance in months." },
+        pop_option_months: { type: "integer", description: "Total option period months (sum of all options)." },
+        clearance_requirement: { type: "string", description: "e.g. 'None', 'Public Trust', 'Secret', 'Top Secret', 'TS/SCI'." },
+        response_deadline: { type: "string", description: "ISO 8601 timestamp of proposal due date if stated." },
+        incumbent: { type: "string", description: "Name of the incumbent contractor if identified." },
+        place_of_performance: { type: "string" },
+        key_personnel: { type: "array", items: { type: "string" }, description: "Required key personnel labor categories." },
+      },
+    },
   },
   required: ["requirements", "summary"],
 };
@@ -145,9 +165,9 @@ serve(async (req) => {
     const combined = parsed.map((p) => `=== ${p.filename} ===\n${p.text}`).join("\n\n").slice(0, 180_000);
     if (!combined.trim()) throw new Error("Could not extract text from attachments. Upload a text-based PDF or .txt version of the SOW.");
 
-    const system = `You are a federal proposal compliance expert. Read the provided solicitation documents (SOW/PWS, Section L, Section M, attachments) and produce a complete compliance traceability matrix. Capture EVERY 'shall', 'must', and 'will' requirement, every Section L submission instruction, and every Section M evaluation factor. Be exhaustive. Use stable req_ids like R-001, R-002. Map each requirement to the proposal section that should respond to it.`;
+    const system = `You are a federal proposal compliance expert. Read the provided solicitation documents (SOW/PWS, Section L, Section M, attachments) and produce (1) a complete compliance traceability matrix capturing EVERY 'shall', 'must', and 'will' requirement, every Section L submission instruction, and every Section M evaluation factor (use stable req_ids R-001, R-002, …; map each requirement to the proposal section that should respond to it), AND (2) a capture_details object with intake fields extracted verbatim from the documents. For capture_details, leave a field empty/null if it is not clearly stated — do NOT guess.`;
 
-    const user = `OPPORTUNITY METADATA:\nTitle: ${proposal.opportunity_title}\nAgency: ${proposal.agency}\nSolicitation: ${proposal.solicitation_number}\nNAICS: ${proposal.naics_code}\n\nSOLICITATION DOCUMENTS:\n${combined}`;
+    const user = `OPPORTUNITY METADATA (may be incomplete — prefer values from the documents):\nTitle: ${proposal.opportunity_title}\nAgency: ${proposal.agency}\nSolicitation: ${proposal.solicitation_number}\nNAICS: ${proposal.naics_code}\n\nSOLICITATION DOCUMENTS:\n${combined}`;
 
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -158,7 +178,7 @@ serve(async (req) => {
           { role: "system", content: system },
           { role: "user", content: user },
         ],
-        tools: [{ type: "function", function: { name: "return_compliance_matrix", description: "Return structured compliance matrix.", parameters: MATRIX_SCHEMA } }],
+        tools: [{ type: "function", function: { name: "return_compliance_matrix", description: "Return structured compliance matrix and capture details.", parameters: MATRIX_SCHEMA } }],
         tool_choice: { type: "function", function: { name: "return_compliance_matrix" } },
       }),
     });
@@ -175,12 +195,51 @@ serve(async (req) => {
     if (!matrix) throw new Error("No matrix returned");
 
     const gaps = (matrix.requirements || []).filter((r: any) => !r.proposal_section).length;
-    await admin.from("proposals").update({
+
+    // Build update payload — only set intake fields that are empty in the proposal AND non-empty from AI
+    const cap = matrix.capture_details || {};
+    const update: Record<string, any> = {
       compliance_matrix: matrix,
       compliance_gaps: gaps,
-    }).eq("id", proposalId);
+    };
+    const fillIfEmpty = (col: string, value: any) => {
+      if (value === undefined || value === null || value === "") return;
+      const current = (proposal as any)[col];
+      const isEmpty = current === null || current === undefined || current === "" || current === 0;
+      if (isEmpty) update[col] = value;
+    };
+    fillIfEmpty("opportunity_title", cap.opportunity_title);
+    fillIfEmpty("agency", cap.agency);
+    fillIfEmpty("solicitation_number", cap.solicitation_number);
+    fillIfEmpty("naics_code", cap.naics_code);
+    fillIfEmpty("set_aside", cap.set_aside);
+    fillIfEmpty("contract_type", cap.contract_type);
+    fillIfEmpty("estimated_value", typeof cap.estimated_value === "number" ? cap.estimated_value : null);
+    fillIfEmpty("pop_base_months", typeof cap.pop_base_months === "number" ? cap.pop_base_months : null);
+    fillIfEmpty("pop_option_months", typeof cap.pop_option_months === "number" ? cap.pop_option_months : null);
+    fillIfEmpty("clearance_requirement", cap.clearance_requirement);
+    if (cap.response_deadline && !proposal.response_deadline) {
+      const d = new Date(cap.response_deadline);
+      if (!isNaN(d.getTime())) update.response_deadline = d.toISOString();
+    }
 
-    return new Response(JSON.stringify({ matrix, parsed_files: parsed.map((p) => ({ filename: p.filename, chars: p.text.length })) }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    // Stash extras (incumbent, place_of_performance, key_personnel) into customer_intel without overwriting verified data
+    const extras: Record<string, any> = {};
+    if (cap.incumbent) extras.incumbent_from_sow = cap.incumbent;
+    if (cap.place_of_performance) extras.place_of_performance = cap.place_of_performance;
+    if (Array.isArray(cap.key_personnel) && cap.key_personnel.length) extras.key_personnel = cap.key_personnel;
+    if (Object.keys(extras).length && !proposal.customer_intel_verified) {
+      update.customer_intel = { ...(proposal.customer_intel || {}), ...extras };
+    }
+
+    await admin.from("proposals").update(update).eq("id", proposalId);
+
+    return new Response(JSON.stringify({
+      matrix,
+      capture_details: cap,
+      filled_fields: Object.keys(update).filter((k) => k !== "compliance_matrix" && k !== "compliance_gaps"),
+      parsed_files: parsed.map((p) => ({ filename: p.filename, chars: p.text.length })),
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("parse-sow error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
