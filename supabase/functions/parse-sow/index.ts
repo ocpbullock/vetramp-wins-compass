@@ -125,10 +125,14 @@ serve(async (req) => {
       const name = (a.filename || "").toLowerCase();
       if (name.endsWith(".pdf") || (a.file_type && String(a.file_type).toLowerCase().includes("pdf"))) {
         text = await extractFromPdf(buf);
+      } else if (name.endsWith(".docx") || name.endsWith(".doc")) {
+        text = await extractFromDocx(buf);
+      } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".xlsm")) {
+        text = extractFromXlsx(buf);
       } else if (name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".csv")) {
         text = decodePlain(buf);
       } else {
-        // best effort plain decode (won't help for docx but won't crash)
+        // best effort plain decode
         text = decodePlain(buf);
       }
       // truncate per file to keep prompt size sane
