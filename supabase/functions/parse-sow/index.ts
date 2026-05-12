@@ -84,11 +84,21 @@ function decodePlain(bytes: Uint8Array): string {
 }
 
 async function extractFromDocx(bytes: Uint8Array): Promise<string> {
+  // Copy into a fresh Uint8Array so .buffer is a clean ArrayBuffer (mammoth is picky)
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
   try {
-    const { value } = await mammoth.extractRawText({ arrayBuffer: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });
+    const { value } = await mammoth.extractRawText({ arrayBuffer: copy.buffer });
+    if (value) return value;
+  } catch (e) {
+    console.error("docx arrayBuffer parse failed, trying buffer:", e);
+  }
+  try {
+    // Fallback: some mammoth builds want { buffer }
+    const { value } = await mammoth.extractRawText({ buffer: copy } as any);
     return value || "";
   } catch (e) {
-    console.error("docx parse failed:", e);
+    console.error("docx buffer parse failed:", e);
     return "";
   }
 }
