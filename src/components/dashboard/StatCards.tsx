@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Briefcase, Award, History, DollarSign } from "lucide-react";
+import { Briefcase, Award, History, DollarSign, FileEdit } from "lucide-react";
 
 type Props = {
   activeOpps: number;
@@ -7,6 +7,7 @@ type Props = {
   historicalCount: number;
   historicalTotal?: number;
   totalObligated: number;
+  inProgressCount?: number;
   onSelect?: (tab: string) => void;
 };
 
@@ -25,9 +26,10 @@ export function StatCards(p: Props) {
       icon: History, tab: "historical", color: "text-violet-600",
     },
     { label: "Total Obligated", value: fmtMoney(p.totalObligated), icon: DollarSign, tab: "historical", color: "text-money" },
+    { label: "Works in Progress", value: (p.inProgressCount ?? 0).toLocaleString(), icon: FileEdit, tab: "in-progress", color: "text-amber-600" },
   ];
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
       {cards.map((c) => (
         <Card
           key={c.label}

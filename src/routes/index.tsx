@@ -9,6 +9,7 @@ import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
 import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
+import { InProgressTab } from "@/components/dashboard/InProgressTab";
 import { supabase } from "@/integrations/supabase/client";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
 import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
@@ -48,6 +49,17 @@ function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
+  const [inProgressCount, setInProgressCount] = useState<number>(0);
+  useEffect(() => {
+    if (!user) return;
+    (async () => {
+      const { count } = await (supabase as any)
+        .from("proposals")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", user.id);
+      if (typeof count === "number") setInProgressCount(count);
+    })();
+  }, [user, tab]);
   async function handlePropose(o: SamOpportunity) {
     if (!user) return;
     const { data, error } = await (supabase as any).from("proposals").insert({
@@ -194,6 +206,7 @@ function Dashboard() {
           historicalCount={stats.historicalCount}
           historicalTotal={historicalTotal}
           totalObligated={stats.totalObligated}
+          inProgressCount={inProgressCount}
           onSelect={setTab}
         />
 
@@ -201,6 +214,7 @@ function Dashboard() {
           <TabsList>
             <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
             <TabsTrigger value="historical">Historical Awards</TabsTrigger>
+            <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
@@ -209,6 +223,9 @@ function Dashboard() {
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab awards={awards} searchedNaics={searchedNaics} onDetails={setDetailId} />
+          </TabsContent>
+          <TabsContent value="in-progress" className="mt-4">
+            <InProgressTab onCountChange={setInProgressCount} />
           </TabsContent>
           <TabsContent value="analytics" className="mt-4">
             <AnalyticsTab awards={awards} />
