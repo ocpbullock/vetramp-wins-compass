@@ -1,5 +1,5 @@
 import { Card } from "@/components/ui/card";
-import { Briefcase, Award, History, DollarSign } from "lucide-react";
+import { Briefcase, Award, History, DollarSign, FileEdit } from "lucide-react";
 
 type Props = {
   activeOpps: number;
@@ -7,6 +7,7 @@ type Props = {
   historicalCount: number;
   historicalTotal?: number;
   totalObligated: number;
+  inProgressCount?: number;
   onSelect?: (tab: string) => void;
 };
 
