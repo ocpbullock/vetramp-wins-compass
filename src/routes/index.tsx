@@ -9,6 +9,7 @@ import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
 import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
+import { InProgressTab } from "@/components/dashboard/InProgressTab";
 import { supabase } from "@/integrations/supabase/client";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
 import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
@@ -48,6 +49,7 @@ function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
+  const [inProgressCount, setInProgressCount] = useState<number>(0);
   async function handlePropose(o: SamOpportunity) {
     if (!user) return;
     const { data, error } = await (supabase as any).from("proposals").insert({
