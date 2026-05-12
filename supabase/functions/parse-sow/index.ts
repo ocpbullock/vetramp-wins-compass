@@ -63,6 +63,32 @@ function decodePlain(bytes: Uint8Array): string {
   try { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); } catch { return ""; }
 }
 
+async function extractFromDocx(bytes: Uint8Array): Promise<string> {
+  try {
+    const { value } = await mammoth.extractRawText({ arrayBuffer: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });
+    return value || "";
+  } catch (e) {
+    console.error("docx parse failed:", e);
+    return "";
+  }
+}
+
+function extractFromXlsx(bytes: Uint8Array): string {
+  try {
+    const wb = XLSX.read(bytes, { type: "array" });
+    const parts: string[] = [];
+    for (const name of wb.SheetNames) {
+      const sheet = wb.Sheets[name];
+      const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+      if (csv.trim()) parts.push(`--- Sheet: ${name} ---\n${csv}`);
+    }
+    return parts.join("\n\n");
+  } catch (e) {
+    console.error("xlsx parse failed:", e);
+    return "";
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
