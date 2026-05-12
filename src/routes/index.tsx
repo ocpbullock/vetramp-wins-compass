@@ -196,6 +196,7 @@ function Dashboard() {
           historicalCount={stats.historicalCount}
           historicalTotal={historicalTotal}
           totalObligated={stats.totalObligated}
+          inProgressCount={inProgressCount}
           onSelect={setTab}
         />
 
@@ -203,6 +204,7 @@ function Dashboard() {
           <TabsList>
             <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
             <TabsTrigger value="historical">Historical Awards</TabsTrigger>
+            <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
@@ -211,6 +213,9 @@ function Dashboard() {
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab awards={awards} searchedNaics={searchedNaics} onDetails={setDetailId} />
+          </TabsContent>
+          <TabsContent value="in-progress" className="mt-4">
+            <InProgressTab onCountChange={setInProgressCount} />
           </TabsContent>
           <TabsContent value="analytics" className="mt-4">
             <AnalyticsTab awards={awards} />
