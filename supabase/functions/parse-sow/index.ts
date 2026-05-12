@@ -2,6 +2,8 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
+import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,6 +63,32 @@ function decodePlain(bytes: Uint8Array): string {
   try { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); } catch { return ""; }
 }
 
+async function extractFromDocx(bytes: Uint8Array): Promise<string> {
+  try {
+    const { value } = await mammoth.extractRawText({ arrayBuffer: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) });
+    return value || "";
+  } catch (e) {
+    console.error("docx parse failed:", e);
+    return "";
+  }
+}
+
+function extractFromXlsx(bytes: Uint8Array): string {
+  try {
+    const wb = XLSX.read(bytes, { type: "array" });
+    const parts: string[] = [];
+    for (const name of wb.SheetNames) {
+      const sheet = wb.Sheets[name];
+      const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+      if (csv.trim()) parts.push(`--- Sheet: ${name} ---\n${csv}`);
+    }
+    return parts.join("\n\n");
+  } catch (e) {
+    console.error("xlsx parse failed:", e);
+    return "";
+  }
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
@@ -97,10 +125,14 @@ serve(async (req) => {
       const name = (a.filename || "").toLowerCase();
       if (name.endsWith(".pdf") || (a.file_type && String(a.file_type).toLowerCase().includes("pdf"))) {
         text = await extractFromPdf(buf);
+      } else if (name.endsWith(".docx") || name.endsWith(".doc")) {
+        text = await extractFromDocx(buf);
+      } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".xlsm")) {
+        text = extractFromXlsx(buf);
       } else if (name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".csv")) {
         text = decodePlain(buf);
       } else {
-        // best effort plain decode (won't help for docx but won't crash)
+        // best effort plain decode
         text = decodePlain(buf);
       }
       // truncate per file to keep prompt size sane
