@@ -29,12 +29,14 @@ export function OpportunitiesTab({
   opportunities,
   awards = [],
   searchedNaics = [],
+  searchKey = "",
   onPropose,
   onCompete,
 }: {
   opportunities: SamOpportunity[];
   awards?: HistoricalAward[];
   searchedNaics?: string[];
+  searchKey?: string;
   onPropose: (o: SamOpportunity) => void;
   onCompete: (o: SamOpportunity) => void;
 }) {
@@ -49,7 +51,8 @@ export function OpportunitiesTab({
   // Reset NAICS filter whenever a new search runs
   useEffect(() => {
     setActiveNaics(new Set(searchedNaics));
-  }, [searchedNaics.join(",")]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKey]);
 
   const idx = useMemo(() => buildIndex(awards), [awards]);
   const matches = useMemo(() => {
