@@ -134,7 +134,7 @@ function CompanyProfilePanel() {
       if (!rowId || !form) throw new Error("Nothing to save.");
       const { error } = await supabase
         .from("company_profile")
-        .update({ profile_data: form })
+        .update({ profile_data: form as never })
         .eq("id", rowId);
       if (error) throw new Error(error.message);
     },
