@@ -15,10 +15,12 @@ const fmtMoney = (n: any) =>
 export function HistoricalTab({
   awards,
   searchedNaics = [],
+  searchKey = "",
   onDetails,
 }: {
   awards: HistoricalAward[];
   searchedNaics?: string[];
+  searchKey?: string;
   onDetails: (id: string) => void;
 }) {
   const [search, setSearch] = useState("");
@@ -31,7 +33,8 @@ export function HistoricalTab({
 
   useEffect(() => {
     setActiveNaics(new Set(searchedNaics));
-  }, [searchedNaics.join(",")]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchKey]);
 
   const agencies = useMemo(() => Array.from(new Set(awards.map((a) => a["Awarding Agency"]).filter(Boolean) as string[])).sort(), [awards]);
   const vendors = useMemo(() => Array.from(new Set(awards.map((a) => a["Recipient Name"]).filter(Boolean) as string[])).sort(), [awards]);
