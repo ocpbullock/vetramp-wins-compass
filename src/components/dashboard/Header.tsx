@@ -98,20 +98,44 @@ export function Header() {
 
         <div className="flex-1" />
 
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
-            <Bell className="w-5 h-5" />
-            <span className="absolute top-2 right-2 w-2 h-2 rounded-full bg-brand-red" />
-          </Button>
+        <TooltipProvider delayDuration={200}>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" className="relative flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Notifications">
+                  <Bell className="w-5 h-5" />
+                  <span className="hidden sm:block text-[11px] text-muted-foreground leading-none">Notifications</span>
+                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-red" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Notifications</TooltipContent>
+            </Tooltip>
 
-          {isAdmin && (
-            <Button variant="ghost" size="icon" asChild aria-label="Admin">
-              <Link to="/admin"><Shield className="w-5 h-5" /></Link>
-            </Button>
-          )}
-          <Button variant="ghost" size="icon" asChild aria-label="Settings">
-            <Link to="/settings"><Settings className="w-5 h-5" /></Link>
-          </Button>
+            {isAdmin && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button variant="ghost" asChild className="flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Admin">
+                    <Link to="/admin">
+                      <Shield className="w-5 h-5" />
+                      <span className="hidden sm:block text-[11px] text-muted-foreground leading-none">Admin</span>
+                    </Link>
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Admin</TooltipContent>
+              </Tooltip>
+            )}
+
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" asChild className="flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Settings">
+                  <Link to="/settings">
+                    <Settings className="w-5 h-5" />
+                    <span className="hidden sm:block text-[11px] text-muted-foreground leading-none">Settings</span>
+                  </Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Settings</TooltipContent>
+            </Tooltip>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
