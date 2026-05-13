@@ -76,6 +76,18 @@ const TITLE_JACCARD_FLOOR = 0.30;
 const TITLE_MIN_OVERLAP = 2;
 const PSC_TITLE_MIN_OVERLAP = 1; // PSC is a strong signal — relax title bar
 const POP_PROXIMITY_MS = 1000 * 60 * 60 * 24 * 270; // ±9 months
+const BROAD_AGENCY_KEYS = new Set(["defense", "homeland security", "veterans affairs"]);
+
+function opportunityAgencyKeys(fullPath?: string | null): string[] {
+  const raw = (fullPath || "")
+    .split(".")
+    .map((s) => normAgency(s))
+    .filter(Boolean)
+    .reverse();
+  const deduped = [...new Set(raw)];
+  const specific = deduped.filter((key) => !BROAD_AGENCY_KEYS.has(key));
+  return specific.length > 0 ? specific : deduped;
+}
 
 /**
  * Match a SAM opportunity against the historical award set to find the
@@ -113,10 +125,7 @@ export function matchIncumbent(
     if (parent.length > 0) return decorate(summarize("parent", parent), opp);
   }
 
-  const path = (opp.fullParentPathName || "")
-    .split(".")
-    .map((s) => normAgency(s))
-    .filter(Boolean);
+  const path = opportunityAgencyKeys(opp.fullParentPathName);
   const naics = (opp.naicsCode || "").trim();
   const psc = (opp.classificationCode || "").trim().toUpperCase();
   const triedKeys: string[] = [];
