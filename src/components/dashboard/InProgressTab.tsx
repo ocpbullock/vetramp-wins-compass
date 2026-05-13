@@ -47,7 +47,6 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
 
   async function remove(id: string) {
-    if (!confirm("Delete this proposal draft?")) return;
     const { error } = await supabase.from("proposals").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Deleted");
