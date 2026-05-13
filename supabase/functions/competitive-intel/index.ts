@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
 
     const { sub, top } = parseAgency(agency || "");
     const agencyName = sub || top;
-    const cacheKey = `v4|${agencyName}|${naicsCode}|${setAside || "none"}`;
+    const cacheKey = `v5|${agencyName}|${naicsCode}|${setAside || "none"}`;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
