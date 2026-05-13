@@ -168,6 +168,11 @@ function Dashboard() {
       setProgress(100);
       setProgressText("Done");
       setDataSource({ kind: "fresh", fetchedAt: new Date().toISOString() });
+      try {
+        localStorage.setItem("vetramp:lastSearchAt", String(Date.now()));
+        localStorage.setItem("vetramp:oppCount", String(samRes.opportunities.length));
+        window.dispatchEvent(new Event("vetramp:search-updated"));
+      } catch {}
     } catch (e: any) {
       log("error", e.message);
       toast.error(e.message);
