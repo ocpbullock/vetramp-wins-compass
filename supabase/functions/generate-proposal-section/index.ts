@@ -123,6 +123,9 @@ Set-Aside: ${opportunity?.setAside || opportunity?.typeOfSetAside || "N/A"}
 Place of Performance: ${JSON.stringify(opportunity?.placeOfPerformance || {})}
 Description: ${opportunity?.description || "(infer from title/agency)"}
 
+${customerIntel ? `CUSTOMER INTELLIGENCE (verified by capture team):\n${JSON.stringify(customerIntel, null, 2)}\n` : ""}
+${complianceMatrix ? `COMPLIANCE MATRIX rows mapped to this section:\n${JSON.stringify(complianceMatrix, null, 2)}\n` : ""}
+${solutionDesign ? `SOLUTION DESIGN inputs:\n${JSON.stringify(solutionDesign, null, 2)}\n` : ""}
 ${attachmentsText ? `SOLICITATION ATTACHMENT TEXT (truncated):\n${String(attachmentsText).slice(0, 30000)}\n` : ""}
 
 CRITICAL: Before writing, briefly research the end-user unit from context (mission, facility, terminology) and weave at least 3 unit-specific details into the section. If you cannot identify the unit, say so explicitly with [TO BE VERIFIED].`;
