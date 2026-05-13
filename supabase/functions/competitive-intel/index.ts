@@ -76,6 +76,34 @@ async function fetchMarketLandscape(naics: string, setAside?: string) {
   } catch { return []; }
 }
 
+async function fetchByPiid(solicitationNumber: string) {
+  if (!solicitationNumber) return [];
+  try {
+    const res = await fetch(USA, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filters: {
+          award_type_codes: ["A", "B", "C", "D"],
+          piids: [solicitationNumber],
+        },
+        fields: FIELDS,
+        sort: "Start Date",
+        order: "desc",
+        limit: 25,
+        page: 1,
+      }),
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.results || []).map((r: any) => {
+      const n = r?.NAICS;
+      if (n && typeof n === "object") return { ...r, NAICS: n.code ?? "", NAICS_Description: n.description ?? "" };
+      return r;
+    });
+  } catch { return []; }
+}
+
 function aggregateByVendor(rows: any[]) {
   const map = new Map<string, any>();
   for (const r of rows) {
@@ -208,17 +236,30 @@ Deno.serve(async (req) => {
       .eq("cache_key", cacheKey).gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
-    let agencyRows: any[]; let marketRows: any[];
+    let agencyRows: any[]; let marketRows: any[]; let piidRows: any[] = [];
     if (cached) {
       const p = cached.payload as any;
       agencyRows = p._raw?.agency || [];
       marketRows = p._raw?.market || [];
+      piidRows = p._raw?.piid || [];
     } else {
-      [agencyRows, marketRows] = await Promise.all([
+      [agencyRows, marketRows, piidRows] = await Promise.all([
         agencyName ? fetchAgencyHistory(agencyName, naicsCode) : Promise.resolve([]),
         fetchMarketLandscape(naicsCode, setAside),
+        fetchByPiid(solicitationNumber || ""),
       ]);
+      if (piidRows.length) {
+        const seen = new Set(agencyRows.map((r) => r.generated_internal_id).filter(Boolean));
+        for (const r of piidRows) {
+          const id = r.generated_internal_id;
+          if (!id || !seen.has(id)) {
+            agencyRows.push(r);
+            if (id) seen.add(id);
+          }
+        }
+      }
     }
+    const piidMatch = piidRows.length > 0;
 
     const incumbent = pickIncumbent(agencyRows, solicitationNumber, postedDate);
     const agencyVendors = aggregateByVendor(agencyRows);
@@ -252,6 +293,7 @@ Deno.serve(async (req) => {
         vendors: marketVendors.slice(0, 25),
       },
       scorecard,
+      piidMatch,
       cachedAt: cached?.created_at ?? new Date().toISOString(),
       fromCache: !!cached,
     };
@@ -263,7 +305,7 @@ Deno.serve(async (req) => {
         agency: agencyName,
         naics_code: naicsCode,
         set_aside: setAside || null,
-        payload: { ...payload, _raw: { agency: agencyRows, market: marketRows } },
+        payload: { ...payload, _raw: { agency: agencyRows, market: marketRows, piid: piidRows } },
         expires_at: expiresAt,
       }, { onConflict: "cache_key" });
     }
