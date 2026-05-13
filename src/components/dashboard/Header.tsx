@@ -53,14 +53,14 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 bg-card border-b border-border">
-      <div className="max-w-[1400px] mx-auto px-6 min-h-36 py-3 flex flex-wrap xl:flex-nowrap items-center gap-5">
+      <div className="max-w-[1400px] mx-auto px-6 min-h-20 py-2 flex flex-wrap xl:flex-nowrap items-center gap-5">
         <Link to="/" className="flex items-center shrink-0 w-full md:w-auto" aria-label="VetRamp Pursuit home">
           <img
             src={logoUrl}
             alt="VetRamp Pursuit"
-            className="h-24 sm:h-28 md:h-32 lg:h-36 w-auto max-w-full object-contain"
-            width={1467}
-            height={178}
+            className="h-12 sm:h-14 md:h-16 lg:h-18 w-auto max-w-full object-contain"
+            width={1679}
+            height={322}
           />
         </Link>
 
