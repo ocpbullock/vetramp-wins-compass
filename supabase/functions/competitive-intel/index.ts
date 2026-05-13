@@ -76,6 +76,34 @@ async function fetchMarketLandscape(naics: string, setAside?: string) {
   } catch { return []; }
 }
 
+async function fetchByPiid(solicitationNumber: string) {
+  if (!solicitationNumber) return [];
+  try {
+    const res = await fetch(USA, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filters: {
+          award_type_codes: ["A", "B", "C", "D"],
+          piids: [solicitationNumber],
+        },
+        fields: FIELDS,
+        sort: "Start Date",
+        order: "desc",
+        limit: 25,
+        page: 1,
+      }),
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.results || []).map((r: any) => {
+      const n = r?.NAICS;
+      if (n && typeof n === "object") return { ...r, NAICS: n.code ?? "", NAICS_Description: n.description ?? "" };
+      return r;
+    });
+  } catch { return []; }
+}
+
 function aggregateByVendor(rows: any[]) {
   const map = new Map<string, any>();
   for (const r of rows) {
