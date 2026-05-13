@@ -55,6 +55,47 @@ const NAV: NavItem[] = [
 export function Header() {
   const { user, signOut, isAdmin } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const [lastSearchAt, setLastSearchAt] = useState<number | null>(null);
+  const [oppCount, setOppCount] = useState<number | null>(null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const read = () => {
+      try {
+        const ts = localStorage.getItem("vetramp:lastSearchAt");
+        const c = localStorage.getItem("vetramp:oppCount");
+        setLastSearchAt(ts ? Number(ts) : null);
+        setOppCount(c ? Number(c) : null);
+      } catch {}
+    };
+    read();
+    const onUpdate = () => read();
+    window.addEventListener("vetramp:search-updated", onUpdate);
+    window.addEventListener("storage", onUpdate);
+    const id = window.setInterval(() => setTick((t) => t + 1), 30000);
+    return () => {
+      window.removeEventListener("vetramp:search-updated", onUpdate);
+      window.removeEventListener("storage", onUpdate);
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const handleQuickSearch = async () => {
+    if (location.pathname !== "/") {
+      await navigate({ to: "/", hash: "quick-search" });
+    }
+    requestAnimationFrame(() => {
+      const el = document.getElementById("quick-search");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        const input = el.querySelector<HTMLInputElement>("input, [role='combobox']");
+        input?.focus();
+      }
+    });
+  };
+
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
   const displayName =
     (user?.user_metadata as any)?.full_name ||
