@@ -52,8 +52,10 @@ export function Header() {
   const onHome = location.pathname === "/";
 
   const isActive = (item: NavItem) => {
+    if (item.to !== "/" && location.pathname.startsWith(item.to)) return true;
     if (!onHome) return false;
     if (item.matchHash) return currentHash === item.matchHash;
+    if (item.to !== "/") return false;
     // Dashboard is active when on / with no recognized tab hash
     return !["opportunities", "analytics", "logs", "in-progress", "historical"].includes(currentHash);
   };
