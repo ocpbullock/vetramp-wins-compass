@@ -236,26 +236,26 @@ Deno.serve(async (req) => {
       .eq("cache_key", cacheKey).gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
-    let agencyRows: any[]; let marketRows: any[]; let piidRows: any[] = [];
+    let agencyRows: any[]; let marketRows: any[];
     if (cached) {
       const p = cached.payload as any;
       agencyRows = p._raw?.agency || [];
       marketRows = p._raw?.market || [];
-      piidRows = p._raw?.piid || [];
     } else {
-      [agencyRows, marketRows, piidRows] = await Promise.all([
+      [agencyRows, marketRows] = await Promise.all([
         agencyName ? fetchAgencyHistory(agencyName, naicsCode) : Promise.resolve([]),
         fetchMarketLandscape(naicsCode, setAside),
-        fetchByPiid(solicitationNumber || ""),
       ]);
-      if (piidRows.length) {
-        const seen = new Set(agencyRows.map((r) => r.generated_internal_id).filter(Boolean));
-        for (const r of piidRows) {
-          const id = r.generated_internal_id;
-          if (!id || !seen.has(id)) {
-            agencyRows.push(r);
-            if (id) seen.add(id);
-          }
+    }
+    // PIID rows are per-solicitation — always fetch fresh, never cache merged.
+    const piidRows = await fetchByPiid(solicitationNumber || "");
+    if (piidRows.length) {
+      const seen = new Set(agencyRows.map((r) => r.generated_internal_id).filter(Boolean));
+      for (const r of piidRows) {
+        const id = r.generated_internal_id;
+        if (!id || !seen.has(id)) {
+          agencyRows = [...agencyRows, r];
+          if (id) seen.add(id);
         }
       }
     }
