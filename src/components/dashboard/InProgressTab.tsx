@@ -27,7 +27,7 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
   async function load() {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from("proposals")
       .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at")
       .eq("user_id", user.id)
@@ -44,7 +44,7 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
 
   async function remove(id: string) {
     if (!confirm("Delete this proposal draft?")) return;
-    const { error } = await (supabase as any).from("proposals").delete().eq("id", id);
+    const { error } = await supabase.from("proposals").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Deleted");
     load();

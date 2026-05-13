@@ -53,7 +53,7 @@ function Dashboard() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { count } = await (supabase as any)
+      const { count } = await supabase
         .from("proposals")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id);
@@ -62,7 +62,7 @@ function Dashboard() {
   }, [user, tab]);
   async function handlePropose(o: SamOpportunity) {
     if (!user) return;
-    const { data, error } = await (supabase as any).from("proposals").insert({
+    const { data, error } = await supabase.from("proposals").insert({
       user_id: user.id,
       solicitation_number: o.solicitationNumber || o.noticeId || "unknown",
       notice_id: o.noticeId,
