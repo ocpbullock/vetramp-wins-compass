@@ -20,6 +20,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, ShieldCheck, UserMinus, UserCheck, Trash2, RotateCcw, X, Mail } from "lucide-react";
+import { KnowledgeBaseSections } from "./knowledge-base";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -62,9 +63,11 @@ function AdminPage() {
           <TabsList>
             <TabsTrigger value="users">Users</TabsTrigger>
             <TabsTrigger value="invites">Invitations</TabsTrigger>
+            <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
           </TabsList>
           <TabsContent value="users" className="mt-4"><UsersPanel currentUserId={user.id} accessToken={accessToken} /></TabsContent>
           <TabsContent value="invites" className="mt-4"><InvitesPanel accessToken={accessToken} /></TabsContent>
+          <TabsContent value="knowledge" className="mt-4"><KnowledgeBaseSections /></TabsContent>
         </Tabs>
       </main>
     </div>
