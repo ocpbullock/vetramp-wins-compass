@@ -122,10 +122,11 @@ function ProposalPipeline() {
     try {
       // gather attachment text (parsed_content) when available
       const attachmentsText = attachments.map((a) => a.parsed_content).filter(Boolean).join("\n\n---\n\n");
+      const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-proposal-section`;
       const resp = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           sectionId, sectionTitle,
           opportunity: proposal.opportunity_data ?? {
