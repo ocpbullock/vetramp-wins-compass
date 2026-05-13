@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
@@ -31,6 +31,7 @@ const historicalLookbackFrom = () => format(subYears(new Date(), 10), "yyyy-MM-d
 
 function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading } = useAuth();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
   // Auto-restore last search from localStorage on mount (cache hit = instant).
