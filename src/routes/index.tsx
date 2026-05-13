@@ -53,7 +53,7 @@ function Dashboard() {
   useEffect(() => {
     if (!user) return;
     (async () => {
-      const { count } = await (supabase as any)
+      const { count } = await supabase
         .from("proposals")
         .select("id", { count: "exact", head: true })
         .eq("user_id", user.id);
