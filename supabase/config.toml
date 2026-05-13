@@ -13,22 +13,22 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.generate-proposal]
-verify_jwt = false
+verify_jwt = true
 
 [functions.competitive-intel]
-verify_jwt = false
+verify_jwt = true
 
 [functions.vendor-profile]
-verify_jwt = false
+verify_jwt = true
 
 [functions.generate-proposal-section]
-verify_jwt = false
+verify_jwt = true
 
 [functions.sam-attachments]
 verify_jwt = true
 
 [functions.customer-intel]
-verify_jwt = false
+verify_jwt = true
 
 [functions.parse-sow]
 verify_jwt = true
