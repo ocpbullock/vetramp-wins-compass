@@ -7,6 +7,7 @@ const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   cover_letter: ["capability", "win_theme"],
   executive_summary: ["capability", "win_theme"],
   technical_approach: ["capability", "boilerplate"],
+  compliance_matrix: ["boilerplate"],
 };
 
 async function fetchKnowledgeContext(sectionId: string): Promise<string> {
@@ -27,11 +28,11 @@ async function fetchKnowledgeContext(sectionId: string): Promise<string> {
         .limit(5);
       if (error) { console.error("kb fetch error:", cat, error.message); continue; }
       for (const row of data ?? []) {
-        parts.push(`### [${row.category}] ${row.title}\n${row.content}`);
+        parts.push(`--- ${row.title} (${row.category}) ---\n${row.content}`);
       }
     }
     if (!parts.length) return "";
-    return parts.join("\n\n---\n\n").slice(0, 15_000);
+    return parts.join("\n\n").slice(0, 15_000);
   } catch (e) {
     console.error("fetchKnowledgeContext failed:", e);
     return "";
@@ -110,15 +111,7 @@ Use markdown tables for structured data. Quote SOW requirements verbatim when re
 COMPANY PROFILE:
 ${JSON.stringify(companyProfile, null, 2)}
 
-${knowledgeContext ? `KNOWLEDGE BASE (authoritative company content — use verbatim where applicable):\n${knowledgeContext}\n` : ""}
-${customerIntel ? `CUSTOMER INTELLIGENCE (verified by capture team):\n${JSON.stringify(customerIntel, null, 2)}\n` : ""}
-${complianceMatrix ? `COMPLIANCE MATRIX rows mapped to this section:\n${JSON.stringify(complianceMatrix, null, 2)}\n` : ""}
-${solutionDesign ? `SOLUTION DESIGN inputs:\n${JSON.stringify(solutionDesign, null, 2)}\n` : ""}
-
-OPPORTUNITY:
-${complianceMatrix ? `COMPLIANCE MATRIX rows mapped to this section:\n${JSON.stringify(complianceMatrix, null, 2)}\n` : ""}
-${solutionDesign ? `SOLUTION DESIGN inputs:\n${JSON.stringify(solutionDesign, null, 2)}\n` : ""}
-
+${knowledgeContext ? `KNOWLEDGE BASE (authoritative VetRamp content — prefer this over general knowledge when writing):\n${knowledgeContext}\n` : ""}
 OPPORTUNITY:
 Title: ${opportunity?.title || "N/A"}
 Solicitation #: ${opportunity?.solicitationNumber || "N/A"}
@@ -130,6 +123,9 @@ Set-Aside: ${opportunity?.setAside || opportunity?.typeOfSetAside || "N/A"}
 Place of Performance: ${JSON.stringify(opportunity?.placeOfPerformance || {})}
 Description: ${opportunity?.description || "(infer from title/agency)"}
 
+${customerIntel ? `CUSTOMER INTELLIGENCE (verified by capture team):\n${JSON.stringify(customerIntel, null, 2)}\n` : ""}
+${complianceMatrix ? `COMPLIANCE MATRIX rows mapped to this section:\n${JSON.stringify(complianceMatrix, null, 2)}\n` : ""}
+${solutionDesign ? `SOLUTION DESIGN inputs:\n${JSON.stringify(solutionDesign, null, 2)}\n` : ""}
 ${attachmentsText ? `SOLICITATION ATTACHMENT TEXT (truncated):\n${String(attachmentsText).slice(0, 30000)}\n` : ""}
 
 CRITICAL: Before writing, briefly research the end-user unit from context (mission, facility, terminology) and weave at least 3 unit-specific details into the section. If you cannot identify the unit, say so explicitly with [TO BE VERIFIED].`;
