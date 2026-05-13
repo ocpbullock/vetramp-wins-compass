@@ -114,7 +114,7 @@ export function Header() {
     if (item.matchHash) return currentHash === item.matchHash;
     if (item.to !== "/") return false;
     // Dashboard is active when on / with no recognized tab hash
-    return !["opportunities", "analytics", "logs", "in-progress", "historical"].includes(currentHash);
+    return !["opportunities", "tracked", "analytics", "logs", "in-progress", "historical"].includes(currentHash);
   };
 
   return (
