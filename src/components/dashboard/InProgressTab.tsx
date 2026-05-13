@@ -3,6 +3,10 @@ import { useNavigate } from "@tanstack/react-router";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { Trash2, ArrowRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -43,7 +47,6 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
 
   async function remove(id: string) {
-    if (!confirm("Delete this proposal draft?")) return;
     const { error } = await supabase.from("proposals").delete().eq("id", id);
     if (error) return toast.error(error.message);
     toast.success("Deleted");
@@ -72,9 +75,25 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
               <Button size="sm" onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: p.id } })}>
                 Resume <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
-              <Button size="sm" variant="ghost" onClick={() => remove(p.id)}>
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button size="sm" variant="ghost">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete this proposal?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      This permanently deletes "{p.opportunity_title || "Untitled"}" and all of its associated data (attachments, parsed content, intake fields). This cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => remove(p.id)}>Delete proposal</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </div>
           </div>
         </Card>
