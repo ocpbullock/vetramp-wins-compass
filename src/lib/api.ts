@@ -141,6 +141,7 @@ export type CompetitiveIntel = {
 
 export async function getCompetitiveIntel(input: {
   solicitationNumber?: string;
+  title?: string;
   agency: string;
   naicsCode: string;
   setAside?: string;
