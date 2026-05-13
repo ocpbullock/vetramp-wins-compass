@@ -53,12 +53,12 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 bg-card border-b border-border">
-      <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center gap-6">
+      <div className="max-w-[1400px] mx-auto px-6 h-28 flex items-center gap-6">
         <Link to="/" className="flex items-center shrink-0" aria-label="VetRamp Pursuit home">
           <img
             src={logoUrl}
             alt="VetRamp Pursuit"
-            className="h-12 w-auto"
+            className="h-20 md:h-24 w-auto"
             width={1536}
             height={1024}
           />
