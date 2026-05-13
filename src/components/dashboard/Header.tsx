@@ -1,4 +1,5 @@
-import { Link, useLocation } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,8 +26,21 @@ import {
   FileText,
   Bell,
   ChevronDown,
+  Search,
+  Clock,
 } from "lucide-react";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
+
+function formatRelative(ts: number): string {
+  const diff = Math.max(0, Date.now() - ts);
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
 
 type NavItem = { label: string; icon: typeof LayoutDashboard; to: string; hash?: string; matchHash?: string };
 
@@ -35,11 +49,53 @@ const NAV: NavItem[] = [
   { label: "Opportunities", icon: Briefcase, to: "/", hash: "opportunities", matchHash: "opportunities" },
   { label: "Analytics", icon: BarChart3, to: "/", hash: "analytics", matchHash: "analytics" },
   { label: "Reports", icon: FileText, to: "/", hash: "logs", matchHash: "logs" },
+  { label: "Settings", icon: Settings, to: "/settings" },
 ];
 
 export function Header() {
   const { user, signOut, isAdmin } = useAuth();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  const [lastSearchAt, setLastSearchAt] = useState<number | null>(null);
+  const [oppCount, setOppCount] = useState<number | null>(null);
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const read = () => {
+      try {
+        const ts = localStorage.getItem("vetramp:lastSearchAt");
+        const c = localStorage.getItem("vetramp:oppCount");
+        setLastSearchAt(ts ? Number(ts) : null);
+        setOppCount(c ? Number(c) : null);
+      } catch {}
+    };
+    read();
+    const onUpdate = () => read();
+    window.addEventListener("vetramp:search-updated", onUpdate);
+    window.addEventListener("storage", onUpdate);
+    const id = window.setInterval(() => setTick((t) => t + 1), 30000);
+    return () => {
+      window.removeEventListener("vetramp:search-updated", onUpdate);
+      window.removeEventListener("storage", onUpdate);
+      window.clearInterval(id);
+    };
+  }, []);
+
+  const handleQuickSearch = async () => {
+    if (location.pathname !== "/") {
+      await navigate({ to: "/", hash: "quick-search" });
+    }
+    requestAnimationFrame(() => {
+      const el = document.getElementById("quick-search");
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "start" });
+        const input = el.querySelector<HTMLInputElement>("input, [role='combobox']");
+        input?.focus();
+      }
+    });
+  };
+
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
   const displayName =
     (user?.user_metadata as any)?.full_name ||
@@ -51,8 +107,10 @@ export function Header() {
   const onHome = location.pathname === "/";
 
   const isActive = (item: NavItem) => {
+    if (item.to !== "/" && location.pathname.startsWith(item.to)) return true;
     if (!onHome) return false;
     if (item.matchHash) return currentHash === item.matchHash;
+    if (item.to !== "/") return false;
     // Dashboard is active when on / with no recognized tab hash
     return !["opportunities", "analytics", "logs", "in-progress", "historical"].includes(currentHash);
   };
@@ -100,6 +158,31 @@ export function Header() {
 
         <TooltipProvider delayDuration={200}>
           <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/60 border border-border text-[11px] text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              {lastSearchAt ? (
+                <span>
+                  Last search <span className="text-foreground font-medium">{formatRelative(lastSearchAt)}</span>
+                  {oppCount !== null && (
+                    <> · <span className="text-foreground font-medium">{oppCount}</span> tracked</>
+                  )}
+                </span>
+              ) : (
+                <span>No searches yet</span>
+              )}
+            </div>
+
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleQuickSearch}
+              className="gap-1.5"
+              aria-label="New search"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">New Search</span>
+            </Button>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" className="relative flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Notifications">
@@ -124,18 +207,6 @@ export function Header() {
                 <TooltipContent>Admin</TooltipContent>
               </Tooltip>
             )}
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" asChild className="flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Settings">
-                  <Link to="/settings">
-                    <Settings className="w-5 h-5" />
-                    <span className="hidden sm:block text-[11px] text-muted-foreground leading-none">Settings</span>
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Settings</TooltipContent>
-            </Tooltip>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

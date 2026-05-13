@@ -168,6 +168,11 @@ function Dashboard() {
       setProgress(100);
       setProgressText("Done");
       setDataSource({ kind: "fresh", fetchedAt: new Date().toISOString() });
+      try {
+        localStorage.setItem("vetramp:lastSearchAt", String(Date.now()));
+        localStorage.setItem("vetramp:oppCount", String(samRes.opportunities.length));
+        window.dispatchEvent(new Event("vetramp:search-updated"));
+      } catch {}
     } catch (e: any) {
       log("error", e.message);
       toast.error(e.message);
@@ -226,7 +231,9 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <SearchControls onSearch={runSearch} busy={busy} initial={lastInput ?? undefined} />
+      <div id="quick-search" className="scroll-mt-24">
+        <SearchControls onSearch={runSearch} busy={busy} initial={lastInput ?? undefined} />
+      </div>
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">
           <Progress value={progress} className="h-1" />
