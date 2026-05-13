@@ -10,7 +10,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { ArrowLeft, Plus, Trash2, Save, Loader2 } from "lucide-react";
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Table, TableHeader, TableBody, TableRow, TableHead, TableCell,
+} from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { ArrowLeft, Plus, Trash2, Save, Loader2, Upload, FileText } from "lucide-react";
+import { format } from "date-fns";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
@@ -78,9 +88,7 @@ function SettingsPage() {
             <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
           </TabsList>
           <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>
-          <TabsContent value="knowledge" className="mt-4">
-            <Card className="p-6 text-sm text-muted-foreground">Knowledge Base management — coming soon.</Card>
-          </TabsContent>
+          <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>
         </Tabs>
       </main>
     </div>
