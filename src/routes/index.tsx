@@ -10,6 +10,7 @@ import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
 import { InProgressTab } from "@/components/dashboard/InProgressTab";
+import { TrackedOpportunitiesTab } from "@/components/dashboard/TrackedOpportunitiesTab";
 import { supabase } from "@/integrations/supabase/client";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
 import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
