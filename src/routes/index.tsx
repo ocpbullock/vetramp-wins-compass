@@ -226,16 +226,6 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
-      <div className="border-b bg-card">
-        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-end justify-between gap-4 flex-wrap">
-          <div>
-            <h1 className="text-xl font-bold tracking-tight">Federal Contracts Dashboard</h1>
-            <p className="text-xs text-muted-foreground">
-              Active Opportunities + Historical Awards · <span className="text-brand-red font-semibold">VetRamp Pursuit</span>
-            </p>
-          </div>
-        </div>
-      </div>
       <SearchControls onSearch={runSearch} busy={busy} initial={lastInput ?? undefined} />
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">
