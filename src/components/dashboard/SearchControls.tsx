@@ -78,7 +78,7 @@ export function SearchControls({
         <div>
           <Label className="text-xs">From</Label>
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mt-1" />
-          <div className="text-[10px] text-muted-foreground mt-1">SAM clamps to 1y · awards use 5y lookback</div>
+          <div className="text-[10px] text-muted-foreground mt-1">SAM clamps to 1y · awards use 10y lookback</div>
         </div>
         <div>
           <Label className="text-xs">To</Label>
