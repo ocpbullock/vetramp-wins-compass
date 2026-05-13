@@ -51,6 +51,13 @@ function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
+
+  // Sync tab with URL hash from header nav links
+  useEffect(() => {
+    const h = (location.hash || "").replace(/^#/, "");
+    const valid = ["opportunities", "historical", "in-progress", "analytics", "logs"];
+    if (h && valid.includes(h)) setTab(h);
+  }, [location.hash]);
   const [inProgressCount, setInProgressCount] = useState<number>(0);
   async function handlePropose(o: SamOpportunity) {
     if (!user) return;
