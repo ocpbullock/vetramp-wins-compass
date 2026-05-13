@@ -185,6 +185,10 @@ function buildScorecard(opts: {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
 
@@ -193,8 +197,10 @@ Deno.serve(async (req) => {
     const cacheKey = `${agencyName}|${naicsCode}|${setAside || "none"}`;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
     // Cache check
     const { data: cached } = await supabase
