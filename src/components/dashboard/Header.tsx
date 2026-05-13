@@ -158,6 +158,31 @@ export function Header() {
 
         <TooltipProvider delayDuration={200}>
           <div className="flex items-center gap-2">
+            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/60 border border-border text-[11px] text-muted-foreground">
+              <Clock className="w-3 h-3" />
+              {lastSearchAt ? (
+                <span>
+                  Last search <span className="text-foreground font-medium">{formatRelative(lastSearchAt)}</span>
+                  {oppCount !== null && (
+                    <> · <span className="text-foreground font-medium">{oppCount}</span> tracked</>
+                  )}
+                </span>
+              ) : (
+                <span>No searches yet</span>
+              )}
+            </div>
+
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleQuickSearch}
+              className="gap-1.5"
+              aria-label="New search"
+            >
+              <Search className="w-4 h-4" />
+              <span className="hidden sm:inline">New Search</span>
+            </Button>
+
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button variant="ghost" className="relative flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Notifications">
