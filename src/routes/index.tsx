@@ -260,6 +260,7 @@ function Dashboard() {
             <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
             <TabsTrigger value="historical">Historical Awards</TabsTrigger>
             <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
+            <TabsTrigger value="tracked">Tracked</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
@@ -271,6 +272,9 @@ function Dashboard() {
           </TabsContent>
           <TabsContent value="in-progress" className="mt-4">
             <InProgressTab onCountChange={setInProgressCount} />
+          </TabsContent>
+          <TabsContent value="tracked" className="mt-4">
+            <TrackedOpportunitiesTab awards={awards} />
           </TabsContent>
           <TabsContent value="analytics" className="mt-4">
             <AnalyticsTab awards={awards} />
