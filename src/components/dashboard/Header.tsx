@@ -28,6 +28,7 @@ import {
   ChevronDown,
   Search,
   Clock,
+  Crosshair,
 } from "lucide-react";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
