@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
@@ -31,6 +31,7 @@ const historicalLookbackFrom = () => format(subYears(new Date(), 10), "yyyy-MM-d
 
 function Dashboard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading } = useAuth();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
   // Auto-restore last search from localStorage on mount (cache hit = instant).
@@ -50,6 +51,13 @@ function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
+
+  // Sync tab with URL hash from header nav links
+  useEffect(() => {
+    const h = (location.hash || "").replace(/^#/, "");
+    const valid = ["opportunities", "historical", "in-progress", "analytics", "logs"];
+    if (h && valid.includes(h)) setTab(h);
+  }, [location.hash]);
   const [inProgressCount, setInProgressCount] = useState<number>(0);
   async function handlePropose(o: SamOpportunity) {
     if (!user) return;
@@ -218,6 +226,16 @@ function Dashboard() {
   return (
     <div className="min-h-screen bg-background">
       <Header />
+      <div className="border-b bg-card">
+        <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-end justify-between gap-4 flex-wrap">
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">Federal Contracts Dashboard</h1>
+            <p className="text-xs text-muted-foreground">
+              Active Opportunities + Historical Awards · <span className="text-brand-red font-semibold">VetRamp Pursuit</span>
+            </p>
+          </div>
+        </div>
+      </div>
       <SearchControls onSearch={runSearch} busy={busy} initial={lastInput ?? undefined} />
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">

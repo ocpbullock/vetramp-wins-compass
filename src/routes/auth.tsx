@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
 export const Route = createFileRoute("/auth")({ component: AuthPage });
 
@@ -60,9 +61,11 @@ function AuthPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <Card className="w-full max-w-md p-8 shadow-lg">
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold">Federal Contracts Dashboard</h1>
-          <p className="text-sm text-muted-foreground mt-1">VetRamp · SDVOSB</p>
+        <div className="mb-6 flex flex-col items-center text-center">
+          <img src={logoUrl} alt="VetRamp Pursuit" className="h-10 w-auto mb-3" />
+          <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">
+            Opportunities · Captured · <span className="text-brand-red font-semibold">Mission Focused</span>
+          </p>
         </div>
         <Button type="button" variant="outline" disabled={busy} className="w-full mb-4" onClick={handleGoogle}>
           Continue with Google

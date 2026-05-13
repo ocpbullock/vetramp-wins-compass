@@ -32,6 +32,10 @@
   --color-money: var(--money);
   --color-money-foreground: var(--money-foreground);
 
+  --color-brand-navy: var(--brand-navy);
+  --color-brand-red: var(--brand-red);
+  --color-brand-red-foreground: var(--brand-red-foreground);
+
   --color-badge-award: var(--badge-award);
   --color-badge-solicitation: var(--badge-solicitation);
   --color-badge-sources: var(--badge-sources);
@@ -66,8 +70,12 @@
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.21 0.03 260);
 
-  /* Brand */
-  --primary: oklch(0.55 0.22 260);              /* #2563eb */
+  /* Brand — VetRamp Pursuit: deep navy + crimson red accent */
+  --brand-navy: oklch(0.27 0.10 263);           /* ~#0F2A5F */
+  --brand-red: oklch(0.55 0.22 27);             /* ~#C8102E */
+  --brand-red-foreground: oklch(0.99 0 0);
+
+  --primary: oklch(0.27 0.10 263);              /* navy */
   --primary-foreground: oklch(0.99 0 0);
 
   --secondary: oklch(0.96 0.008 247);
@@ -84,10 +92,10 @@
 
   --border: oklch(0.9 0.01 255);                /* #e2e8f0 */
   --input: oklch(0.9 0.01 255);
-  --ring: oklch(0.55 0.22 260);
+  --ring: oklch(0.27 0.10 263);
 
   /* Money */
-  --money: oklch(0.6 0.16 155);                 /* #059669 */
+  --money: oklch(0.6 0.16 155);
   --money-foreground: oklch(0.99 0 0);
 
   /* Notice-type badge palette */
@@ -100,20 +108,20 @@
   --badge-setaside: oklch(0.9 0.1 305);
 
   /* Charts */
-  --chart-1: oklch(0.55 0.22 260);
-  --chart-2: oklch(0.6 0.16 155);
-  --chart-3: oklch(0.7 0.17 50);
-  --chart-4: oklch(0.6 0.2 305);
+  --chart-1: oklch(0.27 0.10 263);
+  --chart-2: oklch(0.55 0.22 27);
+  --chart-3: oklch(0.6 0.16 155);
+  --chart-4: oklch(0.7 0.17 50);
   --chart-5: oklch(0.65 0.15 200);
 
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0.21 0.03 260);
-  --sidebar-primary: oklch(0.55 0.22 260);
+  --sidebar-primary: oklch(0.27 0.10 263);
   --sidebar-primary-foreground: oklch(0.99 0 0);
   --sidebar-accent: oklch(0.95 0.02 250);
   --sidebar-accent-foreground: oklch(0.25 0.03 260);
   --sidebar-border: oklch(0.9 0.01 255);
-  --sidebar-ring: oklch(0.55 0.22 260);
+  --sidebar-ring: oklch(0.27 0.10 263);
 }
 
 .dark {

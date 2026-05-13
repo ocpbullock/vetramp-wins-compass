@@ -72,7 +72,7 @@ function AcceptInvitePage() {
       <Card className="w-full max-w-md p-8 shadow-lg">
         <div className="mb-6">
           <h1 className="text-2xl font-bold">Join the team</h1>
-          <p className="text-sm text-muted-foreground mt-1">Federal Contracts Dashboard · VetRamp</p>
+          <p className="text-sm text-muted-foreground mt-1">VetRamp Pursuit</p>
         </div>
         {state === "loading" && <p className="text-sm text-muted-foreground">Validating invitation…</p>}
         {state === "invalid" && (
