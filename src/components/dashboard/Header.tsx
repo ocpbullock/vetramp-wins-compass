@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { LogOut, Shield } from "lucide-react";
+import { LogOut, Shield, Settings } from "lucide-react";
 
 export function Header() {
   const { user, signOut, isAdmin } = useAuth();
@@ -15,9 +15,14 @@ export function Header() {
         </div>
         <div className="flex items-center gap-3">
           {isAdmin && (
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/admin"><Shield className="w-4 h-4 mr-1" /> Admin</Link>
-            </Button>
+            <>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/admin"><Shield className="w-4 h-4 mr-1" /> Admin</Link>
+              </Button>
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/settings"><Settings className="w-4 h-4 mr-1" /> Settings</Link>
+              </Button>
+            </>
           )}
           <span className="hidden sm:block text-xs text-muted-foreground">{user?.email}</span>
           <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
