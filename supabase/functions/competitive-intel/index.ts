@@ -84,7 +84,7 @@ async function fetchAgencyHistory(agencyName: string, naics: string) {
 async function fetchMarketLandscape(naics: string, setAside?: string) {
   const filters: any = {
     naics_codes: [naics],
-    time_period: [{ start_date: isoYearsAgo(3), end_date: todayISO() }],
+      time_period: [{ start_date: isoYearsAgo(3), end_date: todayISO(), date_type: "new_awards_only" }],
     award_type_codes: ["A", "B", "C", "D"],
   };
   if (setAside) filters.set_aside_type_codes = [setAside];
@@ -246,7 +246,7 @@ Deno.serve(async (req) => {
 
     const { sub, top } = parseAgency(agency || "");
     const agencyName = sub || top;
-    const cacheKey = `v2|${agencyName}|${naicsCode}|${setAside || "none"}`;
+    const cacheKey = `v4|${agencyName}|${naicsCode}|${setAside || "none"}`;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
