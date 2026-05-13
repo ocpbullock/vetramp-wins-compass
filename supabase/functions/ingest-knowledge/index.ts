@@ -1,7 +1,9 @@
+import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 import { corsHeaders } from "../_shared/cors.ts";
 
 const ALLOWED_CATEGORIES = [
@@ -9,16 +11,19 @@ const ALLOWED_CATEGORIES = [
   "boilerplate", "pricing", "win_theme", "other",
 ];
 
-function decodePlain(bytes: Uint8Array): string {
-  try { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); } catch { return ""; }
-}
-
 async function extractFromPdf(bytes: Uint8Array): Promise<string> {
   try {
     const pdf = await getDocumentProxy(bytes);
     const { text } = await extractText(pdf, { mergePages: true });
     return Array.isArray(text) ? text.join("\n") : text;
-  } catch (e) { console.error("pdf parse failed:", e); return ""; }
+  } catch (e) {
+    console.error("pdf parse failed:", e);
+    return "";
+  }
+}
+
+function decodePlain(bytes: Uint8Array): string {
+  try { return new TextDecoder("utf-8", { fatal: false }).decode(bytes); } catch { return ""; }
 }
 
 async function extractFromDocx(bytes: Uint8Array): Promise<string> {
@@ -26,8 +31,33 @@ async function extractFromDocx(bytes: Uint8Array): Promise<string> {
   copy.set(bytes);
   try {
     const { value } = await mammoth.extractRawText({ arrayBuffer: copy.buffer });
+    if (value) return value;
+  } catch (e) {
+    console.error("docx arrayBuffer parse failed, trying buffer:", e);
+  }
+  try {
+    const { value } = await mammoth.extractRawText({ buffer: copy } as any);
     return value || "";
-  } catch (e) { console.error("docx parse failed:", e); return ""; }
+  } catch (e) {
+    console.error("docx buffer parse failed:", e);
+    return "";
+  }
+}
+
+function extractFromXlsx(bytes: Uint8Array): string {
+  try {
+    const wb = XLSX.read(bytes, { type: "array" });
+    const parts: string[] = [];
+    for (const name of wb.SheetNames) {
+      const sheet = wb.Sheets[name];
+      const csv = XLSX.utils.sheet_to_csv(sheet, { blankrows: false });
+      if (csv.trim()) parts.push(`--- Sheet: ${name} ---\n${csv}`);
+    }
+    return parts.join("\n\n");
+  } catch (e) {
+    console.error("xlsx parse failed:", e);
+    return "";
+  }
 }
 
 function base64ToBytes(b64: string): Uint8Array {
@@ -38,65 +68,85 @@ function base64ToBytes(b64: string): Uint8Array {
   return out;
 }
 
+function jsonResponse(body: unknown, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
+
   try {
-    const { fileBase64, filename, category, title } = await req.json();
-    if (!fileBase64 || !filename || !category || !title) {
-      throw new Error("fileBase64, filename, category, and title are required");
+    const { filename, category, title, fileBase64, fileType, tags } = await req.json();
+    if (!filename || !category || !title || !fileBase64) {
+      return jsonResponse({ error: "filename, category, title, and fileBase64 are required" }, 400);
     }
     if (!ALLOWED_CATEGORIES.includes(category)) {
-      throw new Error(`Invalid category. Must be one of: ${ALLOWED_CATEGORIES.join(", ")}`);
+      return jsonResponse({ error: `Invalid category. Must be one of: ${ALLOWED_CATEGORIES.join(", ")}` }, 400);
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const authHeader = req.headers.get("Authorization") || "";
-
     const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
       global: { headers: { Authorization: authHeader } },
     });
-    const admin = createClient(supabaseUrl, serviceKey);
 
     const { data: { user }, error: uErr } = await userClient.auth.getUser();
-    if (uErr || !user) throw new Error("Unauthorized");
+    if (uErr || !user) return jsonResponse({ error: "Unauthorized" }, 401);
 
-    // Check admin role
-    const { data: roleRow } = await admin.from("user_roles")
-      .select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
-    const isAdmin = !!roleRow;
+    let bytes: Uint8Array;
+    try { bytes = base64ToBytes(fileBase64); }
+    catch (e) { return jsonResponse({ error: `Invalid base64 payload: ${e instanceof Error ? e.message : "decode failed"}` }, 400); }
 
-    const bytes = base64ToBytes(fileBase64);
-    const name = filename.toLowerCase();
+    const name = String(filename).toLowerCase();
+    const ftype = String(fileType || "").toLowerCase();
     let content = "";
-    if (name.endsWith(".pdf")) content = await extractFromPdf(bytes);
-    else if (name.endsWith(".docx")) content = await extractFromDocx(bytes);
-    else if (name.endsWith(".txt") || name.endsWith(".md")) content = decodePlain(bytes);
-    else throw new Error("Unsupported file type. Use .pdf, .docx, .txt, or .md");
+    if (name.endsWith(".pdf") || ftype.includes("pdf")) {
+      content = await extractFromPdf(bytes);
+    } else if (name.endsWith(".docx") || name.endsWith(".doc") || ftype.includes("word") || ftype.includes("officedocument.wordprocessingml")) {
+      content = await extractFromDocx(bytes);
+    } else if (name.endsWith(".xlsx") || name.endsWith(".xls") || name.endsWith(".xlsm") || ftype.includes("spreadsheet") || ftype.includes("excel")) {
+      content = extractFromXlsx(bytes);
+    } else if (name.endsWith(".txt") || name.endsWith(".md") || name.endsWith(".csv") || ftype.startsWith("text/")) {
+      content = decodePlain(bytes);
+    } else {
+      content = decodePlain(bytes);
+    }
 
-    content = content.trim();
-    if (!content) throw new Error("Could not extract any text from the file.");
+    content = (content || "").trim();
+    if (!content) {
+      return jsonResponse({ error: "Could not extract any text from the file. Upload a text-based PDF, DOCX, XLSX, TXT, or MD." }, 400);
+    }
+    content = content.slice(0, 200_000);
 
-    const row = {
-      user_id: isAdmin ? null : user.id, // admins ingest as org-wide
-      category,
-      title,
-      content: content.slice(0, 200_000),
-      source_filename: filename,
-      tags: [],
-    };
+    const tagList: string[] = Array.isArray(tags)
+      ? tags.filter((t) => typeof t === "string" && t.trim()).map((t: string) => t.trim())
+      : [];
 
-    const { data: inserted, error: insErr } = await admin
-      .from("knowledge_base").insert(row).select().single();
-    if (insErr) throw new Error(insErr.message);
+    const { data: inserted, error: insErr } = await userClient
+      .from("knowledge_base")
+      .insert({
+        user_id: user.id,
+        category,
+        title,
+        content,
+        source_filename: filename,
+        tags: tagList,
+      })
+      .select("id,title,category")
+      .single();
+    if (insErr) return jsonResponse({ error: insErr.message }, 500);
 
-    return new Response(JSON.stringify({ entry: inserted, chars: content.length }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    return jsonResponse({
+      id: inserted.id,
+      title: inserted.title,
+      category: inserted.category,
+      chars: content.length,
     });
   } catch (e) {
     console.error("ingest-knowledge error:", e);
-    return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }), {
-      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return jsonResponse({ error: e instanceof Error ? e.message : "Unknown error" }, 500);
   }
 });
