@@ -48,6 +48,7 @@ type NavItem = { label: string; icon: typeof LayoutDashboard; to: string; hash?:
 const NAV: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/" },
   { label: "Opportunities", icon: Briefcase, to: "/", hash: "opportunities", matchHash: "opportunities" },
+  { label: "Tracked", icon: Crosshair, to: "/", hash: "tracked", matchHash: "tracked" },
   { label: "Analytics", icon: BarChart3, to: "/", hash: "analytics", matchHash: "analytics" },
   { label: "Reports", icon: FileText, to: "/", hash: "logs", matchHash: "logs" },
   { label: "Settings", icon: Settings, to: "/settings" },
