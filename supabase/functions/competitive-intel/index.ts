@@ -293,6 +293,7 @@ Deno.serve(async (req) => {
         vendors: marketVendors.slice(0, 25),
       },
       scorecard,
+      piidMatch,
       cachedAt: cached?.created_at ?? new Date().toISOString(),
       fromCache: !!cached,
     };
@@ -304,7 +305,7 @@ Deno.serve(async (req) => {
         agency: agencyName,
         naics_code: naicsCode,
         set_aside: setAside || null,
-        payload: { ...payload, _raw: { agency: agencyRows, market: marketRows } },
+        payload: { ...payload, _raw: { agency: agencyRows, market: marketRows, piid: piidRows } },
         expires_at: expiresAt,
       }, { onConflict: "cache_key" });
     }
