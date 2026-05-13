@@ -13,12 +13,36 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 function isoYearsAgo(n: number) {
   const d = new Date(); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10);
 }
+function normId(s?: string | null) { return (s || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+const STOPWORDS = new Set(["the", "and", "for", "with", "from", "this", "that", "services", "service", "support", "system", "systems", "contract", "program", "notice", "request", "information", "rfi", "sources", "sought"]);
+function textTokens(s?: string | null) {
+  return new Set((s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((t) => t.length >= 3 && !STOPWORDS.has(t)));
+}
+function overlapCount(a: Set<string>, b: Set<string>) { let n = 0; for (const t of a) if (b.has(t)) n++; return n; }
+
+const AGENCY_ALIASES: Record<string, string> = {
+  "DEPT OF DEFENSE": "Department of Defense",
+  "DEPT OF THE AIR FORCE": "Department of the Air Force",
+  "AIR FORCE": "Department of the Air Force",
+  "DEPT OF THE ARMY": "Department of the Army",
+  "US ARMY": "Department of the Army",
+  "DEPT OF THE NAVY": "Department of the Navy",
+  "NAVY": "Department of the Navy",
+  "DEFENSE INFORMATION SYSTEMS AGENCY": "Defense Information Systems Agency",
+  "DEFENSE LOGISTICS AGENCY": "Defense Logistics Agency",
+  "DEFENSE HEALTH AGENCY": "Defense Health Agency",
+  "DEFENSE HUMAN RESOURCES ACTIVITY": "Defense Human Resources Activity",
+  "HOUSE OF REPRESENTATIVES, THE": "House of Representatives",
+  "HOUSE OF REPRESENTATIVES": "House of Representatives",
+};
 
 // Extract the most specific sub-agency name from SAM's fullParentPathName
 // e.g. "DEPT OF DEFENSE.DEPT OF THE ARMY.US ARMY CORPS OF ENGINEERS"
 function parseAgency(fullPath: string): { sub: string; top: string } {
   const parts = (fullPath || "").split(".").map((s) => s.trim()).filter(Boolean);
-  return { top: parts[0] ?? "", sub: parts[parts.length - 1] ?? parts[0] ?? "" };
+  const canonical = parts.map((p) => AGENCY_ALIASES[p.toUpperCase()] ?? p);
+  const subtier = canonical.find((p) => /Department of the (Air Force|Army|Navy)|Defense .* Agency|Defense .* Activity/i.test(p));
+  return { top: canonical[0] ?? "", sub: subtier ?? canonical[canonical.length - 1] ?? canonical[0] ?? "" };
 }
 
 async function usaQuery(body: any) {
@@ -45,7 +69,7 @@ async function fetchAgencyHistory(agencyName: string, naics: string) {
     filters: {
       naics_codes: [naics],
       agencies: [{ type: "awarding", tier, name: agencyName }],
-      time_period: [{ start_date: isoYearsAgo(3), end_date: todayISO() }],
+      time_period: [{ start_date: isoYearsAgo(3), end_date: todayISO(), date_type: "new_awards_only" }],
       award_type_codes: ["A", "B", "C", "D"],
     },
     fields: FIELDS,
@@ -65,7 +89,7 @@ async function fetchAgencyHistory(agencyName: string, naics: string) {
 async function fetchMarketLandscape(naics: string, setAside?: string) {
   const filters: any = {
     naics_codes: [naics],
-    time_period: [{ start_date: isoYearsAgo(3), end_date: todayISO() }],
+      time_period: [{ start_date: isoYearsAgo(3), end_date: todayISO(), date_type: "new_awards_only" }],
     award_type_codes: ["A", "B", "C", "D"],
   };
   if (setAside) filters.set_aside_type_codes = [setAside];
@@ -78,6 +102,7 @@ async function fetchMarketLandscape(naics: string, setAside?: string) {
 
 async function fetchByPiid(solicitationNumber: string) {
   if (!solicitationNumber) return [];
+  const needle = normId(solicitationNumber);
   try {
     const res = await fetch(USA, {
       method: "POST",
@@ -96,7 +121,11 @@ async function fetchByPiid(solicitationNumber: string) {
     });
     if (!res.ok) return [];
     const json = await res.json();
-    return (json.results || []).map((r: any) => {
+    return (json.results || []).filter((r: any) => {
+      const awardId = normId(r?.["Award ID"]);
+      const generated = normId(r?.generated_internal_id);
+      return awardId === needle || generated.includes(needle);
+    }).map((r: any) => {
       const n = r?.NAICS;
       if (n && typeof n === "object") return { ...r, NAICS: n.code ?? "", NAICS_Description: n.description ?? "" };
       return r;
@@ -125,22 +154,34 @@ function aggregateByVendor(rows: any[]) {
     .sort((a, b) => b.totalValue - a.totalValue);
 }
 
-function pickIncumbent(rows: any[], solicitationNumber?: string, postedDate?: string) {
+function pickIncumbent(rows: any[], solicitationNumber?: string, postedDate?: string, opportunityTitle?: string) {
   if (rows.length === 0) return { top: null, alternates: [] };
+  const fullSolicitation = normId(solicitationNumber);
+  const exactRows = fullSolicitation
+    ? rows.filter((r) => normId(r["Award ID"]) === fullSolicitation || normId(r.generated_internal_id).includes(fullSolicitation))
+    : [];
+  const sourceRows = exactRows.length > 0 ? exactRows : rows;
   const piidPrefix = solicitationNumber?.match(/^([A-Z0-9]{6})/i)?.[1]?.toUpperCase();
   const posted = postedDate ? new Date(postedDate).getTime() : Date.now();
-  const scored = rows.map((r) => {
+  const oppTokens = textTokens(opportunityTitle);
+  const scored = sourceRows.map((r) => {
     let score = 0;
     const id = String(r["Award ID"] ?? "").toUpperCase();
+    const descTokens = textTokens(`${r.Description ?? ""} ${r["Award ID"] ?? ""}`);
+    const overlap = overlapCount(oppTokens, descTokens);
     if (piidPrefix && id.startsWith(piidPrefix)) score += 1000;
+    if (overlap >= 2) score += 750 + overlap * 100;
+    else if (overlap === 1) score += 150;
     const end = r["End Date"] ? new Date(r["End Date"]).getTime() : 0;
     if (end) {
       const diffMonths = Math.abs(end - posted) / (1000 * 60 * 60 * 24 * 30);
       if (diffMonths <= 18) score += 100 - Math.min(diffMonths * 5, 90);
     }
     score += Math.min((Number(r["Award Amount"]) || 0) / 1e6, 50);
-    return { r, score };
-  }).sort((a, b) => b.score - a.score);
+    return { r, score, overlap };
+  }).filter((s) => exactRows.length > 0 || s.overlap >= 3);
+  if (scored.length === 0) return { top: null, alternates: [] };
+  scored.sort((a, b) => b.score - a.score);
   const toCard = (r: any) => ({
     vendor: r["Recipient Name"],
     recipientId: r.recipient_id ?? null,
@@ -217,12 +258,12 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine } = await req.json();
+    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
 
     const { sub, top } = parseAgency(agency || "");
     const agencyName = sub || top;
-    const cacheKey = `v2|${agencyName}|${naicsCode}|${setAside || "none"}`;
+    const cacheKey = `v7|${agencyName}|${naicsCode}|${setAside || "none"}`;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -261,7 +302,7 @@ Deno.serve(async (req) => {
     }
     const piidMatch = piidRows.length > 0;
 
-    const incumbent = pickIncumbent(agencyRows, solicitationNumber, postedDate);
+    const incumbent = pickIncumbent(agencyRows, solicitationNumber, postedDate, title);
     const agencyVendors = aggregateByVendor(agencyRows);
     const marketVendors = aggregateByVendor(marketRows);
     const agencyTotal = agencyVendors.reduce((s, v) => s + v.totalValue, 0);
