@@ -53,18 +53,18 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 bg-card border-b border-border">
-      <div className="max-w-[1400px] mx-auto px-6 h-28 flex items-center gap-6">
-        <Link to="/" className="flex items-center shrink-0" aria-label="VetRamp Pursuit home">
+      <div className="max-w-[1400px] mx-auto px-6 min-h-36 py-3 flex flex-wrap xl:flex-nowrap items-center gap-5">
+        <Link to="/" className="flex items-center shrink-0 w-full md:w-auto" aria-label="VetRamp Pursuit home">
           <img
             src={logoUrl}
             alt="VetRamp Pursuit"
-            className="h-20 md:h-24 w-auto"
-            width={1536}
-            height={1024}
+            className="h-24 sm:h-28 md:h-32 lg:h-36 w-auto max-w-full object-contain"
+            width={1467}
+            height={178}
           />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 ml-2">
+        <nav className="hidden md:flex items-center gap-1 ml-0 xl:ml-2">
           {NAV.map((item) => {
             const active = isActive(item);
             const Icon = item.icon;
@@ -83,7 +83,7 @@ export function Header() {
                 <Icon className="w-4 h-4" />
                 {item.label}
                 {active && (
-                  <span className="absolute -bottom-[17px] left-2 right-2 h-[2px] bg-primary rounded-full" />
+                  <span className="absolute -bottom-3 left-2 right-2 h-[2px] bg-primary rounded-full" />
                 )}
               </Link>
             );
