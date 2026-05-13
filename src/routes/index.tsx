@@ -27,7 +27,7 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
-const historicalLookbackFrom = () => format(subYears(new Date(), 5), "yyyy-MM-dd");
+const historicalLookbackFrom = () => format(subYears(new Date(), 10), "yyyy-MM-dd");
 
 function Dashboard() {
   const navigate = useNavigate();
