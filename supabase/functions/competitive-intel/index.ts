@@ -97,6 +97,7 @@ async function fetchMarketLandscape(naics: string, setAside?: string) {
 
 async function fetchByPiid(solicitationNumber: string) {
   if (!solicitationNumber) return [];
+  const needle = normId(solicitationNumber);
   try {
     const res = await fetch(USA, {
       method: "POST",
@@ -115,7 +116,11 @@ async function fetchByPiid(solicitationNumber: string) {
     });
     if (!res.ok) return [];
     const json = await res.json();
-    return (json.results || []).map((r: any) => {
+    return (json.results || []).filter((r: any) => {
+      const awardId = normId(r?.["Award ID"]);
+      const generated = normId(r?.generated_internal_id);
+      return awardId === needle || generated.includes(needle);
+    }).map((r: any) => {
       const n = r?.NAICS;
       if (n && typeof n === "object") return { ...r, NAICS: n.code ?? "", NAICS_Description: n.description ?? "" };
       return r;
