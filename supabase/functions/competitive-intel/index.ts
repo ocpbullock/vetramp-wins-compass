@@ -178,8 +178,8 @@ function pickIncumbent(rows: any[], solicitationNumber?: string, postedDate?: st
       if (diffMonths <= 18) score += 100 - Math.min(diffMonths * 5, 90);
     }
     score += Math.min((Number(r["Award Amount"]) || 0) / 1e6, 50);
-    return { r, score, overlap, prefix: !!(piidPrefix && id.startsWith(piidPrefix)) };
-  }).filter((s) => exactRows.length > 0 || s.overlap >= 2 || (s.prefix && s.overlap >= 1));
+    return { r, score, overlap };
+  }).filter((s) => exactRows.length > 0 || s.overlap >= 2);
   if (scored.length === 0) return { top: null, alternates: [] };
   scored.sort((a, b) => b.score - a.score);
   const toCard = (r: any) => ({
