@@ -14,6 +14,11 @@ function isoYearsAgo(n: number) {
   const d = new Date(); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10);
 }
 function normId(s?: string | null) { return (s || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+const STOPWORDS = new Set(["the", "and", "for", "with", "from", "this", "that", "services", "service", "support", "system", "systems", "contract", "program", "notice", "request", "information", "rfi", "sources", "sought"]);
+function textTokens(s?: string | null) {
+  return new Set((s || "").toLowerCase().replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter((t) => t.length >= 3 && !STOPWORDS.has(t)));
+}
+function overlapCount(a: Set<string>, b: Set<string>) { let n = 0; for (const t of a) if (b.has(t)) n++; return n; }
 
 const AGENCY_ALIASES: Record<string, string> = {
   "DEPT OF DEFENSE": "Department of Defense",
@@ -149,22 +154,34 @@ function aggregateByVendor(rows: any[]) {
     .sort((a, b) => b.totalValue - a.totalValue);
 }
 
-function pickIncumbent(rows: any[], solicitationNumber?: string, postedDate?: string) {
+function pickIncumbent(rows: any[], solicitationNumber?: string, postedDate?: string, opportunityTitle?: string) {
   if (rows.length === 0) return { top: null, alternates: [] };
+  const fullSolicitation = normId(solicitationNumber);
+  const exactRows = fullSolicitation
+    ? rows.filter((r) => normId(r["Award ID"]) === fullSolicitation || normId(r.generated_internal_id).includes(fullSolicitation))
+    : [];
+  const sourceRows = exactRows.length > 0 ? exactRows : rows;
   const piidPrefix = solicitationNumber?.match(/^([A-Z0-9]{6})/i)?.[1]?.toUpperCase();
   const posted = postedDate ? new Date(postedDate).getTime() : Date.now();
-  const scored = rows.map((r) => {
+  const oppTokens = textTokens(opportunityTitle);
+  const scored = sourceRows.map((r) => {
     let score = 0;
     const id = String(r["Award ID"] ?? "").toUpperCase();
+    const descTokens = textTokens(`${r.Description ?? ""} ${r["Award ID"] ?? ""}`);
+    const overlap = overlapCount(oppTokens, descTokens);
     if (piidPrefix && id.startsWith(piidPrefix)) score += 1000;
+    if (overlap >= 2) score += 750 + overlap * 100;
+    else if (overlap === 1) score += 150;
     const end = r["End Date"] ? new Date(r["End Date"]).getTime() : 0;
     if (end) {
       const diffMonths = Math.abs(end - posted) / (1000 * 60 * 60 * 24 * 30);
       if (diffMonths <= 18) score += 100 - Math.min(diffMonths * 5, 90);
     }
     score += Math.min((Number(r["Award Amount"]) || 0) / 1e6, 50);
-    return { r, score };
-  }).sort((a, b) => b.score - a.score);
+    return { r, score, overlap, prefix: !!(piidPrefix && id.startsWith(piidPrefix)) };
+  }).filter((s) => exactRows.length > 0 || s.overlap >= 2 || (s.prefix && s.overlap >= 1));
+  if (scored.length === 0) return { top: null, alternates: [] };
+  scored.sort((a, b) => b.score - a.score);
   const toCard = (r: any) => ({
     vendor: r["Recipient Name"],
     recipientId: r.recipient_id ?? null,
@@ -241,7 +258,7 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine } = await req.json();
+    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
 
     const { sub, top } = parseAgency(agency || "");
@@ -285,7 +302,7 @@ Deno.serve(async (req) => {
     }
     const piidMatch = piidRows.length > 0;
 
-    const incumbent = pickIncumbent(agencyRows, solicitationNumber, postedDate);
+    const incumbent = pickIncumbent(agencyRows, solicitationNumber, postedDate, title);
     const agencyVendors = aggregateByVendor(agencyRows);
     const marketVendors = aggregateByVendor(marketRows);
     const agencyTotal = agencyVendors.reduce((s, v) => s + v.totalValue, 0);
