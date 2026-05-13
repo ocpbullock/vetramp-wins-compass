@@ -231,7 +231,7 @@ function ProposalPipeline() {
   const readiness = useMemo(() => {
     if (!proposal) return 0;
     let score = 0;
-    if (proposal.solicitation_number) score += 10;
+    if (proposal.pop_base_months) score += 10;
     if (proposal.opportunity_type) score += 5;
     if (proposal.estimated_value) score += 5;
     if (proposal.contract_type) score += 5;
