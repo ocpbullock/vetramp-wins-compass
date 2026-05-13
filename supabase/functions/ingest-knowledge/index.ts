@@ -117,13 +117,15 @@ serve(async (req) => {
 
     content = (content || "").trim();
     if (!content) {
-      return jsonResponse({ error: "Could not extract any text from the file. Upload a text-based PDF, DOCX, XLSX, TXT, or MD." }, 400);
+      return jsonResponse({ error: "Could not extract text from this file. Try a text-based PDF or .txt version." }, 400);
     }
     content = content.slice(0, 200_000);
 
     const tagList: string[] = Array.isArray(tags)
       ? tags.filter((t) => typeof t === "string" && t.trim()).map((t: string) => t.trim())
-      : [];
+      : typeof tags === "string"
+        ? tags.split(",").map((t) => t.trim()).filter(Boolean)
+        : [];
 
     const { data: inserted, error: insErr } = await userClient
       .from("knowledge_base")
