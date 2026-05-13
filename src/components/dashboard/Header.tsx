@@ -10,6 +10,12 @@ import {
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
+  TooltipProvider,
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import {
   LogOut,
   Shield,
   Settings,
