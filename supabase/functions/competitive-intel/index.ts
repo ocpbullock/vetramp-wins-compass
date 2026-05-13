@@ -179,7 +179,7 @@ function pickIncumbent(rows: any[], solicitationNumber?: string, postedDate?: st
     }
     score += Math.min((Number(r["Award Amount"]) || 0) / 1e6, 50);
     return { r, score, overlap };
-  }).filter((s) => exactRows.length > 0 || s.overlap >= 2);
+  }).filter((s) => exactRows.length > 0 || s.overlap >= 3);
   if (scored.length === 0) return { top: null, alternates: [] };
   scored.sort((a, b) => b.score - a.score);
   const toCard = (r: any) => ({
@@ -263,7 +263,7 @@ Deno.serve(async (req) => {
 
     const { sub, top } = parseAgency(agency || "");
     const agencyName = sub || top;
-    const cacheKey = `v6|${agencyName}|${naicsCode}|${setAside || "none"}`;
+    const cacheKey = `v7|${agencyName}|${naicsCode}|${setAside || "none"}`;
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
