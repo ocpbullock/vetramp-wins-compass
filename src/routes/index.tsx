@@ -10,6 +10,7 @@ import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
 import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
 import { InProgressTab } from "@/components/dashboard/InProgressTab";
+import { TrackedOpportunitiesTab } from "@/components/dashboard/TrackedOpportunitiesTab";
 import { supabase } from "@/integrations/supabase/client";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
 import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
@@ -55,7 +56,7 @@ function Dashboard() {
   // Sync tab with URL hash from header nav links
   useEffect(() => {
     const h = (location.hash || "").replace(/^#/, "");
-    const valid = ["opportunities", "historical", "in-progress", "analytics", "logs"];
+    const valid = ["opportunities", "historical", "in-progress", "tracked", "analytics", "logs"];
     if (h && valid.includes(h)) setTab(h);
   }, [location.hash]);
   const [inProgressCount, setInProgressCount] = useState<number>(0);
@@ -259,6 +260,7 @@ function Dashboard() {
             <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
             <TabsTrigger value="historical">Historical Awards</TabsTrigger>
             <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
+            <TabsTrigger value="tracked">Tracked</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
@@ -270,6 +272,9 @@ function Dashboard() {
           </TabsContent>
           <TabsContent value="in-progress" className="mt-4">
             <InProgressTab onCountChange={setInProgressCount} />
+          </TabsContent>
+          <TabsContent value="tracked" className="mt-4">
+            <TrackedOpportunitiesTab awards={awards} />
           </TabsContent>
           <TabsContent value="analytics" className="mt-4">
             <AnalyticsTab awards={awards} />

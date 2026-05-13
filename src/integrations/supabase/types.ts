@@ -364,6 +364,63 @@ export type Database = {
         }
         Relationships: []
       }
+      tracked_opportunities: {
+        Row: {
+          agency: string
+          contract_vehicle: string
+          contract_vehicle_other: string | null
+          created_at: string
+          description: string | null
+          estimated_value: number | null
+          id: string
+          naics_code: string
+          notes: string | null
+          response_deadline: string | null
+          source_url: string | null
+          status: string
+          sub_agency: string | null
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          agency: string
+          contract_vehicle: string
+          contract_vehicle_other?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_value?: number | null
+          id?: string
+          naics_code: string
+          notes?: string | null
+          response_deadline?: string | null
+          source_url?: string | null
+          status?: string
+          sub_agency?: string | null
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          agency?: string
+          contract_vehicle?: string
+          contract_vehicle_other?: string | null
+          created_at?: string
+          description?: string | null
+          estimated_value?: number | null
+          id?: string
+          naics_code?: string
+          notes?: string | null
+          response_deadline?: string | null
+          source_url?: string | null
+          status?: string
+          sub_agency?: string | null
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_invites: {
         Row: {
           created_at: string

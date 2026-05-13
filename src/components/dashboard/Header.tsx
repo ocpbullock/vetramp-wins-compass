@@ -28,6 +28,7 @@ import {
   ChevronDown,
   Search,
   Clock,
+  Crosshair,
 } from "lucide-react";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
@@ -47,6 +48,7 @@ type NavItem = { label: string; icon: typeof LayoutDashboard; to: string; hash?:
 const NAV: NavItem[] = [
   { label: "Dashboard", icon: LayoutDashboard, to: "/" },
   { label: "Opportunities", icon: Briefcase, to: "/", hash: "opportunities", matchHash: "opportunities" },
+  { label: "Tracked", icon: Crosshair, to: "/", hash: "tracked", matchHash: "tracked" },
   { label: "Analytics", icon: BarChart3, to: "/", hash: "analytics", matchHash: "analytics" },
   { label: "Reports", icon: FileText, to: "/", hash: "logs", matchHash: "logs" },
   { label: "Settings", icon: Settings, to: "/settings" },
@@ -112,7 +114,7 @@ export function Header() {
     if (item.matchHash) return currentHash === item.matchHash;
     if (item.to !== "/") return false;
     // Dashboard is active when on / with no recognized tab hash
-    return !["opportunities", "analytics", "logs", "in-progress", "historical"].includes(currentHash);
+    return !["opportunities", "tracked", "analytics", "logs", "in-progress", "historical"].includes(currentHash);
   };
 
   return (
