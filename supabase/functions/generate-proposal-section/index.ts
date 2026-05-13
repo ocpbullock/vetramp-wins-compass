@@ -1,4 +1,43 @@
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
+
+const SECTION_KB_CATEGORIES: Record<string, string[]> = {
+  past_performance: ["past_performance"],
+  staffing_plan: ["personnel"],
+  cover_letter: ["capability", "win_theme"],
+  executive_summary: ["capability", "win_theme"],
+  technical_approach: ["capability", "boilerplate"],
+};
+
+async function fetchKnowledgeContext(sectionId: string): Promise<string> {
+  try {
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!supabaseUrl || !serviceKey) return "";
+    const admin = createClient(supabaseUrl, serviceKey);
+
+    const categories = SECTION_KB_CATEGORIES[sectionId] ?? ["boilerplate"];
+    const parts: string[] = [];
+    for (const cat of categories) {
+      const { data, error } = await admin
+        .from("knowledge_base")
+        .select("title,content,category")
+        .eq("category", cat)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      if (error) { console.error("kb fetch error:", cat, error.message); continue; }
+      for (const row of data ?? []) {
+        parts.push(`### [${row.category}] ${row.title}\n${row.content}`);
+      }
+    }
+    if (!parts.length) return "";
+    return parts.join("\n\n---\n\n").slice(0, 15_000);
+  } catch (e) {
+    console.error("fetchKnowledgeContext failed:", e);
+    return "";
+  }
+}
+
 
 // Generates ONE proposal section using the AI Gateway, streaming SSE back to client.
 // Inputs: { sectionId, sectionTitle, opportunity, companyProfile, customerIntel?, complianceMatrix?, solutionDesign?, attachmentsText? }
@@ -61,6 +100,8 @@ Deno.serve(async (req) => {
     const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
       `Write the section titled "${sectionTitle}". Be specific to this customer; avoid boilerplate.`;
 
+    const knowledgeContext = await fetchKnowledgeContext(sectionId);
+
     const systemPrompt = `You are a senior federal capture manager writing for LGE Consulting, LLC dba VetRamp (SBA-certified SDVOSB).
 You are writing ONE section of a proposal at a time. Output MARKDOWN only — no preamble, no closing remarks.
 Every "shall" requirement in the SOW must be addressed if this section covers it. Use the unit's terminology, not generic federal-speak.
@@ -69,7 +110,12 @@ Use markdown tables for structured data. Quote SOW requirements verbatim when re
 COMPANY PROFILE:
 ${JSON.stringify(companyProfile, null, 2)}
 
+${knowledgeContext ? `KNOWLEDGE BASE (authoritative company content — use verbatim where applicable):\n${knowledgeContext}\n` : ""}
 ${customerIntel ? `CUSTOMER INTELLIGENCE (verified by capture team):\n${JSON.stringify(customerIntel, null, 2)}\n` : ""}
+${complianceMatrix ? `COMPLIANCE MATRIX rows mapped to this section:\n${JSON.stringify(complianceMatrix, null, 2)}\n` : ""}
+${solutionDesign ? `SOLUTION DESIGN inputs:\n${JSON.stringify(solutionDesign, null, 2)}\n` : ""}
+
+OPPORTUNITY:
 ${complianceMatrix ? `COMPLIANCE MATRIX rows mapped to this section:\n${JSON.stringify(complianceMatrix, null, 2)}\n` : ""}
 ${solutionDesign ? `SOLUTION DESIGN inputs:\n${JSON.stringify(solutionDesign, null, 2)}\n` : ""}
 
