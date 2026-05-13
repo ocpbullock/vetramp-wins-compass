@@ -35,6 +35,7 @@ const NAV: NavItem[] = [
   { label: "Opportunities", icon: Briefcase, to: "/", hash: "opportunities", matchHash: "opportunities" },
   { label: "Analytics", icon: BarChart3, to: "/", hash: "analytics", matchHash: "analytics" },
   { label: "Reports", icon: FileText, to: "/", hash: "logs", matchHash: "logs" },
+  { label: "Settings", icon: Settings, to: "/settings" },
 ];
 
 export function Header() {
@@ -51,8 +52,10 @@ export function Header() {
   const onHome = location.pathname === "/";
 
   const isActive = (item: NavItem) => {
+    if (item.to !== "/" && location.pathname.startsWith(item.to)) return true;
     if (!onHome) return false;
     if (item.matchHash) return currentHash === item.matchHash;
+    if (item.to !== "/") return false;
     // Dashboard is active when on / with no recognized tab hash
     return !["opportunities", "analytics", "logs", "in-progress", "historical"].includes(currentHash);
   };
@@ -124,18 +127,6 @@ export function Header() {
                 <TooltipContent>Admin</TooltipContent>
               </Tooltip>
             )}
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" asChild className="flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Settings">
-                  <Link to="/settings">
-                    <Settings className="w-5 h-5" />
-                    <span className="hidden sm:block text-[11px] text-muted-foreground leading-none">Settings</span>
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Settings</TooltipContent>
-            </Tooltip>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
