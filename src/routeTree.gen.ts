@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as KnowledgeBaseRouteImport } from './routes/knowledge-base'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
@@ -16,6 +17,11 @@ import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProposalsProposalIdRouteImport } from './routes/proposals.$proposalId'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const KnowledgeBaseRoute = KnowledgeBaseRouteImport.update({
   id: '/knowledge-base',
   path: '/knowledge-base',
@@ -53,6 +59,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
+  '/settings': typeof SettingsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRoutesByTo {
@@ -61,6 +68,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
+  '/settings': typeof SettingsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRoutesById {
@@ -70,6 +78,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
+  '/settings': typeof SettingsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRouteTypes {
@@ -80,6 +89,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/knowledge-base'
+    | '/settings'
     | '/proposals/$proposalId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -88,6 +98,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/knowledge-base'
+    | '/settings'
     | '/proposals/$proposalId'
   id:
     | '__root__'
@@ -96,6 +107,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/auth'
     | '/knowledge-base'
+    | '/settings'
     | '/proposals/$proposalId'
   fileRoutesById: FileRoutesById
 }
@@ -105,11 +117,19 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
   KnowledgeBaseRoute: typeof KnowledgeBaseRoute
+  SettingsRoute: typeof SettingsRoute
   ProposalsProposalIdRoute: typeof ProposalsProposalIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/knowledge-base': {
       id: '/knowledge-base'
       path: '/knowledge-base'
@@ -161,6 +181,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
   KnowledgeBaseRoute: KnowledgeBaseRoute,
+  SettingsRoute: SettingsRoute,
   ProposalsProposalIdRoute: ProposalsProposalIdRoute,
 }
 export const routeTree = rootRouteImport
