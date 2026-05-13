@@ -137,7 +137,7 @@ export function TrackedAnalyzePanel({
                         <XAxis dataKey="year" tick={{ fontSize: 11 }} />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtMoney} />
                         <RTooltip formatter={(v: any) => fmtMoney(Number(v))} />
-                        <Bar dataKey="value" fill="hsl(var(--primary))" />
+                        <Bar dataKey="value" fill="#2563eb" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
