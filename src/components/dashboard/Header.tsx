@@ -170,7 +170,9 @@ export function Header() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-        </div>
+          </div>
+        </TooltipProvider>
+
       </div>
     </header>
   );
