@@ -305,7 +305,7 @@ Deno.serve(async (req) => {
         agency: agencyName,
         naics_code: naicsCode,
         set_aside: setAside || null,
-        payload: { ...payload, _raw: { agency: agencyRows, market: marketRows, piid: piidRows } },
+        payload: { ...payload, _raw: { agency: agencyRows.filter((r) => !piidRows.some((p) => p.generated_internal_id && p.generated_internal_id === r.generated_internal_id)), market: marketRows } },
         expires_at: expiresAt,
       }, { onConflict: "cache_key" });
     }
