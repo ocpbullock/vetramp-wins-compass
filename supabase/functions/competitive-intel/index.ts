@@ -13,12 +13,31 @@ function todayISO() { return new Date().toISOString().slice(0, 10); }
 function isoYearsAgo(n: number) {
   const d = new Date(); d.setFullYear(d.getFullYear() - n); return d.toISOString().slice(0, 10);
 }
+function normId(s?: string | null) { return (s || "").toUpperCase().replace(/[^A-Z0-9]/g, ""); }
+
+const AGENCY_ALIASES: Record<string, string> = {
+  "DEPT OF DEFENSE": "Department of Defense",
+  "DEPT OF THE AIR FORCE": "Department of the Air Force",
+  "AIR FORCE": "Department of the Air Force",
+  "DEPT OF THE ARMY": "Department of the Army",
+  "US ARMY": "Department of the Army",
+  "DEPT OF THE NAVY": "Department of the Navy",
+  "NAVY": "Department of the Navy",
+  "DEFENSE INFORMATION SYSTEMS AGENCY": "Defense Information Systems Agency",
+  "DEFENSE LOGISTICS AGENCY": "Defense Logistics Agency",
+  "DEFENSE HEALTH AGENCY": "Defense Health Agency",
+  "DEFENSE HUMAN RESOURCES ACTIVITY": "Defense Human Resources Activity",
+  "HOUSE OF REPRESENTATIVES, THE": "House of Representatives",
+  "HOUSE OF REPRESENTATIVES": "House of Representatives",
+};
 
 // Extract the most specific sub-agency name from SAM's fullParentPathName
 // e.g. "DEPT OF DEFENSE.DEPT OF THE ARMY.US ARMY CORPS OF ENGINEERS"
 function parseAgency(fullPath: string): { sub: string; top: string } {
   const parts = (fullPath || "").split(".").map((s) => s.trim()).filter(Boolean);
-  return { top: parts[0] ?? "", sub: parts[parts.length - 1] ?? parts[0] ?? "" };
+  const canonical = parts.map((p) => AGENCY_ALIASES[p.toUpperCase()] ?? p);
+  const subtier = canonical.find((p) => /Department of the (Air Force|Army|Navy)|Defense .* Agency|Defense .* Activity/i.test(p));
+  return { top: canonical[0] ?? "", sub: subtier ?? canonical[canonical.length - 1] ?? canonical[0] ?? "" };
 }
 
 async function usaQuery(body: any) {
@@ -45,7 +64,7 @@ async function fetchAgencyHistory(agencyName: string, naics: string) {
     filters: {
       naics_codes: [naics],
       agencies: [{ type: "awarding", tier, name: agencyName }],
-      time_period: [{ start_date: isoYearsAgo(3), end_date: todayISO() }],
+      time_period: [{ start_date: isoYearsAgo(3), end_date: todayISO(), date_type: "new_awards_only" }],
       award_type_codes: ["A", "B", "C", "D"],
     },
     fields: FIELDS,
