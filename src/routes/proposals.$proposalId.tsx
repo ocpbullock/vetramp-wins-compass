@@ -70,7 +70,7 @@ function ProposalPipeline() {
     })();
   }, [user, proposalId, navigate]);
 
-  async function patchProposal(patch: Record<string, any>) {
+  async function patchProposal(patch: TablesUpdate<"proposals">) {
     setProposal((p: any) => ({ ...p, ...patch }));
     const { error } = await supabase.from("proposals").update(patch).eq("id", proposalId);
     if (error) toast.error(error.message);
