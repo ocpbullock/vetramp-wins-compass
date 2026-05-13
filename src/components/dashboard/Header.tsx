@@ -128,18 +128,6 @@ export function Header() {
               </Tooltip>
             )}
 
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" asChild className="flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Settings">
-                  <Link to="/settings">
-                    <Settings className="w-5 h-5" />
-                    <span className="hidden sm:block text-[11px] text-muted-foreground leading-none">Settings</span>
-                  </Link>
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Settings</TooltipContent>
-            </Tooltip>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-accent transition-colors">
