@@ -35,6 +35,7 @@ const NAV: NavItem[] = [
   { label: "Opportunities", icon: Briefcase, to: "/", hash: "opportunities", matchHash: "opportunities" },
   { label: "Analytics", icon: BarChart3, to: "/", hash: "analytics", matchHash: "analytics" },
   { label: "Reports", icon: FileText, to: "/", hash: "logs", matchHash: "logs" },
+  { label: "Settings", icon: Settings, to: "/settings" },
 ];
 
 export function Header() {
