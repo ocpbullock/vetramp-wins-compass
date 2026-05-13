@@ -17,6 +17,7 @@ import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { DataSourceBadge } from "@/components/dashboard/DataSourceBadge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   searchSam, searchUsaspending, makeCacheKey, readCache, writeCache,
   type SamOpportunity, type HistoricalAward,
@@ -174,7 +175,45 @@ function Dashboard() {
     return { activeOpps, awardNotices, historicalCount: awards.length, totalObligated };
   }, [opps, awards]);
 
-  if (loading || !user) return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+  if (loading || !user) {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header placeholder */}
+        <div className="border-b">
+          <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
+            <Skeleton className="h-6 w-40" />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-24" />
+              <Skeleton className="h-8 w-8 rounded-full" />
+            </div>
+          </div>
+        </div>
+
+        {/* Search controls placeholder */}
+        <div className="border-b">
+          <div className="max-w-[1400px] mx-auto px-6 py-4 flex flex-wrap items-center gap-3">
+            <Skeleton className="h-9 flex-1 min-w-[240px]" />
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-9 w-40" />
+            <Skeleton className="h-9 w-28" />
+          </div>
+        </div>
+
+        {/* Stat cards placeholder */}
+        <main className="max-w-[1400px] mx-auto px-6 py-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="rounded-lg border p-4 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-7 w-20" />
+                <Skeleton className="h-3 w-16" />
+              </div>
+            ))}
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
