@@ -69,6 +69,7 @@ export function CompetitiveIntelModal({
     setLoading(true); setError(null); setData(null);
     getCompetitiveIntel({
       solicitationNumber: opp.solicitationNumber,
+      title: opp.title,
       agency: opp.fullParentPathName ?? "",
       naicsCode: opp.naicsCode ?? "",
       setAside: opp.typeOfSetAside || undefined,
