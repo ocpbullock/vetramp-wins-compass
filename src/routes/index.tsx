@@ -50,16 +50,6 @@ function Dashboard() {
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
   const [inProgressCount, setInProgressCount] = useState<number>(0);
-  useEffect(() => {
-    if (!user) return;
-    (async () => {
-      const { count } = await supabase
-        .from("proposals")
-        .select("id", { count: "exact", head: true })
-        .eq("user_id", user.id);
-      if (typeof count === "number") setInProgressCount(count);
-    })();
-  }, [user, tab]);
   async function handlePropose(o: SamOpportunity) {
     if (!user) return;
     const { data, error } = await supabase.from("proposals").insert({
