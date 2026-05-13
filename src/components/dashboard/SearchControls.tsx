@@ -77,9 +77,20 @@ export function SearchControls({
         </div>
 
         <div>
-          <Label className="text-xs">From</Label>
+          <Label className="text-xs flex items-center gap-1">
+            From
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button type="button" aria-label="From date info" className="inline-flex">
+                    <Info className="w-3 h-3 text-muted-foreground" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>SAM clamps to 1y · awards use 10y lookback</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </Label>
           <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className="mt-1" />
-          <div className="text-[10px] text-muted-foreground mt-1">SAM clamps to 1y · awards use 10y lookback</div>
         </div>
         <div>
           <Label className="text-xs">To</Label>
