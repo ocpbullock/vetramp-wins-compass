@@ -71,7 +71,7 @@ function ProposalPipeline() {
 
   async function patchProposal(patch: Record<string, any>) {
     setProposal((p: any) => ({ ...p, ...patch }));
-    const { error } = await (supabase as any).from("proposals").update(patch).eq("id", proposalId);
+    const { error } = await supabase.from("proposals").update(patch).eq("id", proposalId);
     if (error) toast.error(error.message);
   }
 
