@@ -154,7 +154,7 @@ export function CompetitiveIntelModal({
           <h3 className="text-sm font-semibold flex items-center gap-2"><Trophy className="w-4 h-4" />Likely Incumbent</h3>
           {localMatch && localMatch.confidence !== "none" ? (() => {
             const simPct = localMatch.similarity ? Math.round(localMatch.similarity * 100) : null;
-            const lowConfTitle = localMatch.confidence === "title" && simPct != null && simPct < 70;
+            const lowConfTitle = localMatch.confidence === "fuzzy" && simPct != null && simPct < 70;
             const confLabel =
               localMatch.confidence === "exact" ? "EXACT PIID MATCH" :
               localMatch.confidence === "parent" ? "PARENT IDV MATCH" :
