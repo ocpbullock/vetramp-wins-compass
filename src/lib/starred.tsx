@@ -132,7 +132,7 @@ export function StarredProvider({ children }: { children: React.ReactNode }) {
           response_deadline: input.responseDeadline ?? null,
           posted_date: input.postedDate ?? null,
           set_aside_description: input.setAsideDescription ?? null,
-          source_data: input.sourceData ?? null,
+          source_data: (input.sourceData ?? null) as any,
         });
         if (error) {
           setStarredIds(starredIds);
