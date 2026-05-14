@@ -348,7 +348,7 @@ function ProposalPipeline() {
             <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
-            <ComingSoon title="Solution Design (Phase 3)" description="Build staffing, technical approach, management plan, transition timeline, and price strategy with AI assistance. For now, capture freeform solution notes." fieldLabel="Solution design notes" value={proposal.technical_approach?.notes || ""} onSave={(v) => patchProposal({ technical_approach: { ...(proposal.technical_approach || {}), notes: v } })} />
+            <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
           </TabsContent>
           <TabsContent value="generate" className="mt-4 space-y-4">
             <GenerateStep proposal={proposal} sectionGen={sectionGen} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
