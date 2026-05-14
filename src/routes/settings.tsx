@@ -26,6 +26,7 @@ import { TeamPanel } from "@/components/settings/TeamPanel";
 import { PartnersPanel } from "@/components/settings/PartnersPanel";
 import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 import { ContractVehiclesPanel } from "@/components/settings/ContractVehiclesPanel";
+import { AIUsagePanel } from "@/components/settings/AIUsagePanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
