@@ -99,6 +99,7 @@ export function ProposalModal({ opp, onClose }: { opp: SamOpportunity | null; on
     if (!opp || !user) return;
     const { error } = await supabase.from("proposal_drafts").insert({
       user_id: user.id,
+      team_id: teamId,
       solicitation_number: opp.solicitationNumber || "unknown",
       opportunity_title: opp.title,
       agency: opp.fullParentPathName,
