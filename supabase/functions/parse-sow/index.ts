@@ -189,11 +189,11 @@ function mergeCapture(a: any, b: any): any {
   return out;
 }
 
-async function callAI(apiKey: string, system: string, user: string): Promise<any> {
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+async function callAI(_apiKey: string, system: string, user: string, teamId: string | null): Promise<any> {
+  const data = await sharedCallAI({
+    functionName: "parse-sow",
+    teamId,
+    body: {
       model: "google/gemini-2.5-pro",
       messages: [
         { role: "system", content: system },
@@ -201,15 +201,8 @@ async function callAI(apiKey: string, system: string, user: string): Promise<any
       ],
       tools: [{ type: "function", function: { name: "return_compliance_matrix", description: "Return structured compliance matrix and capture details.", parameters: MATRIX_SCHEMA } }],
       tool_choice: { type: "function", function: { name: "return_compliance_matrix" } },
-    }),
+    },
   });
-  if (!r.ok) {
-    const t = await r.text();
-    const err: any = new Error(`AI gateway error ${r.status}: ${t}`);
-    err.status = r.status;
-    throw err;
-  }
-  const data = await r.json();
   const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
   return args ? JSON.parse(args) : null;
 }
