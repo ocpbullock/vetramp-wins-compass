@@ -326,10 +326,11 @@ serve(async (req) => {
             const partial = await callAI(apiKey, system, userMsg, teamId, userId, proposalId);
             if (partial) partials.push(partial);
           } catch (e: any) {
-            if (e instanceof AIRateLimitError) return await fail("Rate limit exceeded. Try again in a few minutes.");
-            if (e instanceof AICreditsError) return await fail("AI credits exhausted.");
-            if (e instanceof AIBudgetExceededError) return await fail(e.message);
-            if (e instanceof AITimeoutError) return await fail(e.message);
+            if (e instanceof AIRateLimitError) return await fail("Rate limit exceeded. Try again in a few minutes.", "idle");
+            if (e instanceof AICreditsError) return await fail("AI credits exhausted.", "idle");
+            if (e instanceof AIBudgetExceededError) return await fail(e.message, "idle");
+            if (e instanceof AITimeoutError) return await fail(e.message, "idle");
+            if (e instanceof AIServiceUnavailableError) return await fail(e.message, "idle");
             console.error("chunk failed:", i + 1, e);
             send("warn", { message: `Chunk ${i + 1} failed: ${e.message}` });
           }
