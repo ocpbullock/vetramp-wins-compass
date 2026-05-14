@@ -119,7 +119,7 @@ function Dashboard() {
       const historicalFrom = historicalLookbackFrom();
       const cacheInput = { ...input, historicalFrom };
       const cacheKey = makeCacheKey(cacheInput);
-      const cached = input.forceRefresh ? null : await readCache(cacheKey, cacheInput);
+      const cached = input.forceRefresh || !teamId ? null : await readCache(cacheKey, teamId, cacheInput);
       if (cached) {
         setOpps((cached.opportunities as any) ?? []);
         const h = cached.historical as any;
