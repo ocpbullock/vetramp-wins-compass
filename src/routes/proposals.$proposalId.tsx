@@ -425,19 +425,21 @@ function ProposalPipeline() {
           <div className="flex-1" />
           <Badge variant="outline">{proposal.status}</Badge>
           {dataIssues.length > 0 && (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-400 cursor-help">
-                  <AlertTriangle className="w-3 h-3 mr-1" />
-                  Data issues detected ({dataIssues.length})
-                </Badge>
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                <ul className="text-xs space-y-1 list-disc list-inside">
-                  {dataIssues.map((i) => <li key={i.code}>{i.message}</li>)}
-                </ul>
-              </TooltipContent>
-            </Tooltip>
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-400 cursor-help">
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    Data issues detected ({dataIssues.length})
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <ul className="text-xs space-y-1 list-disc list-inside">
+                    {dataIssues.map((i) => <li key={i.code}>{i.message}</li>)}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {cd && <Badge className={cd === "PAST DUE" ? "bg-destructive" : ""}>{cd === "PAST DUE" ? cd : `${cd} until deadline`}</Badge>}
           <Button onClick={exportDocx} variant="outline"><Download className="w-4 h-4 mr-1" />Export .docx</Button>
