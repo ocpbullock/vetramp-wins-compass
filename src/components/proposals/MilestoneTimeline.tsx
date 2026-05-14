@@ -90,7 +90,7 @@ export function MilestoneTimeline({
     const { data, error } = await supabase.from("proposal_milestones").insert({
       proposal_id: proposalId,
       title: newTitle.trim(),
-      due_date: new Date(newDate).toISOString(),
+      due_date: localInputToIso(newDate),
       status: "upcoming" as const,
       sort_order: milestones.length,
     }).select().single();
