@@ -31,6 +31,7 @@ const NAV: NavItem[] = [
 
 export function Header() {
   const { user, signOut, isAdmin } = useAuth();
+  const { currentTeam } = useTeam();
   const location = useLocation();
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
