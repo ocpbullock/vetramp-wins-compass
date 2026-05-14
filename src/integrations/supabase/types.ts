@@ -542,6 +542,7 @@ export type Database = {
           opportunity_data: Json | null
           opportunity_title: string | null
           opportunity_type: string | null
+          parsing_status: string
           pop_base_months: number | null
           pop_option_months: number | null
           price_strategy: Json | null
@@ -578,6 +579,7 @@ export type Database = {
           opportunity_data?: Json | null
           opportunity_title?: string | null
           opportunity_type?: string | null
+          parsing_status?: string
           pop_base_months?: number | null
           pop_option_months?: number | null
           price_strategy?: Json | null
@@ -614,6 +616,7 @@ export type Database = {
           opportunity_data?: Json | null
           opportunity_title?: string | null
           opportunity_type?: string | null
+          parsing_status?: string
           pop_base_months?: number | null
           pop_option_months?: number | null
           price_strategy?: Json | null

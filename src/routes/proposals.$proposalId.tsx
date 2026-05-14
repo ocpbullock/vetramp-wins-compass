@@ -102,27 +102,74 @@ function ProposalPipeline() {
   }
 
   const [parsing, setParsing] = useState(false);
+  const [parseProgress, setParseProgress] = useState<string>("");
   async function parseDocuments() {
     const sowAtts = attachments.filter((a) => a.file_type === "sow");
     if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
     setParsing(true);
+    setParseProgress("Starting…");
     try {
       const { data: sess } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-sow`;
-      toast.info("Parsing solicitation documents… this can take a minute");
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token}` },
         body: JSON.stringify({ proposalId }),
       });
-      const j = await r.json();
-      if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
-      // The edge function may have updated capture fields server-side; refetch for the latest state
+      if (!r.ok || !r.body) {
+        const txt = await r.text().catch(() => "");
+        toast.error(txt || `HTTP ${r.status}`);
+        return;
+      }
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let done: any = null;
+      while (true) {
+        const { value, done: streamDone } = await reader.read();
+        if (streamDone) break;
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+        for (const evt of events) {
+          const lines = evt.split("\n");
+          const eventLine = lines.find((l) => l.startsWith("event:"))?.slice(6).trim();
+          const dataLine = lines.find((l) => l.startsWith("data:"))?.slice(5).trim();
+          if (!eventLine || !dataLine) continue;
+          let payload: any = {};
+          try { payload = JSON.parse(dataLine); } catch {}
+          if (eventLine === "status" || eventLine === "progress") {
+            if (payload.message) setParseProgress(payload.message);
+            else if (payload.phase === "merging") setParseProgress("Merging results…");
+          } else if (eventLine === "files") {
+            const empties = (payload.files || []).filter((f: any) => f.empty);
+            for (const f of empties) {
+              toast.error(`Could not extract text from ${f.filename} — try uploading a text-based PDF instead of a scanned image.`);
+            }
+          } else if (eventLine === "warn") {
+            toast.warning(payload.message || "Partial parse warning");
+          } else if (eventLine === "error") {
+            toast.error(payload.error || "Parse failed");
+          } else if (eventLine === "done") {
+            done = payload;
+          }
+        }
+      }
       const { data: fresh } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
       if (fresh) setProposal(fresh);
-      const filled = j.filled_fields?.length ?? 0;
-      toast.success(`Extracted ${j.matrix?.requirements?.length ?? 0} requirements${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
-    } catch (e: any) { toast.error(e.message); } finally { setParsing(false); }
+      const { data: freshAtts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false });
+      if (freshAtts) setAttachments(freshAtts);
+      if (done) {
+        const filled = done.filled_fields?.length ?? 0;
+        toast.success(`Extracted ${done.requirements_count ?? done.matrix?.requirements?.length ?? 0} requirements across ${done.chunks ?? 1} pass${(done.chunks ?? 1) === 1 ? "" : "es"}${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+      await supabase.from("proposals").update({ parsing_status: "error" }).eq("id", proposalId);
+    } finally {
+      setParsing(false);
+      setParseProgress("");
+    }
   }
 
   async function autoFetchSamAttachments() {
@@ -339,7 +386,7 @@ function ProposalPipeline() {
           </TabsList>
 
           <TabsContent value="intake" className="mt-4 space-y-4">
-            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} proposalId={proposalId} />
+            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} />
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
@@ -363,8 +410,10 @@ function ProposalPipeline() {
   );
 }
 
-function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, proposalId }: any) {
+function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
+  const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
+  const largeDoc = totalChars > 300_000;
   const [local, setLocal] = useState(proposal);
   useEffect(() => setLocal(proposal), [proposal.id]);
   const save = () => onPatch({
@@ -486,21 +535,44 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             className="w-full"
           >
             {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
-            {parsing ? "Parsing…" : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
+            {parsing ? (parseProgress || "Parsing…") : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
           </Button>
+          {parsing && proposal.parsing_status === "parsing" && (
+            <div className="text-[11px] text-muted-foreground">Do not navigate away — parsing in progress.</div>
+          )}
           <div className="text-[11px] text-muted-foreground">
             Parsing extracts requirements (Section L/M, "shall" statements) AND auto-fills capture details below — title, agency, contract type, value, PoP, clearance, etc.
           </div>
+          {largeDoc && (
+            <div className="text-[11px] rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 px-2 py-1.5">
+              <AlertTriangle className="w-3 h-3 inline-block mr-1" />
+              Large solicitation detected ({Math.round(totalChars / 1000)}K chars) — parsing may take several minutes and multiple AI passes.
+            </div>
+          )}
           <div className="space-y-1">
             {sowAttachments.length === 0 && <div className="text-xs text-muted-foreground">No files yet.</div>}
-            {sowAttachments.map((a: any) => (
-              <div key={a.id} className="flex items-center gap-2 text-xs border border-border rounded px-2 py-1.5">
-                <FileText className="w-3 h-3 text-muted-foreground" />
-                <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
-                <Badge variant="outline" className="text-[10px]">{a.file_type}</Badge>
-                <button onClick={() => onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
-              </div>
-            ))}
+            {sowAttachments.map((a: any) => {
+              const chars = a.parsed_content?.length || 0;
+              const empty = a.parsed_content !== null && a.parsed_content !== undefined && chars === 0;
+              return (
+                <div key={a.id} className="border border-border rounded px-2 py-1.5 space-y-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <FileText className="w-3 h-3 text-muted-foreground" />
+                    <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
+                    <Badge variant="outline" className="text-[10px]">{a.file_type}</Badge>
+                    <button onClick={() => onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                  </div>
+                  {chars > 0 && (
+                    <div className="text-[10px] text-muted-foreground pl-5">{chars.toLocaleString()} chars extracted</div>
+                  )}
+                  {empty && (
+                    <div className="text-[10px] text-destructive pl-5">
+                      Could not extract text — try uploading a text-based PDF instead of a scanned image.
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
             <AlertTriangle className="w-3 h-3 inline-block mr-1 text-yellow-500" />
