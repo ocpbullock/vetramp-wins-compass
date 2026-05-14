@@ -52,6 +52,8 @@ function Dashboard() {
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
   const [historicalTotal, setHistoricalTotal] = useState<number | undefined>();
   const [searchedNaics, setSearchedNaics] = useState<string[]>([]);
+  // Currently selected NAICS in SearchControls — drives instant client-side filtering.
+  const [currentNaics, setCurrentNaics] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
@@ -242,7 +244,7 @@ function Dashboard() {
     <div className="min-h-screen bg-background">
       <Header />
       <div id="quick-search" className="scroll-mt-24">
-        <SearchControls onSearch={runSearch} busy={busy} initial={lastInput ?? undefined} />
+        <SearchControls onSearch={runSearch} onNaicsChange={setCurrentNaics} busy={busy} initial={lastInput ?? undefined} />
       </div>
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">
@@ -276,7 +278,7 @@ function Dashboard() {
             <TabsTrigger value="logs">Logs</TabsTrigger>
           </TabsList>
           <TabsContent value="opportunities" className="mt-4">
-            <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} searchKey={searchedNaics.join(",")} onPropose={handlePropose} onCompete={setCompeteOpp} />
+            <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} activeFilterNaics={currentNaics} searchKey={searchedNaics.join(",")} onPropose={handlePropose} onCompete={setCompeteOpp} />
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab awards={awards} searchedNaics={searchedNaics} searchKey={searchedNaics.join(",")} onDetails={setDetailId} />

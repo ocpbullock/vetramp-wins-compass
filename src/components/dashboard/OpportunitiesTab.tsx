@@ -28,6 +28,7 @@ export function OpportunitiesTab({
   opportunities,
   awards = [],
   searchedNaics = [],
+  activeFilterNaics,
   searchKey = "",
   onPropose,
   onCompete,
@@ -35,6 +36,8 @@ export function OpportunitiesTab({
   opportunities: SamOpportunity[];
   awards?: HistoricalAward[];
   searchedNaics?: string[];
+  /** Currently selected NAICS in SearchControls — drives client-side filtering. */
+  activeFilterNaics?: string[];
   searchKey?: string;
   onPropose: (o: SamOpportunity) => void;
   onCompete: (o: SamOpportunity) => void;
@@ -52,6 +55,13 @@ export function OpportunitiesTab({
     setActiveNaics(new Set(searchedNaics));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchKey]);
+
+  // External NAICS selection (from SearchControls) overrides the local set
+  // when provided, so toggling chips in the search bar instantly narrows results.
+  const effectiveNaics = useMemo(
+    () => (activeFilterNaics ? new Set(activeFilterNaics) : activeNaics),
+    [activeFilterNaics, activeNaics],
+  );
 
   const idx = useMemo(() => buildIndex(awards), [awards]);
   const matches = useMemo(() => {
@@ -83,10 +93,11 @@ export function OpportunitiesTab({
       if (q && !(o.title?.toLowerCase().includes(q) || o.solicitationNumber?.toLowerCase().includes(q))) return false;
       if (agency !== "__all__" && shortAgency(o.fullParentPathName) !== agency) return false;
       if (type !== "__all__" && o.type !== type) return false;
-      if (searchedNaics.length > 0 && o.naicsCode && !activeNaics.has(o.naicsCode)) return false;
+      // Empty NAICS selection = show all (no filter applied)
+      if (effectiveNaics.size > 0 && o.naicsCode && !effectiveNaics.has(o.naicsCode)) return false;
       return true;
     });
-  }, [opportunities, search, agency, type, activeNaics, searchedNaics, recompetesOnly, matches]);
+  }, [opportunities, search, agency, type, effectiveNaics, recompetesOnly, matches]);
 
   const sorted = useMemo(() => {
     const arr = [...filtered];
@@ -158,7 +169,14 @@ export function OpportunitiesTab({
               Recompetes only <span className="text-muted-foreground">({recompeteCount})</span>
             </Label>
           </div>
-          <div className="text-xs text-muted-foreground self-center ml-auto">{sorted.length} of {opportunities.length}</div>
+          <div className="text-xs self-center ml-auto">
+            <span className={sorted.length < opportunities.length ? "text-primary font-medium" : "text-muted-foreground"}>
+              Showing {sorted.length} of {opportunities.length} results
+            </span>
+            {sorted.length < opportunities.length && (
+              <span className="text-muted-foreground ml-1">(filtered)</span>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto bg-card rounded-md border border-border">

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,10 +20,12 @@ export type SearchInput = {
 export function SearchControls({
   initial,
   onSearch,
+  onNaicsChange,
   busy,
 }: {
   initial?: Partial<SearchInput>;
   onSearch: (i: SearchInput) => void;
+  onNaicsChange?: (codes: string[]) => void;
   busy: boolean;
 }) {
   // Recalculate per render (memoized) so a long-lived session doesn't keep
@@ -42,6 +44,13 @@ export function SearchControls({
   const [from, setFrom] = useState(initial?.postedFrom ?? defaultFrom);
   const [to, setTo] = useState(initial?.postedTo ?? today);
   const [keyword, setKeyword] = useState(initial?.keyword ?? "");
+
+  // Notify parent of NAICS changes so the dashboard can filter results
+  // client-side without re-running the search.
+  useEffect(() => {
+    onNaicsChange?.(naics);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [naics]);
 
   function toggle(code: string) {
     setNaics((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
