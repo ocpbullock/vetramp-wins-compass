@@ -56,6 +56,35 @@ export function CompetitiveIntelModal({
     [opp, awards],
   );
 
+  const teamId = useTeamId();
+  const oppVehicle = useMemo(() => detectVehicle(opp), [opp]);
+
+  const { data: heldVehicles = [] } = useQuery({
+    queryKey: ["contract-vehicles", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_vehicles")
+        .select("vehicle_name,status")
+        .eq("team_id", teamId!);
+      if (error) throw new Error(error.message);
+      return (data ?? []).filter((r) => r.status === "active").map((r) => r.vehicle_name);
+    },
+  });
+
+  const { data: partnerVehicles = [] } = useQuery({
+    queryKey: ["partner-vehicles", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teaming_partners")
+        .select("contract_vehicles")
+        .eq("team_id", teamId!);
+      if (error) throw new Error(error.message);
+      return (data ?? []).flatMap((r) => r.contract_vehicles ?? []);
+    },
+  });
+
   // How many awards in the user's cached history are at this opportunity's
   // sub-agency (any path segment match). Drives the Agency Experience score.
   const userAgencyAwardCount = useMemo(() => {
