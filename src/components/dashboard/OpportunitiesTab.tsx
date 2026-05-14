@@ -28,6 +28,7 @@ export function OpportunitiesTab({
   opportunities,
   awards = [],
   searchedNaics = [],
+  activeFilterNaics,
   searchKey = "",
   onPropose,
   onCompete,
@@ -35,6 +36,8 @@ export function OpportunitiesTab({
   opportunities: SamOpportunity[];
   awards?: HistoricalAward[];
   searchedNaics?: string[];
+  /** Currently selected NAICS in SearchControls — drives client-side filtering. */
+  activeFilterNaics?: string[];
   searchKey?: string;
   onPropose: (o: SamOpportunity) => void;
   onCompete: (o: SamOpportunity) => void;
@@ -52,6 +55,13 @@ export function OpportunitiesTab({
     setActiveNaics(new Set(searchedNaics));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchKey]);
+
+  // External NAICS selection (from SearchControls) overrides the local set
+  // when provided, so toggling chips in the search bar instantly narrows results.
+  const effectiveNaics = useMemo(
+    () => (activeFilterNaics ? new Set(activeFilterNaics) : activeNaics),
+    [activeFilterNaics, activeNaics],
+  );
 
   const idx = useMemo(() => buildIndex(awards), [awards]);
   const matches = useMemo(() => {
