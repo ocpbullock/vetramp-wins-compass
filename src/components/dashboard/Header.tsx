@@ -1,5 +1,4 @@
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { Link, useLocation } from "@tanstack/react-router";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,87 +15,22 @@ import {
   TooltipTrigger,
   TooltipContent,
 } from "@/components/ui/tooltip";
-import {
-  LogOut,
-  Shield,
-  Settings,
-  LayoutDashboard,
-  Briefcase,
-  BarChart3,
-  FileText,
-  Bell,
-  ChevronDown,
-  Search,
-  Clock,
-  Crosshair,
-} from "lucide-react";
+import { LogOut, Shield, Settings, ChevronDown } from "lucide-react";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
-function formatRelative(ts: number): string {
-  const diff = Math.max(0, Date.now() - ts);
-  const m = Math.floor(diff / 60000);
-  if (m < 1) return "just now";
-  if (m < 60) return `${m}m ago`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h ago`;
-  const d = Math.floor(h / 24);
-  return `${d}d ago`;
-}
-
-type NavItem = { label: string; icon: typeof LayoutDashboard; to: string; hash?: string; matchHash?: string };
+type NavItem = { label: string; to: string; hash?: string; matchHash?: string };
 
 const NAV: NavItem[] = [
-  { label: "Dashboard", icon: LayoutDashboard, to: "/" },
-  { label: "Opportunities", icon: Briefcase, to: "/", hash: "opportunities", matchHash: "opportunities" },
-  { label: "Tracked", icon: Crosshair, to: "/", hash: "tracked", matchHash: "tracked" },
-  { label: "Analytics", icon: BarChart3, to: "/", hash: "analytics", matchHash: "analytics" },
-  { label: "Reports", icon: FileText, to: "/", hash: "logs", matchHash: "logs" },
-  { label: "Settings", icon: Settings, to: "/settings" },
+  { label: "Dashboard", to: "/" },
+  { label: "Opportunities", to: "/", hash: "opportunities", matchHash: "opportunities" },
+  { label: "Tracked", to: "/", hash: "tracked", matchHash: "tracked" },
+  { label: "Analytics", to: "/", hash: "analytics", matchHash: "analytics" },
+  { label: "Reports", to: "/", hash: "logs", matchHash: "logs" },
 ];
 
 export function Header() {
   const { user, signOut, isAdmin } = useAuth();
   const location = useLocation();
-  const navigate = useNavigate();
-
-  const [lastSearchAt, setLastSearchAt] = useState<number | null>(null);
-  const [oppCount, setOppCount] = useState<number | null>(null);
-  const [, setTick] = useState(0);
-
-  useEffect(() => {
-    const read = () => {
-      try {
-        const ts = localStorage.getItem("vetramp:lastSearchAt");
-        const c = localStorage.getItem("vetramp:oppCount");
-        setLastSearchAt(ts ? Number(ts) : null);
-        setOppCount(c ? Number(c) : null);
-      } catch {}
-    };
-    read();
-    const onUpdate = () => read();
-    window.addEventListener("vetramp:search-updated", onUpdate);
-    window.addEventListener("storage", onUpdate);
-    const id = window.setInterval(() => setTick((t) => t + 1), 30000);
-    return () => {
-      window.removeEventListener("vetramp:search-updated", onUpdate);
-      window.removeEventListener("storage", onUpdate);
-      window.clearInterval(id);
-    };
-  }, []);
-
-  const handleQuickSearch = async () => {
-    if (location.pathname !== "/") {
-      await navigate({ to: "/", hash: "quick-search" });
-    }
-    requestAnimationFrame(() => {
-      const el = document.getElementById("quick-search");
-      if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "start" });
-        const input = el.querySelector<HTMLInputElement>("input, [role='combobox']");
-        input?.focus();
-      }
-    });
-  };
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
   const displayName =
@@ -113,7 +47,6 @@ export function Header() {
     if (!onHome) return false;
     if (item.matchHash) return currentHash === item.matchHash;
     if (item.to !== "/") return false;
-    // Dashboard is active when on / with no recognized tab hash
     return !["opportunities", "tracked", "analytics", "logs", "in-progress", "historical"].includes(currentHash);
   };
 
@@ -130,26 +63,24 @@ export function Header() {
           />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-1 ml-0 xl:ml-2">
+        <nav className="hidden md:flex items-center gap-2 ml-0 xl:ml-4">
           {NAV.map((item) => {
             const active = isActive(item);
-            const Icon = item.icon;
             return (
               <Link
                 key={item.label}
                 to={item.to}
                 hash={item.hash}
                 className={[
-                  "relative flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-md transition-colors",
+                  "relative px-4 py-2 text-sm font-medium rounded-md transition-colors",
                   active
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent",
                 ].join(" ")}
               >
-                <Icon className="w-4 h-4" />
                 {item.label}
                 {active && (
-                  <span className="absolute -bottom-3 left-2 right-2 h-[2px] bg-primary rounded-full" />
+                  <span className="absolute -bottom-3 left-3 right-3 h-[2px] bg-primary rounded-full" />
                 )}
               </Link>
             );
@@ -159,60 +90,30 @@ export function Header() {
         <div className="flex-1" />
 
         <TooltipProvider delayDuration={200}>
-          <div className="flex items-center gap-2">
-            <div className="hidden lg:flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-muted/60 border border-border text-[11px] text-muted-foreground">
-              <Clock className="w-3 h-3" />
-              {lastSearchAt ? (
-                <span>
-                  Last search <span className="text-foreground font-medium">{formatRelative(lastSearchAt)}</span>
-                  {oppCount !== null && (
-                    <> · <span className="text-foreground font-medium">{oppCount}</span> tracked</>
-                  )}
-                </span>
-              ) : (
-                <span>No searches yet</span>
-              )}
-            </div>
-
-            <Button
-              variant="default"
-              size="sm"
-              onClick={handleQuickSearch}
-              className="gap-1.5"
-              aria-label="New search"
-            >
-              <Search className="w-4 h-4" />
-              <span className="hidden sm:inline">New Search</span>
-            </Button>
-
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button variant="ghost" className="relative flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Notifications">
-                  <Bell className="w-5 h-5" />
-                  <span className="hidden sm:block text-[11px] text-muted-foreground leading-none">Notifications</span>
-                  <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-brand-red" />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent>Notifications</TooltipContent>
-            </Tooltip>
-
+          <div className="flex items-center gap-1 border-l border-border pl-2">
             {isAdmin && (
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <Button variant="ghost" asChild className="flex flex-col items-center h-auto py-1 px-2 gap-0.5" aria-label="Admin">
-                    <Link to="/admin">
-                      <Shield className="w-5 h-5" />
-                      <span className="hidden sm:block text-[11px] text-muted-foreground leading-none">Admin</span>
-                    </Link>
+                  <Button variant="ghost" size="icon" asChild aria-label="Admin">
+                    <Link to="/admin"><Shield className="w-5 h-5" /></Link>
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>Admin</TooltipContent>
               </Tooltip>
             )}
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" asChild aria-label="Settings">
+                  <Link to="/settings"><Settings className="w-5 h-5" /></Link>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>Settings</TooltipContent>
+            </Tooltip>
+          </div>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-accent transition-colors">
+              <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-accent transition-colors ml-1">
                 <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
                   {initials}
                 </div>
@@ -243,9 +144,7 @@ export function Header() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          </div>
         </TooltipProvider>
-
       </div>
     </header>
   );
