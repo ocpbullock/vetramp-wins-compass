@@ -24,6 +24,17 @@ Deno.serve(async (req) => {
       maxResults = 10000,
     } = await req.json();
 
+    // Cache check (24h TTL) — same agency+NAICS+window returns near-identical results within a day
+    const cacheKey = await hashCacheKey({ naicsCodes, startDate, endDate, keyword: keyword || null, maxResults });
+    try {
+      const cached = await getCachedResponse("usaspending", cacheKey);
+      if (cached) {
+        return new Response(JSON.stringify({ ...cached.response_data, _cached: true, _cached_at: cached.created_at }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch (e) { console.error("usaspending cache read failed:", e); }
+
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
     const addDays = (d: Date, days: number) => {
       const next = new Date(d);
