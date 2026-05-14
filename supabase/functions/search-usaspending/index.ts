@@ -1,4 +1,5 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
 
 const PER_CALL_TIMEOUT_MS = 30_000;
