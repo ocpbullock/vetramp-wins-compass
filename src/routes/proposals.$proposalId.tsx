@@ -338,7 +338,7 @@ function ProposalPipeline() {
   );
 }
 
-function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing }: any) {
+function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, proposalId }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const [local, setLocal] = useState(proposal);
   useEffect(() => setLocal(proposal), [proposal.id]);
