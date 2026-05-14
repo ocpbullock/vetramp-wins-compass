@@ -634,6 +634,11 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           selectedIds={proposal.selected_past_performance ?? []}
           onChange={(ids) => onPatch({ selected_past_performance: ids })}
         />
+
+        <OCIScreeningCard
+          value={(proposal.oci_screening as OciAnswers) ?? {}}
+          onChange={(v) => onPatch({ oci_screening: v as never })}
+        />
       </div>
 
       <Card>
