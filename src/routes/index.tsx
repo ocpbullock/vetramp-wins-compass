@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, useLocation } from "@tanstack/react-route
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
+import { useTeamId } from "@/lib/team";
 import { Header } from "@/components/dashboard/Header";
 import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
 import { StatCards } from "@/components/dashboard/StatCards";
