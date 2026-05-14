@@ -45,29 +45,18 @@ const PRICING: Record<string, { in: number; out: number }> = {
  * Per-call model routing. Adjust here without touching each function.
  * Resolver receives a free-form variant key (e.g. section id) and picks the model.
  */
+// POC: pin every function to Gemini 2.5 Pro so we can evaluate output quality
+// at the highest tier before optimizing cost. No per-section tiering.
 export const MODEL_CONFIG = {
   "parse-sow": { default: "google/gemini-2.5-pro" },
-  "customer-intel": { default: "google/gemini-2.5-flash" },
-  "generate-proposal-section": {
-    default: "google/gemini-3-flash-preview",
-    bySection: {
-      cover_letter: "google/gemini-2.5-pro",
-      executive_summary: "google/gemini-2.5-pro",
-      technical_approach: "google/gemini-2.5-flash",
-      management_approach: "google/gemini-2.5-flash",
-      staffing_plan: "google/gemini-2.5-flash",
-      past_performance: "google/gemini-2.5-flash",
-      compliance_matrix: "google/gemini-2.5-flash-lite",
-    } as Record<string, string>,
-  },
+  "customer-intel": { default: "google/gemini-2.5-pro" },
+  "generate-proposal-section": { default: "google/gemini-2.5-pro" },
   "generate-proposal": { default: "google/gemini-2.5-pro" },
 } as const;
 
-export function pickModel(functionName: string, variant?: string): string {
-  const cfg = (MODEL_CONFIG as any)[functionName];
-  if (!cfg) return "google/gemini-3-flash-preview";
-  if (variant && cfg.bySection?.[variant]) return cfg.bySection[variant];
-  return cfg.default;
+export function pickModel(_functionName: string, _variant?: string): string {
+  // POC: ignore function/variant routing — everything uses Gemini 2.5 Pro.
+  return "google/gemini-2.5-pro";
 }
 
 const DEFAULT_TIMEOUT_MS = 120_000;

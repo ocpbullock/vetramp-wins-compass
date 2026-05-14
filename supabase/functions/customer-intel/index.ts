@@ -57,7 +57,10 @@ serve(async (req) => {
       const cached = await getCachedResponse("customer-intel", cacheKey);
       if (cached) {
         const intel = { ...cached.response_data, _cached: true, _cached_at: cached.created_at };
-        return new Response(JSON.stringify({ intel }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(
+          JSON.stringify({ intel, cached: true, cached_at: cached.created_at }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
     }
 
@@ -112,6 +115,7 @@ Research this customer and return structured intel. Focus on: who actually uses 
         model: pickModel("customer-intel"),
         inputTokens: data.__usage?.inputTokens,
         outputTokens: data.__usage?.outputTokens,
+        ttlHours: 48,
       });
     } catch (e) { console.error("cache write failed:", e); }
     return new Response(JSON.stringify({ intel }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });

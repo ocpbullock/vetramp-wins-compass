@@ -765,6 +765,17 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
             {parsing ? (parseProgress || "Parsing…") : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
           </Button>
+          {proposal.compliance_matrix && !parsing && (
+            <Button
+              onClick={() => onParse?.({ skipCache: true })}
+              variant="ghost"
+              size="sm"
+              className="w-full text-[11px] h-7"
+              disabled={sowAttachments.length === 0}
+            >
+              <RefreshCw className="w-3 h-3 mr-1" /> Force regenerate (bypass cache)
+            </Button>
+          )}
           {parsing && proposal.parsing_status === "parsing" && (
             <div className="text-[11px] text-muted-foreground">Do not navigate away — parsing in progress.</div>
           )}
@@ -937,7 +948,14 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, atta
       if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
       const merged = { ...intel, ...j.intel, notes };
       await onPatch({ customer_intel: merged });
-      toast.success(j.cached ? "Customer intelligence loaded from cache" : "Customer intelligence drafted");
+      if (j.cached && j.cached_at) {
+        const ms = Date.now() - new Date(j.cached_at).getTime();
+        const mins = Math.max(1, Math.round(ms / 60000));
+        const ago = mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} hr ago` : `${Math.round(mins / 1440)} d ago`;
+        toast.success(`Using cached intel from ${ago}`, { description: "Toggle 'Skip cache' to force a fresh AI run." });
+      } else {
+        toast.success("Customer intelligence drafted");
+      }
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); setAiBusy?.(false); }
   }
 

@@ -296,7 +296,7 @@ serve(async (req) => {
         if (!skipCache) {
           const cached = await getCachedResponse("parse-sow", cacheKey);
           if (cached) {
-            send("status", { phase: "cache_hit", message: "Returning cached parse result (less than 24h old)…" });
+            send("status", { phase: "cache_hit", message: "Using previous result — documents unchanged." });
             const matrix = cached.response_data;
             await admin.from("proposals").update({ compliance_matrix: matrix, parsing_status: "complete" }).eq("id", proposalId);
             send("done", {
