@@ -9,7 +9,6 @@ import {
   badgeClassForType, isProposable, shortAgency,
 } from "@/lib/contracts";
 import { type SamOpportunity, type HistoricalAward } from "@/lib/api";
-import { NaicsFilterChips } from "./NaicsFilterChips";
 import { buildIndex, matchIncumbent, type IncumbentMatch } from "@/lib/incumbents";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
