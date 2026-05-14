@@ -113,10 +113,14 @@ function ProposalPipeline() {
 
   const [parsing, setParsing] = useState(false);
   const [parseProgress, setParseProgress] = useState<string>("");
-  async function parseDocuments() {
+  const [aiBusy, setAiBusy] = useState(false);
+  const [genProgress, setGenProgress] = useState<{ current: number; total: number; label: string } | null>(null);
+  const [useCache, setUseCache] = useState(true);
+  async function parseDocuments(opts?: { skipCache?: boolean }) {
+    if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     const sowAtts = attachments.filter((a) => a.file_type === "sow");
     if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
-    setParsing(true);
+    setParsing(true); setAiBusy(true);
     setParseProgress("Starting…");
     try {
       const { data: sess } = await supabase.auth.getSession();
@@ -124,7 +128,7 @@ function ProposalPipeline() {
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token}` },
-        body: JSON.stringify({ proposalId }),
+        body: JSON.stringify({ proposalId, skipCache: opts?.skipCache ?? !useCache }),
       });
       if (!r.ok || !r.body) {
         const txt = await r.text().catch(() => "");
@@ -177,7 +181,7 @@ function ProposalPipeline() {
       toast.error(e.message);
       await supabase.from("proposals").update({ parsing_status: "error" }).eq("id", proposalId);
     } finally {
-      setParsing(false);
+      setParsing(false); setAiBusy(false);
       setParseProgress("");
     }
   }
