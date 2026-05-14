@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { PartnersPanel } from "@/components/settings/PartnersPanel";
+import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
