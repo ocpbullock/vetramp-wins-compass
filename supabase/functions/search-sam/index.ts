@@ -178,13 +178,29 @@ Deno.serve(async (req) => {
       if (i < naicsCodes.length - 1) await new Promise((r) => setTimeout(r, 500));
     }
 
-    const seen = new Set<string>();
-    const deduped = all.filter((o) => {
-      const key = o.solicitationNumber || o.noticeId || JSON.stringify(o).slice(0, 50);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    // Normalize each opportunity (trim strings, ISO dates, validate NAICS)
+    const normalized = all.map(normalizeOpportunity);
+
+    // Dedupe by both solicitationNumber AND noticeId — amendments create new
+    // notices for the same solicitation; either match means duplicate.
+    const seenSol = new Set<string>();
+    const seenNotice = new Set<string>();
+    const deduped: any[] = [];
+    for (const o of normalized) {
+      const sol = o.solicitationNumber ? String(o.solicitationNumber) : "";
+      const notice = o.noticeId ? String(o.noticeId) : "";
+      if (sol && seenSol.has(sol)) continue;
+      if (notice && seenNotice.has(notice)) continue;
+      if (!sol && !notice) {
+        // Fall back to fingerprint
+        const fp = JSON.stringify(o).slice(0, 80);
+        if (seenSol.has(fp)) continue;
+        seenSol.add(fp);
+      }
+      if (sol) seenSol.add(sol);
+      if (notice) seenNotice.add(notice);
+      deduped.push(o);
+    }
 
     let message: string | undefined;
     if (rateLimited) {
