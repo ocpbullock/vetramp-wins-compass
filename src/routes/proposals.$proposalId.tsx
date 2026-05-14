@@ -102,27 +102,74 @@ function ProposalPipeline() {
   }
 
   const [parsing, setParsing] = useState(false);
+  const [parseProgress, setParseProgress] = useState<string>("");
   async function parseDocuments() {
     const sowAtts = attachments.filter((a) => a.file_type === "sow");
     if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
     setParsing(true);
+    setParseProgress("Starting…");
     try {
       const { data: sess } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-sow`;
-      toast.info("Parsing solicitation documents… this can take a minute");
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token}` },
         body: JSON.stringify({ proposalId }),
       });
-      const j = await r.json();
-      if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
-      // The edge function may have updated capture fields server-side; refetch for the latest state
+      if (!r.ok || !r.body) {
+        const txt = await r.text().catch(() => "");
+        toast.error(txt || `HTTP ${r.status}`);
+        return;
+      }
+      const reader = r.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let done: any = null;
+      while (true) {
+        const { value, done: streamDone } = await reader.read();
+        if (streamDone) break;
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+        for (const evt of events) {
+          const lines = evt.split("\n");
+          const eventLine = lines.find((l) => l.startsWith("event:"))?.slice(6).trim();
+          const dataLine = lines.find((l) => l.startsWith("data:"))?.slice(5).trim();
+          if (!eventLine || !dataLine) continue;
+          let payload: any = {};
+          try { payload = JSON.parse(dataLine); } catch {}
+          if (eventLine === "status" || eventLine === "progress") {
+            if (payload.message) setParseProgress(payload.message);
+            else if (payload.phase === "merging") setParseProgress("Merging results…");
+          } else if (eventLine === "files") {
+            const empties = (payload.files || []).filter((f: any) => f.empty);
+            for (const f of empties) {
+              toast.error(`Could not extract text from ${f.filename} — try uploading a text-based PDF instead of a scanned image.`);
+            }
+          } else if (eventLine === "warn") {
+            toast.warning(payload.message || "Partial parse warning");
+          } else if (eventLine === "error") {
+            toast.error(payload.error || "Parse failed");
+          } else if (eventLine === "done") {
+            done = payload;
+          }
+        }
+      }
       const { data: fresh } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
       if (fresh) setProposal(fresh);
-      const filled = j.filled_fields?.length ?? 0;
-      toast.success(`Extracted ${j.matrix?.requirements?.length ?? 0} requirements${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
-    } catch (e: any) { toast.error(e.message); } finally { setParsing(false); }
+      const { data: freshAtts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false });
+      if (freshAtts) setAttachments(freshAtts);
+      if (done) {
+        const filled = done.filled_fields?.length ?? 0;
+        toast.success(`Extracted ${done.requirements_count ?? done.matrix?.requirements?.length ?? 0} requirements across ${done.chunks ?? 1} pass${(done.chunks ?? 1) === 1 ? "" : "es"}${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
+      }
+    } catch (e: any) {
+      toast.error(e.message);
+      await supabase.from("proposals").update({ parsing_status: "error" }).eq("id", proposalId);
+    } finally {
+      setParsing(false);
+      setParseProgress("");
+    }
   }
 
   async function autoFetchSamAttachments() {
