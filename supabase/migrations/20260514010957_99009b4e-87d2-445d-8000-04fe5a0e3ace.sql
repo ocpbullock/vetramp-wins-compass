@@ -1,0 +1,1 @@
+ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS parsing_status text NOT NULL DEFAULT 'idle';
