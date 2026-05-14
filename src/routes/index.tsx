@@ -292,6 +292,7 @@ function Dashboard() {
         </div>
       )}
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
+        <SetupBanner />
         <StatCards
           activeOpps={stats.activeOpps}
           awardNotices={stats.awardNotices}
