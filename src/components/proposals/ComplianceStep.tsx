@@ -122,6 +122,7 @@ export function ComplianceStep({
     const total = reqs.length;
     const counts: Record<ReqStatus, number> = { not_started: 0, in_progress: 0, drafted: 0, reviewed: 0, final: 0 };
     const bySection: Record<string, { total: number; unaddressed: number }> = {};
+    let verified = 0;
     for (const r of reqs) {
       const s = ((r.status as ReqStatus) || "not_started");
       counts[s]++;
@@ -129,12 +130,41 @@ export function ComplianceStep({
       bySection[sec] ||= { total: 0, unaddressed: 0 };
       bySection[sec].total++;
       if (s === "not_started") bySection[sec].unaddressed++;
+      if (r.verified) verified++;
     }
     const addressed = total - counts.not_started;
     const pct = total ? Math.round((addressed / total) * 100) : 0;
+    const verifiedPct = total ? Math.round((verified / total) * 100) : 0;
     const sectionRows = Object.entries(bySection).sort((a, b) => b[1].unaddressed - a[1].unaddressed);
-    return { total, addressed, pct, counts, sectionRows };
+    return { total, addressed, pct, counts, sectionRows, verified, verifiedPct };
   }, [reqs]);
+
+  // Validation pass on the matrix
+  const validation = useMemo(() => {
+    const meta = matrix.parse_metadata || {};
+    const totalChars: number = meta.total_chars || 0;
+    const approxPages = totalChars ? Math.max(1, Math.round(totalChars / 3000)) : 0;
+    const seen = new Set<string>();
+    const dupes = new Set<string>();
+    let empty = 0;
+    let unmapped = 0;
+    for (const r of reqs) {
+      const id = String(r.req_id || "");
+      if (id) {
+        if (seen.has(id)) dupes.add(id);
+        seen.add(id);
+      }
+      if (!String(r.requirement_text || "").trim()) empty++;
+      if (!r.proposal_section) unmapped++;
+    }
+    const expectedMin = approxPages ? Math.floor(approxPages / 2) : 0;
+    const sparse = expectedMin > 0 && reqs.length < expectedMin;
+    const truncated = !!meta.truncated_any;
+    return {
+      totalChars, approxPages, dupes: Array.from(dupes), empty, unmapped, sparse,
+      expectedMin, truncated, parsedFiles: meta.parsed_files || [],
+    };
+  }, [matrix.parse_metadata, reqs]);
 
   function exportMatrixCsv() {
     const rows = [["Req ID", "Source", "Type", "Category", "Requirement", "Proposal Section", "Status", "Assignee", "Response Notes"]];
