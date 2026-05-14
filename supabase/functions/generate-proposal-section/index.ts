@@ -96,6 +96,7 @@ Deno.serve(async (req) => {
       complianceMatrix,
       solutionDesign,
       attachmentsText,
+      teaming,
     } = body;
 
     const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
