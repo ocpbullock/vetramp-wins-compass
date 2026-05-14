@@ -839,13 +839,18 @@ function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, o
   );
 }
 
-function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = [], onUpload, onDelete }: any) {
+function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, attachments = [], onUpload, onDelete, aiBusy, setAiBusy, online }: any) {
   const [busy, setBusy] = useState(false);
+  const [skipCache, setSkipCache] = useState(false);
   const intel = proposal.customer_intel || {};
   const [notes, setNotes] = useState<string>(intel.notes || "");
+  const locked = busy || (aiBusy && !busy);
 
   async function research() {
+    if (online === false) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
+    if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     setBusy(true);
+    setAiBusy?.(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/customer-intel`;
@@ -865,14 +870,18 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = []
           companyProfile,
           extraNotes: notes || undefined,
           attachmentsText: attachmentsText || undefined,
+          userId: session?.user?.id,
+          proposalId,
+          teamId: proposal.team_id ?? null,
+          skipCache,
         }),
       });
       const j = await r.json();
       if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
       const merged = { ...intel, ...j.intel, notes };
       await onPatch({ customer_intel: merged });
-      toast.success("Customer intelligence drafted");
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+      toast.success(j.cached ? "Customer intelligence loaded from cache" : "Customer intelligence drafted");
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); setAiBusy?.(false); }
   }
 
   const list = (label: string, items?: string[]) => items?.length ? (
