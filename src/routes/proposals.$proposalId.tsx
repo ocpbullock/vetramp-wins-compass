@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
+import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
