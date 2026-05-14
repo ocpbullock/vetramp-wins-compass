@@ -150,6 +150,7 @@ Output the markdown for this section now. Do NOT include other sections.`;
         teamId: teamId ?? null,
         userId: userId ?? null,
         proposalId: proposalId ?? null,
+        timeoutMs: 90_000,
         stream: true,
         body: {
           model: pickModel("generate-proposal-section", sectionId),
