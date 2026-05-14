@@ -393,6 +393,9 @@ serve(async (req) => {
 
         await admin.from("proposals").update(update).eq("id", proposalId);
 
+        // Cache final matrix for 24h
+        try { await setCachedResponse({ functionName: "parse-sow", cacheKey, teamId, responseData: matrix, model: pickModel("parse-sow") }); } catch (e) { console.error("cache write failed:", e); }
+
         send("done", {
           matrix,
           capture_details: cap,
