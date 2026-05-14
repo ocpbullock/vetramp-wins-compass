@@ -321,7 +321,9 @@ function Dashboard() {
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab awards={awards} searchedNaics={searchedNaics} searchKey={searchedNaics.join(",")} onDetails={setDetailId} />
           </TabsContent>
-          <TabsContent value="in-progress" className="mt-4">
+          <TabsContent value="starred" className="mt-4">
+            <StarredTab onStartProposal={handleStartFromStarred} />
+          </TabsContent>
             <InProgressTab onCountChange={setInProgressCount} />
           </TabsContent>
           <TabsContent value="tracked" className="mt-4">
