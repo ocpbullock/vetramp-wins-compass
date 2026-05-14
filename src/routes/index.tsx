@@ -64,9 +64,10 @@ function Dashboard() {
   // Sync tab with URL hash from header nav links
   useEffect(() => {
     const h = (location.hash || "").replace(/^#/, "");
-    const valid = ["opportunities", "historical", "in-progress", "tracked", "analytics", "logs"];
+    const valid = ["opportunities", "historical", "in-progress", "tracked", "starred", "analytics", "logs"];
     if (h && valid.includes(h)) setTab(h);
   }, [location.hash]);
+  const { count: starredCount } = useStarred();
   const [inProgressCount, setInProgressCount] = useState<number>(0);
 
   // Fetch in-progress count on mount so the stat card is populated before
