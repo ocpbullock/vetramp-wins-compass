@@ -13,6 +13,8 @@ import { buildIndex, matchIncumbent, type IncumbentMatch } from "@/lib/incumbent
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { StarButton } from "@/components/dashboard/StarButton";
+import { starInputFromSam } from "@/lib/starred";
 
 type SortKey = "title" | "agency" | "naics" | "type" | "posted" | "deadline" | "incumbent";
 
