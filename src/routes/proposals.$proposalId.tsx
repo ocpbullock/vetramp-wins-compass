@@ -687,6 +687,7 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = []
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }
 
