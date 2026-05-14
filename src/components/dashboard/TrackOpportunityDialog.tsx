@@ -109,6 +109,7 @@ export function TrackOpportunityDialog({
     setSaving(true);
     const payload = {
       user_id: user.id,
+      team_id: teamId,
       title: title.trim(),
       agency: agency.trim(),
       sub_agency: subAgency.trim() || null,
