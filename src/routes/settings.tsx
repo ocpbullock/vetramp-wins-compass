@@ -87,11 +87,13 @@ function SettingsPage() {
             {isAdmin && <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>}
             <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
+            <TabsTrigger value="past-performance">Past Performance</TabsTrigger>
           </TabsList>
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
           {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>}
           <TabsContent value="team" className="mt-4"><TeamPanel /></TabsContent>
           <TabsContent value="partners" className="mt-4"><PartnersPanel /></TabsContent>
+          <TabsContent value="past-performance" className="mt-4"><PastPerformancePanel /></TabsContent>
         </Tabs>
       </main>
     </div>
