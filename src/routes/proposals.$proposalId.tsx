@@ -320,11 +320,22 @@ function ProposalPipeline() {
   }
 
   async function generateAll() {
-    for (const s of SECTIONS) {
-      // skip already generated unless user wants regen
-      if (proposal.sections?.[s.id]?.content) continue;
-      await generateSection(s.id, s.title);
+    const remaining = SECTIONS.filter((s) => !proposal.sections?.[s.id]?.content);
+    if (remaining.length === 0) { toast.info("All sections already drafted"); return; }
+    for (let i = 0; i < remaining.length; i++) {
+      const s = remaining[i];
+      setGenProgress({ current: i + 1, total: remaining.length, label: s.title });
+      try {
+        await generateSection(s.id, s.title);
+      } catch (e) {
+        // continue with next; per-section toast already shown
+      }
+      if (i < remaining.length - 1) {
+        // 2s pacing between calls to avoid hammering the gateway
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     }
+    setGenProgress(null);
   }
 
   async function exportDocx() {
