@@ -1,244 +1,207 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import {
+  searchOpportunities,
+  mapOpportunityRow,
+  opportunityRowToSamShape,
+  checkDailyUsage,
+  logUsage,
+  TangoError,
+} from "../_shared/tango-client.ts";
 
-const BASE = "https://api.sam.gov/opportunities/v2/search";
+const CACHE_TTL_HOURS = 24;
 
-// In-memory circuit breaker (resets on cold start)
-const breaker = {
-  consecutiveErrors: 0,
-  openUntil: 0,
-  lastSuccessAt: 0 as number,
-};
-const BREAKER_THRESHOLD = 3;
-const BREAKER_OPEN_MS = 60_000;
-
-function fmtDate(iso: string) {
-  const [y, m, d] = iso.split("-");
-  return `${m}/${d}/${y}`;
-}
-
-function toIso(value: unknown): string | null {
-  if (value === null || value === undefined) return null;
-  const s = String(value).trim();
-  if (!s) return null;
-  // Already ISO
-  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
-    const d = new Date(s);
-    return isNaN(d.getTime()) ? s : d.toISOString();
-  }
-  // Try MM/DD/YYYY or other parseable formats
-  const d = new Date(s);
-  if (!isNaN(d.getTime())) return d.toISOString();
-  return s;
-}
-
-function trimAll<T>(obj: T): T {
-  if (obj === null || obj === undefined) return obj;
-  if (typeof obj === "string") return obj.trim() as unknown as T;
-  if (Array.isArray(obj)) return obj.map(trimAll) as unknown as T;
-  if (typeof obj === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
-      out[k] = trimAll(v);
-    }
-    return out as unknown as T;
-  }
-  return obj;
-}
-
-function normalizeOpportunity(o: any): any {
-  const cleaned = trimAll(o);
-  const out = { ...cleaned } as any;
-  // ISO 8601 dates for known date fields
-  for (const key of ["postedDate", "responseDeadLine", "archiveDate", "updatedDate"]) {
-    if (out[key] !== undefined) {
-      const iso = toIso(out[key]);
-      if (iso) out[key] = iso;
-    }
-  }
-  // Validate NAICS exactly 6 digits
-  if (out.naicsCode !== undefined && out.naicsCode !== null) {
-    const n = String(out.naicsCode).replace(/\D/g, "");
-    if (n.length === 6) out.naicsCode = n;
-    else { out.naicsCodeRaw = out.naicsCode; out.naicsCode = null; out.naicsInvalid = true; }
-  }
-  return out;
+function fmtDateForTango(iso: string) {
+  // Tango expects ISO YYYY-MM-DD
+  if (!iso) return iso;
+  if (/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso.slice(0, 10);
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? iso : d.toISOString().slice(0, 10);
 }
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
-
   try {
-    // Auth: require a valid Supabase user before consuming SAM.gov rate-limited quota.
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     const sbUrl = Deno.env.get("SUPABASE_URL")!;
     const sbKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
+    const sbService = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const userClient = createClient(sbUrl, sbKey, { global: { headers: { Authorization: authHeader } } });
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const apiKey = Deno.env.get("SAM_GOV_API_KEY");
-    if (!apiKey) throw new Error("SAM_GOV_API_KEY not configured");
-
-    const { naicsCodes, postedFrom, postedTo, keyword } = await req.json();
-
-    let fromIso = postedFrom;
-    const fromMs = new Date(postedFrom).getTime();
-    const toMs = new Date(postedTo).getTime();
-    const oneYearMs = 365 * 24 * 60 * 60 * 1000;
-    if (toMs - fromMs >= oneYearMs) {
-      const adjusted = new Date(toMs - oneYearMs + 24 * 60 * 60 * 1000);
-      fromIso = adjusted.toISOString().slice(0, 10);
-    }
-    const from = fmtDate(fromIso);
-    const to = fmtDate(postedTo);
-
-    const all: any[] = [];
-    const errors: any[] = [];
-    const log: string[] = [];
-    let rateLimited = false;
-    let circuitOpen = false;
-    let processed = 0;
-
-    // Circuit-breaker pre-check
-    if (breaker.openUntil > Date.now()) {
-      return new Response(JSON.stringify({
-        opportunities: [],
-        errors: [{ error: "circuit_open" }],
-        log: [`Circuit breaker open until ${new Date(breaker.openUntil).toISOString()}`],
-        circuitOpen: true,
-        message: `SAM.gov is experiencing issues. Showing cached results from ${
-          breaker.lastSuccessAt ? new Date(breaker.lastSuccessAt).toISOString() : "(no recent success)"
-        }.`,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    for (let i = 0; i < naicsCodes.length; i++) {
-      const code = naicsCodes[i];
-      const params = new URLSearchParams({
-        api_key: apiKey,
-        ncode: code,
-        postedFrom: from,
-        postedTo: to,
-        limit: "200",
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-      if (keyword) params.set("q", keyword);
+    }
+    const admin = createClient(sbUrl, sbService);
 
-      const url = `${BASE}?${params.toString()}`;
-      try {
-        const res = await fetch(url);
+    const body = await req.json();
+    const { naicsCodes = [], postedFrom, postedTo, keyword, setAside, teamId } = body;
 
-        if (res.status === 429) {
-          rateLimited = true;
-          breaker.consecutiveErrors++;
-          errors.push({ naicsCode: code, status: 429, error: "rate_limited" });
-          log.push(`NAICS ${code}: HTTP 429 — stopping all remaining queries`);
+    // Resolve team_id (prefer caller-provided; else first membership)
+    let team_id: string | null = teamId ?? null;
+    if (!team_id) {
+      const { data: tm } = await admin
+        .from("team_members")
+        .select("team_id")
+        .eq("user_id", user.id)
+        .limit(1)
+        .maybeSingle();
+      team_id = tm?.team_id ?? null;
+    }
+    if (!team_id) {
+      return new Response(JSON.stringify({ error: "no_team", opportunities: [], log: [] }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const log: string[] = [];
+    const errors: any[] = [];
+    const fromIso = fmtDateForTango(postedFrom);
+    const toIso = fmtDateForTango(postedTo);
+
+    // Cache lookup: rows fetched within TTL matching NAICS + window
+    const cacheCutoff = new Date(Date.now() - CACHE_TTL_HOURS * 3600 * 1000).toISOString();
+    let cacheQuery = admin
+      .from("tango_cached_opportunities")
+      .select("*")
+      .eq("team_id", team_id)
+      .gte("fetched_at", cacheCutoff);
+    if (naicsCodes.length) cacheQuery = cacheQuery.in("naics_code", naicsCodes);
+    if (postedFrom) cacheQuery = cacheQuery.gte("posted_date", new Date(fromIso).toISOString());
+    if (postedTo) cacheQuery = cacheQuery.lte("posted_date", new Date(toIso + "T23:59:59Z").toISOString());
+
+    const { data: cachedRows } = await cacheQuery.limit(2000);
+    if (cachedRows && cachedRows.length > 0) {
+      await logUsage(admin, { team_id, endpoint: "/opportunities/", params: body, cached: true, response_status: 200 });
+      const opportunities = cachedRows.map(opportunityRowToSamShape);
+      // Optional keyword filter client-side
+      const filtered = keyword
+        ? opportunities.filter((o: any) =>
+            (o.title || "").toLowerCase().includes(String(keyword).toLowerCase()) ||
+            (o.description || "").toLowerCase().includes(String(keyword).toLowerCase()),
+          )
+        : opportunities;
+      log.push(`Served ${filtered.length} from cache`);
+      return new Response(
+        JSON.stringify({ opportunities: filtered, errors, log, _cached: true }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Daily quota check
+    const usage = await checkDailyUsage(admin, team_id);
+    if (!usage.allowed) {
+      // Fall back to any cached results regardless of TTL
+      const { data: stale } = await admin
+        .from("tango_cached_opportunities")
+        .select("*")
+        .eq("team_id", team_id)
+        .in("naics_code", naicsCodes.length ? naicsCodes : ["__none__"])
+        .limit(1000);
+      const opportunities = (stale ?? []).map(opportunityRowToSamShape);
+      return new Response(
+        JSON.stringify({
+          opportunities,
+          errors,
+          log: [`Daily Tango API limit approaching (${usage.used}/100). Showing cached results only.`],
+          message: "Daily API limit approaching. Showing cached results only.",
+          rateLimited: true,
+          _cached: true,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
+    }
+
+    // Hit Tango. Try comma-separated NAICS first; fall back to per-code loop on error.
+    const all: any[] = [];
+    let calls = 0;
+    try {
+      const params: Record<string, unknown> = {
+        page_size: 100,
+        posted_date_from: fromIso,
+        posted_date_to: toIso,
+      };
+      if (naicsCodes.length) params.naics = naicsCodes;
+      if (keyword) params.keyword = keyword;
+      if (setAside) params.set_aside = setAside;
+      const resp = await searchOpportunities(params as any);
+      calls++;
+      await logUsage(admin, { team_id, endpoint: "/opportunities/", params, cached: false, response_status: 200 });
+      all.push(...(resp.results ?? []));
+    } catch (e) {
+      const te = e as TangoError;
+      log.push(`combined NAICS query failed (${te.status}): ${te.message}`);
+      // Fallback: per-NAICS loop with 500ms delay
+      for (let i = 0; i < naicsCodes.length; i++) {
+        // Re-check quota each loop
+        const u2 = await checkDailyUsage(admin, team_id);
+        if (!u2.allowed) {
+          log.push("Daily limit hit during per-NAICS loop; stopping.");
           break;
         }
-
-        if (!res.ok) {
-          breaker.consecutiveErrors++;
-          const text = await res.text();
-          errors.push({ naicsCode: code, status: res.status, error: text.slice(0, 300) });
-          log.push(`NAICS ${code}: HTTP ${res.status}`);
-          if (breaker.consecutiveErrors >= BREAKER_THRESHOLD) {
-            breaker.openUntil = Date.now() + BREAKER_OPEN_MS;
-            circuitOpen = true;
-            log.push(`Circuit breaker tripped after ${breaker.consecutiveErrors} consecutive errors`);
-            break;
-          }
-          continue;
+        const code = naicsCodes[i];
+        try {
+          const params: Record<string, unknown> = {
+            page_size: 100,
+            naics: code,
+            posted_date_from: fromIso,
+            posted_date_to: toIso,
+          };
+          if (keyword) params.keyword = keyword;
+          if (setAside) params.set_aside = setAside;
+          const resp = await searchOpportunities(params as any);
+          calls++;
+          await logUsage(admin, { team_id, endpoint: "/opportunities/", params, cached: false, response_status: 200 });
+          all.push(...(resp.results ?? []));
+          log.push(`NAICS ${code}: ${resp.results?.length ?? 0} results`);
+        } catch (err) {
+          const ee = err as TangoError;
+          errors.push({ naicsCode: code, status: ee.status, error: ee.message });
+          await logUsage(admin, { team_id, endpoint: "/opportunities/", params: { naics: code }, cached: false, response_status: ee.status });
         }
-
-        const json = await res.json();
-        // Validate response shape
-        if (!json || !Array.isArray(json.opportunitiesData)) {
-          breaker.consecutiveErrors++;
-          console.error("SAM.gov unexpected response shape:", JSON.stringify(json).slice(0, 500));
-          errors.push({ naicsCode: code, error: "Unexpected SAM.gov response shape (missing opportunitiesData)" });
-          log.push(`NAICS ${code}: invalid response shape`);
-          if (breaker.consecutiveErrors >= BREAKER_THRESHOLD) {
-            breaker.openUntil = Date.now() + BREAKER_OPEN_MS;
-            circuitOpen = true;
-            break;
-          }
-          continue;
-        }
-
-        breaker.consecutiveErrors = 0;
-        breaker.lastSuccessAt = Date.now();
-        const data = json.opportunitiesData;
-        all.push(...data);
-        log.push(`NAICS ${code}: ${data.length} results`);
-      } catch (e: any) {
-        breaker.consecutiveErrors++;
-        errors.push({ naicsCode: code, error: e.message });
-        log.push(`NAICS ${code}: error ${e.message}`);
-        if (breaker.consecutiveErrors >= BREAKER_THRESHOLD) {
-          breaker.openUntil = Date.now() + BREAKER_OPEN_MS;
-          circuitOpen = true;
-          log.push(`Circuit breaker tripped after ${breaker.consecutiveErrors} consecutive errors`);
-          break;
-        }
-      } finally {
-        processed = i + 1;
+        if (i < naicsCodes.length - 1) await new Promise((r) => setTimeout(r, 500));
       }
-
-      if (i < naicsCodes.length - 1) await new Promise((r) => setTimeout(r, 500));
     }
 
-    // Normalize each opportunity (trim strings, ISO dates, validate NAICS)
-    const normalized = all.map(normalizeOpportunity);
+    // Dedupe
+    const seen = new Set<string>();
+    const deduped = all.filter((o: any) => {
+      const key = String(
+        o?.id ?? o?.tango_id ?? o?.noticeId ?? o?.notice_id ?? o?.solicitationNumber ?? o?.solicitation_number ?? JSON.stringify(o).slice(0, 80),
+      );
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
 
-    // Dedupe by both solicitationNumber AND noticeId — amendments create new
-    // notices for the same solicitation; either match means duplicate.
-    const seenSol = new Set<string>();
-    const seenNotice = new Set<string>();
-    const deduped: any[] = [];
-    for (const o of normalized) {
-      const sol = o.solicitationNumber ? String(o.solicitationNumber) : "";
-      const notice = o.noticeId ? String(o.noticeId) : "";
-      if (sol && seenSol.has(sol)) continue;
-      if (notice && seenNotice.has(notice)) continue;
-      if (!sol && !notice) {
-        // Fall back to fingerprint
-        const fp = JSON.stringify(o).slice(0, 80);
-        if (seenSol.has(fp)) continue;
-        seenSol.add(fp);
-      }
-      if (sol) seenSol.add(sol);
-      if (notice) seenNotice.add(notice);
-      deduped.push(o);
+    // Upsert cache
+    if (deduped.length > 0) {
+      const rows = deduped.map((o: any) => mapOpportunityRow(team_id!, o));
+      const { error: upErr } = await admin
+        .from("tango_cached_opportunities")
+        .upsert(rows, { onConflict: "team_id,tango_id" });
+      if (upErr) console.error("tango opps upsert error", upErr);
     }
 
-    let message: string | undefined;
-    if (rateLimited) {
-      message = `SAM.gov rate limit reached. Retrieved results for ${processed - 1} of ${naicsCodes.length} NAICS codes. Wait 5 minutes and search again, or reduce the number of selected NAICS codes.`;
-    } else if (circuitOpen) {
-      message = `SAM.gov is experiencing issues. Returned partial results from ${processed} of ${naicsCodes.length} NAICS codes. Try again in a minute.`;
-    }
+    const opportunities = deduped.map((o: any) => opportunityRowToSamShape(mapOpportunityRow(team_id!, o)));
+    log.push(`Tango calls: ${calls}, results: ${opportunities.length}`);
 
     return new Response(
-      JSON.stringify({
-        opportunities: deduped,
-        errors,
-        log,
-        rateLimited,
-        circuitOpen,
-        processed,
-        total: naicsCodes.length,
-        message,
-      }),
+      JSON.stringify({ opportunities, errors, log, _cached: false, calls }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (e: any) {
-    console.error("search-sam error:", e);
-    return new Response(JSON.stringify({ error: e.message }), {
+    console.error("search-sam (tango) error:", e);
+    return new Response(JSON.stringify({ error: e.message ?? "unknown" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
