@@ -1,4 +1,4 @@
-import { Database, Zap } from "lucide-react";
+import { Database, Zap, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export type DataSource =
