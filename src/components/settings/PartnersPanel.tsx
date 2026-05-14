@@ -200,11 +200,9 @@ function PartnerDialog({
   const [form, setForm] = useState(() => initialForm(initial));
   const [saving, setSaving] = useState(false);
 
-  // reset when opening with new initial
-  useState(() => undefined);
-  if (open && form.__seedFor !== (initial?.id ?? "new")) {
-    setForm(initialForm(initial));
-  }
+  useEffect(() => {
+    if (open) setForm(initialForm(initial));
+  }, [open, initial]);
 
   const update = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
 
