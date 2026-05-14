@@ -1,0 +1,1 @@
+ALTER TABLE public.proposals ADD COLUMN IF NOT EXISTS oci_screening jsonb NOT NULL DEFAULT '{}'::jsonb;
