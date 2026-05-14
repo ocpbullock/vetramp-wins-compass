@@ -6,12 +6,14 @@ import { Copy, Download, Save, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { useTeamId } from "@/lib/team";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import type { SamOpportunity } from "@/lib/api";
 
 export function ProposalModal({ opp, onClose }: { opp: SamOpportunity | null; onClose: () => void }) {
   const open = !!opp;
   const { user } = useAuth();
+  const teamId = useTeamId();
   const [content, setContent] = useState("");
   const [generating, setGenerating] = useState(false);
 
@@ -97,6 +99,7 @@ export function ProposalModal({ opp, onClose }: { opp: SamOpportunity | null; on
     if (!opp || !user) return;
     const { error } = await supabase.from("proposal_drafts").insert({
       user_id: user.id,
+      team_id: teamId,
       solicitation_number: opp.solicitationNumber || "unknown",
       opportunity_title: opp.title,
       agency: opp.fullParentPathName,

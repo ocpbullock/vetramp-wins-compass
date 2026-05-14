@@ -11,6 +11,7 @@ import { ChevronDown } from "lucide-react";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useTeamId } from "@/lib/team";
 import { toast } from "sonner";
 
 export const CONTRACT_VEHICLES = [
@@ -61,6 +62,7 @@ export function TrackOpportunityDialog({
   onSaved: () => void;
 }) {
   const { user } = useAuth();
+  const teamId = useTeamId();
   const [saving, setSaving] = useState(false);
 
   const [title, setTitle] = useState("");
@@ -107,6 +109,7 @@ export function TrackOpportunityDialog({
     setSaving(true);
     const payload = {
       user_id: user.id,
+      team_id: teamId,
       title: title.trim(),
       agency: agency.trim(),
       sub_agency: subAgency.trim() || null,

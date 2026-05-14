@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, useLocation } from "@tanstack/react-route
 import { useEffect, useMemo, useRef, useState } from "react";
 import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
+import { useTeamId } from "@/lib/team";
 import { Header } from "@/components/dashboard/Header";
 import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
 import { StatCards } from "@/components/dashboard/StatCards";
@@ -34,6 +35,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();
+  const teamId = useTeamId();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
   // Auto-restore last search from localStorage on mount (cache hit = instant).
   const didAutoLoad = useRef(false);
@@ -64,6 +66,7 @@ function Dashboard() {
     if (!user) return;
     const { data, error } = await supabase.from("proposals").insert({
       user_id: user.id,
+      team_id: teamId,
       solicitation_number: o.solicitationNumber || o.noticeId || "unknown",
       notice_id: o.noticeId,
       opportunity_title: o.title,

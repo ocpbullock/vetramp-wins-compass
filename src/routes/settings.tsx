@@ -22,6 +22,7 @@ import {
 import { ArrowLeft, Plus, Trash2, Save, Loader2, Upload, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { TeamPanel } from "@/components/settings/TeamPanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
@@ -57,13 +58,9 @@ function SettingsPage() {
   useEffect(() => {
     if (loading) return;
     if (!user) navigate({ to: "/auth" });
-    else if (!isAdmin) {
-      toast.error("Admins only.");
-      navigate({ to: "/" });
-    }
-  }, [user, loading, isAdmin, navigate]);
+  }, [user, loading, navigate]);
 
-  if (loading || !user || !isAdmin) {
+  if (loading || !user) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
   }
 
@@ -73,7 +70,7 @@ function SettingsPage() {
         <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold tracking-tight">Settings</h1>
-            <p className="text-xs text-muted-foreground">Company profile and knowledge base</p>
+            <p className="text-xs text-muted-foreground">Team, company profile, and knowledge base</p>
           </div>
           <Button variant="outline" size="sm" asChild>
             <Link to="/"><ArrowLeft className="w-4 h-4 mr-1" /> Back to dashboard</Link>
@@ -82,13 +79,15 @@ function SettingsPage() {
       </header>
 
       <main className="max-w-[1400px] mx-auto p-6">
-        <Tabs defaultValue="company">
+        <Tabs defaultValue={isAdmin ? "company" : "team"}>
           <TabsList>
-            <TabsTrigger value="company">Company Profile</TabsTrigger>
-            <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
+            {isAdmin && <TabsTrigger value="company">Company Profile</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>}
+            <TabsTrigger value="team">Team</TabsTrigger>
           </TabsList>
-          <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>
-          <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>
+          {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
+          {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>}
+          <TabsContent value="team" className="mt-4"><TeamPanel /></TabsContent>
         </Tabs>
       </main>
     </div>
