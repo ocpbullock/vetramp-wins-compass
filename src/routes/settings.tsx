@@ -28,6 +28,7 @@ import { PartnersPanel } from "@/components/settings/PartnersPanel";
 import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 import { ContractVehiclesPanel } from "@/components/settings/ContractVehiclesPanel";
 import { AIUsagePanel } from "@/components/settings/AIUsagePanel";
+import { TangoUsagePanel } from "@/components/settings/TangoUsagePanel";
 import { DataHealthPanel } from "@/components/settings/DataHealthPanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
