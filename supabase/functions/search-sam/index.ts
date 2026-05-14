@@ -16,6 +16,54 @@ function fmtDate(iso: string) {
   return `${m}/${d}/${y}`;
 }
 
+function toIso(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  // Already ISO
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? s : d.toISOString();
+  }
+  // Try MM/DD/YYYY or other parseable formats
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString();
+  return s;
+}
+
+function trimAll<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === "string") return obj.trim() as unknown as T;
+  if (Array.isArray(obj)) return obj.map(trimAll) as unknown as T;
+  if (typeof obj === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      out[k] = trimAll(v);
+    }
+    return out as unknown as T;
+  }
+  return obj;
+}
+
+function normalizeOpportunity(o: any): any {
+  const cleaned = trimAll(o);
+  const out = { ...cleaned } as any;
+  // ISO 8601 dates for known date fields
+  for (const key of ["postedDate", "responseDeadLine", "archiveDate", "updatedDate"]) {
+    if (out[key] !== undefined) {
+      const iso = toIso(out[key]);
+      if (iso) out[key] = iso;
+    }
+  }
+  // Validate NAICS exactly 6 digits
+  if (out.naicsCode !== undefined && out.naicsCode !== null) {
+    const n = String(out.naicsCode).replace(/\D/g, "");
+    if (n.length === 6) out.naicsCode = n;
+    else { out.naicsCodeRaw = out.naicsCode; out.naicsCode = null; out.naicsInvalid = true; }
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
