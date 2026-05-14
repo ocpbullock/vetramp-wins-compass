@@ -98,6 +98,7 @@ Deno.serve(async (req) => {
       solutionDesign,
       attachmentsText,
       teaming,
+      pastPerformance,
     } = body;
 
     const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
