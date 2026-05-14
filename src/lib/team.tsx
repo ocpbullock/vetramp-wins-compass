@@ -89,6 +89,11 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const bootstrap = useCallback(async (uid: string) => {
+    if (bootstrapInFlight.current) {
+      // Should be guarded by callers, but double-check to avoid concurrent runs.
+      return;
+    }
+    bootstrapInFlight.current = true;
     setLoading(true);
     try {
       const { data: memberships, error } = await supabase
@@ -141,6 +146,16 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       setLoading(false);
+      bootstrapInFlight.current = false;
+      // If a team switch came in while we were running, process the latest one.
+      const next = queuedTeamId.current;
+      if (next) {
+        queuedTeamId.current = null;
+        if (typeof window !== "undefined") localStorage.setItem(SELECTED_TEAM_KEY, next);
+        bootstrappedFor.current = null;
+        // Fire-and-forget; errors surface via the inner try/catch above.
+        void bootstrap(uid);
+      }
     }
   }, [loadMembers]);
 
