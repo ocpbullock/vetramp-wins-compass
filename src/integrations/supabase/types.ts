@@ -284,6 +284,57 @@ export type Database = {
           },
         ]
       }
+      proposal_teaming: {
+        Row: {
+          created_at: string
+          id: string
+          naics_contribution: string[]
+          notes: string | null
+          partner_id: string
+          proposal_id: string
+          role: string
+          updated_at: string
+          work_share_pct: number | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          naics_contribution?: string[]
+          notes?: string | null
+          partner_id: string
+          proposal_id: string
+          role?: string
+          updated_at?: string
+          work_share_pct?: number | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          naics_contribution?: string[]
+          notes?: string | null
+          partner_id?: string
+          proposal_id?: string
+          role?: string
+          updated_at?: string
+          work_share_pct?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_teaming_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "teaming_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_teaming_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposals: {
         Row: {
           agency: string | null
@@ -422,6 +473,77 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teaming_partners: {
+        Row: {
+          cage_code: string | null
+          capabilities_summary: string | null
+          certifications: string[]
+          company_name: string
+          contract_vehicles: string[]
+          created_at: string
+          created_by: string | null
+          id: string
+          naics_codes: string[]
+          notes: string | null
+          past_performance_summary: string | null
+          poc_email: string | null
+          poc_name: string | null
+          poc_phone: string | null
+          relationship_status: string
+          team_id: string
+          uei: string | null
+          updated_at: string
+        }
+        Insert: {
+          cage_code?: string | null
+          capabilities_summary?: string | null
+          certifications?: string[]
+          company_name: string
+          contract_vehicles?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          naics_codes?: string[]
+          notes?: string | null
+          past_performance_summary?: string | null
+          poc_email?: string | null
+          poc_name?: string | null
+          poc_phone?: string | null
+          relationship_status?: string
+          team_id: string
+          uei?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cage_code?: string | null
+          capabilities_summary?: string | null
+          certifications?: string[]
+          company_name?: string
+          contract_vehicles?: string[]
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          naics_codes?: string[]
+          notes?: string | null
+          past_performance_summary?: string | null
+          poc_email?: string | null
+          poc_name?: string | null
+          poc_phone?: string | null
+          relationship_status?: string
+          team_id?: string
+          uei?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "teaming_partners_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
