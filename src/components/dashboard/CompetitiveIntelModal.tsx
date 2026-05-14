@@ -11,6 +11,7 @@ import { matchIncumbent } from "@/lib/incumbents";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeamId } from "@/lib/team";
 import { BidScorecard } from "./BidScorecard";
+import { DataProvenance } from "./DataSourceBadge";
 
 const KNOWN_VEHICLES = [
   "OASIS+", "STARS III", "Alliant 2", "SEWP V", "SEWP VI", "CIO-SP3", "CIO-SP4",
