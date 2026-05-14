@@ -92,6 +92,9 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
               {overdueByProposal[p.id] > 0 && (
                 <Badge className="bg-destructive">{overdueByProposal[p.id]} overdue</Badge>
               )}
+              {ociStatus(p.oci_screening) === "flagged" && (
+                <Badge variant="destructive" title="Potential OCI detected — consult legal counsel"><ShieldAlert className="w-3 h-3 mr-1" />OCI flag</Badge>
+              )}
               <Button size="sm" onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: p.id } })}>
                 Resume <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
