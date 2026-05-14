@@ -19,13 +19,19 @@ function filenameFromHeaders(headers: Headers, fallback: string) {
 
 function classify(name: string): string {
   const n = name.toLowerCase();
-  if (n.includes("sow") || n.includes("pws") || n.includes("statement_of_work")) return "sow";
-  if (n.includes("section_l") || n.includes("sectionl") || n.includes("section l")) return "section_l";
-  if (n.includes("section_m") || n.includes("sectionm") || n.includes("section m")) return "section_m";
-  if (n.includes("amend")) return "amendment";
-  if (n.includes("q&a") || n.includes("qa") || n.includes("questions")) return "qa";
-  if (n.includes("rfp") || n.includes("rfq") || n.includes("solicitation")) return "solicitation";
-  return "attachment";
+  if (n.includes("sow") || n.includes("pws") || n.includes("statement_of_work") || n.includes("statement of work")) return "sow";
+  if (n.includes("section_l") || n.includes("section l") || n.includes("section_m") || n.includes("section m") || n.includes("instructions")) return "instructions";
+  if (n.includes("amend") || n.includes("mod ") || n.includes("_mod") || n.includes("modification")) return "amendment";
+  if (n.includes("qasp") || n.includes("cdrl") || n.includes("dd254") || n.includes("dd_254")) return "attachment";
+  return "other";
+}
+
+function nameFromUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const last = u.pathname.split("/").filter(Boolean).pop() || "file";
+    return decodeURIComponent(last);
+  } catch { return "file"; }
 }
 
 Deno.serve(async (req) => {
