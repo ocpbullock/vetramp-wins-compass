@@ -87,6 +87,9 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
             </div>
             <div className="flex items-center gap-2 shrink-0">
               <Badge variant="secondary" className="capitalize">{p.status || "intake"}</Badge>
+              {overdueByProposal[p.id] > 0 && (
+                <Badge className="bg-destructive">{overdueByProposal[p.id]} overdue</Badge>
+              )}
               <Button size="sm" onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: p.id } })}>
                 Resume <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
