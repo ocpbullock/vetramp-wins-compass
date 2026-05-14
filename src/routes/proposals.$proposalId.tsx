@@ -438,9 +438,21 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
               <Upload className="w-4 h-4 inline-block mr-1" />Upload document
             </div>
           </label>
+          <Button
+            onClick={onParse}
+            disabled={parsing || sowAttachments.length === 0}
+            size="sm"
+            className="w-full"
+          >
+            {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
+            {parsing ? "Parsing…" : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
+          </Button>
+          <div className="text-[11px] text-muted-foreground">
+            Parsing extracts requirements (Section L/M, "shall" statements) AND auto-fills capture details below — title, agency, contract type, value, PoP, clearance, etc.
+          </div>
           <div className="space-y-1">
-            {attachments.length === 0 && <div className="text-xs text-muted-foreground">No files yet.</div>}
-            {attachments.map((a: any) => (
+            {sowAttachments.length === 0 && <div className="text-xs text-muted-foreground">No files yet.</div>}
+            {sowAttachments.map((a: any) => (
               <div key={a.id} className="flex items-center gap-2 text-xs border border-border rounded px-2 py-1.5">
                 <FileText className="w-3 h-3 text-muted-foreground" />
                 <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
