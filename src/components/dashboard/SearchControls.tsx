@@ -34,8 +34,9 @@ export function SearchControls({
     const now = new Date();
     return {
       today: format(now, "yyyy-MM-dd"),
-      // Default remains a 36-month UI window for continuity; the dashboard
-      // applies a separate 10-year historical award lookback for recompete matching.
+        // Default remains a 36-month UI window for continuity; the dashboard
+        // applies a separate 10-year historical award lookback for recompete matching.
+        // Federal procurement data is sourced via the Tango API.
       defaultFrom: format(subYears(now, 3), "yyyy-MM-dd"),
     };
   }, []);
