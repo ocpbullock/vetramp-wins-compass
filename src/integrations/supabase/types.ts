@@ -811,6 +811,275 @@ export type Database = {
         }
         Relationships: []
       }
+      tango_api_usage: {
+        Row: {
+          cached: boolean
+          called_at: string
+          endpoint: string
+          id: string
+          params: Json | null
+          response_status: number | null
+          team_id: string
+        }
+        Insert: {
+          cached?: boolean
+          called_at?: string
+          endpoint: string
+          id?: string
+          params?: Json | null
+          response_status?: number | null
+          team_id: string
+        }
+        Update: {
+          cached?: boolean
+          called_at?: string
+          endpoint?: string
+          id?: string
+          params?: Json | null
+          response_status?: number | null
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tango_api_usage_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tango_cached_contracts: {
+        Row: {
+          agency: string | null
+          award_date: string | null
+          base_and_all_options: number | null
+          contract_type: string | null
+          description: string | null
+          fetched_at: string
+          id: string
+          idv_piid: string | null
+          naics_code: string | null
+          obligated_amount: number | null
+          parent_award_id: string | null
+          period_of_performance_end: string | null
+          period_of_performance_start: string | null
+          piid: string | null
+          psc_code: string | null
+          raw_data: Json | null
+          set_aside: string | null
+          tango_id: string
+          team_id: string
+          vehicle: string | null
+          vendor_duns: string | null
+          vendor_name: string | null
+          vendor_uei: string | null
+        }
+        Insert: {
+          agency?: string | null
+          award_date?: string | null
+          base_and_all_options?: number | null
+          contract_type?: string | null
+          description?: string | null
+          fetched_at?: string
+          id?: string
+          idv_piid?: string | null
+          naics_code?: string | null
+          obligated_amount?: number | null
+          parent_award_id?: string | null
+          period_of_performance_end?: string | null
+          period_of_performance_start?: string | null
+          piid?: string | null
+          psc_code?: string | null
+          raw_data?: Json | null
+          set_aside?: string | null
+          tango_id: string
+          team_id: string
+          vehicle?: string | null
+          vendor_duns?: string | null
+          vendor_name?: string | null
+          vendor_uei?: string | null
+        }
+        Update: {
+          agency?: string | null
+          award_date?: string | null
+          base_and_all_options?: number | null
+          contract_type?: string | null
+          description?: string | null
+          fetched_at?: string
+          id?: string
+          idv_piid?: string | null
+          naics_code?: string | null
+          obligated_amount?: number | null
+          parent_award_id?: string | null
+          period_of_performance_end?: string | null
+          period_of_performance_start?: string | null
+          piid?: string | null
+          psc_code?: string | null
+          raw_data?: Json | null
+          set_aside?: string | null
+          tango_id?: string
+          team_id?: string
+          vehicle?: string | null
+          vendor_duns?: string | null
+          vendor_name?: string | null
+          vendor_uei?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tango_cached_contracts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tango_cached_entities: {
+        Row: {
+          cage_code: string | null
+          city: string | null
+          country: string | null
+          dba_name: string | null
+          fetched_at: string
+          id: string
+          legal_name: string | null
+          naics_codes: string[] | null
+          raw_data: Json | null
+          small_business_types: string[] | null
+          state: string | null
+          tango_id: string
+          team_id: string
+          uei: string | null
+        }
+        Insert: {
+          cage_code?: string | null
+          city?: string | null
+          country?: string | null
+          dba_name?: string | null
+          fetched_at?: string
+          id?: string
+          legal_name?: string | null
+          naics_codes?: string[] | null
+          raw_data?: Json | null
+          small_business_types?: string[] | null
+          state?: string | null
+          tango_id: string
+          team_id: string
+          uei?: string | null
+        }
+        Update: {
+          cage_code?: string | null
+          city?: string | null
+          country?: string | null
+          dba_name?: string | null
+          fetched_at?: string
+          id?: string
+          legal_name?: string | null
+          naics_codes?: string[] | null
+          raw_data?: Json | null
+          small_business_types?: string[] | null
+          state?: string | null
+          tango_id?: string
+          team_id?: string
+          uei?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tango_cached_entities_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      tango_cached_opportunities: {
+        Row: {
+          agency: string | null
+          archive_date: string | null
+          award_info: Json | null
+          classification_code: string | null
+          description: string | null
+          fetched_at: string
+          id: string
+          naics_code: string | null
+          naics_description: string | null
+          notice_id: string | null
+          office: string | null
+          place_of_performance: Json | null
+          point_of_contact: Json | null
+          posted_date: string | null
+          raw_data: Json | null
+          response_deadline: string | null
+          set_aside: string | null
+          set_aside_description: string | null
+          solicitation_number: string | null
+          source_url: string | null
+          tango_id: string
+          team_id: string
+          title: string
+        }
+        Insert: {
+          agency?: string | null
+          archive_date?: string | null
+          award_info?: Json | null
+          classification_code?: string | null
+          description?: string | null
+          fetched_at?: string
+          id?: string
+          naics_code?: string | null
+          naics_description?: string | null
+          notice_id?: string | null
+          office?: string | null
+          place_of_performance?: Json | null
+          point_of_contact?: Json | null
+          posted_date?: string | null
+          raw_data?: Json | null
+          response_deadline?: string | null
+          set_aside?: string | null
+          set_aside_description?: string | null
+          solicitation_number?: string | null
+          source_url?: string | null
+          tango_id: string
+          team_id: string
+          title: string
+        }
+        Update: {
+          agency?: string | null
+          archive_date?: string | null
+          award_info?: Json | null
+          classification_code?: string | null
+          description?: string | null
+          fetched_at?: string
+          id?: string
+          naics_code?: string | null
+          naics_description?: string | null
+          notice_id?: string | null
+          office?: string | null
+          place_of_performance?: Json | null
+          point_of_contact?: Json | null
+          posted_date?: string | null
+          raw_data?: Json | null
+          response_deadline?: string | null
+          set_aside?: string | null
+          set_aside_description?: string | null
+          solicitation_number?: string | null
+          source_url?: string | null
+          tango_id?: string
+          team_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tango_cached_opportunities_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           id: string
