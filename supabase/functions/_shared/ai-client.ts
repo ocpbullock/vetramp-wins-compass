@@ -22,7 +22,13 @@ const PROVIDERS: Record<Provider, ProviderConfig> = {
     defaultModel: "gpt-4o-mini",
   },
   anthropic: {
-    baseUrl: "https://api.anthropic.com/v1/chat/completions",
+    // NOTE: Anthropic provider is NOT yet fully implemented. The Messages API
+    // (https://api.anthropic.com/v1/messages) uses a different request/response
+    // shape than OpenAI chat completions (system prompt is a top-level field,
+    // messages must alternate user/assistant, response is `content[]` not
+    // `choices[]`, and the auth header is `x-api-key` + `anthropic-version`).
+    // Do not select this provider until a format-conversion layer is added.
+    baseUrl: "https://api.anthropic.com/v1/messages",
     apiKeyEnv: "ANTHROPIC_API_KEY",
     defaultModel: "claude-3-5-sonnet-latest",
   },
