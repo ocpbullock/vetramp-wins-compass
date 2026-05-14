@@ -937,7 +937,14 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, atta
       if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
       const merged = { ...intel, ...j.intel, notes };
       await onPatch({ customer_intel: merged });
-      toast.success(j.cached ? "Customer intelligence loaded from cache" : "Customer intelligence drafted");
+      if (j.cached && j.cached_at) {
+        const ms = Date.now() - new Date(j.cached_at).getTime();
+        const mins = Math.max(1, Math.round(ms / 60000));
+        const ago = mins < 60 ? `${mins} min ago` : mins < 1440 ? `${Math.round(mins / 60)} hr ago` : `${Math.round(mins / 1440)} d ago`;
+        toast.success(`Using cached intel from ${ago}`, { description: "Toggle 'Skip cache' to force a fresh AI run." });
+      } else {
+        toast.success("Customer intelligence drafted");
+      }
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); setAiBusy?.(false); }
   }
 
