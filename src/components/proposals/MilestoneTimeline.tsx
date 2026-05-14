@@ -159,7 +159,7 @@ export function MilestoneTimeline({
                       <Input
                         type="datetime-local"
                         value={format(new Date(m.due_date), "yyyy-MM-dd'T'HH:mm")}
-                        onChange={(e) => patchMilestone(m.id, { due_date: new Date(e.target.value).toISOString() })}
+                        onChange={(e) => patchMilestone(m.id, { due_date: localInputToIso(e.target.value) })}
                         className="h-7 text-xs w-[180px]"
                       />
                       <span className={`text-[10px] font-mono w-16 text-right ${
