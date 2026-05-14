@@ -82,17 +82,24 @@ function ProposalPipeline() {
     if (error) toast.error(error.message);
   }
 
-  async function uploadFile(file: File, fileType: string) {
-    if (!user) return;
+  async function uploadFile(file: File, fileType?: string) {
+    if (!user) return null;
+    const ft = fileType || classifyFilename(file.name);
     const path = `${user.id}/${proposalId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const { error: upErr } = await supabase.storage.from("proposal-attachments").upload(path, file);
-    if (upErr) { toast.error(upErr.message); return; }
+    if (upErr) { toast.error(upErr.message); return null; }
     const { data: row, error: insErr } = await supabase.from("proposal_attachments").insert({
-      proposal_id: proposalId, filename: file.name, file_type: fileType, storage_path: path, source: "manual", size_bytes: file.size,
+      proposal_id: proposalId, filename: file.name, file_type: ft, storage_path: path, source: "manual", size_bytes: file.size,
     }).select().single();
-    if (insErr) { toast.error(insErr.message); return; }
+    if (insErr) { toast.error(insErr.message); return null; }
     setAttachments((a) => [row, ...a]);
-    toast.success(`Uploaded ${file.name}`);
+    return row;
+  }
+
+  async function updateAttachmentType(att: any, fileType: string) {
+    const { error } = await supabase.from("proposal_attachments").update({ file_type: fileType }).eq("id", att.id);
+    if (error) { toast.error(error.message); return; }
+    setAttachments((a) => a.map((x) => (x.id === att.id ? { ...x, file_type: fileType } : x)));
   }
 
   async function deleteAttachment(att: any) {
