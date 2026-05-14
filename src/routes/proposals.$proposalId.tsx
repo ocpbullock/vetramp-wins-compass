@@ -326,6 +326,8 @@ function ProposalPipeline() {
           </CardContent>
         </Card>
 
+        <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
+
         <Tabs value={step} onValueChange={setStep}>
           <TabsList>
             <TabsTrigger value="intake">1. Intake</TabsTrigger>
