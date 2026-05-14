@@ -93,22 +93,33 @@ export type Database = {
         Row: {
           id: string
           profile_data: Json
+          team_id: string | null
           updated_at: string
           updated_by: string | null
         }
         Insert: {
           id?: string
           profile_data: Json
+          team_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
         Update: {
           id?: string
           profile_data?: Json
+          team_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "company_profile_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       knowledge_base: {
         Row: {
@@ -231,6 +242,7 @@ export type Database = {
           response_deadline: string | null
           solicitation_number: string
           status: string
+          team_id: string | null
           updated_at: string
           user_id: string
         }
@@ -244,6 +256,7 @@ export type Database = {
           response_deadline?: string | null
           solicitation_number: string
           status?: string
+          team_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -257,10 +270,19 @@ export type Database = {
           response_deadline?: string | null
           solicitation_number?: string
           status?: string
+          team_id?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "proposal_drafts_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposals: {
         Row: {
@@ -290,6 +312,7 @@ export type Database = {
           solicitation_number: string
           staffing_plan: Json | null
           status: string
+          team_id: string | null
           technical_approach: Json | null
           transition_plan: Json | null
           updated_at: string
@@ -323,6 +346,7 @@ export type Database = {
           solicitation_number: string
           staffing_plan?: Json | null
           status?: string
+          team_id?: string | null
           technical_approach?: Json | null
           transition_plan?: Json | null
           updated_at?: string
@@ -356,11 +380,79 @@ export type Database = {
           solicitation_number?: string
           staffing_plan?: Json | null
           status?: string
+          team_id?: string | null
           technical_approach?: Json | null
           transition_plan?: Json | null
           updated_at?: string
           user_id?: string
           user_notes?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposals_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_members: {
+        Row: {
+          id: string
+          joined_at: string
+          role: string
+          team_id: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          joined_at?: string
+          role?: string
+          team_id: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          joined_at?: string
+          role?: string
+          team_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      teams: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+          slug?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -379,6 +471,7 @@ export type Database = {
           source_url: string | null
           status: string
           sub_agency: string | null
+          team_id: string | null
           title: string
           updated_at: string
           user_id: string
@@ -397,6 +490,7 @@ export type Database = {
           source_url?: string | null
           status?: string
           sub_agency?: string | null
+          team_id?: string | null
           title: string
           updated_at?: string
           user_id: string
@@ -415,11 +509,20 @@ export type Database = {
           source_url?: string | null
           status?: string
           sub_agency?: string | null
+          team_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "tracked_opportunities_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_invites: {
         Row: {
@@ -512,6 +615,18 @@ export type Database = {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_team_member: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      team_role: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: string
+      }
+      team_role_in: {
+        Args: { _roles: string[]; _team_id: string; _user_id: string }
         Returns: boolean
       }
     }
