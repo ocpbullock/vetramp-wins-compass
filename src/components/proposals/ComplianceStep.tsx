@@ -246,7 +246,7 @@ export function ComplianceStep({
             <CardDescription className="text-xs">Track response status across all extracted requirements.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="border border-border rounded-md p-3">
                 <div className="text-xs text-muted-foreground">Total requirements</div>
                 <div className="text-2xl font-semibold">{stats.total}</div>
@@ -255,6 +255,11 @@ export function ComplianceStep({
                 <div className="text-xs text-muted-foreground">Addressed</div>
                 <div className="text-2xl font-semibold">{stats.pct}%</div>
                 <div className="text-[10px] text-muted-foreground">{stats.addressed} of {stats.total}</div>
+              </div>
+              <div className="border border-border rounded-md p-3">
+                <div className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Verified</div>
+                <div className="text-2xl font-semibold">{stats.verifiedPct}%</div>
+                <div className="text-[10px] text-muted-foreground">{stats.verified} of {stats.total}</div>
               </div>
               <div className="border border-border rounded-md p-3 col-span-2">
                 <div className="text-xs text-muted-foreground mb-1">By status</div>
