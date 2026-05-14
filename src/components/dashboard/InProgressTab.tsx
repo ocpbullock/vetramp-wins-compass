@@ -36,7 +36,7 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
     setLoading(true);
     const { data, error } = await supabase
       .from("proposals")
-      .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at")
+      .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at,oci_screening")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
     if (error) toast.error(error.message);
