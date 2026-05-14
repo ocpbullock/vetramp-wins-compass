@@ -338,10 +338,12 @@ export async function callAI(opts: AICallOptions): Promise<any> {
         await logUsage({ ...opts, provider, model, inputTokens: 0, outputTokens: 0, status: "error", errorMessage: "timeout" });
         throw new AITimeoutError();
       }
-      lastErr = e;
+      // TypeError from fetch typically = DNS / connection refused / network down
+      const isNetwork = e?.name === "TypeError" || /fetch failed|network|ENOTFOUND|ECONNREFUSED|ECONNRESET|EAI_AGAIN/i.test(String(e?.message || ""));
+      lastErr = isNetwork ? new AIServiceUnavailableError(e) : e;
       if (attempt < MAX_ATTEMPTS) { await sleep(BASE_BACKOFF_MS * Math.pow(2, attempt - 1)); continue; }
-      await logUsage({ ...opts, provider, model, inputTokens: 0, outputTokens: 0, status: "error", errorMessage: e?.message || "unknown" });
-      throw e;
+      await logUsage({ ...opts, provider, model, inputTokens: 0, outputTokens: 0, status: "error", errorMessage: lastErr?.message || "unknown" });
+      throw lastErr;
     }
   }
   throw lastErr || new Error("AI call failed");
