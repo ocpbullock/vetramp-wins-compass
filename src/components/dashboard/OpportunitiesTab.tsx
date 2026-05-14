@@ -239,7 +239,7 @@ export function OpportunitiesTab({
 
 function IncumbentCell({ m }: { m?: IncumbentMatch }) {
   if (!m || m.confidence === "none") {
-    return <span className="inline-flex items-center gap-1 text-muted-foreground"><Sparkles className="w-3 h-3" />New</span>;
+    return <span className="text-muted-foreground">—</span>;
   }
   const label = m.confidence === "exact"
     ? "Recompete"
