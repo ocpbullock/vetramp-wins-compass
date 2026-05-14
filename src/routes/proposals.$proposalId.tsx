@@ -427,6 +427,12 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             <div className="col-span-2"><Button onClick={save} size="sm">Save details</Button></div>
           </CardContent>
         </Card>
+
+        <TeamingCard
+          proposalId={proposalId}
+          teamId={proposal.team_id ?? null}
+          opportunityNaics={proposal.naics_code}
+        />
       </div>
 
       <Card>
