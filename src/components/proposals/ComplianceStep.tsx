@@ -378,8 +378,8 @@ export function ComplianceStep({
             </div>
 
             <div className="border border-border rounded-md divide-y divide-border">
-              <div className="grid grid-cols-[1.25rem_5rem_5rem_4rem_1fr_8rem_8rem_2rem] gap-2 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted">
-                <div></div><div>ID</div><div>Source</div><div>Type</div><div>Requirement</div><div>Section</div><div>Status</div><div>Owner</div>
+              <div className="grid grid-cols-[1.25rem_2rem_5rem_5rem_4rem_1fr_8rem_8rem_2rem] gap-2 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted">
+                <div></div><div title="Verified">Ver.</div><div>ID</div><div>Source</div><div>Type</div><div>Requirement</div><div>Section</div><div>Status</div><div>Owner</div>
               </div>
               {filtered.map((r: any) => {
                 const status: ReqStatus = (r.status as ReqStatus) || "not_started";
@@ -388,14 +388,20 @@ export function ComplianceStep({
                 return (
                   <div key={r.req_id}>
                     <div
-                      className="grid grid-cols-[1.25rem_5rem_5rem_4rem_1fr_8rem_8rem_2rem] gap-2 px-2 py-2 text-xs items-center hover:bg-accent/40 cursor-pointer"
+                      className="grid grid-cols-[1.25rem_2rem_5rem_5rem_4rem_1fr_8rem_8rem_2rem] gap-2 px-2 py-2 text-xs items-center hover:bg-accent/40 cursor-pointer"
                       onClick={() => setExpanded((e) => ({ ...e, [r.req_id]: !e[r.req_id] }))}
                     >
                       <div className="text-muted-foreground">{isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}</div>
+                      <div onClick={(e) => e.stopPropagation()} title="Mark requirement as verified by a human">
+                        <Checkbox
+                          checked={!!r.verified}
+                          onCheckedChange={(v) => updateReq(r.req_id, { verified: !!v })}
+                        />
+                      </div>
                       <div className="font-mono text-[10px]">{r.req_id}</div>
                       <div className="text-[10px] truncate">{r.source_section}</div>
                       <div><Badge variant="outline" className="text-[10px]">{r.type}</Badge></div>
-                      <div className="truncate" title={r.requirement_text}>{r.requirement_text}</div>
+                      <div className="truncate" title={r.requirement_text}>{r.requirement_text || <span className="text-destructive">(empty)</span>}</div>
                       <div>
                         {r.proposal_section
                           ? <Badge variant="secondary" className="text-[10px]">{r.proposal_section}</Badge>
