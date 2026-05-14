@@ -13,6 +13,7 @@ import type { SamOpportunity } from "@/lib/api";
 export function ProposalModal({ opp, onClose }: { opp: SamOpportunity | null; onClose: () => void }) {
   const open = !!opp;
   const { user } = useAuth();
+  const teamId = useTeamId();
   const [content, setContent] = useState("");
   const [generating, setGenerating] = useState(false);
 
