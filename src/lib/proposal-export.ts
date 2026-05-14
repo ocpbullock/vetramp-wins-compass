@@ -150,13 +150,13 @@ function buildComplianceMatrixTable(matrix: any): (Paragraph | Table)[] {
   const widths = [900, 1500, 4060, 1900, 1000];
   const total = widths.reduce((a, b) => a + b, 0);
   const headers = ["Req ID", "Source Section", "Requirement", "Proposal Section", "Page Ref"];
-  const mkCell = (text: string, w: number, bold: boolean, shade?: string) =>
+  const mkCell = (text: string, w: number, bold: boolean, shade?: string, color?: string) =>
     new TableCell({
       borders: allBorders,
       width: { size: w, type: WidthType.DXA },
       shading: shade ? { fill: shade, type: ShadingType.CLEAR, color: "auto" } : undefined,
       margins: { top: 80, bottom: 80, left: 100, right: 100 },
-      children: [new Paragraph({ children: [tr(text, { bold, size: 20 })] })],
+      children: [new Paragraph({ children: [tr(text, { bold, size: 20, color })] })],
     });
   const rows = [
     new TableRow({ tableHeader: true, children: headers.map((h, i) => mkCell(h, widths[i], true, "1F2937")) }),
