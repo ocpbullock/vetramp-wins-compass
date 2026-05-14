@@ -355,6 +355,7 @@ export function aiErrorResponse(e: unknown, corsHeaders: Record<string, string>)
   if (e instanceof AICreditsError) return new Response(JSON.stringify({ error: e.message }), { status: 402, headers });
   if (e instanceof AIBudgetExceededError) return new Response(JSON.stringify({ error: e.message, used: e.used, budget: e.budget }), { status: 402, headers });
   if (e instanceof AITimeoutError) return new Response(JSON.stringify({ error: e.message }), { status: 504, headers });
+  if (e instanceof AIServiceUnavailableError) return new Response(JSON.stringify({ error: e.message, code: "ai_unavailable" }), { status: 503, headers });
   const msg = e instanceof Error ? e.message : "AI call failed";
   return new Response(JSON.stringify({ error: msg }), { status: 500, headers });
 }
