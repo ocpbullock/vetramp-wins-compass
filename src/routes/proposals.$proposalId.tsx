@@ -535,21 +535,44 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             className="w-full"
           >
             {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
-            {parsing ? "Parsing…" : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
+            {parsing ? (parseProgress || "Parsing…") : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
           </Button>
+          {parsing && proposal.parsing_status === "parsing" && (
+            <div className="text-[11px] text-muted-foreground">Do not navigate away — parsing in progress.</div>
+          )}
           <div className="text-[11px] text-muted-foreground">
             Parsing extracts requirements (Section L/M, "shall" statements) AND auto-fills capture details below — title, agency, contract type, value, PoP, clearance, etc.
           </div>
+          {largeDoc && (
+            <div className="text-[11px] rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 px-2 py-1.5">
+              <AlertTriangle className="w-3 h-3 inline-block mr-1" />
+              Large solicitation detected ({Math.round(totalChars / 1000)}K chars) — parsing may take several minutes and multiple AI passes.
+            </div>
+          )}
           <div className="space-y-1">
             {sowAttachments.length === 0 && <div className="text-xs text-muted-foreground">No files yet.</div>}
-            {sowAttachments.map((a: any) => (
-              <div key={a.id} className="flex items-center gap-2 text-xs border border-border rounded px-2 py-1.5">
-                <FileText className="w-3 h-3 text-muted-foreground" />
-                <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
-                <Badge variant="outline" className="text-[10px]">{a.file_type}</Badge>
-                <button onClick={() => onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
-              </div>
-            ))}
+            {sowAttachments.map((a: any) => {
+              const chars = a.parsed_content?.length || 0;
+              const empty = a.parsed_content !== null && a.parsed_content !== undefined && chars === 0;
+              return (
+                <div key={a.id} className="border border-border rounded px-2 py-1.5 space-y-1">
+                  <div className="flex items-center gap-2 text-xs">
+                    <FileText className="w-3 h-3 text-muted-foreground" />
+                    <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
+                    <Badge variant="outline" className="text-[10px]">{a.file_type}</Badge>
+                    <button onClick={() => onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                  </div>
+                  {chars > 0 && (
+                    <div className="text-[10px] text-muted-foreground pl-5">{chars.toLocaleString()} chars extracted</div>
+                  )}
+                  {empty && (
+                    <div className="text-[10px] text-destructive pl-5">
+                      Could not extract text — try uploading a text-based PDF instead of a scanned image.
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
           <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
             <AlertTriangle className="w-3 h-3 inline-block mr-1 text-yellow-500" />
