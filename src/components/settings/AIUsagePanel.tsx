@@ -231,11 +231,11 @@ export function AIUsagePanel() {
                 <div className="h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={dailyTrend} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                       <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v.toFixed(2)}`} />
                       <Tooltip formatter={(v: any) => `$${Number(v).toFixed(4)}`} contentStyle={{ fontSize: 12 }} />
-                      <Line type="monotone" dataKey="cost" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="cost" stroke="#2563eb" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
@@ -246,11 +246,11 @@ export function AIUsagePanel() {
                 <div className="h-48 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={byFn} margin={{ top: 5, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                       <XAxis dataKey="fn" tick={{ fontSize: 10 }} interval={0} angle={-15} textAnchor="end" height={50} />
                       <YAxis tick={{ fontSize: 10 }} tickFormatter={(v) => `$${v.toFixed(2)}`} />
                       <Tooltip formatter={(v: any) => `$${Number(v).toFixed(4)}`} contentStyle={{ fontSize: 12 }} />
-                      <Bar dataKey="cost" fill="hsl(var(--primary))" />
+                      <Bar dataKey="cost" fill="#2563eb" />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
