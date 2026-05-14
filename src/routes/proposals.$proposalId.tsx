@@ -63,6 +63,7 @@ function ProposalPipeline() {
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState("intake");
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
+  const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
 
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
@@ -76,7 +77,32 @@ function ProposalPipeline() {
         supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false }),
       ]);
       if (pe || !p) { toast.error("Proposal not found"); navigate({ to: "/" }); return; }
-      setProposal(p);
+
+      // Run integrity checks; auto-assign team_id if missing
+      let proposalRow: any = p;
+      const knownSectionIds = SECTIONS.map((s) => s.id);
+      const initial = validateProposal(proposalRow, knownSectionIds);
+      if (initial.needsTeamAssignment) {
+        const { data: tm } = await supabase
+          .from("team_members")
+          .select("team_id")
+          .eq("user_id", user.id)
+          .order("joined_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (tm?.team_id) {
+          await supabase.from("proposals").update({ team_id: tm.team_id }).eq("id", proposalId);
+          proposalRow = { ...proposalRow, team_id: tm.team_id };
+        }
+      }
+      const finalCheck = validateProposal(proposalRow, knownSectionIds);
+      if (finalCheck.issues.length) {
+        // eslint-disable-next-line no-console
+        console.warn("[proposal data integrity]", finalCheck.issues);
+      }
+      setDataIssues(finalCheck.issues);
+
+      setProposal(proposalRow);
       setCompanyProfile(cp?.profile_data ?? null);
       setAttachments(atts ?? []);
       setLoading(false);
