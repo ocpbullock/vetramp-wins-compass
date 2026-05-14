@@ -190,10 +190,15 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const setCurrentTeam = useCallback((id: string) => {
     if (typeof window !== "undefined") localStorage.setItem(SELECTED_TEAM_KEY, id);
-    if (user) {
-      bootstrappedFor.current = null;
-      bootstrap(user.id);
+    if (!user) return;
+    if (bootstrapInFlight.current) {
+      // Defer: the in-flight bootstrap will pick this up when it completes,
+      // overwriting any earlier queued switch with the latest request.
+      queuedTeamId.current = id;
+      return;
     }
+    bootstrappedFor.current = null;
+    void bootstrap(user.id);
   }, [user, bootstrap]);
 
   return (
