@@ -102,6 +102,14 @@ export function TrackedAnalyzePanel({
             {title && <div className="font-medium text-foreground">{title}</div>}
             <div>NAICS <span className="font-mono">{naicsCode}</span> · Agency: {agency || "—"}</div>
             <div className="text-xs">5-year lookback</div>
+            {(() => {
+              const latest = agencyAwards.map((a) => a["Start Date"]).filter(Boolean).sort().slice(-1)[0];
+              return (
+                <div className="text-[11px] text-amber-600 dark:text-amber-400">
+                  ⏱ USAspending data may be 30-90 days behind actual awards.{latest && <> Most recent award in this dataset: <span className="font-mono">{latest.slice(0, 10)}</span></>}
+                </div>
+              );
+            })()}
           </div>
         </SheetHeader>
 
