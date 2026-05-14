@@ -91,6 +91,7 @@ function SettingsPage() {
             <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
             <TabsTrigger value="past-performance">Past Performance</TabsTrigger>
             <TabsTrigger value="vehicles">Contract Vehicles</TabsTrigger>
+            <TabsTrigger value="ai-usage">AI Usage</TabsTrigger>
           </TabsList>
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
           {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>}
@@ -98,6 +99,7 @@ function SettingsPage() {
           <TabsContent value="partners" className="mt-4"><PartnersPanel /></TabsContent>
           <TabsContent value="past-performance" className="mt-4"><PastPerformancePanel /></TabsContent>
           <TabsContent value="vehicles" className="mt-4"><ContractVehiclesPanel /></TabsContent>
+          <TabsContent value="ai-usage" className="mt-4"><AIUsagePanel /></TabsContent>
         </Tabs>
       </main>
     </div>
