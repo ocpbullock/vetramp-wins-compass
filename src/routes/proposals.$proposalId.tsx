@@ -207,16 +207,18 @@ function ProposalPipeline() {
       });
       const j = await r.json();
       if (!r.ok) {
-        toast.error(j.error || "Fetch failed");
-        setFetchResults({ error: j.error || "Fetch failed", results: [], attempted: 0, saved: [] });
+        const msg = friendlyError({ status: r.status, message: j.error || "Fetch failed", code: j.code });
+        toast.error(msg);
+        setFetchResults({ error: msg, results: [], attempted: 0, saved: [] });
         return;
       }
       setFetchResults(j);
       const { data: atts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false });
       setAttachments(atts ?? []);
     } catch (e: any) {
-      toast.error(e.message);
-      setFetchResults({ error: e.message, results: [], attempted: 0, saved: [] });
+      const msg = friendlyFromError(e);
+      toast.error(msg);
+      setFetchResults({ error: msg, results: [], attempted: 0, saved: [] });
     } finally {
       setFetching(false);
     }
