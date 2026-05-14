@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_usage_log: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          estimated_cost_usd: number
+          function_name: string
+          id: string
+          input_tokens: number
+          model: string
+          output_tokens: number
+          provider: string
+          status: string
+          team_id: string | null
+          user_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          estimated_cost_usd?: number
+          function_name: string
+          id?: string
+          input_tokens?: number
+          model: string
+          output_tokens?: number
+          provider?: string
+          status?: string
+          team_id?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          estimated_cost_usd?: number
+          function_name?: string
+          id?: string
+          input_tokens?: number
+          model?: string
+          output_tokens?: number
+          provider?: string
+          status?: string
+          team_id?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       cached_competitive_intel: {
         Row: {
           agency: string | null

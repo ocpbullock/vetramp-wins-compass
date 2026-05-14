@@ -4,6 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
+import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -188,11 +189,11 @@ function mergeCapture(a: any, b: any): any {
   return out;
 }
 
-async function callAI(apiKey: string, system: string, user: string): Promise<any> {
-  const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
+async function callAI(_apiKey: string, system: string, user: string, teamId: string | null): Promise<any> {
+  const data = await sharedCallAI({
+    functionName: "parse-sow",
+    teamId,
+    body: {
       model: "google/gemini-2.5-pro",
       messages: [
         { role: "system", content: system },
@@ -200,15 +201,8 @@ async function callAI(apiKey: string, system: string, user: string): Promise<any
       ],
       tools: [{ type: "function", function: { name: "return_compliance_matrix", description: "Return structured compliance matrix and capture details.", parameters: MATRIX_SCHEMA } }],
       tool_choice: { type: "function", function: { name: "return_compliance_matrix" } },
-    }),
+    },
   });
-  if (!r.ok) {
-    const t = await r.text();
-    const err: any = new Error(`AI gateway error ${r.status}: ${t}`);
-    err.status = r.status;
-    throw err;
-  }
-  const data = await r.json();
   const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
   return args ? JSON.parse(args) : null;
 }
@@ -297,11 +291,12 @@ serve(async (req) => {
           send("progress", { chunk: i + 1, total: chunks.length, message: `Parsing chunk ${i + 1} of ${chunks.length}…` });
           const userMsg = `${meta}\nEXCERPT ${i + 1} of ${chunks.length}:\n${chunks[i]}`;
           try {
-            const partial = await callAI(apiKey, system, userMsg);
+            const partial = await callAI(apiKey, system, userMsg, proposal.team_id ?? null);
             if (partial) partials.push(partial);
           } catch (e: any) {
-            if (e.status === 429) return await fail("Rate limit exceeded. Try again in a few minutes.");
-            if (e.status === 402) return await fail("AI credits exhausted.");
+            if (e instanceof AIRateLimitError) return await fail("Rate limit exceeded. Try again in a few minutes.");
+            if (e instanceof AICreditsError) return await fail("AI credits exhausted.");
+            if (e instanceof AITimeoutError) return await fail(e.message);
             console.error("chunk failed:", i + 1, e);
             send("warn", { message: `Chunk ${i + 1} failed: ${e.message}` });
           }
