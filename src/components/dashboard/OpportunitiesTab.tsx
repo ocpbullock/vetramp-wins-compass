@@ -136,7 +136,6 @@ export function OpportunitiesTab({
   return (
     <TooltipProvider delayDuration={150}>
       <div className="space-y-3">
-        <NaicsFilterChips searched={searchedNaics} active={activeNaics} onChange={setActiveNaics} />
         <div className="flex flex-wrap gap-2 items-center">
           <Input placeholder="Search title or sol #..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
           <Select value={agency} onValueChange={setAgency}>
