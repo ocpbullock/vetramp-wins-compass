@@ -153,18 +153,21 @@ export function CompetitiveIntelModal({
         <section className="space-y-2">
           <h3 className="text-sm font-semibold flex items-center gap-2"><Trophy className="w-4 h-4" />Likely Incumbent</h3>
           {localMatch && localMatch.confidence !== "none" ? (() => {
+            const simPct = localMatch.similarity ? Math.round(localMatch.similarity * 100) : null;
+            const lowConfTitle = localMatch.confidence === "title" && simPct != null && simPct < 70;
             const confLabel =
               localMatch.confidence === "exact" ? "EXACT PIID MATCH" :
               localMatch.confidence === "parent" ? "PARENT IDV MATCH" :
               localMatch.confidence === "psc" ? `PSC MATCH${localMatch.diagnostics?.pscMatched ? ` (${localMatch.diagnostics.pscMatched})` : ""}` :
               localMatch.confidence === "frequent" ? "FREQUENT VENDOR" :
-              `TITLE MATCH${localMatch.similarity ? ` (${Math.round(localMatch.similarity * 100)}%)` : ""}`;
+              `TITLE MATCH${simPct != null ? ` (${simPct}%)` : ""}`;
+            const headlineLabel = lowConfTitle ? "POSSIBLE INCUMBENT — LOW CONFIDENCE" : "LIKELY INCUMBENT";
             const top = localMatch.awards[0];
             const others = [...new Set(localMatch.awards.slice(1, 6).map(a => a["Recipient Name"]).filter(Boolean))] as string[];
             return (
-              <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+              <div className={`p-4 rounded-lg border ${lowConfTitle ? "border-border bg-muted/30" : "border-amber-500/30 bg-amber-500/5"}`}>
                 <div className="flex items-center gap-2 mb-1 flex-wrap">
-                  <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">LIKELY INCUMBENT</Badge>
+                  <Badge className={lowConfTitle ? "bg-muted text-muted-foreground hover:bg-muted" : "bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15"}>{headlineLabel}</Badge>
                   <Badge variant="outline" className="text-[10px]">{confLabel}</Badge>
                   {localMatch.popExpiringSoon && <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-600 dark:text-amber-400">⏰ PoP EXPIRING ±9mo</Badge>}
                   <span className="text-[11px] text-muted-foreground">{localMatch.awards.length} prior award{localMatch.awards.length !== 1 ? "s" : ""}</span>
@@ -190,6 +193,15 @@ export function CompetitiveIntelModal({
               </div>
             );
           })() : loading ? <Skeleton className="h-24" /> : !data ? null : data.incumbent.top ? (
+            <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
+              <div className="flex items-center gap-2 mb-1 flex-wrap">
+                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">CANDIDATE</Badge>
+                <Badge variant="outline" className="text-[10px]">USASPENDING HEURISTIC</Badge>
+                <span className="text-[11px] text-muted-foreground">Not in your cached historical set — lower confidence</span>
+              </div>
+              <div className="text-[11px] text-muted-foreground mb-2">
+                This match is based on spending patterns, not contract-level data. The actual incumbent may differ.
+              </div>
             <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
                 <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">CANDIDATE</Badge>
