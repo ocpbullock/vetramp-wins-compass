@@ -545,6 +545,7 @@ export type Database = {
           pop_base_months: number | null
           pop_option_months: number | null
           price_strategy: Json | null
+          pricing: Json | null
           readiness_score: number | null
           response_deadline: string | null
           sections: Json | null
@@ -580,6 +581,7 @@ export type Database = {
           pop_base_months?: number | null
           pop_option_months?: number | null
           price_strategy?: Json | null
+          pricing?: Json | null
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
@@ -615,6 +617,7 @@ export type Database = {
           pop_base_months?: number | null
           pop_option_months?: number | null
           price_strategy?: Json | null
+          pricing?: Json | null
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
