@@ -1,4 +1,17 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
+
+const PER_CALL_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
