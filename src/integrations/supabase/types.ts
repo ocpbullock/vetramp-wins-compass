@@ -769,6 +769,48 @@ export type Database = {
           },
         ]
       }
+      starred_opportunities: {
+        Row: {
+          created_at: string
+          id: string
+          naics_code: string | null
+          notice_id: string
+          posted_date: string | null
+          response_deadline: string | null
+          set_aside_description: string | null
+          source_data: Json | null
+          team_id: string
+          title: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          naics_code?: string | null
+          notice_id: string
+          posted_date?: string | null
+          response_deadline?: string | null
+          set_aside_description?: string | null
+          source_data?: Json | null
+          team_id: string
+          title?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          naics_code?: string | null
+          notice_id?: string
+          posted_date?: string | null
+          response_deadline?: string | null
+          set_aside_description?: string | null
+          source_data?: Json | null
+          team_id?: string
+          title?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       team_members: {
         Row: {
           id: string
