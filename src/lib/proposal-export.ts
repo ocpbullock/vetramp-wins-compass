@@ -159,7 +159,7 @@ function buildComplianceMatrixTable(matrix: any): (Paragraph | Table)[] {
       children: [new Paragraph({ children: [tr(text, { bold, size: 20, color })] })],
     });
   const rows = [
-    new TableRow({ tableHeader: true, children: headers.map((h, i) => mkCell(h, widths[i], true, "1F2937")) }),
+    new TableRow({ tableHeader: true, children: headers.map((h, i) => mkCell(h, widths[i], true, "1F2937", "FFFFFF")) }),
     ...reqs.map((r) => new TableRow({ children: [
       mkCell(String(r.req_id ?? ""), widths[0], false),
       mkCell(String(r.source_section ?? ""), widths[1], false),
