@@ -299,6 +299,7 @@ function Dashboard() {
           historicalTotal={historicalTotal}
           totalObligated={stats.totalObligated}
           inProgressCount={inProgressCount}
+          starredCount={starredCount}
           onSelect={setTab}
         />
 
@@ -308,6 +309,7 @@ function Dashboard() {
           <TabsList>
             <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
             <TabsTrigger value="historical">Historical Awards</TabsTrigger>
+            <TabsTrigger value="starred">Starred{starredCount ? ` (${starredCount})` : ""}</TabsTrigger>
             <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
             <TabsTrigger value="tracked">Tracked</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
