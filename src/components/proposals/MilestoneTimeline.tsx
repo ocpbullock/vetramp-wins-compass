@@ -23,6 +23,15 @@ function initials(m?: TeamMember | null) {
   return src.slice(0, 2).toUpperCase();
 }
 
+// Convert a <input type="datetime-local"> value ("YYYY-MM-DDTHH:mm") to an ISO
+// string in the user's local timezone. Using date-fns' `parse` makes the local
+// interpretation explicit (avoids relying on Date constructor parsing rules).
+function localInputToIso(value: string): string {
+  if (!value) return "";
+  const d = parse(value, "yyyy-MM-dd'T'HH:mm", new Date());
+  return d.toISOString();
+}
+
 export function MilestoneTimeline({
   proposalId,
   responseDeadline,
