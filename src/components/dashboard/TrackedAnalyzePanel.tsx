@@ -7,6 +7,7 @@ import { format, subYears, parseISO } from "date-fns";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid,
 } from "recharts";
+import { DataProvenance } from "./DataSourceBadge";
 
 const fmtMoney = (n: number) =>
   n >= 1_000_000_000 ? `$${(n / 1e9).toFixed(2)}B`
