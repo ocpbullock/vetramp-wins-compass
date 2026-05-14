@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
-import { getInviteByToken } from "@/lib/admin.functions";
+import { acceptInvite, getInviteByToken } from "@/lib/admin.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,8 @@ function AcceptInvitePage() {
   const { token } = Route.useSearch();
   const navigate = useNavigate();
   const fetchInvite = useServerFn(getInviteByToken);
-  const [state, setState] = useState<"loading" | "ready" | "invalid" | "expired" | "accepted">("loading");
+  const acceptInviteFn = useServerFn(acceptInvite);
+  const [state, setState] = useState<"loading" | "ready" | "invalid" | "expired" | "accepted" | "no-session">("loading");
   const [invite, setInvite] = useState<{ email: string; role: string } | null>(null);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -26,6 +27,10 @@ function AcceptInvitePage() {
   useEffect(() => {
     (async () => {
       if (!token) { setState("invalid"); return; }
+      // The Supabase invite magic link signs the user in before redirecting here.
+      // If there is no session, the lookup endpoint will reject (it requires auth).
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) { setState("no-session"); return; }
       try {
         const res = await fetchInvite({ data: { token } });
         if (!res.invite) { setState("invalid"); return; }
@@ -40,31 +45,29 @@ function AcceptInvitePage() {
     })();
   }, [token, fetchInvite]);
 
+  async function finalizeAcceptance() {
+    const res = await acceptInviteFn({ data: { token } });
+    if (res.alreadyAccepted) {
+      toast.info("Invitation already accepted.");
+    } else {
+      toast.success("Welcome to the team!");
+    }
+    navigate({ to: "/" });
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!invite) return;
     setBusy(true);
-    // The Supabase invite email already created the user and signed them in via the magic link.
-    // If they reached this page directly (e.g. password setup), we update the password.
-    const { data: sessionData } = await supabase.auth.getSession();
-    if (sessionData.session) {
+    try {
       const { error } = await supabase.auth.updateUser({ password });
-      setBusy(false);
       if (error) { toast.error(error.message); return; }
-      toast.success("Welcome to the team!");
-      navigate({ to: "/" });
-      return;
+      await finalizeAcceptance();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not accept invitation.");
+    } finally {
+      setBusy(false);
     }
-    // Fallback: try password sign-up (works if user doesn't exist yet)
-    const { error } = await supabase.auth.signUp({
-      email: invite.email,
-      password,
-      options: { emailRedirectTo: `${window.location.origin}/` },
-    });
-    setBusy(false);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Account created — check your email to confirm, then sign in.");
-    navigate({ to: "/auth" });
   }
 
   return (
@@ -75,6 +78,14 @@ function AcceptInvitePage() {
           <p className="text-sm text-muted-foreground mt-1">VetRamp Pursuit</p>
         </div>
         {state === "loading" && <p className="text-sm text-muted-foreground">Validating invitation…</p>}
+        {state === "no-session" && (
+          <div className="space-y-3">
+            <p className="text-sm">
+              Please open the invitation link from the email we sent you. It signs you in automatically.
+            </p>
+            <Button variant="outline" onClick={() => navigate({ to: "/auth" })}>Go to sign in</Button>
+          </div>
+        )}
         {state === "invalid" && (
           <div className="space-y-3">
             <p className="text-sm">This invitation link is invalid or has been cancelled.</p>
@@ -101,6 +112,7 @@ function AcceptInvitePage() {
             <div>
               <Label>Email</Label>
               <Input value={invite.email} disabled />
+              <p className="text-xs text-muted-foreground mt-1">Email partially hidden for security.</p>
             </div>
             <div>
               <Label>Password</Label>

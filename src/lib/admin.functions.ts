@@ -174,8 +174,21 @@ export const cancelInvite = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-// Public (no admin check) — used by /accept-invite to look up an invite by token
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!local || !domain) return "***";
+  const dotIdx = domain.lastIndexOf(".");
+  const domainName = dotIdx > 0 ? domain.slice(0, dotIdx) : domain;
+  const tld = dotIdx > 0 ? domain.slice(dotIdx) : "";
+  const maskedLocal = local[0] + "***";
+  const maskedDomain = domainName[0] + "***";
+  return `${maskedLocal}@${maskedDomain}${tld}`;
+}
+
+// Requires auth — magic-link invite flow signs the user in before this runs.
+// Returns a masked email so a leaked token cannot be used to harvest addresses.
 export const getInviteByToken = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ token: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
     const { data: invite, error } = await supabaseAdmin
@@ -185,8 +198,65 @@ export const getInviteByToken = createServerFn({ method: "GET" })
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!invite) return { invite: null as null };
+    const masked = { ...invite, email: maskEmail(invite.email) };
     if (invite.status !== "pending" || new Date(invite.expires_at) < new Date()) {
-      return { invite: { ...invite, expired: true } };
+      return { invite: { ...masked, expired: true } };
     }
-    return { invite: { ...invite, expired: false } };
+    return { invite: { ...masked, expired: false } };
+  });
+
+// Called from /accept-invite after the user is signed in (via magic link or password).
+// Verifies the signed-in user's email matches the invite, picks a team where the
+// inviter is owner/admin, inserts membership, and marks the invite accepted.
+export const acceptInvite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ token: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { data: invite, error: invErr } = await supabaseAdmin
+      .from("user_invites")
+      .select("id,email,role,status,expires_at,invited_by")
+      .eq("token", data.token)
+      .maybeSingle();
+    if (invErr) throw new Error(invErr.message);
+    if (!invite) throw new Error("Invitation not found.");
+    if (invite.status === "accepted") return { ok: true, alreadyAccepted: true };
+    if (invite.status !== "pending") throw new Error("This invitation is no longer valid.");
+    if (new Date(invite.expires_at) < new Date()) throw new Error("This invitation has expired.");
+
+    // Verify the current user's email matches the invite
+    const { data: authUser, error: uErr } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    if (uErr) throw new Error(uErr.message);
+    const userEmail = authUser?.user?.email?.toLowerCase() ?? "";
+    if (userEmail !== invite.email.toLowerCase()) {
+      throw new Error("Signed-in account does not match the invited email address.");
+    }
+
+    // Find the inviter's team (owner/admin role). If multiple, pick the most recent.
+    let teamId: string | null = null;
+    if (invite.invited_by) {
+      const { data: inviterTeams, error: tErr } = await supabaseAdmin
+        .from("team_members")
+        .select("team_id, role, joined_at")
+        .eq("user_id", invite.invited_by)
+        .in("role", ["owner", "admin"])
+        .order("joined_at", { ascending: false });
+      if (tErr) throw new Error(tErr.message);
+      teamId = inviterTeams?.[0]?.team_id ?? null;
+    }
+    if (!teamId) throw new Error("Could not resolve a team for this invitation. Contact your admin.");
+
+    // Insert membership (idempotent — ignore unique-violation if already a member)
+    const { error: mErr } = await supabaseAdmin
+      .from("team_members")
+      .insert({ team_id: teamId, user_id: context.userId, role: "member" });
+    if (mErr && !/duplicate|unique/i.test(mErr.message)) throw new Error(mErr.message);
+
+    // Mark invite accepted
+    const { error: aErr } = await supabaseAdmin
+      .from("user_invites")
+      .update({ status: "accepted", updated_at: new Date().toISOString() })
+      .eq("id", invite.id);
+    if (aErr) throw new Error(aErr.message);
+
+    return { ok: true, teamId };
   });
