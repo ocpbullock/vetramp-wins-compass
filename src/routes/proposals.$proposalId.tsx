@@ -691,30 +691,10 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = []
   );
 }
 
-function ComplianceStep({ proposal, attachments, onPatch }: any) {
-  const [busy, setBusy] = useState(false);
+function ComplianceStep({ proposal, attachments, onGoToIntake }: any) {
   const matrix = proposal.compliance_matrix || {};
   const reqs: any[] = matrix.requirements || [];
-
-  async function parse() {
-    if (attachments.length === 0) { toast.error("Upload the SOW/PWS first on the Intake step"); return; }
-    setBusy(true);
-    try {
-      const { data: sess } = await supabase.auth.getSession();
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-sow`;
-      toast.info("Parsing solicitation documents… this can take a minute");
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token}` },
-        body: JSON.stringify({ proposalId: proposal.id }),
-      });
-      const j = await r.json();
-      if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
-      // refresh proposal compliance from response
-      await onPatch({ compliance_matrix: j.matrix, compliance_gaps: (j.matrix.requirements || []).filter((x: any) => !x.proposal_section).length });
-      toast.success(`Extracted ${j.matrix.requirements?.length ?? 0} requirements`);
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
-  }
+  const hasMatrix = reqs.length > 0 || !!matrix.summary;
 
   function exportMatrixCsv() {
     const rows = [["Req ID", "Source", "Type", "Category", "Requirement", "Proposal Section", "Notes"]];
@@ -729,26 +709,42 @@ function ComplianceStep({ proposal, attachments, onPatch }: any) {
   const byType: Record<string, number> = {};
   for (const r of reqs) byType[r.type] = (byType[r.type] || 0) + 1;
 
+  if (!hasMatrix) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Compliance matrix</CardTitle>
+          <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border border-dashed border-border rounded-md p-6 text-center space-y-3">
+            <AlertTriangle className="w-6 h-6 text-yellow-500 mx-auto" />
+            <div className="text-sm">Documents haven't been parsed yet — go to Intake to upload and parse your SOW/PWS.</div>
+            <Button size="sm" onClick={onGoToIntake}><ArrowLeft className="w-4 h-4 mr-1" />Go to Intake</Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Compliance matrix</CardTitle>
-            <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments.</CardDescription>
+            <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments. Re-parse from the Intake step if documents change.</CardDescription>
           </div>
           <div className="flex gap-2">
             {reqs.length > 0 && <Button onClick={exportMatrixCsv} variant="outline" size="sm"><Download className="w-4 h-4 mr-1" />Export CSV</Button>}
-            <Button onClick={parse} disabled={busy} size="sm">
-              {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
-              {busy ? "Parsing…" : reqs.length > 0 ? "Re-parse documents" : "Parse documents"}
-            </Button>
+            <Button onClick={onGoToIntake} variant="outline" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />Re-parse in Intake</Button>
           </div>
         </CardHeader>
         <CardContent>
-          {attachments.length === 0 && (
-            <div className="text-xs text-muted-foreground border border-dashed border-border rounded p-3"><AlertTriangle className="w-3 h-3 inline mr-1 text-yellow-500" />No attachments uploaded yet. Go to the Intake step to upload the SOW/PWS.</div>
-          )}
+          {matrix.summary && <p className="text-sm mb-3 leading-relaxed">{matrix.summary}</p>}
+          {reqs.length > 0 && (
+            <div className="flex gap-2 flex-wrap mb-3 text-xs">
+              <Badge variant="outline">{reqs.length} requirements</Badge>
           {matrix.summary && <p className="text-sm mb-3 leading-relaxed">{matrix.summary}</p>}
           {reqs.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-3 text-xs">
