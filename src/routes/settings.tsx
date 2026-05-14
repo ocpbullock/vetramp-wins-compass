@@ -22,6 +22,7 @@ import {
 import { ArrowLeft, Plus, Trash2, Save, Loader2, Upload, FileText } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
+import { TeamPanel } from "@/components/settings/TeamPanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
