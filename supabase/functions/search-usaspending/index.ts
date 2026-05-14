@@ -1,4 +1,17 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
+
+const PER_CALL_TIMEOUT_MS = 30_000;
+
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: ctrl.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -10,6 +23,17 @@ Deno.serve(async (req) => {
       keyword,
       maxResults = 10000,
     } = await req.json();
+
+    // Cache check (24h TTL) — same agency+NAICS+window returns near-identical results within a day
+    const cacheKey = await hashCacheKey({ naicsCodes, startDate, endDate, keyword: keyword || null, maxResults });
+    try {
+      const cached = await getCachedResponse("usaspending", cacheKey);
+      if (cached) {
+        return new Response(JSON.stringify({ ...cached.response_data, _cached: true, _cached_at: cached.created_at }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    } catch (e) { console.error("usaspending cache read failed:", e); }
 
     const fmt = (d: Date) => d.toISOString().slice(0, 10);
     const addDays = (d: Date, days: number) => {
@@ -74,7 +98,10 @@ Deno.serve(async (req) => {
     let lastMeta: any = null;
     let totalReported: number | undefined;
 
-    for (const chunk of [...chunks].reverse()) {
+    let partial = false;
+    let partialReason: string | null = null;
+
+    outer: for (const chunk of [...chunks].reverse()) {
       if (all.length >= maxResults) break;
       const chunkBody = {
         ...baseBody,
@@ -85,16 +112,35 @@ Deno.serve(async (req) => {
       };
       const hardPageLimit = Math.min(100, Math.ceil((maxResults - all.length) / PAGE_SIZE));
       for (let page = 1; page <= hardPageLimit; page++) {
-        const res = await fetch(
-          "https://api.usaspending.gov/api/v2/search/spending_by_award/",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ ...chunkBody, page }),
-          },
-        );
+        let res: Response;
+        try {
+          res = await fetchWithTimeout(
+            "https://api.usaspending.gov/api/v2/search/spending_by_award/",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ ...chunkBody, page }),
+            },
+            PER_CALL_TIMEOUT_MS,
+          );
+        } catch (e: any) {
+          // Timeout or network error — return whatever we have so far
+          partial = true;
+          partialReason = e?.name === "AbortError"
+            ? `USAspending timed out after ${PER_CALL_TIMEOUT_MS / 1000}s on page ${page}. Showing partial results.`
+            : `USAspending request failed (${e?.message || "network error"}). Showing partial results.`;
+          console.error("usaspending fetch failed:", e);
+          break outer;
+        }
         if (!res.ok) {
           const text = await res.text();
+          // If we already have some data, return partial; otherwise error
+          if (all.length > 0) {
+            partial = true;
+            partialReason = `USAspending HTTP ${res.status} on page ${page}. Showing partial results.`;
+            console.error("usaspending HTTP error:", res.status, text.slice(0, 300));
+            break outer;
+          }
           return new Response(
             JSON.stringify({ error: `USAspending HTTP ${res.status}: ${text.slice(0, 300)}` }),
             { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
@@ -112,8 +158,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // Flatten NAICS object → string code so the client can filter, sort,
-    // render, and match incumbents on a plain value.
     const seen = new Set<string>();
     const flat = all.filter((r: any) => {
       const key = r.generated_internal_id || `${r["Award ID"]}|${r["Start Date"]}|${r["Award Amount"]}`;
@@ -127,9 +171,6 @@ Deno.serve(async (req) => {
         out.NAICS = n.code ?? "";
         out.NAICS_Description = n.description ?? "";
       }
-      // USAspending returns the PSC code under `psc_code`; mirror it into
-      // "Product or Service Code" so client-side incumbent matching can
-      // index by that single canonical key.
       if (!out["Product or Service Code"] && r.psc_code) {
         out["Product or Service Code"] = r.psc_code;
       }
@@ -138,19 +179,34 @@ Deno.serve(async (req) => {
 
     const returned = flat.slice(0, maxResults);
 
-    return new Response(
-      JSON.stringify({
-        results: returned,
-        page_metadata: {
-          total: totalReported ?? all.length,
-          fetched: returned.length,
-          hasNext: (totalReported ?? all.length) > returned.length,
-          chunks: chunks.length,
-          truncated: (totalReported ?? all.length) > returned.length,
-        },
-      }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-    );
+    const responsePayload = {
+      results: returned,
+      page_metadata: {
+        total: totalReported ?? all.length,
+        fetched: returned.length,
+        hasNext: (totalReported ?? all.length) > returned.length,
+        chunks: chunks.length,
+        truncated: (totalReported ?? all.length) > returned.length,
+      },
+      partial,
+      partial_reason: partialReason,
+    };
+
+    // Cache full (non-partial) responses for 24h
+    if (!partial) {
+      try {
+        await setCachedResponse({
+          functionName: "usaspending",
+          cacheKey,
+          responseData: responsePayload,
+          ttlHours: 24,
+        });
+      } catch (e) { console.error("usaspending cache write failed:", e); }
+    }
+
+    return new Response(JSON.stringify(responsePayload), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), {
       status: 500,

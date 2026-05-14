@@ -87,6 +87,12 @@ export class AIRateLimitError extends Error {
 export class AICreditsError extends Error {
   constructor() { super("AI credits exhausted. Add funds in Workspace settings."); this.name = "AICreditsError"; }
 }
+export class AIServiceUnavailableError extends Error {
+  constructor(public cause?: unknown) {
+    super("AI service is temporarily unavailable. Your documents and data are safe — try again in a few minutes.");
+    this.name = "AIServiceUnavailableError";
+  }
+}
 export class AIBudgetExceededError extends Error {
   constructor(public used: number, public budget: number) {
     super(`Monthly AI budget exceeded ($${used.toFixed(2)} of $${budget.toFixed(2)} used). Adjust your budget in Settings or wait until next month.`);
@@ -332,10 +338,12 @@ export async function callAI(opts: AICallOptions): Promise<any> {
         await logUsage({ ...opts, provider, model, inputTokens: 0, outputTokens: 0, status: "error", errorMessage: "timeout" });
         throw new AITimeoutError();
       }
-      lastErr = e;
+      // TypeError from fetch typically = DNS / connection refused / network down
+      const isNetwork = e?.name === "TypeError" || /fetch failed|network|ENOTFOUND|ECONNREFUSED|ECONNRESET|EAI_AGAIN/i.test(String(e?.message || ""));
+      lastErr = isNetwork ? new AIServiceUnavailableError(e) : e;
       if (attempt < MAX_ATTEMPTS) { await sleep(BASE_BACKOFF_MS * Math.pow(2, attempt - 1)); continue; }
-      await logUsage({ ...opts, provider, model, inputTokens: 0, outputTokens: 0, status: "error", errorMessage: e?.message || "unknown" });
-      throw e;
+      await logUsage({ ...opts, provider, model, inputTokens: 0, outputTokens: 0, status: "error", errorMessage: lastErr?.message || "unknown" });
+      throw lastErr;
     }
   }
   throw lastErr || new Error("AI call failed");
@@ -347,6 +355,7 @@ export function aiErrorResponse(e: unknown, corsHeaders: Record<string, string>)
   if (e instanceof AICreditsError) return new Response(JSON.stringify({ error: e.message }), { status: 402, headers });
   if (e instanceof AIBudgetExceededError) return new Response(JSON.stringify({ error: e.message, used: e.used, budget: e.budget }), { status: 402, headers });
   if (e instanceof AITimeoutError) return new Response(JSON.stringify({ error: e.message }), { status: 504, headers });
+  if (e instanceof AIServiceUnavailableError) return new Response(JSON.stringify({ error: e.message, code: "ai_unavailable" }), { status: 503, headers });
   const msg = e instanceof Error ? e.message : "AI call failed";
   return new Response(JSON.stringify({ error: msg }), { status: 500, headers });
 }

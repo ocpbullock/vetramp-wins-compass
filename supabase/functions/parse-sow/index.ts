@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError, AIBudgetExceededError, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
+import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError, AIBudgetExceededError, AIServiceUnavailableError, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -195,6 +195,7 @@ async function callAI(_apiKey: string, system: string, user: string, teamId: str
     teamId,
     userId,
     proposalId,
+    timeoutMs: 180_000,
     body: {
       model: pickModel("parse-sow"),
       messages: [
@@ -230,8 +231,8 @@ serve(async (req) => {
       const send = (event: string, data: any) => {
         try { controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch {}
       };
-      const fail = async (msg: string) => {
-        await admin.from("proposals").update({ parsing_status: "error" }).eq("id", proposalId);
+      const fail = async (msg: string, status: "error" | "idle" = "error") => {
+        await admin.from("proposals").update({ parsing_status: status }).eq("id", proposalId);
         send("error", { error: msg });
         try { controller.close(); } catch {}
       };
@@ -325,10 +326,11 @@ serve(async (req) => {
             const partial = await callAI(apiKey, system, userMsg, teamId, userId, proposalId);
             if (partial) partials.push(partial);
           } catch (e: any) {
-            if (e instanceof AIRateLimitError) return await fail("Rate limit exceeded. Try again in a few minutes.");
-            if (e instanceof AICreditsError) return await fail("AI credits exhausted.");
-            if (e instanceof AIBudgetExceededError) return await fail(e.message);
-            if (e instanceof AITimeoutError) return await fail(e.message);
+            if (e instanceof AIRateLimitError) return await fail("Rate limit exceeded. Try again in a few minutes.", "idle");
+            if (e instanceof AICreditsError) return await fail("AI credits exhausted.", "idle");
+            if (e instanceof AIBudgetExceededError) return await fail(e.message, "idle");
+            if (e instanceof AITimeoutError) return await fail(e.message, "idle");
+            if (e instanceof AIServiceUnavailableError) return await fail(e.message, "idle");
             console.error("chunk failed:", i + 1, e);
             send("warn", { message: `Chunk ${i + 1} failed: ${e.message}` });
           }

@@ -83,6 +83,7 @@ Research this customer and return structured intel. Focus on: who actually uses 
         teamId: teamId ?? null,
         userId: userId ?? null,
         proposalId: proposalId ?? null,
+        timeoutMs: 60_000,
         body: {
           model: pickModel("customer-intel"),
           messages: [

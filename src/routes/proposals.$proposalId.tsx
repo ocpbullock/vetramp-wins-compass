@@ -25,6 +25,9 @@ import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
 import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-classify";
 import { DataProvenance } from "@/components/dashboard/DataSourceBadge";
 import { OCIScreeningCard, ociStatus, type OciAnswers } from "@/components/proposals/OCIScreeningCard";
+import { StepErrorBoundary } from "@/components/StepErrorBoundary";
+import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
+import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
@@ -116,7 +119,9 @@ function ProposalPipeline() {
   const [aiBusy, setAiBusy] = useState(false);
   const [genProgress, setGenProgress] = useState<{ current: number; total: number; label: string } | null>(null);
   const [useCache, setUseCache] = useState(true);
+  const online = useOnline();
   async function parseDocuments(opts?: { skipCache?: boolean }) {
+    if (!online) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
     if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     const sowAtts = attachments.filter((a) => a.file_type === "sow");
     if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
@@ -131,8 +136,7 @@ function ProposalPipeline() {
         body: JSON.stringify({ proposalId, skipCache: opts?.skipCache ?? !useCache }),
       });
       if (!r.ok || !r.body) {
-        const txt = await r.text().catch(() => "");
-        toast.error(txt || `HTTP ${r.status}`);
+        toast.error(await friendlyFromResponse(r));
         return;
       }
       const reader = r.body.getReader();
@@ -163,7 +167,7 @@ function ProposalPipeline() {
           } else if (eventLine === "warn") {
             toast.warning(payload.message || "Partial parse warning");
           } else if (eventLine === "error") {
-            toast.error(payload.error || "Parse failed");
+            toast.error(friendlyError({ message: payload.error || "Parse failed", code: payload.code }));
           } else if (eventLine === "done") {
             done = payload;
           }
@@ -178,8 +182,8 @@ function ProposalPipeline() {
         toast.success(`Extracted ${done.requirements_count ?? done.matrix?.requirements?.length ?? 0} requirements across ${done.chunks ?? 1} pass${(done.chunks ?? 1) === 1 ? "" : "es"}${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
       }
     } catch (e: any) {
-      toast.error(e.message);
-      await supabase.from("proposals").update({ parsing_status: "error" }).eq("id", proposalId);
+      toast.error(friendlyFromError(e));
+      await supabase.from("proposals").update({ parsing_status: "idle" }).eq("id", proposalId);
     } finally {
       setParsing(false); setAiBusy(false);
       setParseProgress("");
@@ -203,24 +207,29 @@ function ProposalPipeline() {
       });
       const j = await r.json();
       if (!r.ok) {
-        toast.error(j.error || "Fetch failed");
-        setFetchResults({ error: j.error || "Fetch failed", results: [], attempted: 0, saved: [] });
+        const msg = friendlyError({ status: r.status, message: j.error || "Fetch failed", code: j.code });
+        toast.error(msg);
+        setFetchResults({ error: msg, results: [], attempted: 0, saved: [] });
         return;
       }
       setFetchResults(j);
       const { data: atts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false });
       setAttachments(atts ?? []);
     } catch (e: any) {
-      toast.error(e.message);
-      setFetchResults({ error: e.message, results: [], attempted: 0, saved: [] });
+      const msg = friendlyFromError(e);
+      toast.error(msg);
+      setFetchResults({ error: msg, results: [], attempted: 0, saved: [] });
     } finally {
       setFetching(false);
     }
   }
 
   async function generateSection(sectionId: string, sectionTitle: string) {
+    if (!online) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
+    if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     if (!companyProfile) { toast.error("Company profile missing"); return; }
     setSectionGen((s) => ({ ...s, [sectionId]: true }));
+    setAiBusy(true);
     try {
       // gather attachment text (parsed_content) when available
       const attachmentsText = attachments.map((a) => a.parsed_content).filter(Boolean).join("\n\n---\n\n");
@@ -267,7 +276,7 @@ function ProposalPipeline() {
       });
       if (!resp.ok || !resp.body) {
         const j = await resp.json().catch(() => ({ error: "Failed" }));
-        toast.error(j.error || `HTTP ${resp.status}`); return;
+        toast.error(friendlyError({ status: resp.status, message: j.error, code: j.code })); return;
       }
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
@@ -300,9 +309,10 @@ function ProposalPipeline() {
       await patchProposal({ sections: finalSections });
       toast.success(`Generated ${sectionTitle}`);
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(friendlyFromError(e));
     } finally {
       setSectionGen((s) => ({ ...s, [sectionId]: false }));
+      setAiBusy(false);
     }
   }
 
@@ -353,6 +363,7 @@ function ProposalPipeline() {
 
   return (
     <div className="min-h-screen bg-background">
+      <OfflineBanner />
       <Header />
       <div className="max-w-[1400px] mx-auto px-6 py-4 space-y-4">
         <div className="flex items-center gap-3 flex-wrap">
@@ -391,23 +402,33 @@ function ProposalPipeline() {
           </TabsList>
 
           <TabsContent value="intake" className="mt-4 space-y-4">
-            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} />
+            <StepErrorBoundary label="intake">
+              <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} />
+            </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
-            <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
+            <StepErrorBoundary label="intel">
+              <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
+            </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
-            <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
+            <StepErrorBoundary label="compliance">
+              <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
+            </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
-            <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
+            <StepErrorBoundary label="solution">
+              <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
+            </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="generate" className="mt-4 space-y-4">
-            <GenerateStep proposal={proposal} sectionGen={sectionGen} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
-              const wc = content.split(/\s+/).filter(Boolean).length;
-              const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
-              patchProposal({ sections: next });
-            }} onExport={exportDocx} />
+            <StepErrorBoundary label="generate">
+              <GenerateStep proposal={proposal} sectionGen={sectionGen} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
+                const wc = content.split(/\s+/).filter(Boolean).length;
+                const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
+                patchProposal({ sections: next });
+              }} onExport={exportDocx} />
+            </StepErrorBoundary>
           </TabsContent>
         </Tabs>
       </div>
