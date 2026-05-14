@@ -14,6 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_response_cache: {
+        Row: {
+          cache_key: string
+          created_at: string
+          expires_at: string
+          function_name: string
+          id: string
+          input_tokens: number
+          model: string | null
+          output_tokens: number
+          response_data: Json
+          team_id: string | null
+        }
+        Insert: {
+          cache_key: string
+          created_at?: string
+          expires_at?: string
+          function_name: string
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          response_data: Json
+          team_id?: string | null
+        }
+        Update: {
+          cache_key?: string
+          created_at?: string
+          expires_at?: string
+          function_name?: string
+          id?: string
+          input_tokens?: number
+          model?: string | null
+          output_tokens?: number
+          response_data?: Json
+          team_id?: string | null
+        }
+        Relationships: []
+      }
       ai_usage_log: {
         Row: {
           created_at: string
@@ -24,6 +63,7 @@ export type Database = {
           input_tokens: number
           model: string
           output_tokens: number
+          proposal_id: string | null
           provider: string
           status: string
           team_id: string | null
@@ -38,6 +78,7 @@ export type Database = {
           input_tokens?: number
           model: string
           output_tokens?: number
+          proposal_id?: string | null
           provider?: string
           status?: string
           team_id?: string | null
@@ -52,6 +93,7 @@ export type Database = {
           input_tokens?: number
           model?: string
           output_tokens?: number
+          proposal_id?: string | null
           provider?: string
           status?: string
           team_id?: string | null
@@ -726,6 +768,27 @@ export type Database = {
           },
         ]
       }
+      team_settings: {
+        Row: {
+          created_at: string
+          monthly_ai_budget_usd: number
+          team_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          monthly_ai_budget_usd?: number
+          team_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          monthly_ai_budget_usd?: number
+          team_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       teaming_partners: {
         Row: {
           cage_code: string | null
@@ -891,6 +954,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      user_ai_settings: {
+        Row: {
+          created_at: string
+          monthly_ai_budget_usd: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          monthly_ai_budget_usd?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          monthly_ai_budget_usd?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
       }
       user_invites: {
         Row: {
