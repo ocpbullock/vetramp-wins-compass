@@ -90,6 +90,19 @@ export async function searchUsaspending(input: {
   };
 }
 
+export async function searchEntities(input: {
+  vendor_name?: string;
+  uei?: string;
+  naics_code?: string;
+  small_business_type?: string;
+}) {
+  logCall(`Tango entities`);
+  const { data, error } = await supabase.functions.invoke("search-entities", { body: input });
+  if (error) { logErr("search-entities", error.message); throw error; }
+  logOk("search-entities", `${data?.results?.length ?? 0} entities`);
+  return data as { results: any[]; _cached?: boolean };
+}
+
 export async function getAwardDetail(generatedInternalId: string) {
   logCall(`USAspending detail ${generatedInternalId}`);
   const { data, error } = await supabase.functions.invoke("usaspending-detail", {
