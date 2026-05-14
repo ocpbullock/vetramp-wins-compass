@@ -149,6 +149,17 @@ function ProposalPipeline() {
     try {
       // gather attachment text (parsed_content) when available
       const attachmentsText = attachments.map((a) => a.parsed_content).filter(Boolean).join("\n\n---\n\n");
+      const teamingEntries = await fetchTeamingForProposal(proposalId);
+      const teaming = teamingEntries.map((e) => ({
+        company_name: e.partner?.company_name,
+        role: e.role,
+        work_share_pct: e.work_share_pct,
+        certifications: e.partner?.certifications ?? [],
+        naics_codes: e.partner?.naics_codes ?? [],
+        naics_contribution: e.naics_contribution,
+        capabilities_summary: e.partner?.capabilities_summary,
+        past_performance_summary: e.partner?.past_performance_summary,
+      }));
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-proposal-section`;
       const resp = await fetch(url, {
@@ -168,6 +179,7 @@ function ProposalPipeline() {
             staffing: proposal.staffing_plan, technical: proposal.technical_approach,
             management: proposal.management_approach, transition: proposal.transition_plan,
           },
+          teaming: teaming.length ? teaming : undefined,
           attachmentsText: attachmentsText || undefined,
         }),
       });
