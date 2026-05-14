@@ -219,10 +219,9 @@ function CompanyProfilePanel() {
         onChange={(items) => update({ certifications: items })}
       />
 
-      <PastPerformanceCard
-        items={form.past_performance ?? []}
-        onChange={(items) => update({ past_performance: items })}
-      />
+      <Card className="p-4 text-xs text-muted-foreground border-dashed">
+        Past performance is now managed in the structured <strong>Past Performance</strong> tab. The freeform list here is deprecated.
+      </Card>
 
       <div className="flex justify-end">
         <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>
