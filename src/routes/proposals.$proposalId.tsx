@@ -182,8 +182,8 @@ function ProposalPipeline() {
         toast.success(`Extracted ${done.requirements_count ?? done.matrix?.requirements?.length ?? 0} requirements across ${done.chunks ?? 1} pass${(done.chunks ?? 1) === 1 ? "" : "es"}${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
       }
     } catch (e: any) {
-      toast.error(e.message);
-      await supabase.from("proposals").update({ parsing_status: "error" }).eq("id", proposalId);
+      toast.error(friendlyFromError(e));
+      await supabase.from("proposals").update({ parsing_status: "idle" }).eq("id", proposalId);
     } finally {
       setParsing(false); setAiBusy(false);
       setParseProgress("");
