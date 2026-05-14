@@ -402,6 +402,130 @@ function ProposalPipeline() {
   );
 }
 
+function SamFetchResults({ results, samUrl }: { results: any; samUrl?: string }) {
+  if (!results) return null;
+  const { saved = [], results: items = [], attempted = 0, error } = results;
+  const downloaded = saved.length;
+  const authReq = items.filter((r: any) => r.status === "auth_required").length;
+  const failed = items.filter((r: any) => r.status === "error").length;
+  const zero = attempted === 0;
+  return (
+    <div className="space-y-2">
+      {zero ? (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs space-y-2">
+          <div className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5" /> No attachments returned by SAM.gov
+          </div>
+          <div className="text-muted-foreground">
+            This usually means the files require authentication. Visit the listing on SAM.gov to download manually, then upload them below.
+          </div>
+          {samUrl && (
+            <Button asChild size="sm" variant="outline" className="w-full">
+              <a href={samUrl} target="_blank" rel="noreferrer"><ExternalLink className="w-3.5 h-3.5 mr-1" />Open opportunity on SAM.gov</a>
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-md border border-border bg-muted/40 p-2.5 text-xs space-y-1.5">
+          <div className="font-medium">
+            Found {attempted} attachment{attempted === 1 ? "" : "s"}.{" "}
+            <span className="text-emerald-600 dark:text-emerald-400">Downloaded {downloaded}.</span>{" "}
+            {authReq > 0 && <span className="text-destructive">{authReq} require SAM.gov login.</span>}
+            {failed > 0 && <span className="text-destructive"> {failed} failed.</span>}
+          </div>
+          <div className="space-y-1">
+            {items.map((r: any, i: number) => (
+              <div key={i} className="flex items-center gap-1.5">
+                {r.status === "downloaded" ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                )}
+                <span className="truncate flex-1" title={r.filename}>{r.filename}</span>
+                {r.status !== "downloaded" && (
+                  <span className="text-[10px] text-destructive">
+                    {r.status === "auth_required" ? "Requires SAM.gov login" : (r.error || "Failed")}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          {(authReq > 0 || failed > 0) && samUrl && (
+            <a href={samUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary text-[11px] mt-1">
+              <ExternalLink className="w-3 h-3" />Download manually from SAM.gov
+            </a>
+          )}
+        </div>
+      )}
+      {error && <div className="text-[11px] text-destructive">{error}</div>}
+    </div>
+  );
+}
+
+function DropZoneUpload({ onUpload }: { onUpload: (f: File, type?: string) => Promise<any> }) {
+  const [dragOver, setDragOver] = useState(false);
+  const [progress, setProgress] = useState<{ name: string; status: "uploading" | "done" | "error"; type?: string }[]>([]);
+
+  async function handleFiles(files: FileList | File[]) {
+    const arr = Array.from(files);
+    if (!arr.length) return;
+    setProgress((p) => [...arr.map((f) => ({ name: f.name, status: "uploading" as const, type: classifyFilename(f.name) })), ...p]);
+    for (const f of arr) {
+      try {
+        await onUpload(f, classifyFilename(f.name));
+        setProgress((p) => p.map((x) => (x.name === f.name && x.status === "uploading" ? { ...x, status: "done" } : x)));
+      } catch {
+        setProgress((p) => p.map((x) => (x.name === f.name && x.status === "uploading" ? { ...x, status: "error" } : x)));
+      }
+    }
+    setTimeout(() => setProgress((p) => p.filter((x) => x.status === "uploading")), 2500);
+  }
+
+  return (
+    <div className="space-y-2">
+      <label
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+        }}
+        className={`block border-2 border-dashed rounded-md p-4 text-center text-sm cursor-pointer transition ${
+          dragOver ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
+        }`}
+      >
+        <input
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = ""; }}
+        />
+        <Upload className="w-4 h-4 inline-block mr-1" />
+        Drop files here or click to browse
+        <div className="text-[11px] text-muted-foreground mt-1">Multiple files supported. Type auto-detected.</div>
+      </label>
+      {progress.length > 0 && (
+        <div className="space-y-1">
+          {progress.map((p, i) => (
+            <div key={i} className="flex items-center gap-1.5 text-[11px]">
+              {p.status === "uploading" ? (
+                <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />
+              ) : p.status === "done" ? (
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              ) : (
+                <AlertTriangle className="w-3 h-3 text-destructive" />
+              )}
+              <span className="truncate flex-1">{p.name}</span>
+              {p.type && <Badge variant="outline" className="text-[10px]">{p.type}</Badge>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId, fetchResults, fetching, onUpdateAttachmentType }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
