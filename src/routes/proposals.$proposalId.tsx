@@ -180,11 +180,14 @@ function ProposalPipeline() {
     }
   }
 
+  const [fetchResults, setFetchResults] = useState<any>(null);
+  const [fetching, setFetching] = useState(false);
   async function autoFetchSamAttachments() {
     if (!proposal?.notice_id) { toast.error("No notice ID on this opportunity"); return; }
+    setFetching(true);
+    setFetchResults(null);
     const { data: sess } = await supabase.auth.getSession();
     const token = sess.session?.access_token;
-    toast.info("Fetching attachments from SAM.gov…");
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sam-attachments`;
       const r = await fetch(url, {
@@ -193,12 +196,19 @@ function ProposalPipeline() {
         body: JSON.stringify({ proposalId, noticeId: proposal.notice_id, action: "download" }),
       });
       const j = await r.json();
-      if (!r.ok) { toast.error(j.error || "Fetch failed"); return; }
-      toast.success(`Downloaded ${j.saved?.length ?? 0} of ${j.attempted ?? 0}`);
+      if (!r.ok) {
+        toast.error(j.error || "Fetch failed");
+        setFetchResults({ error: j.error || "Fetch failed", results: [], attempted: 0, saved: [] });
+        return;
+      }
+      setFetchResults(j);
       const { data: atts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false });
       setAttachments(atts ?? []);
     } catch (e: any) {
       toast.error(e.message);
+      setFetchResults({ error: e.message, results: [], attempted: 0, saved: [] });
+    } finally {
+      setFetching(false);
     }
   }
 
