@@ -263,6 +263,8 @@ function Dashboard() {
           onSelect={setTab}
         />
 
+        <DeadlinesWidget />
+
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
             <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
