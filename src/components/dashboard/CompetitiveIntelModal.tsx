@@ -244,6 +244,15 @@ export function CompetitiveIntelModal({
             <Building2 className="w-4 h-4" />
             How {data?.agencyHistory.agencyName || shortAgency(opp?.fullParentPathName)} awards NAICS {opp?.naicsCode}
           </h3>
+          {(() => {
+            const dates = (data?.agencyHistory.vendors || []).map((v) => v.mostRecent).filter(Boolean) as string[];
+            const latest = dates.sort().slice(-1)[0];
+            return (
+              <div className="text-[11px] text-muted-foreground">
+                ⏱ USAspending data may be 30-90 days behind actual awards.{latest && <> Most recent award in this dataset: <span className="font-mono">{latest.slice(0, 10)}</span></>}
+              </div>
+            );
+          })()}
           {loading ? <Skeleton className="h-40" /> : !data ? null : (
             <div className="border border-border rounded-lg overflow-hidden">
               <div className="grid grid-cols-4 gap-2 p-3 bg-muted/40 text-xs">
