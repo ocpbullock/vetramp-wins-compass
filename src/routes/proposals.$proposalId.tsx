@@ -28,6 +28,7 @@ import { OCIScreeningCard, ociStatus, type OciAnswers } from "@/components/propo
 import { StepErrorBoundary } from "@/components/StepErrorBoundary";
 import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
 import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
+import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
