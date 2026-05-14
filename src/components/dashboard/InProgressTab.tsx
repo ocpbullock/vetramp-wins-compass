@@ -7,7 +7,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, ArrowRight } from "lucide-react";
+import { Trash2, ArrowRight, ShieldAlert } from "lucide-react";
+import { ociStatus } from "@/components/proposals/OCIScreeningCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ type Proposal = {
   status: string | null;
   response_deadline: string | null;
   updated_at: string;
+  oci_screening: any;
 };
 
 export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
@@ -35,7 +37,7 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
     setLoading(true);
     const { data, error } = await supabase
       .from("proposals")
-      .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at")
+      .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at,oci_screening")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
     if (error) toast.error(error.message);
@@ -89,6 +91,9 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
               <Badge variant="secondary" className="capitalize">{p.status || "intake"}</Badge>
               {overdueByProposal[p.id] > 0 && (
                 <Badge className="bg-destructive">{overdueByProposal[p.id]} overdue</Badge>
+              )}
+              {ociStatus(p.oci_screening) === "flagged" && (
+                <Badge variant="destructive" title="Potential OCI detected — consult legal counsel"><ShieldAlert className="w-3 h-3 mr-1" />OCI flag</Badge>
               )}
               <Button size="sm" onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: p.id } })}>
                 Resume <ArrowRight className="w-3 h-3 ml-1" />

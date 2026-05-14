@@ -584,6 +584,7 @@ export type Database = {
           management_approach: Json | null
           naics_code: string | null
           notice_id: string | null
+          oci_screening: Json
           opportunity_data: Json | null
           opportunity_title: string | null
           opportunity_type: string | null
@@ -621,6 +622,7 @@ export type Database = {
           management_approach?: Json | null
           naics_code?: string | null
           notice_id?: string | null
+          oci_screening?: Json
           opportunity_data?: Json | null
           opportunity_title?: string | null
           opportunity_type?: string | null
@@ -658,6 +660,7 @@ export type Database = {
           management_approach?: Json | null
           naics_code?: string | null
           notice_id?: string | null
+          oci_screening?: Json
           opportunity_data?: Json | null
           opportunity_title?: string | null
           opportunity_type?: string | null
