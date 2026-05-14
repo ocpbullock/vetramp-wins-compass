@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Upload, Download, Sparkles, RefreshCw, FileText, CheckCircle2, Circle, AlertTriangle, Trash2, ExternalLink, Search, ListChecks, ShieldCheck, Linkedin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { exportProposalDocx } from "@/lib/proposal-export";
 import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
