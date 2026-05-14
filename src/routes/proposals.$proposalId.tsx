@@ -341,7 +341,7 @@ function ProposalPipeline() {
             <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
-            <ComplianceStep proposal={proposal} attachments={attachments} onGoToIntake={() => setStep("intake")} />
+            <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
             <ComingSoon title="Solution Design (Phase 3)" description="Build staffing, technical approach, management plan, transition timeline, and price strategy with AI assistance. For now, capture freeform solution notes." fieldLabel="Solution design notes" value={proposal.technical_approach?.notes || ""} onSave={(v) => patchProposal({ technical_approach: { ...(proposal.technical_approach || {}), notes: v } })} />
