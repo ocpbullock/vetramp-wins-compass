@@ -87,6 +87,12 @@ export class AIRateLimitError extends Error {
 export class AICreditsError extends Error {
   constructor() { super("AI credits exhausted. Add funds in Workspace settings."); this.name = "AICreditsError"; }
 }
+export class AIServiceUnavailableError extends Error {
+  constructor(public cause?: unknown) {
+    super("AI service is temporarily unavailable. Your documents and data are safe — try again in a few minutes.");
+    this.name = "AIServiceUnavailableError";
+  }
+}
 export class AIBudgetExceededError extends Error {
   constructor(public used: number, public budget: number) {
     super(`Monthly AI budget exceeded ($${used.toFixed(2)} of $${budget.toFixed(2)} used). Adjust your budget in Settings or wait until next month.`);
