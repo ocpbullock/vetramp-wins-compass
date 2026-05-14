@@ -410,8 +410,10 @@ function ProposalPipeline() {
   );
 }
 
-function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, proposalId }: any) {
+function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
+  const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
+  const largeDoc = totalChars > 300_000;
   const [local, setLocal] = useState(proposal);
   useEffect(() => setLocal(proposal), [proposal.id]);
   const save = () => onPatch({
