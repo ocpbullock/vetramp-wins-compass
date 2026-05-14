@@ -121,6 +121,63 @@ export type Database = {
           },
         ]
       }
+      contract_vehicles: {
+        Row: {
+          awarding_agency: string | null
+          ceiling_value: number | null
+          contract_number: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          naics_codes: string[]
+          notes: string | null
+          ordering_guide_url: string | null
+          period_of_performance_end: string | null
+          period_of_performance_start: string | null
+          status: string
+          team_id: string
+          updated_at: string
+          vehicle_name: string
+          vehicle_type: string | null
+        }
+        Insert: {
+          awarding_agency?: string | null
+          ceiling_value?: number | null
+          contract_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          naics_codes?: string[]
+          notes?: string | null
+          ordering_guide_url?: string | null
+          period_of_performance_end?: string | null
+          period_of_performance_start?: string | null
+          status?: string
+          team_id: string
+          updated_at?: string
+          vehicle_name: string
+          vehicle_type?: string | null
+        }
+        Update: {
+          awarding_agency?: string | null
+          ceiling_value?: number | null
+          contract_number?: string | null
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          naics_codes?: string[]
+          notes?: string | null
+          ordering_guide_url?: string | null
+          period_of_performance_end?: string | null
+          period_of_performance_start?: string | null
+          status?: string
+          team_id?: string
+          updated_at?: string
+          vehicle_name?: string
+          vehicle_type?: string | null
+        }
+        Relationships: []
+      }
       knowledge_base: {
         Row: {
           category: string
