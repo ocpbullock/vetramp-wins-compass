@@ -161,6 +161,12 @@ function ProposalPipeline() {
         capabilities_summary: e.partner?.capabilities_summary,
         past_performance_summary: e.partner?.past_performance_summary,
       }));
+      let pastPerformance: any[] = [];
+      const selectedPpIds: string[] = proposal.selected_past_performance ?? [];
+      if (selectedPpIds.length > 0) {
+        const { data: pp } = await supabase.from("past_performance").select("*").in("id", selectedPpIds);
+        pastPerformance = pp ?? [];
+      }
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-proposal-section`;
       const resp = await fetch(url, {
@@ -181,6 +187,7 @@ function ProposalPipeline() {
             management: proposal.management_approach, transition: proposal.transition_plan,
           },
           teaming: teaming.length ? teaming : undefined,
+          pastPerformance: pastPerformance.length ? pastPerformance : undefined,
           attachmentsText: attachmentsText || undefined,
         }),
       });
