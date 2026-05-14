@@ -33,7 +33,7 @@ export const OCI_QUESTIONS: { key: string; question: string; tag: string }[] = [
   },
 ];
 
-export type OciAnswers = Record<string, "yes" | "no" | undefined> & { notes?: string };
+export type OciAnswers = { [k: string]: "yes" | "no" | string | undefined; notes?: string };
 
 export function ociStatus(answers: OciAnswers | null | undefined): "clean" | "flagged" | "incomplete" {
   if (!answers) return "incomplete";
