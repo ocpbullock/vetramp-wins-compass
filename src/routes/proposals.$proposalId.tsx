@@ -17,6 +17,7 @@ import { ArrowLeft, Upload, Download, Sparkles, RefreshCw, FileText, CheckCircle
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
