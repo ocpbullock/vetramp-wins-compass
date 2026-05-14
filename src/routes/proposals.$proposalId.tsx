@@ -22,6 +22,7 @@ import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPast
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
 import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
+import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-classify";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
