@@ -13,7 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { ArrowLeft, Upload, Download, Sparkles, RefreshCw, FileText, CheckCircle2, Circle, AlertTriangle, Trash2, ExternalLink, Search, ListChecks, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Upload, Download, Sparkles, RefreshCw, FileText, CheckCircle2, Circle, AlertTriangle, Trash2, ExternalLink, Search, ListChecks, ShieldCheck, Linkedin } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 
@@ -93,6 +94,30 @@ function ProposalPipeline() {
     await supabase.storage.from("proposal-attachments").remove([att.storage_path]);
     await supabase.from("proposal_attachments").delete().eq("id", att.id);
     setAttachments((a) => a.filter((x) => x.id !== att.id));
+  }
+
+  const [parsing, setParsing] = useState(false);
+  async function parseDocuments() {
+    const sowAtts = attachments.filter((a) => a.file_type === "sow");
+    if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
+    setParsing(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-sow`;
+      toast.info("Parsing solicitation documents… this can take a minute");
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token}` },
+        body: JSON.stringify({ proposalId }),
+      });
+      const j = await r.json();
+      if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
+      // The edge function may have updated capture fields server-side; refetch for the latest state
+      const { data: fresh } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
+      if (fresh) setProposal(fresh);
+      const filled = j.filled_fields?.length ?? 0;
+      toast.success(`Extracted ${j.matrix?.requirements?.length ?? 0} requirements${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
+    } catch (e: any) { toast.error(e.message); } finally { setParsing(false); }
   }
 
   async function autoFetchSamAttachments() {
@@ -288,13 +313,13 @@ function ProposalPipeline() {
           </TabsList>
 
           <TabsContent value="intake" className="mt-4 space-y-4">
-            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} />
+            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} />
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
-            <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} />
+            <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
-            <ComplianceStep proposal={proposal} attachments={attachments} onPatch={patchProposal} />
+            <ComplianceStep proposal={proposal} attachments={attachments} onGoToIntake={() => setStep("intake")} />
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
             <ComingSoon title="Solution Design (Phase 3)" description="Build staffing, technical approach, management plan, transition timeline, and price strategy with AI assistance. For now, capture freeform solution notes." fieldLabel="Solution design notes" value={proposal.technical_approach?.notes || ""} onSave={(v) => patchProposal({ technical_approach: { ...(proposal.technical_approach || {}), notes: v } })} />
@@ -312,7 +337,8 @@ function ProposalPipeline() {
   );
 }
 
-function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch }: any) {
+function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing }: any) {
+  const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const [local, setLocal] = useState(proposal);
   useEffect(() => setLocal(proposal), [proposal.id]);
   const save = () => onPatch({
@@ -412,9 +438,21 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
               <Upload className="w-4 h-4 inline-block mr-1" />Upload document
             </div>
           </label>
+          <Button
+            onClick={onParse}
+            disabled={parsing || sowAttachments.length === 0}
+            size="sm"
+            className="w-full"
+          >
+            {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
+            {parsing ? "Parsing…" : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
+          </Button>
+          <div className="text-[11px] text-muted-foreground">
+            Parsing extracts requirements (Section L/M, "shall" statements) AND auto-fills capture details below — title, agency, contract type, value, PoP, clearance, etc.
+          </div>
           <div className="space-y-1">
-            {attachments.length === 0 && <div className="text-xs text-muted-foreground">No files yet.</div>}
-            {attachments.map((a: any) => (
+            {sowAttachments.length === 0 && <div className="text-xs text-muted-foreground">No files yet.</div>}
+            {sowAttachments.map((a: any) => (
               <div key={a.id} className="flex items-center gap-2 text-xs border border-border rounded px-2 py-1.5">
                 <FileText className="w-3 h-3 text-muted-foreground" />
                 <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
@@ -504,7 +542,7 @@ function GenerateStep({ proposal, sectionGen, onGenerate, onGenerateAll, onPatch
   );
 }
 
-function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
+function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = [], onUpload, onDelete }: any) {
   const [busy, setBusy] = useState(false);
   const intel = proposal.customer_intel || {};
   const [notes, setNotes] = useState<string>(intel.notes || "");
@@ -514,6 +552,10 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/customer-intel`;
+      const attachmentsText = attachments
+        .map((a: any) => a.parsed_content)
+        .filter(Boolean)
+        .join("\n\n---\n\n");
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
@@ -525,6 +567,7 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
           },
           companyProfile,
           extraNotes: notes || undefined,
+          attachmentsText: attachmentsText || undefined,
         }),
       });
       const j = await r.json();
@@ -539,7 +582,11 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
     <div><div className="text-xs font-semibold mb-1">{label}</div><ul className="text-xs space-y-1 list-disc list-inside text-muted-foreground">{items.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
   ) : null;
 
+  const linkedinUrl = (name: string) =>
+    `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${name} ${proposal.agency || ""}`.trim())}`;
+
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-1 space-y-3">
         <Card>
@@ -551,9 +598,39 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
               {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
               {busy ? "Researching…" : intel.customer_summary ? "Re-run research" : "Run research"}
             </Button>
+            {attachments.length > 0 && (
+              <div className="text-[11px] text-muted-foreground">
+                Research will include text from {attachments.length} reference document{attachments.length === 1 ? "" : "s"}.
+              </div>
+            )}
             <div className="flex items-center gap-2 pt-2">
               <input id="verified" type="checkbox" checked={!!proposal.customer_intel_verified} onChange={(e) => onPatch({ customer_intel_verified: e.target.checked })} />
               <Label htmlFor="verified" className="text-xs">I have reviewed this intel</Label>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Reference documents</CardTitle>
+            <CardDescription className="text-xs">Incumbent past performance, agency strategic plans, org charts, prior task order SOWs — anything that gives the AI more context.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <label className="block">
+              <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f && onUpload) onUpload(f, "customer_intel"); e.target.value = ""; }} />
+              <div className="border-2 border-dashed border-border rounded-md p-3 text-center text-xs cursor-pointer hover:bg-muted">
+                <Upload className="w-3 h-3 inline-block mr-1" />Upload reference document
+              </div>
+            </label>
+            <div className="space-y-1">
+              {attachments.length === 0 && <div className="text-[11px] text-muted-foreground">No reference documents yet.</div>}
+              {attachments.map((a: any) => (
+                <div key={a.id} className="flex items-center gap-2 text-xs border border-border rounded px-2 py-1.5">
+                  <FileText className="w-3 h-3 text-muted-foreground" />
+                  <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
+                  <button onClick={() => onDelete && onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -576,7 +653,29 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
           {list("Risks", intel.risks)}
           {intel.key_personnel?.length > 0 && (
             <div><div className="text-xs font-semibold mb-1">Key personnel</div>
-              <div className="space-y-1 text-xs">{intel.key_personnel.map((p: any, i: number) => <div key={i} className="border border-border rounded px-2 py-1"><span className="font-semibold">{p.name}</span> — {p.role} {p.notes && <span className="text-muted-foreground">· {p.notes}</span>}</div>)}</div>
+              <div className="space-y-1 text-xs">{intel.key_personnel.map((p: any, i: number) => (
+                <div key={i} className="border border-border rounded px-2 py-1 flex items-center gap-2">
+                  <div className="flex-1">
+                    <span className="font-semibold">{p.name}</span> — {p.role} {p.notes && <span className="text-muted-foreground">· {p.notes}</span>}
+                  </div>
+                  {p.name && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={linkedinUrl(p.name)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground hover:text-primary inline-flex items-center justify-center h-6 w-6 rounded hover:bg-accent"
+                          aria-label={`Search LinkedIn for ${p.name}`}
+                        >
+                          <Linkedin className="w-3.5 h-3.5" />
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>Search LinkedIn</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              ))}</div>
             </div>
           )}
           {intel.citations?.length > 0 && (
@@ -588,33 +687,14 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
         </CardContent>
       </Card>
     </div>
+    </TooltipProvider>
   );
 }
 
-function ComplianceStep({ proposal, attachments, onPatch }: any) {
-  const [busy, setBusy] = useState(false);
+function ComplianceStep({ proposal, attachments, onGoToIntake }: any) {
   const matrix = proposal.compliance_matrix || {};
   const reqs: any[] = matrix.requirements || [];
-
-  async function parse() {
-    if (attachments.length === 0) { toast.error("Upload the SOW/PWS first on the Intake step"); return; }
-    setBusy(true);
-    try {
-      const { data: sess } = await supabase.auth.getSession();
-      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-sow`;
-      toast.info("Parsing solicitation documents… this can take a minute");
-      const r = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token}` },
-        body: JSON.stringify({ proposalId: proposal.id }),
-      });
-      const j = await r.json();
-      if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
-      // refresh proposal compliance from response
-      await onPatch({ compliance_matrix: j.matrix, compliance_gaps: (j.matrix.requirements || []).filter((x: any) => !x.proposal_section).length });
-      toast.success(`Extracted ${j.matrix.requirements?.length ?? 0} requirements`);
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
-  }
+  const hasMatrix = reqs.length > 0 || !!matrix.summary;
 
   function exportMatrixCsv() {
     const rows = [["Req ID", "Source", "Type", "Category", "Requirement", "Proposal Section", "Notes"]];
@@ -629,26 +709,38 @@ function ComplianceStep({ proposal, attachments, onPatch }: any) {
   const byType: Record<string, number> = {};
   for (const r of reqs) byType[r.type] = (byType[r.type] || 0) + 1;
 
+  if (!hasMatrix) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Compliance matrix</CardTitle>
+          <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="border border-dashed border-border rounded-md p-6 text-center space-y-3">
+            <AlertTriangle className="w-6 h-6 text-yellow-500 mx-auto" />
+            <div className="text-sm">Documents haven't been parsed yet — go to Intake to upload and parse your SOW/PWS.</div>
+            <Button size="sm" onClick={onGoToIntake}><ArrowLeft className="w-4 h-4 mr-1" />Go to Intake</Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <div className="space-y-4">
       <Card>
         <CardHeader className="pb-2 flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Compliance matrix</CardTitle>
-            <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments.</CardDescription>
+            <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments. Re-parse from the Intake step if documents change.</CardDescription>
           </div>
           <div className="flex gap-2">
             {reqs.length > 0 && <Button onClick={exportMatrixCsv} variant="outline" size="sm"><Download className="w-4 h-4 mr-1" />Export CSV</Button>}
-            <Button onClick={parse} disabled={busy} size="sm">
-              {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
-              {busy ? "Parsing…" : reqs.length > 0 ? "Re-parse documents" : "Parse documents"}
-            </Button>
+            <Button onClick={onGoToIntake} variant="outline" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />Re-parse in Intake</Button>
           </div>
         </CardHeader>
         <CardContent>
-          {attachments.length === 0 && (
-            <div className="text-xs text-muted-foreground border border-dashed border-border rounded p-3"><AlertTriangle className="w-3 h-3 inline mr-1 text-yellow-500" />No attachments uploaded yet. Go to the Intake step to upload the SOW/PWS.</div>
-          )}
           {matrix.summary && <p className="text-sm mb-3 leading-relaxed">{matrix.summary}</p>}
           {reqs.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-3 text-xs">

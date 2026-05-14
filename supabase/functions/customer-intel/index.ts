@@ -43,11 +43,16 @@ const SCHEMA = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { opportunity, companyProfile, extraNotes } = await req.json();
+    const { opportunity, companyProfile, extraNotes, attachmentsText } = await req.json();
     const apiKey = Deno.env.get("LOVABLE_API_KEY");
     if (!apiKey) throw new Error("LOVABLE_API_KEY not configured");
 
     const system = `You are a senior federal capture manager doing pre-RFP customer intelligence. Use your knowledge of US federal agencies, DoD components, USA Spending, FPDS, SAM.gov, agency strategic plans, and recent press to build a deep profile of the buying customer. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`;
+
+    // Cap attachments text to keep prompt size reasonable
+    const trimmedAttachments = typeof attachmentsText === "string" && attachmentsText.length > 0
+      ? attachmentsText.slice(0, 60000)
+      : "";
 
     const user = `OPPORTUNITY:
 ${JSON.stringify(opportunity, null, 2)}
@@ -55,7 +60,7 @@ ${JSON.stringify(opportunity, null, 2)}
 OUR COMPANY PROFILE (for win-theme alignment):
 ${JSON.stringify(companyProfile, null, 2)}
 
-${extraNotes ? `ADDITIONAL CONTEXT FROM USER:\n${extraNotes}\n` : ""}
+${extraNotes ? `ADDITIONAL CONTEXT FROM USER:\n${extraNotes}\n` : ""}${trimmedAttachments ? `\nREFERENCE DOCUMENTS PROVIDED BY USER (incumbent past performance, agency plans, prior SOWs, org charts, etc.):\n${trimmedAttachments}\n` : ""}
 Research this customer and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.`;
 
     const r = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
