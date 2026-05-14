@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Download, ShieldCheck, AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, Download, ShieldCheck, AlertTriangle, ChevronDown, ChevronRight, Search, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useTeam, type TeamMember } from "@/lib/team";
 
 type ReqStatus = "not_started" | "in_progress" | "drafted" | "reviewed" | "final";
