@@ -66,10 +66,11 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
 - 2.3 QA TABLE: | Metric | Target | Measurement Method | Reporting Frequency | (15% ticket audits, 90%+ satisfaction, Lean/Kaizen).
 - 2.4 Risk Register TABLE of 5 risks: | Risk | Likelihood | Impact | Mitigation | Responsible | — include CONTRACT-SPECIFIC risks derived from the SOW, not just boilerplate.`,
   past_performance: `Write PAST PERFORMANCE.
-- 3.1 Relevant Contracts TABLE: | Contract Name | Agency | Value | Period | Scope | CPARS |. Use ONLY entries from the company profile past_performance array. Do not fabricate.
-- 3.2 Relevance to This Requirement: matrix mapping past performance to current SOW tasks.
-- 3.3 References paragraph + Federal experience summary (Army, Air Force, DHA, VA, DHS).
-- BAMC remains the primary reference with specific achievements.`,
+- 3.1 Relevant Contracts TABLE: | Contract Name | Agency | Value | Period | Scope | CPARS |. Use ONLY entries provided in the PAST PERFORMANCE LIBRARY block (selected by the capture team) plus the company profile past_performance array if no library is supplied. Do not fabricate contracts, values, periods, POCs, or CPARS ratings.
+- 3.2 For each entry, write a 1-2 paragraph narrative anchored on the entry's description, drawing out scope relevance to the current SOW. Reference the actual contract number, task order number, and POC when present.
+- 3.3 Relevance Matrix: map each past performance entry to specific current SOW tasks/PWS sections.
+- 3.4 References paragraph listing client POCs (name, title, phone, email) verbatim from the supplied entries.
+- If a teaming partner brings additional past performance, cite it after VetRamp's own.`,
   staffing_plan: `Write the STAFFING PLAN.
 - 4.1 Team Composition TABLE: | Role | FTE | Clearance | Required Certs | Location |. If solutionDesign.staffing is present, use those rows verbatim.
 - 4.2 Key Personnel: bios with required qualifications. If a candidate name is missing, use "[KEY PERSONNEL — TO BE NAMED]" with the required qualifications listed.
