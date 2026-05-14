@@ -170,6 +170,10 @@ export function TrackedAnalyzePanel({
                   </div>
                 )}
               </section>
+
+              <div className="border-t border-border pt-3">
+                <DataProvenance source="USAspending.gov" fetchedAt={fetchedAt} />
+              </div>
             </>
           )}
         </div>
