@@ -306,7 +306,7 @@ function ProposalPipeline() {
       await patchProposal({ sections: finalSections });
       toast.success(`Generated ${sectionTitle}`);
     } catch (e: any) {
-      toast.error(e.message);
+      toast.error(friendlyFromError(e));
     } finally {
       setSectionGen((s) => ({ ...s, [sectionId]: false }));
     }
