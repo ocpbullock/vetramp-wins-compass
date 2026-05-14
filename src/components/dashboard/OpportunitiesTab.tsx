@@ -183,8 +183,10 @@ export function OpportunitiesTab({
               {sorted.map((o, i) => {
                 const key = (o.solicitationNumber ?? o.noticeId ?? "") + i;
                 const m = matches.get((o.solicitationNumber ?? o.noticeId ?? "") as string);
+                const dlMs = o.responseDeadLine ? new Date(o.responseDeadLine).getTime() : NaN;
+                const isExpired = !isNaN(dlMs) && dlMs < Date.now();
                 return (
-                  <tr key={key}>
+                  <tr key={key} className={isExpired ? "opacity-50" : ""}>
                     <td className="max-w-[320px]">
                       {o.uiLink ? (
                         <a href={o.uiLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-start gap-1 line-clamp-2">
@@ -202,7 +204,12 @@ export function OpportunitiesTab({
                       <IncumbentCell m={m} />
                     </td>
                     <td className="text-xs whitespace-nowrap">{o.postedDate?.slice(0, 10)}</td>
-                    <td className="text-xs whitespace-nowrap">{o.responseDeadLine?.slice(0, 10)}</td>
+                    <td className="text-xs whitespace-nowrap">
+                      {o.responseDeadLine?.slice(0, 10)}
+                      {isExpired && (
+                        <span className="ml-1 inline-block px-1.5 py-0.5 rounded text-[9px] font-medium bg-muted text-muted-foreground border border-border">Closed</span>
+                      )}
+                    </td>
                     <td className="font-mono text-xs">{o.solicitationNumber}</td>
                     <td>
                       <div className="flex gap-1">

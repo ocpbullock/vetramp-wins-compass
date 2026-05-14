@@ -28,6 +28,7 @@ import { OCIScreeningCard, ociStatus, type OciAnswers } from "@/components/propo
 import { StepErrorBoundary } from "@/components/StepErrorBoundary";
 import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
 import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
+import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
@@ -62,6 +63,7 @@ function ProposalPipeline() {
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState("intake");
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
+  const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
 
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
@@ -75,7 +77,32 @@ function ProposalPipeline() {
         supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false }),
       ]);
       if (pe || !p) { toast.error("Proposal not found"); navigate({ to: "/" }); return; }
-      setProposal(p);
+
+      // Run integrity checks; auto-assign team_id if missing
+      let proposalRow: any = p;
+      const knownSectionIds = SECTIONS.map((s) => s.id);
+      const initial = validateProposal(proposalRow, knownSectionIds);
+      if (initial.needsTeamAssignment) {
+        const { data: tm } = await supabase
+          .from("team_members")
+          .select("team_id")
+          .eq("user_id", user.id)
+          .order("joined_at", { ascending: true })
+          .limit(1)
+          .maybeSingle();
+        if (tm?.team_id) {
+          await supabase.from("proposals").update({ team_id: tm.team_id }).eq("id", proposalId);
+          proposalRow = { ...proposalRow, team_id: tm.team_id };
+        }
+      }
+      const finalCheck = validateProposal(proposalRow, knownSectionIds);
+      if (finalCheck.issues.length) {
+        // eslint-disable-next-line no-console
+        console.warn("[proposal data integrity]", finalCheck.issues);
+      }
+      setDataIssues(finalCheck.issues);
+
+      setProposal(proposalRow);
       setCompanyProfile(cp?.profile_data ?? null);
       setAttachments(atts ?? []);
       setLoading(false);
@@ -174,7 +201,20 @@ function ProposalPipeline() {
         }
       }
       const { data: fresh } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
-      if (fresh) setProposal(fresh);
+      let freshRow: any = fresh;
+      // Client-side compliance matrix integrity pass
+      if (freshRow?.compliance_matrix) {
+        const knownIds = SECTIONS.map((s) => s.id);
+        const { fixedCount, fixes, matrix: cleaned } = validateComplianceMatrix(freshRow.compliance_matrix, knownIds);
+        if (fixedCount > 0) {
+          await supabase.from("proposals").update({ compliance_matrix: cleaned }).eq("id", proposalId);
+          freshRow = { ...freshRow, compliance_matrix: cleaned };
+          toast.message(`Auto-fixed ${fixedCount} issue${fixedCount === 1 ? "" : "s"} in the parsed matrix.`, { description: fixes.join(" ") });
+        }
+        // Refresh data issues banner
+        setDataIssues(validateProposal(freshRow, knownIds).issues);
+      }
+      if (freshRow) setProposal(freshRow);
       const { data: freshAtts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false });
       if (freshAtts) setAttachments(freshAtts);
       if (done) {
@@ -384,6 +424,23 @@ function ProposalPipeline() {
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to opportunities</Link>
           <div className="flex-1" />
           <Badge variant="outline">{proposal.status}</Badge>
+          {dataIssues.length > 0 && (
+            <TooltipProvider delayDuration={200}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-400 cursor-help">
+                    <AlertTriangle className="w-3 h-3 mr-1" />
+                    Data issues detected ({dataIssues.length})
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <ul className="text-xs space-y-1 list-disc list-inside">
+                    {dataIssues.map((i) => <li key={i.code}>{i.message}</li>)}
+                  </ul>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          )}
           {cd && <Badge className={cd === "PAST DUE" ? "bg-destructive" : ""}>{cd === "PAST DUE" ? cd : `${cd} until deadline`}</Badge>}
           <Button onClick={exportDocx} variant="outline"><Download className="w-4 h-4 mr-1" />Export .docx</Button>
         </div>

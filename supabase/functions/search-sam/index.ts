@@ -16,6 +16,54 @@ function fmtDate(iso: string) {
   return `${m}/${d}/${y}`;
 }
 
+function toIso(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  const s = String(value).trim();
+  if (!s) return null;
+  // Already ISO
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? s : d.toISOString();
+  }
+  // Try MM/DD/YYYY or other parseable formats
+  const d = new Date(s);
+  if (!isNaN(d.getTime())) return d.toISOString();
+  return s;
+}
+
+function trimAll<T>(obj: T): T {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj === "string") return obj.trim() as unknown as T;
+  if (Array.isArray(obj)) return obj.map(trimAll) as unknown as T;
+  if (typeof obj === "object") {
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      out[k] = trimAll(v);
+    }
+    return out as unknown as T;
+  }
+  return obj;
+}
+
+function normalizeOpportunity(o: any): any {
+  const cleaned = trimAll(o);
+  const out = { ...cleaned } as any;
+  // ISO 8601 dates for known date fields
+  for (const key of ["postedDate", "responseDeadLine", "archiveDate", "updatedDate"]) {
+    if (out[key] !== undefined) {
+      const iso = toIso(out[key]);
+      if (iso) out[key] = iso;
+    }
+  }
+  // Validate NAICS exactly 6 digits
+  if (out.naicsCode !== undefined && out.naicsCode !== null) {
+    const n = String(out.naicsCode).replace(/\D/g, "");
+    if (n.length === 6) out.naicsCode = n;
+    else { out.naicsCodeRaw = out.naicsCode; out.naicsCode = null; out.naicsInvalid = true; }
+  }
+  return out;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -130,13 +178,29 @@ Deno.serve(async (req) => {
       if (i < naicsCodes.length - 1) await new Promise((r) => setTimeout(r, 500));
     }
 
-    const seen = new Set<string>();
-    const deduped = all.filter((o) => {
-      const key = o.solicitationNumber || o.noticeId || JSON.stringify(o).slice(0, 50);
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    });
+    // Normalize each opportunity (trim strings, ISO dates, validate NAICS)
+    const normalized = all.map(normalizeOpportunity);
+
+    // Dedupe by both solicitationNumber AND noticeId — amendments create new
+    // notices for the same solicitation; either match means duplicate.
+    const seenSol = new Set<string>();
+    const seenNotice = new Set<string>();
+    const deduped: any[] = [];
+    for (const o of normalized) {
+      const sol = o.solicitationNumber ? String(o.solicitationNumber) : "";
+      const notice = o.noticeId ? String(o.noticeId) : "";
+      if (sol && seenSol.has(sol)) continue;
+      if (notice && seenNotice.has(notice)) continue;
+      if (!sol && !notice) {
+        // Fall back to fingerprint
+        const fp = JSON.stringify(o).slice(0, 80);
+        if (seenSol.has(fp)) continue;
+        seenSol.add(fp);
+      }
+      if (sol) seenSol.add(sol);
+      if (notice) seenNotice.add(notice);
+      deduped.push(o);
+    }
 
     let message: string | undefined;
     if (rateLimited) {
