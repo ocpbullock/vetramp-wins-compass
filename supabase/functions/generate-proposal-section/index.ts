@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
+import { callAI, aiErrorResponse } from "../_shared/ai-client.ts";
 
 const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   past_performance: ["past_performance"],
