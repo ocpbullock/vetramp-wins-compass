@@ -28,9 +28,10 @@ export function StatCards(p: Props) {
     },
     { label: "Total Obligated", value: fmtMoney(p.totalObligated), icon: DollarSign, tab: "historical", color: "text-money" },
     { label: "Works in Progress", value: (p.inProgressCount ?? 0).toLocaleString(), icon: FileEdit, tab: "in-progress", color: "text-amber-600" },
+    { label: "Starred", value: (p.starredCount ?? 0).toLocaleString(), icon: Star, tab: "starred", color: "text-amber-500" },
   ];
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
       {cards.map((c) => (
         <Card
           key={c.label}
