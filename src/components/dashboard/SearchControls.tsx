@@ -34,8 +34,9 @@ export function SearchControls({
     const now = new Date();
     return {
       today: format(now, "yyyy-MM-dd"),
-      // Default remains a 36-month UI window for continuity; the dashboard
-      // applies a separate 10-year historical award lookback for recompete matching.
+        // Default remains a 36-month UI window for continuity; the dashboard
+        // applies a separate 10-year historical award lookback for recompete matching.
+        // Federal procurement data is sourced via the Tango API.
       defaultFrom: format(subYears(now, 3), "yyyy-MM-dd"),
     };
   }, []);
@@ -102,7 +103,7 @@ export function SearchControls({
                     <Info className="w-3 h-3 text-muted-foreground" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>SAM clamps to 1y · awards use 10y lookback</TooltipContent>
+                <TooltipContent>Federal procurement data via Tango API · awards use 10y lookback</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </Label>

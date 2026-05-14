@@ -6,6 +6,9 @@ verify_jwt = true
 [functions.search-usaspending]
 verify_jwt = true
 
+[functions.search-entities]
+verify_jwt = true
+
 [functions.usaspending-detail]
 verify_jwt = false
 

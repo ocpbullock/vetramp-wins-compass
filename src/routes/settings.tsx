@@ -28,6 +28,7 @@ import { PartnersPanel } from "@/components/settings/PartnersPanel";
 import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 import { ContractVehiclesPanel } from "@/components/settings/ContractVehiclesPanel";
 import { AIUsagePanel } from "@/components/settings/AIUsagePanel";
+import { TangoUsagePanel } from "@/components/settings/TangoUsagePanel";
 import { DataHealthPanel } from "@/components/settings/DataHealthPanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
@@ -105,7 +106,7 @@ function SettingsPage() {
             <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
             <TabsTrigger value="past-performance">Past Performance</TabsTrigger>
             <TabsTrigger value="vehicles">Contract Vehicles</TabsTrigger>
-            <TabsTrigger value="ai-usage">AI Usage</TabsTrigger>
+            <TabsTrigger value="ai-usage">API &amp; AI Usage</TabsTrigger>
             <TabsTrigger value="data-health">Data Health</TabsTrigger>
           </TabsList>
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
@@ -114,7 +115,7 @@ function SettingsPage() {
           <TabsContent value="partners" className="mt-4"><PartnersPanel /></TabsContent>
           <TabsContent value="past-performance" className="mt-4"><PastPerformancePanel /></TabsContent>
           <TabsContent value="vehicles" className="mt-4"><ContractVehiclesPanel /></TabsContent>
-          <TabsContent value="ai-usage" className="mt-4"><AIUsagePanel /></TabsContent>
+          <TabsContent value="ai-usage" className="mt-4 space-y-4"><TangoUsagePanel /><AIUsagePanel /></TabsContent>
           <TabsContent value="data-health" className="mt-4"><DataHealthPanel /></TabsContent>
         </Tabs>
       </main>
