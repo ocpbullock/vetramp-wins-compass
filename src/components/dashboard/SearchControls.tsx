@@ -103,7 +103,7 @@ export function SearchControls({
                     <Info className="w-3 h-3 text-muted-foreground" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>SAM clamps to 1y · awards use 10y lookback</TooltipContent>
+                <TooltipContent>Federal procurement data via Tango API · awards use 10y lookback</TooltipContent>
               </Tooltip>
             </TooltipProvider>
           </Label>
