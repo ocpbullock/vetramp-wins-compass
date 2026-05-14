@@ -31,6 +31,7 @@ export function TrackedAnalyzePanel({
   const [loading, setLoading] = useState(false);
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !naicsCode) return;
