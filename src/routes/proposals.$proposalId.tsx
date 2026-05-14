@@ -225,8 +225,11 @@ function ProposalPipeline() {
   }
 
   async function generateSection(sectionId: string, sectionTitle: string) {
+    if (!online) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
+    if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     if (!companyProfile) { toast.error("Company profile missing"); return; }
     setSectionGen((s) => ({ ...s, [sectionId]: true }));
+    setAiBusy(true);
     try {
       // gather attachment text (parsed_content) when available
       const attachmentsText = attachments.map((a) => a.parsed_content).filter(Boolean).join("\n\n---\n\n");
