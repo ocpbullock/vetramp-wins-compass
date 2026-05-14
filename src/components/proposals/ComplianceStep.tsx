@@ -207,6 +207,37 @@ export function ComplianceStep({
 
   return (
     <div className="space-y-4">
+      {/* Validation summary */}
+      {reqs.length > 0 && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
+          <CardContent className="py-3 space-y-2">
+            <div className="text-sm">
+              Extracted <span className="font-semibold">{stats.total}</span> requirements
+              {validation.approxPages ? <> from ~<span className="font-semibold">{validation.approxPages}</span> pages of solicitation text</> : null}
+              {validation.unmapped > 0 && <> · <span className="text-amber-600 dark:text-amber-400 font-semibold">{validation.unmapped}</span> unmapped to a proposal section</>}
+              {validation.empty > 0 && <> · <span className="text-destructive font-semibold">{validation.empty}</span> with empty text</>}
+              {validation.dupes.length > 0 && <> · <span className="text-destructive font-semibold">{validation.dupes.length}</span> duplicate IDs</>}
+              .
+            </div>
+            {validation.sparse && (
+              <div className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
+                <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                Only {reqs.length} requirements across ~{validation.approxPages} pages — fewer than expected ({validation.expectedMin}+). The model may have missed sections; consider re-parsing.
+              </div>
+            )}
+            {validation.truncated && (
+              <div className="text-xs text-destructive flex items-start gap-1">
+                <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                ⚠️ Documents were partially processed (one or more files exceeded the per-file size limit). Some requirements may be missing. Consider uploading smaller individual files.
+              </div>
+            )}
+            {validation.dupes.length > 0 && (
+              <div className="text-[11px] text-muted-foreground">Duplicate req_ids: <span className="font-mono">{validation.dupes.slice(0, 6).join(", ")}</span>{validation.dupes.length > 6 && "…"}</div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dashboard summary */}
       {reqs.length > 0 && (
         <Card>
