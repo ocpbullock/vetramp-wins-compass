@@ -115,6 +115,7 @@ Research this customer and return structured intel. Focus on: who actually uses 
         model: pickModel("customer-intel"),
         inputTokens: data.__usage?.inputTokens,
         outputTokens: data.__usage?.outputTokens,
+        ttlHours: 48,
       });
     } catch (e) { console.error("cache write failed:", e); }
     return new Response(JSON.stringify({ intel }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
