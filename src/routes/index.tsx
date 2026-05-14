@@ -12,6 +12,8 @@ import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
 import { LogsTab } from "@/components/dashboard/LogsTab";
 import { InProgressTab } from "@/components/dashboard/InProgressTab";
 import { TrackedOpportunitiesTab } from "@/components/dashboard/TrackedOpportunitiesTab";
+import { StarredTab } from "@/components/dashboard/StarredTab";
+import { useStarred, type StarredRow } from "@/lib/starred";
 import { supabase } from "@/integrations/supabase/client";
 import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
 import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
@@ -62,9 +64,10 @@ function Dashboard() {
   // Sync tab with URL hash from header nav links
   useEffect(() => {
     const h = (location.hash || "").replace(/^#/, "");
-    const valid = ["opportunities", "historical", "in-progress", "tracked", "analytics", "logs"];
+    const valid = ["opportunities", "historical", "in-progress", "tracked", "starred", "analytics", "logs"];
     if (h && valid.includes(h)) setTab(h);
   }, [location.hash]);
+  const { count: starredCount } = useStarred();
   const [inProgressCount, setInProgressCount] = useState<number>(0);
 
   // Fetch in-progress count on mount so the stat card is populated before
@@ -103,6 +106,22 @@ function Dashboard() {
       await generateDefaultMilestones(data.id, o.responseDeadLine);
     }
     navigate({ to: "/proposals/$proposalId", params: { proposalId: data.id } });
+  }
+
+  async function handleStartFromStarred(row: StarredRow) {
+    // Promote a starred bookmark into the proposal pipeline. Prefer the
+    // captured source_data snapshot (rich SAM payload) when present.
+    const sd = (row.source_data as SamOpportunity | null) ?? null;
+    const o: SamOpportunity = sd ?? ({
+      noticeId: row.notice_id,
+      solicitationNumber: row.notice_id,
+      title: row.title ?? "",
+      naicsCode: row.naics_code ?? undefined,
+      responseDeadLine: row.response_deadline ?? undefined,
+      postedDate: row.posted_date ?? undefined,
+      setAside: row.set_aside_description ?? undefined,
+    } as unknown as SamOpportunity);
+    await handlePropose(o);
   }
   const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
   const [vendor, setVendor] = useState<{ id: string; name: string } | null>(null);
@@ -280,6 +299,7 @@ function Dashboard() {
           historicalTotal={historicalTotal}
           totalObligated={stats.totalObligated}
           inProgressCount={inProgressCount}
+          starredCount={starredCount}
           onSelect={setTab}
         />
 
@@ -289,6 +309,7 @@ function Dashboard() {
           <TabsList>
             <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
             <TabsTrigger value="historical">Historical Awards</TabsTrigger>
+            <TabsTrigger value="starred">Starred{starredCount ? ` (${starredCount})` : ""}</TabsTrigger>
             <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
             <TabsTrigger value="tracked">Tracked</TabsTrigger>
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
@@ -299,6 +320,9 @@ function Dashboard() {
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab awards={awards} searchedNaics={searchedNaics} searchKey={searchedNaics.join(",")} onDetails={setDetailId} />
+          </TabsContent>
+          <TabsContent value="starred" className="mt-4">
+            <StarredTab onStartProposal={handleStartFromStarred} />
           </TabsContent>
           <TabsContent value="in-progress" className="mt-4">
             <InProgressTab onCountChange={setInProgressCount} />

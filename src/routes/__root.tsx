@@ -8,6 +8,8 @@ import {
 import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TeamProvider } from "@/lib/team";
+import { StarredProvider } from "@/lib/starred";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -50,8 +52,12 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TeamProvider>
-          <Outlet />
-          <Toaster richColors position="top-right" />
+          <StarredProvider>
+            <TooltipProvider delayDuration={150}>
+              <Outlet />
+              <Toaster richColors position="top-right" />
+            </TooltipProvider>
+          </StarredProvider>
         </TeamProvider>
       </AuthProvider>
     </QueryClientProvider>

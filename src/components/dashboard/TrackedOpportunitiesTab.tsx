@@ -26,6 +26,7 @@ import {
 import { TrackedAnalyzePanel } from "./TrackedAnalyzePanel";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import type { HistoricalAward } from "@/lib/api";
+import { StarButton } from "./StarButton";
 
 const NAICS_NAME = new Map(NAICS_GROUPS.flatMap((g) => g.codes.map((c) => [c.code, c.name])));
 
@@ -261,6 +262,16 @@ export function TrackedOpportunitiesTab({
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <StarButton
+                        input={{
+                          noticeId: `tracked:${i.id}`,
+                          title: i.title,
+                          naicsCode: i.naics_code,
+                          responseDeadline: i.response_deadline ?? null,
+                          setAsideDescription: null,
+                          sourceData: i,
+                        }}
+                      />
                       <Button size="sm" variant="ghost" onClick={() => setAnalyze(i)} title="Analyze with USAspending">
                         <BarChart3 className="w-4 h-4" />
                       </Button>
