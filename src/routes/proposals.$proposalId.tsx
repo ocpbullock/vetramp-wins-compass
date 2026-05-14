@@ -900,10 +900,14 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, atta
           <CardContent className="space-y-2">
             <Label className="text-xs">Optional context to bias research</Label>
             <Textarea rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. 'I think the incumbent is XYZ', 'KO is Jane Smith', anything from prior conversations…" />
-            <Button onClick={research} disabled={busy} size="sm" className="w-full">
+            <Button onClick={research} disabled={locked} size="sm" className="w-full" title={aiBusy && !busy ? "Another AI task is running — please wait." : undefined}>
               {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
               {busy ? "Researching…" : intel.customer_summary ? "Re-run research" : "Run research"}
             </Button>
+            <div className="flex items-center gap-2">
+              <input id="skipCacheIntel" type="checkbox" checked={skipCache} onChange={(e) => setSkipCache(e.target.checked)} />
+              <Label htmlFor="skipCacheIntel" className="text-[11px] text-muted-foreground">Skip cache (force fresh AI run)</Label>
+            </div>
             {attachments.length > 0 && (
               <div className="text-[11px] text-muted-foreground">
                 Research will include text from {attachments.length} reference document{attachments.length === 1 ? "" : "s"}.
