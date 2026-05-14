@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
+import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
