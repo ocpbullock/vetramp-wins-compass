@@ -16,7 +16,7 @@ import { Progress } from "@/components/ui/progress";
 import { ArrowLeft, Upload, Download, Sparkles, RefreshCw, FileText, CheckCircle2, Circle, AlertTriangle, Trash2, ExternalLink, Search, ListChecks, ShieldCheck, Linkedin } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
-import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { exportProposalDocx } from "@/lib/proposal-export";
 import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
@@ -291,38 +291,12 @@ function ProposalPipeline() {
   }
 
   async function exportDocx() {
-    const sections = proposal.sections || {};
-    const children: Paragraph[] = [];
-    children.push(new Paragraph({ heading: HeadingLevel.TITLE, children: [new TextRun(proposal.opportunity_title || "Proposal")] }));
-    children.push(new Paragraph({ children: [new TextRun(`Solicitation #: ${proposal.solicitation_number}`)] }));
-    children.push(new Paragraph({ children: [new TextRun(`Agency: ${proposal.agency || ""}`)] }));
-    children.push(new Paragraph({ children: [new TextRun(`Submitted by: LGE Consulting, LLC dba VetRamp | UEI: N8HBYAZ9VGQ5 | CAGE: 9PKK3`)] }));
-    children.push(new Paragraph({ children: [new TextRun("")] }));
-    for (const s of SECTIONS) {
-      const sec = sections[s.id];
-      if (!sec?.content) continue;
-      children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(s.title)] }));
-      for (const line of sec.content.split("\n")) {
-        if (line.startsWith("# ")) children.push(new Paragraph({ heading: HeadingLevel.HEADING_1, children: [new TextRun(line.slice(2))] }));
-        else if (line.startsWith("## ")) children.push(new Paragraph({ heading: HeadingLevel.HEADING_2, children: [new TextRun(line.slice(3))] }));
-        else if (line.startsWith("### ")) children.push(new Paragraph({ heading: HeadingLevel.HEADING_3, children: [new TextRun(line.slice(4))] }));
-        else children.push(new Paragraph({ children: [new TextRun(line)] }));
-      }
+    try {
+      await exportProposalDocx({ proposal, companyProfile, sectionDefs: SECTIONS });
+      toast.success("Proposal exported");
+    } catch (e: any) {
+      toast.error(`Export failed: ${e?.message ?? e}`);
     }
-    const doc = new Document({
-      styles: { default: { document: { run: { font: "Times New Roman", size: 24 } } } },
-      sections: [{
-        properties: { page: { size: { width: 12240, height: 15840 }, margin: { top: 1440, right: 1440, bottom: 1440, left: 1440 } } },
-        children,
-      }],
-    });
-    const blob = await Packer.toBlob(doc);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `Proposal-${proposal.solicitation_number || "draft"}.docx`;
-    a.click();
-    URL.revokeObjectURL(url);
   }
 
   const readiness = useMemo(() => {
