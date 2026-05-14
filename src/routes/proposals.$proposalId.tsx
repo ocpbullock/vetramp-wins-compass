@@ -446,6 +446,15 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           teamId={proposal.team_id ?? null}
           opportunityNaics={proposal.naics_code}
         />
+
+        <RelevantPastPerformanceCard
+          teamId={proposal.team_id ?? null}
+          naics={proposal.naics_code}
+          agency={proposal.agency}
+          opportunityTitle={proposal.opportunity_title}
+          selectedIds={proposal.selected_past_performance ?? []}
+          onChange={(ids) => onPatch({ selected_past_performance: ids })}
+        />
       </div>
 
       <Card>
