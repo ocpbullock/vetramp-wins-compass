@@ -542,7 +542,7 @@ function GenerateStep({ proposal, sectionGen, onGenerate, onGenerateAll, onPatch
   );
 }
 
-function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
+function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = [], onUpload, onDelete }: any) {
   const [busy, setBusy] = useState(false);
   const intel = proposal.customer_intel || {};
   const [notes, setNotes] = useState<string>(intel.notes || "");
@@ -552,6 +552,10 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/customer-intel`;
+      const attachmentsText = attachments
+        .map((a: any) => a.parsed_content)
+        .filter(Boolean)
+        .join("\n\n---\n\n");
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
@@ -563,6 +567,7 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
           },
           companyProfile,
           extraNotes: notes || undefined,
+          attachmentsText: attachmentsText || undefined,
         }),
       });
       const j = await r.json();
@@ -577,7 +582,11 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
     <div><div className="text-xs font-semibold mb-1">{label}</div><ul className="text-xs space-y-1 list-disc list-inside text-muted-foreground">{items.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
   ) : null;
 
+  const linkedinUrl = (name: string) =>
+    `https://www.linkedin.com/search/results/people/?keywords=${encodeURIComponent(`${name} ${proposal.agency || ""}`.trim())}`;
+
   return (
+    <TooltipProvider delayDuration={200}>
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-1 space-y-3">
         <Card>
@@ -589,9 +598,39 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
               {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
               {busy ? "Researching…" : intel.customer_summary ? "Re-run research" : "Run research"}
             </Button>
+            {attachments.length > 0 && (
+              <div className="text-[11px] text-muted-foreground">
+                Research will include text from {attachments.length} reference document{attachments.length === 1 ? "" : "s"}.
+              </div>
+            )}
             <div className="flex items-center gap-2 pt-2">
               <input id="verified" type="checkbox" checked={!!proposal.customer_intel_verified} onChange={(e) => onPatch({ customer_intel_verified: e.target.checked })} />
               <Label htmlFor="verified" className="text-xs">I have reviewed this intel</Label>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Reference documents</CardTitle>
+            <CardDescription className="text-xs">Incumbent past performance, agency strategic plans, org charts, prior task order SOWs — anything that gives the AI more context.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <label className="block">
+              <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f && onUpload) onUpload(f, "customer_intel"); e.target.value = ""; }} />
+              <div className="border-2 border-dashed border-border rounded-md p-3 text-center text-xs cursor-pointer hover:bg-muted">
+                <Upload className="w-3 h-3 inline-block mr-1" />Upload reference document
+              </div>
+            </label>
+            <div className="space-y-1">
+              {attachments.length === 0 && <div className="text-[11px] text-muted-foreground">No reference documents yet.</div>}
+              {attachments.map((a: any) => (
+                <div key={a.id} className="flex items-center gap-2 text-xs border border-border rounded px-2 py-1.5">
+                  <FileText className="w-3 h-3 text-muted-foreground" />
+                  <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
+                  <button onClick={() => onDelete && onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -614,7 +653,29 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch }: any) {
           {list("Risks", intel.risks)}
           {intel.key_personnel?.length > 0 && (
             <div><div className="text-xs font-semibold mb-1">Key personnel</div>
-              <div className="space-y-1 text-xs">{intel.key_personnel.map((p: any, i: number) => <div key={i} className="border border-border rounded px-2 py-1"><span className="font-semibold">{p.name}</span> — {p.role} {p.notes && <span className="text-muted-foreground">· {p.notes}</span>}</div>)}</div>
+              <div className="space-y-1 text-xs">{intel.key_personnel.map((p: any, i: number) => (
+                <div key={i} className="border border-border rounded px-2 py-1 flex items-center gap-2">
+                  <div className="flex-1">
+                    <span className="font-semibold">{p.name}</span> — {p.role} {p.notes && <span className="text-muted-foreground">· {p.notes}</span>}
+                  </div>
+                  {p.name && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <a
+                          href={linkedinUrl(p.name)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-muted-foreground hover:text-primary inline-flex items-center justify-center h-6 w-6 rounded hover:bg-accent"
+                          aria-label={`Search LinkedIn for ${p.name}`}
+                        >
+                          <Linkedin className="w-3.5 h-3.5" />
+                        </a>
+                      </TooltipTrigger>
+                      <TooltipContent>Search LinkedIn</TooltipContent>
+                    </Tooltip>
+                  )}
+                </div>
+              ))}</div>
             </div>
           )}
           {intel.citations?.length > 0 && (
