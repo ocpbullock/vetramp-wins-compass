@@ -287,6 +287,9 @@ export function CompetitiveIntelModal({
               oppNaics={opp?.naicsCode ?? ""}
               oppSetAside={opp?.typeOfSetAside || undefined}
               responseDeadLine={opp?.responseDeadLine}
+              oppVehicle={oppVehicle}
+              heldVehicles={heldVehicles}
+              partnerVehicles={partnerVehicles}
             />
           ) : null}
         </section>
