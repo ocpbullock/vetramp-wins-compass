@@ -96,6 +96,30 @@ function ProposalPipeline() {
     setAttachments((a) => a.filter((x) => x.id !== att.id));
   }
 
+  const [parsing, setParsing] = useState(false);
+  async function parseDocuments() {
+    const sowAtts = attachments.filter((a) => a.file_type === "sow");
+    if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
+    setParsing(true);
+    try {
+      const { data: sess } = await supabase.auth.getSession();
+      const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/parse-sow`;
+      toast.info("Parsing solicitation documents… this can take a minute");
+      const r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${sess.session?.access_token}` },
+        body: JSON.stringify({ proposalId }),
+      });
+      const j = await r.json();
+      if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
+      // The edge function may have updated capture fields server-side; refetch for the latest state
+      const { data: fresh } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
+      if (fresh) setProposal(fresh);
+      const filled = j.filled_fields?.length ?? 0;
+      toast.success(`Extracted ${j.matrix?.requirements?.length ?? 0} requirements${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
+    } catch (e: any) { toast.error(e.message); } finally { setParsing(false); }
+  }
+
   async function autoFetchSamAttachments() {
     if (!proposal?.notice_id) { toast.error("No notice ID on this opportunity"); return; }
     const { data: sess } = await supabase.auth.getSession();
