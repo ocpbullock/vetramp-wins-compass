@@ -149,7 +149,7 @@ function Dashboard() {
       setOpps(samRes.opportunities);
       setProgress(60);
 
-      setProgressText("Fetching USAspending historical awards (5-year lookback, paginating)...");
+      setProgressText("Fetching USAspending historical awards (10-year lookback, paginating)...");
       const usaRes = await searchUsaspending({
         naicsCodes: input.naicsCodes,
         startDate: historicalFrom,
