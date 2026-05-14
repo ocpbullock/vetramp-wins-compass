@@ -312,6 +312,7 @@ function ProposalPipeline() {
       toast.error(friendlyFromError(e));
     } finally {
       setSectionGen((s) => ({ ...s, [sectionId]: false }));
+      setAiBusy(false);
     }
   }
 
