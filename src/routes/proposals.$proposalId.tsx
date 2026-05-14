@@ -765,6 +765,17 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
             {parsing ? (parseProgress || "Parsing…") : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
           </Button>
+          {proposal.compliance_matrix && !parsing && (
+            <Button
+              onClick={() => onParse?.({ skipCache: true })}
+              variant="ghost"
+              size="sm"
+              className="w-full text-[11px] h-7"
+              disabled={sowAttachments.length === 0}
+            >
+              <RefreshCw className="w-3 h-3 mr-1" /> Force regenerate (bypass cache)
+            </Button>
+          )}
           {parsing && proposal.parsing_status === "parsing" && (
             <div className="text-[11px] text-muted-foreground">Do not navigate away — parsing in progress.</div>
           )}
