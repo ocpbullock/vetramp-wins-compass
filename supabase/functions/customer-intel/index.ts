@@ -83,6 +83,8 @@ Research this customer and return structured intel. Focus on: who actually uses 
     const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
     const intel = args ? JSON.parse(args) : null;
     if (!intel) throw new Error("No intel returned");
+    intel._data_source = "ai";
+    intel._fetched_at = new Date().toISOString();
     return new Response(JSON.stringify({ intel }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("customer-intel error:", e);

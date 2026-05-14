@@ -314,7 +314,15 @@ serve(async (req) => {
         const summary = partials.map((p) => p.summary).filter(Boolean).join("\n\n");
         const capture_details = partials.reduce((acc, p) => mergeCapture(acc, p.capture_details || {}), {} as any);
 
-        const matrix = { requirements, evaluation_factors, submission_instructions, page_limits, summary, capture_details };
+        const parse_metadata = {
+          total_chars: combined.length,
+          total_chunks: chunks.length,
+          successful_chunks: partials.length,
+          parsed_files: parsed.map((p) => ({ filename: p.filename, chars: p.chars, truncated: p.truncated, empty: p.empty })),
+          truncated_any: parsed.some((p) => p.truncated),
+          parsed_at: new Date().toISOString(),
+        };
+        const matrix = { requirements, evaluation_factors, submission_instructions, page_limits, summary, capture_details, parse_metadata };
         const gaps = requirements.filter((r: any) => !r.proposal_section).length;
 
         const cap = capture_details;

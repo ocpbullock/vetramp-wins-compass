@@ -7,6 +7,7 @@ import { format, subYears, parseISO } from "date-fns";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid,
 } from "recharts";
+import { DataProvenance } from "./DataSourceBadge";
 
 const fmtMoney = (n: number) =>
   n >= 1_000_000_000 ? `$${(n / 1e9).toFixed(2)}B`
@@ -30,6 +31,7 @@ export function TrackedAnalyzePanel({
   const [loading, setLoading] = useState(false);
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open || !naicsCode) return;
@@ -38,7 +40,7 @@ export function TrackedAnalyzePanel({
     const startDate = format(subYears(new Date(), 5), "yyyy-MM-dd");
     const endDate = format(new Date(), "yyyy-MM-dd");
     searchUsaspending({ naicsCodes: [naicsCode], startDate, endDate, maxResults: 2000 })
-      .then((res) => { if (!cancelled) setAwards(res.results ?? []); })
+      .then((res) => { if (!cancelled) { setAwards(res.results ?? []); setFetchedAt(new Date().toISOString()); } })
       .catch((e) => { if (!cancelled) setError(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -100,6 +102,14 @@ export function TrackedAnalyzePanel({
             {title && <div className="font-medium text-foreground">{title}</div>}
             <div>NAICS <span className="font-mono">{naicsCode}</span> · Agency: {agency || "—"}</div>
             <div className="text-xs">5-year lookback</div>
+            {(() => {
+              const latest = agencyAwards.map((a) => a["Start Date"]).filter(Boolean).sort().slice(-1)[0];
+              return (
+                <div className="text-[11px] text-amber-600 dark:text-amber-400">
+                  ⏱ USAspending data may be 30-90 days behind actual awards.{latest && <> Most recent award in this dataset: <span className="font-mono">{latest.slice(0, 10)}</span></>}
+                </div>
+              );
+            })()}
           </div>
         </SheetHeader>
 
@@ -160,6 +170,10 @@ export function TrackedAnalyzePanel({
                   </div>
                 )}
               </section>
+
+              <div className="border-t border-border pt-3">
+                <DataProvenance source="USAspending.gov" fetchedAt={fetchedAt} />
+              </div>
             </>
           )}
         </div>

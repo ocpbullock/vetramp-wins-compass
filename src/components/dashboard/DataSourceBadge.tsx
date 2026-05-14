@@ -1,4 +1,4 @@
-import { Database, Zap } from "lucide-react";
+import { Database, Zap, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 export type DataSource =
@@ -40,5 +40,31 @@ export function DataSourceBadge({ source }: { source: DataSource }) {
       <Database className="w-3 h-3" />
       {label} · {relativeTime(source.fetchedAt)}
     </Badge>
+  );
+}
+
+export function relativeTimeStr(iso?: string | null) {
+  if (!iso) return "unknown";
+  return relativeTime(iso);
+}
+
+export function DataProvenance({
+  source,
+  fetchedAt,
+  note,
+}: {
+  source: string;
+  fetchedAt?: string | null;
+  note?: string;
+}) {
+  return (
+    <div
+      className="inline-flex items-center gap-1 text-[10px] text-muted-foreground"
+      title={note || (fetchedAt ? `Fetched ${new Date(fetchedAt).toLocaleString()}` : undefined)}
+    >
+      <Info className="w-3 h-3" />
+      Data from {source}
+      {fetchedAt && <span> · fetched {relativeTime(fetchedAt)}</span>}
+    </div>
   );
 }

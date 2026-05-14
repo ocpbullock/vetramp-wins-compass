@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { ArrowLeft, Download, ShieldCheck, AlertTriangle, ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ArrowLeft, Download, ShieldCheck, AlertTriangle, ChevronDown, ChevronRight, Search, CheckCircle2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useTeam, type TeamMember } from "@/lib/team";
 
 type ReqStatus = "not_started" | "in_progress" | "drafted" | "reviewed" | "final";
@@ -121,6 +122,7 @@ export function ComplianceStep({
     const total = reqs.length;
     const counts: Record<ReqStatus, number> = { not_started: 0, in_progress: 0, drafted: 0, reviewed: 0, final: 0 };
     const bySection: Record<string, { total: number; unaddressed: number }> = {};
+    let verified = 0;
     for (const r of reqs) {
       const s = ((r.status as ReqStatus) || "not_started");
       counts[s]++;
@@ -128,12 +130,41 @@ export function ComplianceStep({
       bySection[sec] ||= { total: 0, unaddressed: 0 };
       bySection[sec].total++;
       if (s === "not_started") bySection[sec].unaddressed++;
+      if (r.verified) verified++;
     }
     const addressed = total - counts.not_started;
     const pct = total ? Math.round((addressed / total) * 100) : 0;
+    const verifiedPct = total ? Math.round((verified / total) * 100) : 0;
     const sectionRows = Object.entries(bySection).sort((a, b) => b[1].unaddressed - a[1].unaddressed);
-    return { total, addressed, pct, counts, sectionRows };
+    return { total, addressed, pct, counts, sectionRows, verified, verifiedPct };
   }, [reqs]);
+
+  // Validation pass on the matrix
+  const validation = useMemo(() => {
+    const meta = matrix.parse_metadata || {};
+    const totalChars: number = meta.total_chars || 0;
+    const approxPages = totalChars ? Math.max(1, Math.round(totalChars / 3000)) : 0;
+    const seen = new Set<string>();
+    const dupes = new Set<string>();
+    let empty = 0;
+    let unmapped = 0;
+    for (const r of reqs) {
+      const id = String(r.req_id || "");
+      if (id) {
+        if (seen.has(id)) dupes.add(id);
+        seen.add(id);
+      }
+      if (!String(r.requirement_text || "").trim()) empty++;
+      if (!r.proposal_section) unmapped++;
+    }
+    const expectedMin = approxPages ? Math.floor(approxPages / 2) : 0;
+    const sparse = expectedMin > 0 && reqs.length < expectedMin;
+    const truncated = !!meta.truncated_any;
+    return {
+      totalChars, approxPages, dupes: Array.from(dupes), empty, unmapped, sparse,
+      expectedMin, truncated, parsedFiles: meta.parsed_files || [],
+    };
+  }, [matrix.parse_metadata, reqs]);
 
   function exportMatrixCsv() {
     const rows = [["Req ID", "Source", "Type", "Category", "Requirement", "Proposal Section", "Status", "Assignee", "Response Notes"]];
@@ -176,6 +207,37 @@ export function ComplianceStep({
 
   return (
     <div className="space-y-4">
+      {/* Validation summary */}
+      {reqs.length > 0 && (
+        <Card className="border-blue-500/30 bg-blue-500/5">
+          <CardContent className="py-3 space-y-2">
+            <div className="text-sm">
+              Extracted <span className="font-semibold">{stats.total}</span> requirements
+              {validation.approxPages ? <> from ~<span className="font-semibold">{validation.approxPages}</span> pages of solicitation text</> : null}
+              {validation.unmapped > 0 && <> · <span className="text-amber-600 dark:text-amber-400 font-semibold">{validation.unmapped}</span> unmapped to a proposal section</>}
+              {validation.empty > 0 && <> · <span className="text-destructive font-semibold">{validation.empty}</span> with empty text</>}
+              {validation.dupes.length > 0 && <> · <span className="text-destructive font-semibold">{validation.dupes.length}</span> duplicate IDs</>}
+              .
+            </div>
+            {validation.sparse && (
+              <div className="text-xs text-amber-700 dark:text-amber-400 flex items-start gap-1">
+                <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                Only {reqs.length} requirements across ~{validation.approxPages} pages — fewer than expected ({validation.expectedMin}+). The model may have missed sections; consider re-parsing.
+              </div>
+            )}
+            {validation.truncated && (
+              <div className="text-xs text-destructive flex items-start gap-1">
+                <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+                ⚠️ Documents were partially processed (one or more files exceeded the per-file size limit). Some requirements may be missing. Consider uploading smaller individual files.
+              </div>
+            )}
+            {validation.dupes.length > 0 && (
+              <div className="text-[11px] text-muted-foreground">Duplicate req_ids: <span className="font-mono">{validation.dupes.slice(0, 6).join(", ")}</span>{validation.dupes.length > 6 && "…"}</div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Dashboard summary */}
       {reqs.length > 0 && (
         <Card>
@@ -184,7 +246,7 @@ export function ComplianceStep({
             <CardDescription className="text-xs">Track response status across all extracted requirements.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
               <div className="border border-border rounded-md p-3">
                 <div className="text-xs text-muted-foreground">Total requirements</div>
                 <div className="text-2xl font-semibold">{stats.total}</div>
@@ -193,6 +255,11 @@ export function ComplianceStep({
                 <div className="text-xs text-muted-foreground">Addressed</div>
                 <div className="text-2xl font-semibold">{stats.pct}%</div>
                 <div className="text-[10px] text-muted-foreground">{stats.addressed} of {stats.total}</div>
+              </div>
+              <div className="border border-border rounded-md p-3">
+                <div className="text-xs text-muted-foreground flex items-center gap-1"><CheckCircle2 className="w-3 h-3" />Verified</div>
+                <div className="text-2xl font-semibold">{stats.verifiedPct}%</div>
+                <div className="text-[10px] text-muted-foreground">{stats.verified} of {stats.total}</div>
               </div>
               <div className="border border-border rounded-md p-3 col-span-2">
                 <div className="text-xs text-muted-foreground mb-1">By status</div>
@@ -311,8 +378,8 @@ export function ComplianceStep({
             </div>
 
             <div className="border border-border rounded-md divide-y divide-border">
-              <div className="grid grid-cols-[1.25rem_5rem_5rem_4rem_1fr_8rem_8rem_2rem] gap-2 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted">
-                <div></div><div>ID</div><div>Source</div><div>Type</div><div>Requirement</div><div>Section</div><div>Status</div><div>Owner</div>
+              <div className="grid grid-cols-[1.25rem_2rem_5rem_5rem_4rem_1fr_8rem_8rem_2rem] gap-2 px-2 py-1.5 text-[10px] uppercase tracking-wide text-muted-foreground bg-muted">
+                <div></div><div title="Verified">Ver.</div><div>ID</div><div>Source</div><div>Type</div><div>Requirement</div><div>Section</div><div>Status</div><div>Owner</div>
               </div>
               {filtered.map((r: any) => {
                 const status: ReqStatus = (r.status as ReqStatus) || "not_started";
@@ -321,14 +388,20 @@ export function ComplianceStep({
                 return (
                   <div key={r.req_id}>
                     <div
-                      className="grid grid-cols-[1.25rem_5rem_5rem_4rem_1fr_8rem_8rem_2rem] gap-2 px-2 py-2 text-xs items-center hover:bg-accent/40 cursor-pointer"
+                      className="grid grid-cols-[1.25rem_2rem_5rem_5rem_4rem_1fr_8rem_8rem_2rem] gap-2 px-2 py-2 text-xs items-center hover:bg-accent/40 cursor-pointer"
                       onClick={() => setExpanded((e) => ({ ...e, [r.req_id]: !e[r.req_id] }))}
                     >
                       <div className="text-muted-foreground">{isOpen ? <ChevronDown className="w-3.5 h-3.5" /> : <ChevronRight className="w-3.5 h-3.5" />}</div>
+                      <div onClick={(e) => e.stopPropagation()} title="Mark requirement as verified by a human">
+                        <Checkbox
+                          checked={!!r.verified}
+                          onCheckedChange={(v) => updateReq(r.req_id, { verified: !!v })}
+                        />
+                      </div>
                       <div className="font-mono text-[10px]">{r.req_id}</div>
                       <div className="text-[10px] truncate">{r.source_section}</div>
                       <div><Badge variant="outline" className="text-[10px]">{r.type}</Badge></div>
-                      <div className="truncate" title={r.requirement_text}>{r.requirement_text}</div>
+                      <div className="truncate" title={r.requirement_text}>{r.requirement_text || <span className="text-destructive">(empty)</span>}</div>
                       <div>
                         {r.proposal_section
                           ? <Badge variant="secondary" className="text-[10px]">{r.proposal_section}</Badge>
