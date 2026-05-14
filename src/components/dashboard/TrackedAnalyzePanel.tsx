@@ -37,7 +37,7 @@ export function TrackedAnalyzePanel({
     if (!open || !naicsCode) return;
     let cancelled = false;
     setLoading(true); setError(null); setAwards([]);
-    const startDate = format(subYears(new Date(), 5), "yyyy-MM-dd");
+    const startDate = format(subYears(new Date(), 10), "yyyy-MM-dd");
     const endDate = format(new Date(), "yyyy-MM-dd");
     searchUsaspending({ naicsCodes: [naicsCode], startDate, endDate, maxResults: 2000 })
       .then((res) => { if (!cancelled) { setAwards(res.results ?? []); setFetchedAt(new Date().toISOString()); } })
@@ -101,7 +101,7 @@ export function TrackedAnalyzePanel({
           <div className="text-sm text-muted-foreground space-y-0.5">
             {title && <div className="font-medium text-foreground">{title}</div>}
             <div>NAICS <span className="font-mono">{naicsCode}</span> · Agency: {agency || "—"}</div>
-            <div className="text-xs">5-year lookback</div>
+            <div className="text-xs">10-year lookback</div>
             {(() => {
               const latest = agencyAwards.map((a) => a["Start Date"]).filter(Boolean).sort().slice(-1)[0];
               return (
