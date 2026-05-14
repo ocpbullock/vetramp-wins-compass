@@ -20,10 +20,12 @@ export type SearchInput = {
 export function SearchControls({
   initial,
   onSearch,
+  onNaicsChange,
   busy,
 }: {
   initial?: Partial<SearchInput>;
   onSearch: (i: SearchInput) => void;
+  onNaicsChange?: (codes: string[]) => void;
   busy: boolean;
 }) {
   // Recalculate per render (memoized) so a long-lived session doesn't keep
