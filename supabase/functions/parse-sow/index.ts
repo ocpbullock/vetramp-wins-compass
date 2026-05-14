@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError } from "../_shared/ai-client.ts";
+import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError, AIBudgetExceededError, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -189,12 +189,14 @@ function mergeCapture(a: any, b: any): any {
   return out;
 }
 
-async function callAI(_apiKey: string, system: string, user: string, teamId: string | null): Promise<any> {
+async function callAI(_apiKey: string, system: string, user: string, teamId: string | null, userId: string | null, proposalId: string | null): Promise<any> {
   const data = await sharedCallAI({
     functionName: "parse-sow",
     teamId,
+    userId,
+    proposalId,
     body: {
-      model: "google/gemini-2.5-pro",
+      model: pickModel("parse-sow"),
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -210,7 +212,7 @@ async function callAI(_apiKey: string, system: string, user: string, teamId: str
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const { proposalId } = await req.json().catch(() => ({}));
+  const { proposalId, skipCache } = await req.json().catch(() => ({}));
   if (!proposalId) {
     return new Response(JSON.stringify({ error: "proposalId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
