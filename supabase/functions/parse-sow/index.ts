@@ -231,8 +231,8 @@ serve(async (req) => {
       const send = (event: string, data: any) => {
         try { controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`)); } catch {}
       };
-      const fail = async (msg: string) => {
-        await admin.from("proposals").update({ parsing_status: "error" }).eq("id", proposalId);
+      const fail = async (msg: string, status: "error" | "idle" = "error") => {
+        await admin.from("proposals").update({ parsing_status: status }).eq("id", proposalId);
         send("error", { error: msg });
         try { controller.close(); } catch {}
       };
