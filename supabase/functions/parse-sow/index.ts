@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError, AIBudgetExceededError, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
+import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError, AIBudgetExceededError, AIServiceUnavailableError, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
