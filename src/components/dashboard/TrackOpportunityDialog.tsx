@@ -297,3 +297,48 @@ export function TrackOpportunityDialog({
     </Dialog>
   );
 }
+
+function vehicleMatches(held: string, query: string): boolean {
+  if (!held || !query) return false;
+  const h = held.toLowerCase();
+  const q = query.toLowerCase();
+  if (h === q) return true;
+  // OASIS+ matches OASIS+ SB Pool 1 etc.
+  if (q === "oasis+" && h.includes("oasis+")) return true;
+  if (h.includes("oasis+") && q.includes("oasis+")) return true;
+  return h.includes(q) || q.includes(h);
+}
+
+export function useTeamHasVehicle(teamId: string | null, vehicleQuery: string) {
+  const { data: held = [] } = useQuery({
+    queryKey: ["contract-vehicles", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_vehicles")
+        .select("vehicle_name,status")
+        .eq("team_id", teamId!);
+      if (error) throw new Error(error.message);
+      return data ?? [];
+    },
+  });
+  const match = held.find((h) => vehicleMatches(h.vehicle_name, vehicleQuery) && h.status === "active");
+  return { held, match };
+}
+
+function VehicleHoldingNotice({ teamId, vehicle }: { teamId: string | null; vehicle: string }) {
+  const { match } = useTeamHasVehicle(teamId, vehicle);
+  if (!teamId || !vehicle) return null;
+  if (match) {
+    return (
+      <div className="mt-2 flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30">
+        <CheckCircle2 className="w-3.5 h-3.5" /> You hold this vehicle ({match.vehicle_name})
+      </div>
+    );
+  }
+  return (
+    <div className="mt-2 flex items-center gap-1.5 text-xs px-2 py-1 rounded bg-amber-500/10 text-amber-700 dark:text-amber-400 border border-amber-500/30">
+      <AlertTriangle className="w-3.5 h-3.5" /> You don't hold this vehicle — consider teaming
+    </div>
+  );
+}
