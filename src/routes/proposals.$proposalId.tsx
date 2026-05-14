@@ -402,23 +402,33 @@ function ProposalPipeline() {
           </TabsList>
 
           <TabsContent value="intake" className="mt-4 space-y-4">
-            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} />
+            <StepErrorBoundary label="intake">
+              <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} />
+            </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
-            <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
+            <StepErrorBoundary label="intel">
+              <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
+            </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
-            <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
+            <StepErrorBoundary label="compliance">
+              <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
+            </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
-            <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
+            <StepErrorBoundary label="solution">
+              <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
+            </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="generate" className="mt-4 space-y-4">
-            <GenerateStep proposal={proposal} sectionGen={sectionGen} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
-              const wc = content.split(/\s+/).filter(Boolean).length;
-              const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
-              patchProposal({ sections: next });
-            }} onExport={exportDocx} />
+            <StepErrorBoundary label="generate">
+              <GenerateStep proposal={proposal} sectionGen={sectionGen} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
+                const wc = content.split(/\s+/).filter(Boolean).length;
+                const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
+                patchProposal({ sections: next });
+              }} onExport={exportDocx} />
+            </StepErrorBoundary>
           </TabsContent>
         </Tabs>
       </div>
