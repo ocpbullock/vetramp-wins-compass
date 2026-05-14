@@ -195,6 +195,7 @@ async function callAI(_apiKey: string, system: string, user: string, teamId: str
     teamId,
     userId,
     proposalId,
+    timeoutMs: 180_000,
     body: {
       model: pickModel("parse-sow"),
       messages: [
