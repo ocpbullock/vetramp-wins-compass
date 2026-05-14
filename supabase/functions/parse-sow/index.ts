@@ -4,7 +4,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError } from "../_shared/ai-client.ts";
+import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError, AIBudgetExceededError, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -189,12 +189,14 @@ function mergeCapture(a: any, b: any): any {
   return out;
 }
 
-async function callAI(_apiKey: string, system: string, user: string, teamId: string | null): Promise<any> {
+async function callAI(_apiKey: string, system: string, user: string, teamId: string | null, userId: string | null, proposalId: string | null): Promise<any> {
   const data = await sharedCallAI({
     functionName: "parse-sow",
     teamId,
+    userId,
+    proposalId,
     body: {
-      model: "google/gemini-2.5-pro",
+      model: pickModel("parse-sow"),
       messages: [
         { role: "system", content: system },
         { role: "user", content: user },
@@ -210,7 +212,7 @@ async function callAI(_apiKey: string, system: string, user: string, teamId: str
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
-  const { proposalId } = await req.json().catch(() => ({}));
+  const { proposalId, skipCache } = await req.json().catch(() => ({}));
   if (!proposalId) {
     return new Response(JSON.stringify({ error: "proposalId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
@@ -279,6 +281,35 @@ serve(async (req) => {
         const combined = parsed.map((p) => `=== ${p.filename} ===\n${p.text}`).join("\n\n").slice(0, COMBINED_LIMIT);
         if (!combined.trim()) return await fail("Could not extract text from attachments. Upload a text-based PDF or .txt version of the SOW.");
 
+        // ----- Cache check -----
+        const { data: { user } = { user: null } } = await userClient.auth.getUser();
+        const userId = user?.id ?? null;
+        const teamId = proposal.team_id ?? null;
+        const cacheKey = await hashCacheKey({
+          combined_hash: await hashCacheKey(combined),
+          opportunity_title: proposal.opportunity_title,
+          agency: proposal.agency,
+          solicitation_number: proposal.solicitation_number,
+          naics_code: proposal.naics_code,
+        });
+        if (!skipCache) {
+          const cached = await getCachedResponse("parse-sow", cacheKey);
+          if (cached) {
+            send("status", { phase: "cache_hit", message: "Returning cached parse result (less than 24h old)…" });
+            const matrix = cached.response_data;
+            await admin.from("proposals").update({ compliance_matrix: matrix, parsing_status: "complete" }).eq("id", proposalId);
+            send("done", {
+              matrix,
+              cached: true,
+              cached_at: cached.created_at,
+              requirements_count: matrix?.requirements?.length ?? 0,
+              chunks: matrix?.parse_metadata?.total_chunks ?? 0,
+            });
+            try { controller.close(); } catch {}
+            return;
+          }
+        }
+
         const chunks = chunkText(combined);
         send("status", { phase: "chunked", totalChunks: chunks.length, totalChars: combined.length });
 
@@ -291,11 +322,12 @@ serve(async (req) => {
           send("progress", { chunk: i + 1, total: chunks.length, message: `Parsing chunk ${i + 1} of ${chunks.length}…` });
           const userMsg = `${meta}\nEXCERPT ${i + 1} of ${chunks.length}:\n${chunks[i]}`;
           try {
-            const partial = await callAI(apiKey, system, userMsg, proposal.team_id ?? null);
+            const partial = await callAI(apiKey, system, userMsg, teamId, userId, proposalId);
             if (partial) partials.push(partial);
           } catch (e: any) {
             if (e instanceof AIRateLimitError) return await fail("Rate limit exceeded. Try again in a few minutes.");
             if (e instanceof AICreditsError) return await fail("AI credits exhausted.");
+            if (e instanceof AIBudgetExceededError) return await fail(e.message);
             if (e instanceof AITimeoutError) return await fail(e.message);
             console.error("chunk failed:", i + 1, e);
             send("warn", { message: `Chunk ${i + 1} failed: ${e.message}` });
@@ -360,6 +392,9 @@ serve(async (req) => {
         }
 
         await admin.from("proposals").update(update).eq("id", proposalId);
+
+        // Cache final matrix for 24h
+        try { await setCachedResponse({ functionName: "parse-sow", cacheKey, teamId, responseData: matrix, model: pickModel("parse-sow") }); } catch (e) { console.error("cache write failed:", e); }
 
         send("done", {
           matrix,

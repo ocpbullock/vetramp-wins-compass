@@ -1,6 +1,6 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { callAI, aiErrorResponse } from "../_shared/ai-client.ts";
+import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,7 +44,22 @@ const SCHEMA = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { opportunity, companyProfile, extraNotes, attachmentsText, teamId } = await req.json();
+    const { opportunity, companyProfile, extraNotes, attachmentsText, teamId, userId, proposalId, skipCache } = await req.json();
+
+    // Cache key over the inputs that materially affect the result
+    const cacheKey = await hashCacheKey({
+      opportunity,
+      profile: companyProfile,
+      extraNotes: extraNotes ?? "",
+      attachmentsHash: typeof attachmentsText === "string" && attachmentsText.length > 0 ? await hashCacheKey(attachmentsText) : "",
+    });
+    if (!skipCache) {
+      const cached = await getCachedResponse("customer-intel", cacheKey);
+      if (cached) {
+        const intel = { ...cached.response_data, _cached: true, _cached_at: cached.created_at };
+        return new Response(JSON.stringify({ intel }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+    }
 
     const system = `You are a senior federal capture manager doing pre-RFP customer intelligence. Use your knowledge of US federal agencies, DoD components, USA Spending, FPDS, SAM.gov, agency strategic plans, and recent press to build a deep profile of the buying customer. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`;
 
@@ -66,8 +81,10 @@ Research this customer and return structured intel. Focus on: who actually uses 
       data = await callAI({
         functionName: "customer-intel",
         teamId: teamId ?? null,
+        userId: userId ?? null,
+        proposalId: proposalId ?? null,
         body: {
-          model: "google/gemini-2.5-pro",
+          model: pickModel("customer-intel"),
           messages: [
             { role: "system", content: system },
             { role: "user", content: user },
@@ -85,6 +102,17 @@ Research this customer and return structured intel. Focus on: who actually uses 
     if (!intel) throw new Error("No intel returned");
     intel._data_source = "ai";
     intel._fetched_at = new Date().toISOString();
+    try {
+      await setCachedResponse({
+        functionName: "customer-intel",
+        cacheKey,
+        teamId: teamId ?? null,
+        responseData: intel,
+        model: pickModel("customer-intel"),
+        inputTokens: data.__usage?.inputTokens,
+        outputTokens: data.__usage?.outputTokens,
+      });
+    } catch (e) { console.error("cache write failed:", e); }
     return new Response(JSON.stringify({ intel }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e) {
     console.error("customer-intel error:", e);

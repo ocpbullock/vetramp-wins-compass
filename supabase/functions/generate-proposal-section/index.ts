@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
-import { callAI, aiErrorResponse } from "../_shared/ai-client.ts";
+import { callAI, aiErrorResponse, pickModel } from "../_shared/ai-client.ts";
 
 const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   past_performance: ["past_performance"],
@@ -98,6 +98,8 @@ Deno.serve(async (req) => {
       teaming,
       pastPerformance,
       teamId,
+      userId,
+      proposalId,
     } = body;
 
     const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
@@ -146,9 +148,11 @@ Output the markdown for this section now. Do NOT include other sections.`;
       res = await callAI({
         functionName: "generate-proposal-section",
         teamId: teamId ?? null,
+        userId: userId ?? null,
+        proposalId: proposalId ?? null,
         stream: true,
         body: {
-          model: "google/gemini-3-flash-preview",
+          model: pickModel("generate-proposal-section", sectionId),
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },
