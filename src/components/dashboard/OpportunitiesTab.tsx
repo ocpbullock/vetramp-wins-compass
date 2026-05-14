@@ -233,6 +233,7 @@ export function OpportunitiesTab({
                     <td className="font-mono text-xs">{o.solicitationNumber}</td>
                     <td>
                       <div className="flex gap-1">
+                        <StarButton input={starInputFromSam(o)} />
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button size="icon" variant="outline" onClick={() => onCompete(o)} className="h-7 w-7 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">
