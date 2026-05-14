@@ -281,6 +281,35 @@ serve(async (req) => {
         const combined = parsed.map((p) => `=== ${p.filename} ===\n${p.text}`).join("\n\n").slice(0, COMBINED_LIMIT);
         if (!combined.trim()) return await fail("Could not extract text from attachments. Upload a text-based PDF or .txt version of the SOW.");
 
+        // ----- Cache check -----
+        const { data: { user } = { user: null } } = await userClient.auth.getUser();
+        const userId = user?.id ?? null;
+        const teamId = proposal.team_id ?? null;
+        const cacheKey = await hashCacheKey({
+          combined_hash: await hashCacheKey(combined),
+          opportunity_title: proposal.opportunity_title,
+          agency: proposal.agency,
+          solicitation_number: proposal.solicitation_number,
+          naics_code: proposal.naics_code,
+        });
+        if (!skipCache) {
+          const cached = await getCachedResponse("parse-sow", cacheKey);
+          if (cached) {
+            send("status", { phase: "cache_hit", message: "Returning cached parse result (less than 24h old)…" });
+            const matrix = cached.response_data;
+            await admin.from("proposals").update({ compliance_matrix: matrix, parsing_status: "complete" }).eq("id", proposalId);
+            send("done", {
+              matrix,
+              cached: true,
+              cached_at: cached.created_at,
+              requirements_count: matrix?.requirements?.length ?? 0,
+              chunks: matrix?.parse_metadata?.total_chunks ?? 0,
+            });
+            try { controller.close(); } catch {}
+            return;
+          }
+        }
+
         const chunks = chunkText(combined);
         send("status", { phase: "chunked", totalChunks: chunks.length, totalChars: combined.length });
 
@@ -293,11 +322,12 @@ serve(async (req) => {
           send("progress", { chunk: i + 1, total: chunks.length, message: `Parsing chunk ${i + 1} of ${chunks.length}…` });
           const userMsg = `${meta}\nEXCERPT ${i + 1} of ${chunks.length}:\n${chunks[i]}`;
           try {
-            const partial = await callAI(apiKey, system, userMsg, proposal.team_id ?? null);
+            const partial = await callAI(apiKey, system, userMsg, teamId, userId, proposalId);
             if (partial) partials.push(partial);
           } catch (e: any) {
             if (e instanceof AIRateLimitError) return await fail("Rate limit exceeded. Try again in a few minutes.");
             if (e instanceof AICreditsError) return await fail("AI credits exhausted.");
+            if (e instanceof AIBudgetExceededError) return await fail(e.message);
             if (e instanceof AITimeoutError) return await fail(e.message);
             console.error("chunk failed:", i + 1, e);
             send("warn", { message: `Chunk ${i + 1} failed: ${e.message}` });
