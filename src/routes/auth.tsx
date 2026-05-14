@@ -32,15 +32,6 @@ function AuthPage() {
     if (error) toast.error(error.message);
     else navigate({ to: "/" });
   }
-  async function handleSignUp(e: React.FormEvent) {
-    e.preventDefault();
-    setBusy(true);
-    const redirectTo = `${window.location.origin}/`;
-    const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: redirectTo } });
-    setBusy(false);
-    if (error) toast.error(error.message);
-    else toast.success("Account created — check your email to confirm.");
-  }
   async function handleGoogle() {
     setBusy(true);
     const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
@@ -71,29 +62,17 @@ function AuthPage() {
           Continue with Google
         </Button>
         <div className="relative mb-4"><div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div><div className="relative flex justify-center text-xs uppercase"><span className="bg-card px-2 text-muted-foreground">or</span></div></div>
-        <Tabs defaultValue="signin">
-          <TabsList className="grid grid-cols-2 w-full">
-            <TabsTrigger value="signin">Sign in</TabsTrigger>
-            <TabsTrigger value="signup">Sign up</TabsTrigger>
-          </TabsList>
-          <TabsContent value="signin">
-            <form onSubmit={handleSignIn} className="space-y-3 mt-4">
-              <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-              <div><Label>Password</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
-              <Button type="submit" disabled={busy} className="w-full">Sign in</Button>
-              <Button type="button" variant="outline" disabled={busy} className="w-full" onClick={handleMagicLink}>
-                Send magic link
-              </Button>
-            </form>
-          </TabsContent>
-          <TabsContent value="signup">
-            <form onSubmit={handleSignUp} className="space-y-3 mt-4">
-              <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
-              <div><Label>Password</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} minLength={6} required /></div>
-              <Button type="submit" disabled={busy} className="w-full">Create account</Button>
-            </form>
-          </TabsContent>
-        </Tabs>
+        <form onSubmit={handleSignIn} className="space-y-3">
+          <div><Label>Email</Label><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required /></div>
+          <div><Label>Password</Label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></div>
+          <Button type="submit" disabled={busy} className="w-full">Sign in</Button>
+          <Button type="button" variant="outline" disabled={busy} className="w-full" onClick={handleMagicLink}>
+            Send magic link
+          </Button>
+        </form>
+        <p className="text-xs text-muted-foreground text-center mt-6">
+          Access is invite-only. Contact your administrator to request an invitation.
+        </p>
       </Card>
     </div>
   );
