@@ -332,7 +332,8 @@ function ProposalPipeline() {
     if (proposal.staffing_plan) score += 10;
     const generated = SECTIONS.filter((s) => proposal.sections?.[s.id]?.content).length;
     score += Math.round((generated / SECTIONS.length) * 20);
-    return Math.min(100, score);
+    if (ociStatus(proposal.oci_screening) === "incomplete") score -= 5;
+    return Math.max(0, Math.min(100, score));
   }, [proposal, attachments]);
 
   if (loading || !proposal) return <div className="min-h-screen bg-background"><Header /><div className="p-8 text-muted-foreground">Loading proposal…</div></div>;
