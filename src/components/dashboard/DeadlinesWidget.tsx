@@ -38,15 +38,8 @@ export function DeadlinesWidget() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      // Get active proposals first to scope overdue reconcile
-      const { data: props } = await supabase
-        .from("proposals")
-        .select("id")
-        .neq("status", "submitted")
-        .neq("status", "archived");
-      const ids = (props || []).map((p) => p.id);
-      if (ids.length > 0) await reconcileOverdue(ids);
-
+      // Compute overdue at read-time instead of mutating the database from a
+      // render path. A scheduled job (pg_cron) can persist the status if needed.
       const horizon = new Date();
       horizon.setDate(horizon.getDate() + 14);
       const { data, error } = await supabase
@@ -56,7 +49,15 @@ export function DeadlinesWidget() {
         .lte("due_date", horizon.toISOString())
         .order("due_date", { ascending: true })
         .limit(20);
-      if (!error) setRows((data as any as Row[]) || []);
+      if (!error) {
+        const now = Date.now();
+        const rows = ((data as any as Row[]) || []).map((r) =>
+          r.status === "upcoming" && new Date(r.due_date).getTime() < now
+            ? { ...r, status: "overdue" }
+            : r,
+        );
+        setRows(rows);
+      }
       setLoading(false);
     })();
   }, [user]);
