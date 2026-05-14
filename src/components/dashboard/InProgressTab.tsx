@@ -20,6 +20,7 @@ type Proposal = {
   status: string | null;
   response_deadline: string | null;
   updated_at: string;
+  oci_screening: any;
 };
 
 export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
