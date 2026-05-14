@@ -52,8 +52,12 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
         <TeamProvider>
-          <Outlet />
-          <Toaster richColors position="top-right" />
+          <StarredProvider>
+            <TooltipProvider delayDuration={150}>
+              <Outlet />
+              <Toaster richColors position="top-right" />
+            </TooltipProvider>
+          </StarredProvider>
         </TeamProvider>
       </AuthProvider>
     </QueryClientProvider>
