@@ -4,12 +4,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ExternalLink, FileSignature, ArrowUpDown, Repeat, Sparkles, Swords } from "lucide-react";
+import { ExternalLink, FileSignature, ArrowUpDown, Repeat, Swords } from "lucide-react";
 import {
   badgeClassForType, isProposable, shortAgency,
 } from "@/lib/contracts";
 import { type SamOpportunity, type HistoricalAward } from "@/lib/api";
-import { NaicsFilterChips } from "./NaicsFilterChips";
 import { buildIndex, matchIncumbent, type IncumbentMatch } from "@/lib/incumbents";
 import {
   Tooltip, TooltipContent, TooltipProvider, TooltipTrigger,
@@ -137,7 +136,6 @@ export function OpportunitiesTab({
   return (
     <TooltipProvider delayDuration={150}>
       <div className="space-y-3">
-        <NaicsFilterChips searched={searchedNaics} active={activeNaics} onChange={setActiveNaics} />
         <div className="flex flex-wrap gap-2 items-center">
           <Input placeholder="Search title or sol #..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
           <Select value={agency} onValueChange={setAgency}>
@@ -241,7 +239,7 @@ export function OpportunitiesTab({
 
 function IncumbentCell({ m }: { m?: IncumbentMatch }) {
   if (!m || m.confidence === "none") {
-    return <span className="inline-flex items-center gap-1 text-muted-foreground"><Sparkles className="w-3 h-3" />New</span>;
+    return <span className="text-muted-foreground">—</span>;
   }
   const label = m.confidence === "exact"
     ? "Recompete"
