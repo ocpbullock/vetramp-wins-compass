@@ -26,6 +26,8 @@ import {
 } from "@/lib/api";
 import { useLogStore } from "@/lib/log-store";
 import { toast } from "sonner";
+import { generateDefaultMilestones } from "@/lib/milestones";
+import { DeadlinesWidget } from "@/components/dashboard/DeadlinesWidget";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
@@ -78,6 +80,9 @@ function Dashboard() {
       status: "intake",
     }).select("id").single();
     if (error) { toast.error(error.message); return; }
+    if (o.responseDeadLine) {
+      await generateDefaultMilestones(data.id, o.responseDeadLine);
+    }
     navigate({ to: "/proposals/$proposalId", params: { proposalId: data.id } });
   }
   const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
@@ -257,6 +262,8 @@ function Dashboard() {
           inProgressCount={inProgressCount}
           onSelect={setTab}
         />
+
+        <DeadlinesWidget />
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
