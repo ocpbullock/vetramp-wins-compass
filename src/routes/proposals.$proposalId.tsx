@@ -22,6 +22,7 @@ import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPast
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
 import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
+import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-classify";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
@@ -82,17 +83,24 @@ function ProposalPipeline() {
     if (error) toast.error(error.message);
   }
 
-  async function uploadFile(file: File, fileType: string) {
-    if (!user) return;
+  async function uploadFile(file: File, fileType?: string) {
+    if (!user) return null;
+    const ft = fileType || classifyFilename(file.name);
     const path = `${user.id}/${proposalId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const { error: upErr } = await supabase.storage.from("proposal-attachments").upload(path, file);
-    if (upErr) { toast.error(upErr.message); return; }
+    if (upErr) { toast.error(upErr.message); return null; }
     const { data: row, error: insErr } = await supabase.from("proposal_attachments").insert({
-      proposal_id: proposalId, filename: file.name, file_type: fileType, storage_path: path, source: "manual", size_bytes: file.size,
+      proposal_id: proposalId, filename: file.name, file_type: ft, storage_path: path, source: "manual", size_bytes: file.size,
     }).select().single();
-    if (insErr) { toast.error(insErr.message); return; }
+    if (insErr) { toast.error(insErr.message); return null; }
     setAttachments((a) => [row, ...a]);
-    toast.success(`Uploaded ${file.name}`);
+    return row;
+  }
+
+  async function updateAttachmentType(att: any, fileType: string) {
+    const { error } = await supabase.from("proposal_attachments").update({ file_type: fileType }).eq("id", att.id);
+    if (error) { toast.error(error.message); return; }
+    setAttachments((a) => a.map((x) => (x.id === att.id ? { ...x, file_type: fileType } : x)));
   }
 
   async function deleteAttachment(att: any) {
@@ -172,11 +180,14 @@ function ProposalPipeline() {
     }
   }
 
+  const [fetchResults, setFetchResults] = useState<any>(null);
+  const [fetching, setFetching] = useState(false);
   async function autoFetchSamAttachments() {
     if (!proposal?.notice_id) { toast.error("No notice ID on this opportunity"); return; }
+    setFetching(true);
+    setFetchResults(null);
     const { data: sess } = await supabase.auth.getSession();
     const token = sess.session?.access_token;
-    toast.info("Fetching attachments from SAM.gov…");
     try {
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/sam-attachments`;
       const r = await fetch(url, {
@@ -185,12 +196,19 @@ function ProposalPipeline() {
         body: JSON.stringify({ proposalId, noticeId: proposal.notice_id, action: "download" }),
       });
       const j = await r.json();
-      if (!r.ok) { toast.error(j.error || "Fetch failed"); return; }
-      toast.success(`Downloaded ${j.saved?.length ?? 0} of ${j.attempted ?? 0}`);
+      if (!r.ok) {
+        toast.error(j.error || "Fetch failed");
+        setFetchResults({ error: j.error || "Fetch failed", results: [], attempted: 0, saved: [] });
+        return;
+      }
+      setFetchResults(j);
       const { data: atts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false });
       setAttachments(atts ?? []);
     } catch (e: any) {
       toast.error(e.message);
+      setFetchResults({ error: e.message, results: [], attempted: 0, saved: [] });
+    } finally {
+      setFetching(false);
     }
   }
 
@@ -360,7 +378,7 @@ function ProposalPipeline() {
           </TabsList>
 
           <TabsContent value="intake" className="mt-4 space-y-4">
-            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} />
+            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} />
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
@@ -384,7 +402,131 @@ function ProposalPipeline() {
   );
 }
 
-function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId }: any) {
+function SamFetchResults({ results, samUrl }: { results: any; samUrl?: string }) {
+  if (!results) return null;
+  const { saved = [], results: items = [], attempted = 0, error } = results;
+  const downloaded = saved.length;
+  const authReq = items.filter((r: any) => r.status === "auth_required").length;
+  const failed = items.filter((r: any) => r.status === "error").length;
+  const zero = attempted === 0;
+  return (
+    <div className="space-y-2">
+      {zero ? (
+        <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 text-xs space-y-2">
+          <div className="font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1">
+            <AlertTriangle className="w-3.5 h-3.5" /> No attachments returned by SAM.gov
+          </div>
+          <div className="text-muted-foreground">
+            This usually means the files require authentication. Visit the listing on SAM.gov to download manually, then upload them below.
+          </div>
+          {samUrl && (
+            <Button asChild size="sm" variant="outline" className="w-full">
+              <a href={samUrl} target="_blank" rel="noreferrer"><ExternalLink className="w-3.5 h-3.5 mr-1" />Open opportunity on SAM.gov</a>
+            </Button>
+          )}
+        </div>
+      ) : (
+        <div className="rounded-md border border-border bg-muted/40 p-2.5 text-xs space-y-1.5">
+          <div className="font-medium">
+            Found {attempted} attachment{attempted === 1 ? "" : "s"}.{" "}
+            <span className="text-emerald-600 dark:text-emerald-400">Downloaded {downloaded}.</span>{" "}
+            {authReq > 0 && <span className="text-destructive">{authReq} require SAM.gov login.</span>}
+            {failed > 0 && <span className="text-destructive"> {failed} failed.</span>}
+          </div>
+          <div className="space-y-1">
+            {items.map((r: any, i: number) => (
+              <div key={i} className="flex items-center gap-1.5">
+                {r.status === "downloaded" ? (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                ) : (
+                  <AlertTriangle className="w-3.5 h-3.5 text-destructive shrink-0" />
+                )}
+                <span className="truncate flex-1" title={r.filename}>{r.filename}</span>
+                {r.status !== "downloaded" && (
+                  <span className="text-[10px] text-destructive">
+                    {r.status === "auth_required" ? "Requires SAM.gov login" : (r.error || "Failed")}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+          {(authReq > 0 || failed > 0) && samUrl && (
+            <a href={samUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary text-[11px] mt-1">
+              <ExternalLink className="w-3 h-3" />Download manually from SAM.gov
+            </a>
+          )}
+        </div>
+      )}
+      {error && <div className="text-[11px] text-destructive">{error}</div>}
+    </div>
+  );
+}
+
+function DropZoneUpload({ onUpload }: { onUpload: (f: File, type?: string) => Promise<any> }) {
+  const [dragOver, setDragOver] = useState(false);
+  const [progress, setProgress] = useState<{ name: string; status: "uploading" | "done" | "error"; type?: string }[]>([]);
+
+  async function handleFiles(files: FileList | File[]) {
+    const arr = Array.from(files);
+    if (!arr.length) return;
+    setProgress((p) => [...arr.map((f) => ({ name: f.name, status: "uploading" as const, type: classifyFilename(f.name) })), ...p]);
+    for (const f of arr) {
+      try {
+        await onUpload(f, classifyFilename(f.name));
+        setProgress((p) => p.map((x) => (x.name === f.name && x.status === "uploading" ? { ...x, status: "done" } : x)));
+      } catch {
+        setProgress((p) => p.map((x) => (x.name === f.name && x.status === "uploading" ? { ...x, status: "error" } : x)));
+      }
+    }
+    setTimeout(() => setProgress((p) => p.filter((x) => x.status === "uploading")), 2500);
+  }
+
+  return (
+    <div className="space-y-2">
+      <label
+        onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+        onDragLeave={() => setDragOver(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          setDragOver(false);
+          if (e.dataTransfer.files?.length) handleFiles(e.dataTransfer.files);
+        }}
+        className={`block border-2 border-dashed rounded-md p-4 text-center text-sm cursor-pointer transition ${
+          dragOver ? "border-primary bg-primary/5" : "border-border hover:bg-muted"
+        }`}
+      >
+        <input
+          type="file"
+          multiple
+          className="hidden"
+          onChange={(e) => { if (e.target.files?.length) handleFiles(e.target.files); e.target.value = ""; }}
+        />
+        <Upload className="w-4 h-4 inline-block mr-1" />
+        Drop files here or click to browse
+        <div className="text-[11px] text-muted-foreground mt-1">Multiple files supported. Type auto-detected.</div>
+      </label>
+      {progress.length > 0 && (
+        <div className="space-y-1">
+          {progress.map((p, i) => (
+            <div key={i} className="flex items-center gap-1.5 text-[11px]">
+              {p.status === "uploading" ? (
+                <RefreshCw className="w-3 h-3 animate-spin text-muted-foreground" />
+              ) : p.status === "done" ? (
+                <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              ) : (
+                <AlertTriangle className="w-3 h-3 text-destructive" />
+              )}
+              <span className="truncate flex-1">{p.name}</span>
+              {p.type && <Badge variant="outline" className="text-[10px]">{p.type}</Badge>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId, fetchResults, fetching, onUpdateAttachmentType }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
   const largeDoc = totalChars > 300_000;
@@ -495,13 +637,15 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
       <Card>
         <CardHeader><CardTitle className="text-base">Solicitation documents</CardTitle><CardDescription>SOW, Section L/M, amendments</CardDescription></CardHeader>
         <CardContent className="space-y-3">
-          <Button onClick={onAutoFetch} variant="outline" size="sm" className="w-full"><RefreshCw className="w-4 h-4 mr-1" />Try auto-fetch from SAM.gov</Button>
-          <label className="block">
-            <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f, "sow"); e.target.value = ""; }} />
-            <div className="border-2 border-dashed border-border rounded-md p-4 text-center text-sm cursor-pointer hover:bg-muted">
-              <Upload className="w-4 h-4 inline-block mr-1" />Upload document
-            </div>
-          </label>
+          <Button onClick={onAutoFetch} variant="outline" size="sm" className="w-full" disabled={fetching}>
+            {fetching ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+            {fetching ? "Fetching from SAM.gov…" : "Try auto-fetch from SAM.gov"}
+          </Button>
+
+          <SamFetchResults results={fetchResults} samUrl={proposal.opportunity_data?.uiLink} />
+
+          <DropZoneUpload onUpload={onUpload} />
+
           <Button
             onClick={onParse}
             disabled={parsing || sowAttachments.length === 0}
@@ -533,7 +677,14 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                   <div className="flex items-center gap-2 text-xs">
                     <FileText className="w-3 h-3 text-muted-foreground" />
                     <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
-                    <Badge variant="outline" className="text-[10px]">{a.file_type}</Badge>
+                    <Select value={a.file_type ?? "other"} onValueChange={(v) => onUpdateAttachmentType(a, v)}>
+                      <SelectTrigger className="h-6 px-1.5 text-[10px] w-[110px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ATTACHMENT_TYPE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <button onClick={() => onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
                   </div>
                   {chars > 0 && (
@@ -547,10 +698,6 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                 </div>
               );
             })}
-          </div>
-          <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
-            <AlertTriangle className="w-3 h-3 inline-block mr-1 text-yellow-500" />
-            Auto-fetch may fail when SAM.gov requires login for restricted attachments. Upload manually if needed.
           </div>
         </CardContent>
       </Card>

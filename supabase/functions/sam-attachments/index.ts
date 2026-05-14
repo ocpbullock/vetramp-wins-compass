@@ -19,13 +19,19 @@ function filenameFromHeaders(headers: Headers, fallback: string) {
 
 function classify(name: string): string {
   const n = name.toLowerCase();
-  if (n.includes("sow") || n.includes("pws") || n.includes("statement_of_work")) return "sow";
-  if (n.includes("section_l") || n.includes("sectionl") || n.includes("section l")) return "section_l";
-  if (n.includes("section_m") || n.includes("sectionm") || n.includes("section m")) return "section_m";
-  if (n.includes("amend")) return "amendment";
-  if (n.includes("q&a") || n.includes("qa") || n.includes("questions")) return "qa";
-  if (n.includes("rfp") || n.includes("rfq") || n.includes("solicitation")) return "solicitation";
-  return "attachment";
+  if (n.includes("sow") || n.includes("pws") || n.includes("statement_of_work") || n.includes("statement of work")) return "sow";
+  if (n.includes("section_l") || n.includes("section l") || n.includes("section_m") || n.includes("section m") || n.includes("instructions")) return "instructions";
+  if (n.includes("amend") || n.includes("mod ") || n.includes("_mod") || n.includes("modification")) return "amendment";
+  if (n.includes("qasp") || n.includes("cdrl") || n.includes("dd254") || n.includes("dd_254")) return "attachment";
+  return "other";
+}
+
+function nameFromUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    const last = u.pathname.split("/").filter(Boolean).pop() || "file";
+    return decodeURIComponent(last);
+  } catch { return "file"; }
 }
 
 Deno.serve(async (req) => {
@@ -70,13 +76,30 @@ Deno.serve(async (req) => {
       }
       const saved: any[] = [];
       const errors: any[] = [];
+      const results: any[] = [];
       for (const link of links) {
+        const guessedName = nameFromUrl(link);
         try {
           const r = await fetch(appendKey(link), { redirect: "follow" });
-          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          if (r.status === 401 || r.status === 403) {
+            results.push({ link, filename: guessedName, status: "auth_required", httpStatus: r.status });
+            errors.push({ link, error: `HTTP ${r.status} — SAM.gov login required` });
+            continue;
+          }
+          if (!r.ok) {
+            results.push({ link, filename: guessedName, status: "error", httpStatus: r.status, error: `HTTP ${r.status}` });
+            errors.push({ link, error: `HTTP ${r.status}` });
+            continue;
+          }
           const contentType = r.headers.get("content-type") || "application/octet-stream";
+          // SAM sometimes returns the login HTML page with 200 — detect that
+          if (contentType.includes("text/html")) {
+            results.push({ link, filename: guessedName, status: "auth_required", httpStatus: r.status, error: "Received HTML (login page)" });
+            errors.push({ link, error: "SAM.gov returned HTML (login required)" });
+            continue;
+          }
           const fallback = `file-${crypto.randomUUID()}`;
-          const name = filenameFromHeaders(r.headers, fallback);
+          const name = filenameFromHeaders(r.headers, guessedName || fallback);
           const safeName = name.replace(/[^a-zA-Z0-9._-]/g, "_");
           const buf = new Uint8Array(await r.arrayBuffer());
           const path = `${userId}/${proposalId}/${crypto.randomUUID()}-${safeName}`;
@@ -93,11 +116,13 @@ Deno.serve(async (req) => {
           }).select().single();
           if (insErr) throw insErr;
           saved.push(row);
+          results.push({ link, filename: name, status: "downloaded", size: buf.byteLength });
         } catch (e: any) {
+          results.push({ link, filename: guessedName, status: "error", error: e.message });
           errors.push({ link, error: e.message });
         }
       }
-      return new Response(JSON.stringify({ saved, errors, attempted: links.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ saved, errors, results, attempted: links.length }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     return new Response(JSON.stringify({ error: "unknown action" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
