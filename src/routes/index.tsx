@@ -35,6 +35,7 @@ function Dashboard() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, loading } = useAuth();
+  const teamId = useTeamId();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
   // Auto-restore last search from localStorage on mount (cache hit = instant).
   const didAutoLoad = useRef(false);
