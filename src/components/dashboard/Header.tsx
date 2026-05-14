@@ -130,6 +130,7 @@ export function Header() {
               <DropdownMenuLabel className="font-normal">
                 <div className="text-sm font-semibold">{displayName}</div>
                 <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+                {currentTeam && <div className="text-xs text-muted-foreground truncate mt-1">Team: {currentTeam.name}</div>}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
