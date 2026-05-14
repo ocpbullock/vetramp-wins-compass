@@ -257,6 +257,9 @@ function ProposalPipeline() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           sectionId, sectionTitle,
+          userId: session?.user?.id,
+          proposalId,
+          teamId: proposal.team_id ?? null,
           opportunity: proposal.opportunity_data ?? {
             title: proposal.opportunity_title, solicitationNumber: proposal.solicitation_number,
             fullParentPathName: proposal.agency, naicsCode: proposal.naics_code, type: proposal.opportunity_type,
