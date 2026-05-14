@@ -745,10 +745,6 @@ function ComplianceStep({ proposal, attachments, onGoToIntake }: any) {
           {reqs.length > 0 && (
             <div className="flex gap-2 flex-wrap mb-3 text-xs">
               <Badge variant="outline">{reqs.length} requirements</Badge>
-          {matrix.summary && <p className="text-sm mb-3 leading-relaxed">{matrix.summary}</p>}
-          {reqs.length > 0 && (
-            <div className="flex gap-2 flex-wrap mb-3 text-xs">
-              <Badge variant="outline">{reqs.length} requirements</Badge>
               {Object.entries(byType).map(([t, n]) => <Badge key={t} variant="secondary">{t}: {n}</Badge>)}
               {proposal.compliance_gaps > 0 && <Badge className="bg-destructive">{proposal.compliance_gaps} unmapped</Badge>}
             </div>
