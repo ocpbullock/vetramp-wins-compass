@@ -183,11 +183,13 @@ export async function exportProposalDocx(opts: {
   const pageLimits: string[] = Array.isArray(matrix.page_limits) ? matrix.page_limits : [];
 
   const cp = companyProfile || {};
-  const companyName = cp.dba || cp.legal_name || "LGE Consulting, LLC dba VetRamp";
-  const uei = cp.uei || "N8HBYAZ9VGQ5";
-  const cage = cp.cage || "9PKK3";
+  // No hardcoded identity fallbacks — surface placeholders so missing data is
+  // obvious in the exported document and gets fixed in Settings.
+  const companyName = cp.dba || cp.legal_name || "[COMPANY NAME — update in Settings]";
+  const uei = cp.uei || "[UEI — update in Settings]";
+  const cage = cp.cage || "[CAGE — update in Settings]";
   const duns = cp.duns || "";
-  const pocName = cp.founder?.name || cp.poc?.name || "Proposal Manager";
+  const pocName = cp.founder?.name || cp.poc?.name || "[POC NAME — update in Settings]";
   const pocEmail = cp.poc?.email || cp.contact_email || "";
   const pocPhone = cp.poc?.phone || cp.contact_phone || "";
   const submissionDate = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
