@@ -78,6 +78,9 @@ function Dashboard() {
       status: "intake",
     }).select("id").single();
     if (error) { toast.error(error.message); return; }
+    if (o.responseDeadLine) {
+      await generateDefaultMilestones(data.id, o.responseDeadLine);
+    }
     navigate({ to: "/proposals/$proposalId", params: { proposalId: data.id } });
   }
   const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
