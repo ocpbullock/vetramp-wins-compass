@@ -329,6 +329,12 @@ function ProposalPipeline() {
     if (attachments.length) score += 10;
     if (proposal.customer_intel_verified) score += 15;
     if (proposal.compliance_matrix) score += 15;
+    // Verification percentage of compliance requirements (up to 10 pts)
+    const reqs = proposal.compliance_matrix?.requirements || [];
+    if (reqs.length) {
+      const verified = reqs.filter((r: any) => r.verified).length;
+      score += Math.round((verified / reqs.length) * 10);
+    }
     if (proposal.staffing_plan) score += 10;
     const generated = SECTIONS.filter((s) => proposal.sections?.[s.id]?.content).length;
     score += Math.round((generated / SECTIONS.length) * 20);
