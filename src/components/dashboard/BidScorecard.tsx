@@ -83,10 +83,27 @@ function scoreTimeline(deadline?: string): { lvl: Level; detail: string } {
   return { lvl: "strong", detail: `${days}d remaining — comfortable runway` };
 }
 
+function scoreVehicleAccess(
+  oppVehicle: string | null | undefined,
+  heldVehicles: string[],
+  partnerVehicles: string[],
+): { lvl: Level; detail: string } {
+  if (!oppVehicle) return { lvl: "moderate", detail: "No identifiable vehicle on this opportunity" };
+  const v = oppVehicle.toLowerCase();
+  const has = (list: string[]) => list.some((h) => {
+    const hh = (h || "").toLowerCase();
+    return hh && (hh === v || hh.includes(v) || v.includes(hh));
+  });
+  if (has(heldVehicles)) return { lvl: "strong", detail: `Your team holds ${oppVehicle}` };
+  if (has(partnerVehicles)) return { lvl: "moderate", detail: `A teaming partner holds ${oppVehicle}` };
+  return { lvl: "weak", detail: `Nobody on the team holds ${oppVehicle} — would require teaming` };
+}
+
 const VAL: Record<Level, number> = { strong: 2, moderate: 1, weak: 0 };
 
 export function BidScorecard({
   data, userNaics, userAgencyAwardCount, oppNaics, oppSetAside, responseDeadLine,
+  oppVehicle, heldVehicles = [], partnerVehicles = [],
 }: {
   data: CompetitiveIntel;
   userNaics: string[];
@@ -94,10 +111,14 @@ export function BidScorecard({
   oppNaics: string;
   oppSetAside?: string;
   responseDeadLine?: string;
+  oppVehicle?: string | null;
+  heldVehicles?: string[];
+  partnerVehicles?: string[];
 }) {
   const rows: { key: string; label: string; r: { lvl: Level; detail: string } }[] = [
     { key: "naics", label: "NAICS Match", r: scoreNaics(oppNaics, userNaics) },
     { key: "setaside", label: "Set-Aside Match", r: scoreSetAside(oppSetAside) },
+    { key: "vehicle", label: "Vehicle Access", r: scoreVehicleAccess(oppVehicle, heldVehicles, partnerVehicles) },
     { key: "agency", label: "Agency Experience", r: scoreAgencyExp(userAgencyAwardCount, data.agencyHistory.agencyName || "this agency") },
     { key: "incumbent", label: "Incumbent Risk", r: scoreIncumbent(data.incumbent.top) },
     { key: "size", label: "Contract Size", r: scoreContractSize(data.agencyHistory.avgValue) },
