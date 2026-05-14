@@ -467,6 +467,10 @@ export function ComplianceStep({
 function ResponseEditor({ initial, onChange }: { initial: string; onChange: (v: string) => void }) {
   const [val, setVal] = useState(initial);
   const timer = useRef<any>(null);
+  // Keep local state in sync when the upstream value changes (server refresh,
+  // teammate edit, re-parse, etc.). Without this, the textarea would silently
+  // keep showing the original value the editor was first mounted with.
+  useEffect(() => { setVal(initial); }, [initial]);
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
   return (
     <Textarea
