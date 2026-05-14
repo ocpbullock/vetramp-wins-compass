@@ -187,6 +187,10 @@ export function TrackOpportunityDialog({
                   className="mt-2"
                 />
               )}
+              <VehicleHoldingNotice
+                teamId={teamId}
+                vehicle={vehicle === "Custom/Other" ? vehicleOther : vehicle}
+              />
             </div>
             <div>
               <Label className="text-xs">NAICS Code *</Label>
