@@ -28,6 +28,8 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
   const [rows, setRows] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [overdueByProposal, setOverdueByProposal] = useState<Record<string, number>>({});
+
   async function load() {
     if (!user) return;
     setLoading(true);
@@ -40,6 +42,19 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
     else {
       setRows(data || []);
       onCountChange?.(data?.length || 0);
+      const ids = (data || []).map((p) => p.id);
+      if (ids.length > 0) {
+        const { reconcileOverdue } = await import("@/lib/milestones");
+        await reconcileOverdue(ids);
+        const { data: ms } = await supabase
+          .from("proposal_milestones")
+          .select("proposal_id,status")
+          .in("proposal_id", ids)
+          .eq("status", "overdue");
+        const counts: Record<string, number> = {};
+        for (const m of ms || []) counts[m.proposal_id] = (counts[m.proposal_id] || 0) + 1;
+        setOverdueByProposal(counts);
+      }
     }
     setLoading(false);
   }
