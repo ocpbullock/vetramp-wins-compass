@@ -1,17 +1,23 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
-import { hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
+import {
+  searchContracts,
+  mapContractRow,
+  contractRowToUsaspendingShape,
+  checkDailyUsage,
+  logUsage,
+  TangoError,
+} from "../_shared/tango-client.ts";
 
-const PER_CALL_TIMEOUT_MS = 30_000;
+const CACHE_TTL_HOURS = 24 * 7; // contracts change less frequently
+const MAX_RESULTS = 500;
+const PAGE_SIZE = 100;
 
-async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), ms);
-  try {
-    return await fetch(url, { ...init, signal: ctrl.signal });
-  } finally {
-    clearTimeout(timer);
-  }
+function fmt(iso: string) {
+  if (!iso) return iso;
+  if (/^\d{4}-\d{2}-\d{2}/.test(iso)) return iso.slice(0, 10);
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? iso : d.toISOString().slice(0, 10);
 }
 
 Deno.serve(async (req) => {
@@ -19,210 +25,149 @@ Deno.serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization") || "";
     if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
     const sbUrl = Deno.env.get("SUPABASE_URL")!;
     const sbKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
+    const sbService = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const userClient = createClient(sbUrl, sbKey, { global: { headers: { Authorization: authHeader } } });
     const { data: { user } } = await userClient.auth.getUser();
     if (!user) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      return new Response(JSON.stringify({ error: "unauthorized" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
-    const {
-      naicsCodes,
-      startDate,
-      endDate,
-      keyword,
-      maxResults = 10000,
-    } = await req.json();
+    const admin = createClient(sbUrl, sbService);
 
-    // Cache check (24h TTL) — same agency+NAICS+window returns near-identical results within a day
-    const cacheKey = await hashCacheKey({ naicsCodes, startDate, endDate, keyword: keyword || null, maxResults });
-    try {
-      const cached = await getCachedResponse("usaspending", cacheKey);
-      if (cached) {
-        return new Response(JSON.stringify({ ...cached.response_data, _cached: true, _cached_at: cached.created_at }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-    } catch (e) { console.error("usaspending cache read failed:", e); }
+    const body = await req.json();
+    const { naicsCodes = [], startDate, endDate, keyword, agency, vendorName, maxResults = MAX_RESULTS, teamId } = body;
 
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
-    const addDays = (d: Date, days: number) => {
-      const next = new Date(d);
-      next.setUTCDate(next.getUTCDate() + days);
-      return next;
-    };
-    const addYears = (d: Date, years: number) => {
-      const next = new Date(d);
-      next.setUTCFullYear(next.getUTCFullYear() + years);
-      return next;
-    };
-    const chunks: { start: string; end: string }[] = [];
-    let cursor = new Date(`${startDate}T00:00:00.000Z`);
-    const finalEnd = new Date(`${endDate}T00:00:00.000Z`);
-    while (cursor <= finalEnd) {
-      const chunkEnd = addYears(cursor, 1) > finalEnd ? finalEnd : addDays(addYears(cursor, 1), -1);
-      chunks.push({ start: fmt(cursor), end: fmt(chunkEnd) });
-      cursor = addDays(chunkEnd, 1);
+    let team_id: string | null = teamId ?? null;
+    if (!team_id) {
+      const { data: tm } = await admin
+        .from("team_members").select("team_id").eq("user_id", user.id).limit(1).maybeSingle();
+      team_id = tm?.team_id ?? null;
+    }
+    if (!team_id) {
+      return new Response(JSON.stringify({ error: "no_team", results: [] }), {
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
-    const baseBody: any = {
-      filters: {
-        naics_codes: naicsCodes,
-        // new_awards_only restricts to awards whose base date falls inside the
-        // window — without this USAspending returns awards from years ago that
-        // simply had a recent action_date.
-        award_type_codes: ["A", "B", "C", "D"],
-      },
-      fields: [
-        "Award ID",
-        "Recipient Name",
-        "Recipient UEI",
-        "Award Amount",
-        "Awarding Agency",
-        "Awarding Sub Agency",
-        "Start Date",
-        "End Date",
-        "NAICS",
-        "Description",
-        "generated_internal_id",
-        "Type of Set Aside",
-        "Contract Award Type",
-        "Parent Award ID",
-        "Product or Service Code",
-        "psc_code",
-        "psc_description",
-        "Place of Performance State Code",
-        "Place of Performance City Code",
-      ],
-      sort: "Start Date",
-      order: "desc",
-      limit: 100,
-    };
-    if (keyword) baseBody.filters.keywords = [keyword];
+    const fromIso = fmt(startDate);
+    const toIso = fmt(endDate);
 
-    // USAspending caps each request at 100 rows. Loop pages until we hit
-    // maxResults or run out of data. USAspending hard-caps result windows
-    // around 10,000 (page * limit), so 100 pages * 100 rows is the ceiling.
-    const PAGE_SIZE = 100;
+    // Cache check
+    const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 3600 * 1000).toISOString();
+    let q = admin
+      .from("tango_cached_contracts")
+      .select("*")
+      .eq("team_id", team_id)
+      .gte("fetched_at", cutoff);
+    if (naicsCodes.length) q = q.in("naics_code", naicsCodes);
+    if (startDate) q = q.gte("award_date", new Date(fromIso).toISOString());
+    if (endDate) q = q.lte("award_date", new Date(toIso + "T23:59:59Z").toISOString());
+    if (agency) q = q.ilike("agency", `%${agency}%`);
+    if (vendorName) q = q.ilike("vendor_name", `%${vendorName}%`);
+
+    const { data: cachedRows } = await q.limit(maxResults);
+    if (cachedRows && cachedRows.length > 0) {
+      await logUsage(admin, { team_id, endpoint: "/contracts/", params: body, cached: true, response_status: 200 });
+      const results = cachedRows.map(contractRowToUsaspendingShape);
+      return new Response(JSON.stringify({
+        results,
+        page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: false },
+        _cached: true,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Daily quota
+    const usage = await checkDailyUsage(admin, team_id);
+    if (!usage.allowed) {
+      const { data: stale } = await admin
+        .from("tango_cached_contracts")
+        .select("*")
+        .eq("team_id", team_id)
+        .in("naics_code", naicsCodes.length ? naicsCodes : ["__none__"])
+        .limit(maxResults);
+      const results = (stale ?? []).map(contractRowToUsaspendingShape);
+      return new Response(JSON.stringify({
+        results,
+        page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: false },
+        partial: true,
+        partial_reason: "Daily API limit approaching. Showing cached results only.",
+        message: "Daily API limit approaching. Showing cached results only.",
+        _cached: true,
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
+    // Hit Tango with pagination
     const all: any[] = [];
-    let lastMeta: any = null;
-    let totalReported: number | undefined;
-
-    let partial = false;
-    let partialReason: string | null = null;
-
-    outer: for (const chunk of [...chunks].reverse()) {
-      if (all.length >= maxResults) break;
-      const chunkBody = {
-        ...baseBody,
-        filters: {
-          ...baseBody.filters,
-          time_period: [{ start_date: chunk.start, end_date: chunk.end, date_type: "new_awards_only" }],
-        },
+    let page = 1;
+    let calls = 0;
+    let hasNext = true;
+    while (hasNext && all.length < maxResults) {
+      const u = await checkDailyUsage(admin, team_id);
+      if (!u.allowed) break;
+      const params: Record<string, unknown> = {
+        page,
+        page_size: PAGE_SIZE,
+        award_date_from: fromIso,
+        award_date_to: toIso,
       };
-      const hardPageLimit = Math.min(100, Math.ceil((maxResults - all.length) / PAGE_SIZE));
-      for (let page = 1; page <= hardPageLimit; page++) {
-        let res: Response;
-        try {
-          res = await fetchWithTimeout(
-            "https://api.usaspending.gov/api/v2/search/spending_by_award/",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ ...chunkBody, page }),
-            },
-            PER_CALL_TIMEOUT_MS,
-          );
-        } catch (e: any) {
-          // Timeout or network error — return whatever we have so far
-          partial = true;
-          partialReason = e?.name === "AbortError"
-            ? `USAspending timed out after ${PER_CALL_TIMEOUT_MS / 1000}s on page ${page}. Showing partial results.`
-            : `USAspending request failed (${e?.message || "network error"}). Showing partial results.`;
-          console.error("usaspending fetch failed:", e);
-          break outer;
-        }
-        if (!res.ok) {
-          const text = await res.text();
-          // If we already have some data, return partial; otherwise error
-          if (all.length > 0) {
-            partial = true;
-            partialReason = `USAspending HTTP ${res.status} on page ${page}. Showing partial results.`;
-            console.error("usaspending HTTP error:", res.status, text.slice(0, 300));
-            break outer;
-          }
-          return new Response(
-            JSON.stringify({ error: `USAspending HTTP ${res.status}: ${text.slice(0, 300)}` }),
-            { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        }
-        const json = await res.json();
-        const results = json.results || [];
-        all.push(...results);
-        lastMeta = json.page_metadata;
-        if (page === 1 && typeof json.page_metadata?.total === "number") {
-          totalReported = (totalReported ?? 0) + json.page_metadata.total;
-        }
-        const hasNext = json.page_metadata?.hasNext;
-        if (!hasNext || results.length === 0 || all.length >= maxResults) break;
-      }
-    }
-
-    const seen = new Set<string>();
-    const flat = all.filter((r: any) => {
-      const key = r.generated_internal_id || `${r["Award ID"]}|${r["Start Date"]}|${r["Award Amount"]}`;
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).map((r: any) => {
-      const out = { ...r };
-      const n = r?.NAICS;
-      if (n && typeof n === "object") {
-        out.NAICS = n.code ?? "";
-        out.NAICS_Description = n.description ?? "";
-      }
-      if (!out["Product or Service Code"] && r.psc_code) {
-        out["Product or Service Code"] = r.psc_code;
-      }
-      return out;
-    });
-
-    const returned = flat.slice(0, maxResults);
-
-    const responsePayload = {
-      results: returned,
-      page_metadata: {
-        total: totalReported ?? all.length,
-        fetched: returned.length,
-        hasNext: (totalReported ?? all.length) > returned.length,
-        chunks: chunks.length,
-        truncated: (totalReported ?? all.length) > returned.length,
-      },
-      partial,
-      partial_reason: partialReason,
-    };
-
-    // Cache full (non-partial) responses for 24h
-    if (!partial) {
+      if (naicsCodes.length) params.naics = naicsCodes;
+      if (keyword) params.keyword = keyword;
+      if (agency) params.agency = agency;
+      if (vendorName) params.vendor_name = vendorName;
       try {
-        await setCachedResponse({
-          functionName: "usaspending",
-          cacheKey,
-          responseData: responsePayload,
-          ttlHours: 24,
-        });
-      } catch (e) { console.error("usaspending cache write failed:", e); }
+        const resp = await searchContracts(params as any);
+        calls++;
+        await logUsage(admin, { team_id, endpoint: "/contracts/", params, cached: false, response_status: 200 });
+        const batch = resp.results ?? [];
+        all.push(...batch);
+        hasNext = !!resp.next && batch.length === PAGE_SIZE;
+        page++;
+      } catch (e) {
+        const te = e as TangoError;
+        await logUsage(admin, { team_id, endpoint: "/contracts/", params, cached: false, response_status: te.status });
+        console.error("tango contracts error", te);
+        break;
+      }
+      // Pace 500ms between calls
+      if (hasNext) await new Promise((r) => setTimeout(r, 500));
     }
 
-    return new Response(JSON.stringify(responsePayload), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    // Dedupe
+    const seen = new Set<string>();
+    const deduped = all.filter((c) => {
+      const k = String(c?.id ?? c?.tango_id ?? c?.generated_internal_id ?? c?.["Award ID"] ?? JSON.stringify(c).slice(0, 80));
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    }).slice(0, maxResults);
+
+    if (deduped.length) {
+      const rows = deduped.map((c) => mapContractRow(team_id!, c));
+      const { error: upErr } = await admin
+        .from("tango_cached_contracts")
+        .upsert(rows, { onConflict: "team_id,tango_id" });
+      if (upErr) console.error("tango contracts upsert error", upErr);
+    }
+
+    const results = deduped.map((c) => contractRowToUsaspendingShape(mapContractRow(team_id!, c)));
+
+    return new Response(JSON.stringify({
+      results,
+      page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: results.length >= maxResults },
+      _cached: false,
+      calls,
+    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
-    return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    console.error("search-usaspending (tango) error:", e);
+    return new Response(JSON.stringify({ error: e.message ?? "unknown" }), {
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
