@@ -201,7 +201,20 @@ function ProposalPipeline() {
         }
       }
       const { data: fresh } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
-      if (fresh) setProposal(fresh);
+      let freshRow: any = fresh;
+      // Client-side compliance matrix integrity pass
+      if (freshRow?.compliance_matrix) {
+        const knownIds = SECTIONS.map((s) => s.id);
+        const { fixedCount, fixes, matrix: cleaned } = validateComplianceMatrix(freshRow.compliance_matrix, knownIds);
+        if (fixedCount > 0) {
+          await supabase.from("proposals").update({ compliance_matrix: cleaned }).eq("id", proposalId);
+          freshRow = { ...freshRow, compliance_matrix: cleaned };
+          toast.message(`Auto-fixed ${fixedCount} issue${fixedCount === 1 ? "" : "s"} in the parsed matrix.`, { description: fixes.join(" ") });
+        }
+        // Refresh data issues banner
+        setDataIssues(validateProposal(freshRow, knownIds).issues);
+      }
+      if (freshRow) setProposal(freshRow);
       const { data: freshAtts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false });
       if (freshAtts) setAttachments(freshAtts);
       if (done) {
