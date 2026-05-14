@@ -168,8 +168,6 @@ function buildComplianceMatrixTable(matrix: any): (Paragraph | Table)[] {
       mkCell(String(r.page_reference ?? r.notes ?? ""), widths[4], false),
     ] })),
   ];
-  // Override header text color to white
-  rows[0].root.forEach?.(() => {});
   const table = new Table({ width: { size: total, type: WidthType.DXA }, columnWidths: widths, rows });
   return [table];
 }
