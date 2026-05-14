@@ -40,7 +40,7 @@ export function TrackedAnalyzePanel({
     const startDate = format(subYears(new Date(), 5), "yyyy-MM-dd");
     const endDate = format(new Date(), "yyyy-MM-dd");
     searchUsaspending({ naicsCodes: [naicsCode], startDate, endDate, maxResults: 2000 })
-      .then((res) => { if (!cancelled) setAwards(res.results ?? []); })
+      .then((res) => { if (!cancelled) { setAwards(res.results ?? []); setFetchedAt(new Date().toISOString()); } })
       .catch((e) => { if (!cancelled) setError(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
