@@ -169,7 +169,14 @@ export function OpportunitiesTab({
               Recompetes only <span className="text-muted-foreground">({recompeteCount})</span>
             </Label>
           </div>
-          <div className="text-xs text-muted-foreground self-center ml-auto">{sorted.length} of {opportunities.length}</div>
+          <div className="text-xs self-center ml-auto">
+            <span className={sorted.length < opportunities.length ? "text-primary font-medium" : "text-muted-foreground"}>
+              Showing {sorted.length} of {opportunities.length} results
+            </span>
+            {sorted.length < opportunities.length && (
+              <span className="text-muted-foreground ml-1">(filtered)</span>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto bg-card rounded-md border border-border">
