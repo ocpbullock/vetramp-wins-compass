@@ -107,6 +107,22 @@ function Dashboard() {
     }
     navigate({ to: "/proposals/$proposalId", params: { proposalId: data.id } });
   }
+
+  async function handleStartFromStarred(row: StarredRow) {
+    // Promote a starred bookmark into the proposal pipeline. Prefer the
+    // captured source_data snapshot (rich SAM payload) when present.
+    const sd = (row.source_data as SamOpportunity | null) ?? null;
+    const o: SamOpportunity = sd ?? ({
+      noticeId: row.notice_id,
+      solicitationNumber: row.notice_id,
+      title: row.title ?? "",
+      naicsCode: row.naics_code ?? undefined,
+      responseDeadLine: row.response_deadline ?? undefined,
+      postedDate: row.posted_date ?? undefined,
+      setAside: row.set_aside_description ?? undefined,
+    } as unknown as SamOpportunity);
+    await handlePropose(o);
+  }
   const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
   const [vendor, setVendor] = useState<{ id: string; name: string } | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
