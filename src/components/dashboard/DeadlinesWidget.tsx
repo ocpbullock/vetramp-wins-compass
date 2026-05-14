@@ -8,7 +8,7 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
-import { reconcileOverdue, daysUntil } from "@/lib/milestones";
+import { daysUntil } from "@/lib/milestones";
 
 type Row = {
   id: string;
