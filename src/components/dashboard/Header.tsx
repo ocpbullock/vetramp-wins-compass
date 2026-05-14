@@ -121,7 +121,7 @@ export function Header() {
                 </div>
                 <div className="hidden sm:block text-left leading-tight">
                   <div className="text-sm font-semibold">{displayName}</div>
-                  <div className="text-[11px] text-muted-foreground">VetRamp Team</div>
+                  <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">{currentTeam?.name ?? "No team"}</div>
                 </div>
                 <ChevronDown className="w-4 h-4 text-muted-foreground hidden sm:block" />
               </button>
