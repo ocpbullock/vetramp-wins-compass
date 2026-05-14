@@ -25,6 +25,7 @@ import { toast } from "sonner";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { PartnersPanel } from "@/components/settings/PartnersPanel";
 import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
+import { ContractVehiclesPanel } from "@/components/settings/ContractVehiclesPanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
@@ -88,12 +89,14 @@ function SettingsPage() {
             <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
             <TabsTrigger value="past-performance">Past Performance</TabsTrigger>
+            <TabsTrigger value="vehicles">Contract Vehicles</TabsTrigger>
           </TabsList>
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
           {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>}
           <TabsContent value="team" className="mt-4"><TeamPanel /></TabsContent>
           <TabsContent value="partners" className="mt-4"><PartnersPanel /></TabsContent>
           <TabsContent value="past-performance" className="mt-4"><PastPerformancePanel /></TabsContent>
+          <TabsContent value="vehicles" className="mt-4"><ContractVehiclesPanel /></TabsContent>
         </Tabs>
       </main>
     </div>

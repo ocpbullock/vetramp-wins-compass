@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,7 +8,20 @@ import { ExternalLink, Trophy, Building2, Calendar } from "lucide-react";
 import { type SamOpportunity, type HistoricalAward, getCompetitiveIntel, type CompetitiveIntel } from "@/lib/api";
 import { shortAgency } from "@/lib/contracts";
 import { matchIncumbent } from "@/lib/incumbents";
+import { supabase } from "@/integrations/supabase/client";
+import { useTeamId } from "@/lib/team";
 import { BidScorecard } from "./BidScorecard";
+
+const KNOWN_VEHICLES = [
+  "OASIS+", "STARS III", "Alliant 2", "SEWP V", "SEWP VI", "CIO-SP3", "CIO-SP4",
+  "POLARIS", "GSA MAS", "GSA Schedule", "VETS 2", "8(a) STARS",
+];
+function detectVehicle(opp: SamOpportunity | null): string | null {
+  if (!opp) return null;
+  const hay = `${opp.title || ""} ${opp.description || ""} ${opp.fullParentPathName || ""}`.toLowerCase();
+  for (const v of KNOWN_VEHICLES) if (hay.includes(v.toLowerCase())) return v;
+  return null;
+}
 
 function fmtUsd(n?: number | null) {
   if (!n) return "—";
@@ -41,6 +55,35 @@ export function CompetitiveIntelModal({
     () => (opp ? matchIncumbent(opp, awards) : null),
     [opp, awards],
   );
+
+  const teamId = useTeamId();
+  const oppVehicle = useMemo(() => detectVehicle(opp), [opp]);
+
+  const { data: heldVehicles = [] } = useQuery({
+    queryKey: ["contract-vehicles", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("contract_vehicles")
+        .select("vehicle_name,status")
+        .eq("team_id", teamId!);
+      if (error) throw new Error(error.message);
+      return (data ?? []).filter((r) => r.status === "active").map((r) => r.vehicle_name);
+    },
+  });
+
+  const { data: partnerVehicles = [] } = useQuery({
+    queryKey: ["partner-vehicles", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("teaming_partners")
+        .select("contract_vehicles")
+        .eq("team_id", teamId!);
+      if (error) throw new Error(error.message);
+      return (data ?? []).flatMap((r) => r.contract_vehicles ?? []);
+    },
+  });
 
   // How many awards in the user's cached history are at this opportunity's
   // sub-agency (any path segment match). Drives the Agency Experience score.
@@ -244,6 +287,9 @@ export function CompetitiveIntelModal({
               oppNaics={opp?.naicsCode ?? ""}
               oppSetAside={opp?.typeOfSetAside || undefined}
               responseDeadLine={opp?.responseDeadLine}
+              oppVehicle={oppVehicle}
+              heldVehicles={heldVehicles}
+              partnerVehicles={partnerVehicles}
             />
           ) : null}
         </section>
