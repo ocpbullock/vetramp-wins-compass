@@ -26,6 +26,7 @@ import {
 import { TrackedAnalyzePanel } from "./TrackedAnalyzePanel";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import type { HistoricalAward } from "@/lib/api";
+import { StarButton } from "./StarButton";
 
 const NAICS_NAME = new Map(NAICS_GROUPS.flatMap((g) => g.codes.map((c) => [c.code, c.name])));
 
