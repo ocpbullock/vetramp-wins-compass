@@ -119,7 +119,9 @@ function ProposalPipeline() {
   const [aiBusy, setAiBusy] = useState(false);
   const [genProgress, setGenProgress] = useState<{ current: number; total: number; label: string } | null>(null);
   const [useCache, setUseCache] = useState(true);
+  const online = useOnline();
   async function parseDocuments(opts?: { skipCache?: boolean }) {
+    if (!online) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
     if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     const sowAtts = attachments.filter((a) => a.file_type === "sow");
     if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
@@ -134,8 +136,7 @@ function ProposalPipeline() {
         body: JSON.stringify({ proposalId, skipCache: opts?.skipCache ?? !useCache }),
       });
       if (!r.ok || !r.body) {
-        const txt = await r.text().catch(() => "");
-        toast.error(txt || `HTTP ${r.status}`);
+        toast.error(await friendlyFromResponse(r));
         return;
       }
       const reader = r.body.getReader();
