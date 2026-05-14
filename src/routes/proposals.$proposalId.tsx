@@ -513,13 +513,15 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
       <Card>
         <CardHeader><CardTitle className="text-base">Solicitation documents</CardTitle><CardDescription>SOW, Section L/M, amendments</CardDescription></CardHeader>
         <CardContent className="space-y-3">
-          <Button onClick={onAutoFetch} variant="outline" size="sm" className="w-full"><RefreshCw className="w-4 h-4 mr-1" />Try auto-fetch from SAM.gov</Button>
-          <label className="block">
-            <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) onUpload(f, "sow"); e.target.value = ""; }} />
-            <div className="border-2 border-dashed border-border rounded-md p-4 text-center text-sm cursor-pointer hover:bg-muted">
-              <Upload className="w-4 h-4 inline-block mr-1" />Upload document
-            </div>
-          </label>
+          <Button onClick={onAutoFetch} variant="outline" size="sm" className="w-full" disabled={fetching}>
+            {fetching ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+            {fetching ? "Fetching from SAM.gov…" : "Try auto-fetch from SAM.gov"}
+          </Button>
+
+          <SamFetchResults results={fetchResults} samUrl={proposal.opportunity_data?.uiLink} />
+
+          <DropZoneUpload onUpload={onUpload} />
+
           <Button
             onClick={onParse}
             disabled={parsing || sowAttachments.length === 0}
@@ -551,7 +553,14 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                   <div className="flex items-center gap-2 text-xs">
                     <FileText className="w-3 h-3 text-muted-foreground" />
                     <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
-                    <Badge variant="outline" className="text-[10px]">{a.file_type}</Badge>
+                    <Select value={a.file_type ?? "other"} onValueChange={(v) => onUpdateAttachmentType(a, v)}>
+                      <SelectTrigger className="h-6 px-1.5 text-[10px] w-[110px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {ATTACHMENT_TYPE_OPTIONS.map((o) => (
+                          <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <button onClick={() => onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
                   </div>
                   {chars > 0 && (
@@ -565,10 +574,6 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                 </div>
               );
             })}
-          </div>
-          <div className="text-[11px] text-muted-foreground border-t border-border pt-2">
-            <AlertTriangle className="w-3 h-3 inline-block mr-1 text-yellow-500" />
-            Auto-fetch may fail when SAM.gov requires login for restricted attachments. Upload manually if needed.
           </div>
         </CardContent>
       </Card>
