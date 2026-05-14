@@ -30,6 +30,7 @@ import { useLogStore } from "@/lib/log-store";
 import { toast } from "sonner";
 import { generateDefaultMilestones } from "@/lib/milestones";
 import { DeadlinesWidget } from "@/components/dashboard/DeadlinesWidget";
+import { SetupBanner } from "@/components/settings/SetupChecklist";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
@@ -292,6 +293,7 @@ function Dashboard() {
         </div>
       )}
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
+        <SetupBanner />
         <StatCards
           activeOpps={stats.activeOpps}
           awardNotices={stats.awardNotices}

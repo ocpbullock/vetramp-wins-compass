@@ -1,5 +1,6 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { SetupChecklist } from "@/components/settings/SetupChecklist";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -59,11 +60,21 @@ type ProfileData = {
 function SettingsPage() {
   const { user, loading, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
     if (loading) return;
     if (!user) navigate({ to: "/auth" });
   }, [user, loading, navigate]);
+
+  const validTabs = ["company", "knowledge", "team", "partners", "past-performance", "vehicles", "ai-usage", "data-health"];
+  const hashTab = (location.hash || "").replace(/^#/, "");
+  const initialTab = validTabs.includes(hashTab) ? hashTab : (isAdmin ? "company" : "team");
+  const [tab, setTab] = useState<string>(initialTab);
+  useEffect(() => {
+    if (hashTab && validTabs.includes(hashTab)) setTab(hashTab);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hashTab]);
 
   if (loading || !user) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
@@ -83,8 +94,10 @@ function SettingsPage() {
         </div>
       </header>
 
-      <main className="max-w-[1400px] mx-auto p-6">
-        <Tabs defaultValue={isAdmin ? "company" : "team"}>
+      <main className="max-w-[1400px] mx-auto p-6 space-y-6">
+        <SetupChecklist />
+
+        <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
             {isAdmin && <TabsTrigger value="company">Company Profile</TabsTrigger>}
             {isAdmin && <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>}
