@@ -6,6 +6,7 @@ import { Copy, Download, Save, Sparkles } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
+import { useTeamId } from "@/lib/team";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import type { SamOpportunity } from "@/lib/api";
 
