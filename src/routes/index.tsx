@@ -164,6 +164,7 @@ function Dashboard() {
       const totalObligated = (usaRes.results ?? []).reduce((s, a) => s + (Number(a["Award Amount"]) || 0), 0);
       await writeCache({
         cacheKey,
+        teamId: teamId ?? "",
         naicsCodes: input.naicsCodes,
         dateFrom: input.postedFrom,
         dateTo: input.postedTo,
