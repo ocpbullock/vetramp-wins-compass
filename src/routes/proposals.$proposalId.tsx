@@ -257,6 +257,9 @@ function ProposalPipeline() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
         body: JSON.stringify({
           sectionId, sectionTitle,
+          userId: session?.user?.id,
+          proposalId,
+          teamId: proposal.team_id ?? null,
           opportunity: proposal.opportunity_data ?? {
             title: proposal.opportunity_title, solicitationNumber: proposal.solicitation_number,
             fullParentPathName: proposal.agency, naicsCode: proposal.naics_code, type: proposal.opportunity_type,
@@ -317,11 +320,22 @@ function ProposalPipeline() {
   }
 
   async function generateAll() {
-    for (const s of SECTIONS) {
-      // skip already generated unless user wants regen
-      if (proposal.sections?.[s.id]?.content) continue;
-      await generateSection(s.id, s.title);
+    const remaining = SECTIONS.filter((s) => !proposal.sections?.[s.id]?.content);
+    if (remaining.length === 0) { toast.info("All sections already drafted"); return; }
+    for (let i = 0; i < remaining.length; i++) {
+      const s = remaining[i];
+      setGenProgress({ current: i + 1, total: remaining.length, label: s.title });
+      try {
+        await generateSection(s.id, s.title);
+      } catch (e) {
+        // continue with next; per-section toast already shown
+      }
+      if (i < remaining.length - 1) {
+        // 2s pacing between calls to avoid hammering the gateway
+        await new Promise((r) => setTimeout(r, 2000));
+      }
     }
+    setGenProgress(null);
   }
 
   async function exportDocx() {
@@ -408,7 +422,7 @@ function ProposalPipeline() {
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <StepErrorBoundary label="intel">
-              <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
+              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
@@ -423,7 +437,7 @@ function ProposalPipeline() {
           </TabsContent>
           <TabsContent value="generate" className="mt-4 space-y-4">
             <StepErrorBoundary label="generate">
-              <GenerateStep proposal={proposal} sectionGen={sectionGen} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
+              <GenerateStep proposal={proposal} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
                 const wc = content.split(/\s+/).filter(Boolean).length;
                 const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
                 patchProposal({ sections: next });
@@ -762,21 +776,31 @@ function ComingSoon({ title, description, fieldLabel, value, onSave }: { title: 
   );
 }
 
-function GenerateStep({ proposal, sectionGen, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
+function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
   const [active, setActive] = useState(SECTIONS[0].id);
   const sections = proposal.sections || {};
   const generatedCount = SECTIONS.filter((s) => sections[s.id]?.content).length;
   const current = sections[active] as Section | undefined;
+  const anySectionBusy = Object.values(sectionGen || {}).some(Boolean);
+  const lockButtons = !!aiBusy || anySectionBusy;
+  const eta = genProgress ? Math.max(0, (genProgress.total - genProgress.current + 1) * 30) : 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      {genProgress && (
+        <div className="lg:col-span-4 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs flex items-center gap-2">
+          <RefreshCw className="w-3 h-3 animate-spin text-primary" />
+          <span className="font-medium">Generating section {genProgress.current} of {genProgress.total}: {genProgress.label}</span>
+          <span className="text-muted-foreground">· est. ~{Math.ceil(eta / 60)} min remaining</span>
+        </div>
+      )}
       <Card className="lg:col-span-1">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Generation queue</CardTitle>
           <CardDescription className="text-xs">{generatedCount} of {SECTIONS.length} drafted</CardDescription>
         </CardHeader>
         <CardContent className="p-2 space-y-1">
-          <Button size="sm" className="w-full mb-2" onClick={onGenerateAll}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
+          <Button size="sm" className="w-full mb-2" onClick={onGenerateAll} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
           {SECTIONS.map((s) => {
             const has = !!sections[s.id]?.content;
             const busy = sectionGen[s.id];
@@ -798,7 +822,7 @@ function GenerateStep({ proposal, sectionGen, onGenerate, onGenerateAll, onPatch
             <CardTitle className="text-base">{SECTIONS.find((s) => s.id === active)?.title}</CardTitle>
             <CardDescription className="text-xs">{current?.word_count ?? 0} words</CardDescription>
           </div>
-          <Button size="sm" onClick={() => onGenerate(active, SECTIONS.find((s) => s.id === active)!.title)} disabled={sectionGen[active]}>
+          <Button size="sm" onClick={() => onGenerate(active, SECTIONS.find((s) => s.id === active)!.title)} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
             <Sparkles className="w-4 h-4 mr-1" />{sectionGen[active] ? "Generating…" : current?.content ? "Regenerate" : "Generate"}
           </Button>
         </CardHeader>
@@ -815,13 +839,18 @@ function GenerateStep({ proposal, sectionGen, onGenerate, onGenerateAll, onPatch
   );
 }
 
-function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = [], onUpload, onDelete }: any) {
+function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, attachments = [], onUpload, onDelete, aiBusy, setAiBusy, online }: any) {
   const [busy, setBusy] = useState(false);
+  const [skipCache, setSkipCache] = useState(false);
   const intel = proposal.customer_intel || {};
   const [notes, setNotes] = useState<string>(intel.notes || "");
+  const locked = busy || (aiBusy && !busy);
 
   async function research() {
+    if (online === false) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
+    if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     setBusy(true);
+    setAiBusy?.(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/customer-intel`;
@@ -841,14 +870,18 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = []
           companyProfile,
           extraNotes: notes || undefined,
           attachmentsText: attachmentsText || undefined,
+          userId: session?.user?.id,
+          proposalId,
+          teamId: proposal.team_id ?? null,
+          skipCache,
         }),
       });
       const j = await r.json();
       if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
       const merged = { ...intel, ...j.intel, notes };
       await onPatch({ customer_intel: merged });
-      toast.success("Customer intelligence drafted");
-    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); }
+      toast.success(j.cached ? "Customer intelligence loaded from cache" : "Customer intelligence drafted");
+    } catch (e: any) { toast.error(e.message); } finally { setBusy(false); setAiBusy?.(false); }
   }
 
   const list = (label: string, items?: string[]) => items?.length ? (
@@ -867,10 +900,14 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = []
           <CardContent className="space-y-2">
             <Label className="text-xs">Optional context to bias research</Label>
             <Textarea rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. 'I think the incumbent is XYZ', 'KO is Jane Smith', anything from prior conversations…" />
-            <Button onClick={research} disabled={busy} size="sm" className="w-full">
+            <Button onClick={research} disabled={locked} size="sm" className="w-full" title={aiBusy && !busy ? "Another AI task is running — please wait." : undefined}>
               {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
               {busy ? "Researching…" : intel.customer_summary ? "Re-run research" : "Run research"}
             </Button>
+            <div className="flex items-center gap-2">
+              <input id="skipCacheIntel" type="checkbox" checked={skipCache} onChange={(e) => setSkipCache(e.target.checked)} />
+              <Label htmlFor="skipCacheIntel" className="text-[11px] text-muted-foreground">Skip cache (force fresh AI run)</Label>
+            </div>
             {attachments.length > 0 && (
               <div className="text-[11px] text-muted-foreground">
                 Research will include text from {attachments.length} reference document{attachments.length === 1 ? "" : "s"}.
