@@ -291,11 +291,12 @@ serve(async (req) => {
           send("progress", { chunk: i + 1, total: chunks.length, message: `Parsing chunk ${i + 1} of ${chunks.length}…` });
           const userMsg = `${meta}\nEXCERPT ${i + 1} of ${chunks.length}:\n${chunks[i]}`;
           try {
-            const partial = await callAI(apiKey, system, userMsg);
+            const partial = await callAI(apiKey, system, userMsg, proposal.team_id ?? null);
             if (partial) partials.push(partial);
           } catch (e: any) {
-            if (e.status === 429) return await fail("Rate limit exceeded. Try again in a few minutes.");
-            if (e.status === 402) return await fail("AI credits exhausted.");
+            if (e instanceof AIRateLimitError) return await fail("Rate limit exceeded. Try again in a few minutes.");
+            if (e instanceof AICreditsError) return await fail("AI credits exhausted.");
+            if (e instanceof AITimeoutError) return await fail(e.message);
             console.error("chunk failed:", i + 1, e);
             send("warn", { message: `Chunk ${i + 1} failed: ${e.message}` });
           }
