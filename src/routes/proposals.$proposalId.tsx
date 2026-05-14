@@ -21,6 +21,7 @@ import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/Tea
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
+import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
