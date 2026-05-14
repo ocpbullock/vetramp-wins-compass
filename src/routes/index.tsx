@@ -66,6 +66,7 @@ function Dashboard() {
     if (!user) return;
     const { data, error } = await supabase.from("proposals").insert({
       user_id: user.id,
+      team_id: teamId,
       solicitation_number: o.solicitationNumber || o.noticeId || "unknown",
       notice_id: o.noticeId,
       opportunity_title: o.title,
