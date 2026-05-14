@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
+import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
@@ -340,7 +341,7 @@ function ProposalPipeline() {
             <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
-            <ComplianceStep proposal={proposal} attachments={attachments} onGoToIntake={() => setStep("intake")} />
+            <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
             <ComingSoon title="Solution Design (Phase 3)" description="Build staffing, technical approach, management plan, transition timeline, and price strategy with AI assistance. For now, capture freeform solution notes." fieldLabel="Solution design notes" value={proposal.technical_approach?.notes || ""} onSave={(v) => patchProposal({ technical_approach: { ...(proposal.technical_approach || {}), notes: v } })} />
@@ -727,114 +728,3 @@ function CustomerIntelStep({ proposal, companyProfile, onPatch, attachments = []
   );
 }
 
-function ComplianceStep({ proposal, attachments, onGoToIntake }: any) {
-  const matrix = proposal.compliance_matrix || {};
-  const reqs: any[] = matrix.requirements || [];
-  const hasMatrix = reqs.length > 0 || !!matrix.summary;
-
-  function exportMatrixCsv() {
-    const rows = [["Req ID", "Source", "Type", "Category", "Requirement", "Proposal Section", "Notes"]];
-    for (const r of reqs) rows.push([r.req_id, r.source_section, r.type, r.category || "", r.requirement_text, r.proposal_section, r.notes || ""]);
-    const csv = rows.map((row) => row.map((c) => `"${String(c ?? "").replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csv], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a"); a.href = url; a.download = `compliance-matrix-${proposal.solicitation_number}.csv`; a.click();
-    URL.revokeObjectURL(url);
-  }
-
-  const byType: Record<string, number> = {};
-  for (const r of reqs) byType[r.type] = (byType[r.type] || 0) + 1;
-
-  if (!hasMatrix) {
-    return (
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Compliance matrix</CardTitle>
-          <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="border border-dashed border-border rounded-md p-6 text-center space-y-3">
-            <AlertTriangle className="w-6 h-6 text-yellow-500 mx-auto" />
-            <div className="text-sm">Documents haven't been parsed yet — go to Intake to upload and parse your SOW/PWS.</div>
-            <Button size="sm" onClick={onGoToIntake}><ArrowLeft className="w-4 h-4 mr-1" />Go to Intake</Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="pb-2 flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-base flex items-center gap-2"><ShieldCheck className="w-4 h-4" />Compliance matrix</CardTitle>
-            <CardDescription className="text-xs">Auto-parsed from your uploaded SOW/PWS, Section L, Section M, and amendments. Re-parse from the Intake step if documents change.</CardDescription>
-          </div>
-          <div className="flex gap-2">
-            {reqs.length > 0 && <Button onClick={exportMatrixCsv} variant="outline" size="sm"><Download className="w-4 h-4 mr-1" />Export CSV</Button>}
-            <Button onClick={onGoToIntake} variant="outline" size="sm"><ArrowLeft className="w-4 h-4 mr-1" />Re-parse in Intake</Button>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {matrix.summary && <p className="text-sm mb-3 leading-relaxed">{matrix.summary}</p>}
-          {reqs.length > 0 && (
-            <div className="flex gap-2 flex-wrap mb-3 text-xs">
-              <Badge variant="outline">{reqs.length} requirements</Badge>
-              {Object.entries(byType).map(([t, n]) => <Badge key={t} variant="secondary">{t}: {n}</Badge>)}
-              {proposal.compliance_gaps > 0 && <Badge className="bg-destructive">{proposal.compliance_gaps} unmapped</Badge>}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {matrix.evaluation_factors?.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Section M — Evaluation factors</CardTitle></CardHeader>
-          <CardContent className="space-y-2 text-xs">
-            {matrix.evaluation_factors.map((f: any, i: number) => (
-              <div key={i} className="border border-border rounded px-2 py-1.5"><span className="font-semibold">{f.factor}</span>{f.weight && <Badge variant="outline" className="ml-2 text-[10px]">{f.weight}</Badge>}{f.description && <div className="text-muted-foreground mt-0.5">{f.description}</div>}</div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {matrix.submission_instructions?.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Section L — Submission instructions</CardTitle></CardHeader>
-          <CardContent><ul className="text-xs space-y-1 list-disc list-inside text-muted-foreground">{matrix.submission_instructions.map((s: string, i: number) => <li key={i}>{s}</li>)}{matrix.page_limits?.map((p: string, i: number) => <li key={`p${i}`} className="text-foreground">{p}</li>)}</ul></CardContent>
-        </Card>
-      )}
-
-      {reqs.length > 0 && (
-        <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm">Requirements traceability</CardTitle></CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead className="bg-muted text-muted-foreground"><tr>
-                  <th className="text-left p-2 font-medium">ID</th>
-                  <th className="text-left p-2 font-medium">Source</th>
-                  <th className="text-left p-2 font-medium">Type</th>
-                  <th className="text-left p-2 font-medium">Requirement</th>
-                  <th className="text-left p-2 font-medium">Maps to</th>
-                </tr></thead>
-                <tbody>
-                  {reqs.map((r: any) => (
-                    <tr key={r.req_id} className="border-t border-border align-top">
-                      <td className="p-2 font-mono text-[10px]">{r.req_id}</td>
-                      <td className="p-2 whitespace-nowrap">{r.source_section}</td>
-                      <td className="p-2"><Badge variant="outline" className="text-[10px]">{r.type}</Badge></td>
-                      <td className="p-2 max-w-[480px]">{r.requirement_text}</td>
-                      <td className="p-2 whitespace-nowrap">{r.proposal_section ? <Badge variant="secondary" className="text-[10px]">{r.proposal_section}</Badge> : <Badge className="bg-destructive text-[10px]">unmapped</Badge>}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-    </div>
-  );
-}
