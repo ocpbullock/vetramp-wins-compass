@@ -11,6 +11,7 @@ import { ChevronDown } from "lucide-react";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { useTeamId } from "@/lib/team";
 import { toast } from "sonner";
 
 export const CONTRACT_VEHICLES = [
