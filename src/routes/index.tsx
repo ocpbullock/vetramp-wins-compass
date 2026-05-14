@@ -324,6 +324,7 @@ function Dashboard() {
           <TabsContent value="starred" className="mt-4">
             <StarredTab onStartProposal={handleStartFromStarred} />
           </TabsContent>
+          <TabsContent value="in-progress" className="mt-4">
             <InProgressTab onCountChange={setInProgressCount} />
           </TabsContent>
           <TabsContent value="tracked" className="mt-4">
