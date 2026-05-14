@@ -776,21 +776,31 @@ function ComingSoon({ title, description, fieldLabel, value, onSave }: { title: 
   );
 }
 
-function GenerateStep({ proposal, sectionGen, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
+function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
   const [active, setActive] = useState(SECTIONS[0].id);
   const sections = proposal.sections || {};
   const generatedCount = SECTIONS.filter((s) => sections[s.id]?.content).length;
   const current = sections[active] as Section | undefined;
+  const anySectionBusy = Object.values(sectionGen || {}).some(Boolean);
+  const lockButtons = !!aiBusy || anySectionBusy;
+  const eta = genProgress ? Math.max(0, (genProgress.total - genProgress.current + 1) * 30) : 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      {genProgress && (
+        <div className="lg:col-span-4 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs flex items-center gap-2">
+          <RefreshCw className="w-3 h-3 animate-spin text-primary" />
+          <span className="font-medium">Generating section {genProgress.current} of {genProgress.total}: {genProgress.label}</span>
+          <span className="text-muted-foreground">· est. ~{Math.ceil(eta / 60)} min remaining</span>
+        </div>
+      )}
       <Card className="lg:col-span-1">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Generation queue</CardTitle>
           <CardDescription className="text-xs">{generatedCount} of {SECTIONS.length} drafted</CardDescription>
         </CardHeader>
         <CardContent className="p-2 space-y-1">
-          <Button size="sm" className="w-full mb-2" onClick={onGenerateAll}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
+          <Button size="sm" className="w-full mb-2" onClick={onGenerateAll} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
           {SECTIONS.map((s) => {
             const has = !!sections[s.id]?.content;
             const busy = sectionGen[s.id];
@@ -812,7 +822,7 @@ function GenerateStep({ proposal, sectionGen, onGenerate, onGenerateAll, onPatch
             <CardTitle className="text-base">{SECTIONS.find((s) => s.id === active)?.title}</CardTitle>
             <CardDescription className="text-xs">{current?.word_count ?? 0} words</CardDescription>
           </div>
-          <Button size="sm" onClick={() => onGenerate(active, SECTIONS.find((s) => s.id === active)!.title)} disabled={sectionGen[active]}>
+          <Button size="sm" onClick={() => onGenerate(active, SECTIONS.find((s) => s.id === active)!.title)} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
             <Sparkles className="w-4 h-4 mr-1" />{sectionGen[active] ? "Generating…" : current?.content ? "Regenerate" : "Generate"}
           </Button>
         </CardHeader>
