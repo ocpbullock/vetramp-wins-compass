@@ -101,7 +101,7 @@ export function TrackedAnalyzePanel({
           <div className="text-sm text-muted-foreground space-y-0.5">
             {title && <div className="font-medium text-foreground">{title}</div>}
             <div>NAICS <span className="font-mono">{naicsCode}</span> · Agency: {agency || "—"}</div>
-            <div className="text-xs">5-year lookback</div>
+            <div className="text-xs">10-year lookback</div>
             {(() => {
               const latest = agencyAwards.map((a) => a["Start Date"]).filter(Boolean).sort().slice(-1)[0];
               return (
