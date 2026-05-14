@@ -23,6 +23,7 @@ import { ArrowLeft, Plus, Trash2, Save, Loader2, Upload, FileText } from "lucide
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { TeamPanel } from "@/components/settings/TeamPanel";
+import { PartnersPanel } from "@/components/settings/PartnersPanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
@@ -84,10 +85,12 @@ function SettingsPage() {
             {isAdmin && <TabsTrigger value="company">Company Profile</TabsTrigger>}
             {isAdmin && <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>}
             <TabsTrigger value="team">Team</TabsTrigger>
+            <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
           </TabsList>
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
           {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>}
           <TabsContent value="team" className="mt-4"><TeamPanel /></TabsContent>
+          <TabsContent value="partners" className="mt-4"><PartnersPanel /></TabsContent>
         </Tabs>
       </main>
     </div>

@@ -17,6 +17,7 @@ import { ArrowLeft, Upload, Download, Sparkles, RefreshCw, FileText, CheckCircle
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
+import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
@@ -148,6 +149,17 @@ function ProposalPipeline() {
     try {
       // gather attachment text (parsed_content) when available
       const attachmentsText = attachments.map((a) => a.parsed_content).filter(Boolean).join("\n\n---\n\n");
+      const teamingEntries = await fetchTeamingForProposal(proposalId);
+      const teaming = teamingEntries.map((e) => ({
+        company_name: e.partner?.company_name,
+        role: e.role,
+        work_share_pct: e.work_share_pct,
+        certifications: e.partner?.certifications ?? [],
+        naics_codes: e.partner?.naics_codes ?? [],
+        naics_contribution: e.naics_contribution,
+        capabilities_summary: e.partner?.capabilities_summary,
+        past_performance_summary: e.partner?.past_performance_summary,
+      }));
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-proposal-section`;
       const resp = await fetch(url, {
@@ -167,6 +179,7 @@ function ProposalPipeline() {
             staffing: proposal.staffing_plan, technical: proposal.technical_approach,
             management: proposal.management_approach, transition: proposal.transition_plan,
           },
+          teaming: teaming.length ? teaming : undefined,
           attachmentsText: attachmentsText || undefined,
         }),
       });
@@ -313,7 +326,7 @@ function ProposalPipeline() {
           </TabsList>
 
           <TabsContent value="intake" className="mt-4 space-y-4">
-            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} />
+            <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} proposalId={proposalId} />
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <CustomerIntelStep proposal={proposal} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} />
@@ -337,7 +350,7 @@ function ProposalPipeline() {
   );
 }
 
-function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing }: any) {
+function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, proposalId }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const [local, setLocal] = useState(proposal);
   useEffect(() => setLocal(proposal), [proposal.id]);
@@ -426,6 +439,12 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             <div className="col-span-2"><Button onClick={save} size="sm">Save details</Button></div>
           </CardContent>
         </Card>
+
+        <TeamingCard
+          proposalId={proposalId}
+          teamId={proposal.team_id ?? null}
+          opportunityNaics={proposal.naics_code}
+        />
       </div>
 
       <Card>
