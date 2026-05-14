@@ -1,10 +1,10 @@
 project_id = "exmygycifebzmhabnnad"
 
 [functions.search-sam]
-verify_jwt = false
+verify_jwt = true
 
 [functions.search-usaspending]
-verify_jwt = false
+verify_jwt = true
 
 [functions.usaspending-detail]
 verify_jwt = false

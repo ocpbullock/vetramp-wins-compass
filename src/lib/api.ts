@@ -199,12 +199,15 @@ export function makeCacheKey(input: {
 
 export async function readCache(
   cacheKey: string,
+  teamId: string,
   input?: { naicsCodes: string[]; postedFrom: string; postedTo: string; keyword?: string; historicalFrom?: string },
 ) {
-  // 1. Exact match (fast path)
+  if (!teamId) return null;
+  // 1. Exact match (fast path) — scoped to team
   const exact = await supabase
     .from("cached_searches")
     .select("*")
+    .eq("team_id", teamId)
     .eq("cache_key", cacheKey)
     .gt("expires_at", new Date().toISOString())
     .maybeSingle();
@@ -213,14 +216,13 @@ export async function readCache(
     return exact.data;
   }
 
-  // 2. Superset match: a previous search covering the same dates/keyword whose
-  //    naics_codes contains every requested code. Lets users pull a wide NAICS
-  //    range once, then drill down without re-fetching.
+  // 2. Superset match within the same team.
   if (!input) return null;
   const kw = (input.keyword || "").trim();
   let q = supabase
     .from("cached_searches")
     .select("*")
+    .eq("team_id", teamId)
     .eq("date_from", input.postedFrom)
     .eq("date_to", input.postedTo)
     .contains("naics_codes", input.naicsCodes)
@@ -242,6 +244,7 @@ export async function readCache(
 
 export async function writeCache(payload: {
   cacheKey: string;
+  teamId: string;
   naicsCodes: string[];
   dateFrom: string;
   dateTo: string;
@@ -251,9 +254,14 @@ export async function writeCache(payload: {
   historical: any;
   summary: any;
 }) {
+  if (!payload.teamId) {
+    useLogStore.getState().log("info", "↳ cache skipped (no team selected)");
+    return;
+  }
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
   await supabase.from("cached_searches").upsert(
     {
+      team_id: payload.teamId,
       cache_key: payload.cacheKey,
       naics_codes: payload.naicsCodes,
       date_from: payload.dateFrom,

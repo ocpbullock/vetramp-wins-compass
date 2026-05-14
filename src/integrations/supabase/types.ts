@@ -25,7 +25,7 @@ export type Database = {
           model: string | null
           output_tokens: number
           response_data: Json
-          team_id: string | null
+          team_id: string
         }
         Insert: {
           cache_key: string
@@ -37,7 +37,7 @@ export type Database = {
           model?: string | null
           output_tokens?: number
           response_data: Json
-          team_id?: string | null
+          team_id: string
         }
         Update: {
           cache_key?: string
@@ -49,7 +49,7 @@ export type Database = {
           model?: string | null
           output_tokens?: number
           response_data?: Json
-          team_id?: string | null
+          team_id?: string
         }
         Relationships: []
       }
@@ -111,6 +111,7 @@ export type Database = {
           naics_code: string | null
           payload: Json
           set_aside: string | null
+          team_id: string
         }
         Insert: {
           agency?: string | null
@@ -121,6 +122,7 @@ export type Database = {
           naics_code?: string | null
           payload: Json
           set_aside?: string | null
+          team_id: string
         }
         Update: {
           agency?: string | null
@@ -131,6 +133,7 @@ export type Database = {
           naics_code?: string | null
           payload?: Json
           set_aside?: string | null
+          team_id?: string
         }
         Relationships: []
       }
@@ -147,6 +150,7 @@ export type Database = {
           naics_codes: string[]
           opportunities: Json | null
           summary: Json | null
+          team_id: string
         }
         Insert: {
           cache_key: string
@@ -160,6 +164,7 @@ export type Database = {
           naics_codes: string[]
           opportunities?: Json | null
           summary?: Json | null
+          team_id: string
         }
         Update: {
           cache_key?: string
@@ -173,6 +178,7 @@ export type Database = {
           naics_codes?: string[]
           opportunities?: Json | null
           summary?: Json | null
+          team_id?: string
         }
         Relationships: []
       }
@@ -263,7 +269,15 @@ export type Database = {
           vehicle_name?: string
           vehicle_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contract_vehicles_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       knowledge_base: {
         Row: {
@@ -273,6 +287,7 @@ export type Database = {
           id: string
           source_filename: string | null
           tags: string[]
+          team_id: string | null
           title: string
           updated_at: string
           user_id: string | null
@@ -284,6 +299,7 @@ export type Database = {
           id?: string
           source_filename?: string | null
           tags?: string[]
+          team_id?: string | null
           title: string
           updated_at?: string
           user_id?: string | null
@@ -295,6 +311,7 @@ export type Database = {
           id?: string
           source_filename?: string | null
           tags?: string[]
+          team_id?: string | null
           title?: string
           updated_at?: string
           user_id?: string | null
@@ -392,7 +409,15 @@ export type Database = {
           total_value?: number | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "past_performance_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -558,7 +583,15 @@ export type Database = {
           title?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "proposal_milestones_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       proposal_teaming: {
         Row: {

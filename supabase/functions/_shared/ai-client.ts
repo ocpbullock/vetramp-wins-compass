@@ -22,7 +22,13 @@ const PROVIDERS: Record<Provider, ProviderConfig> = {
     defaultModel: "gpt-4o-mini",
   },
   anthropic: {
-    baseUrl: "https://api.anthropic.com/v1/chat/completions",
+    // NOTE: Anthropic provider is NOT yet fully implemented. The Messages API
+    // (https://api.anthropic.com/v1/messages) uses a different request/response
+    // shape than OpenAI chat completions (system prompt is a top-level field,
+    // messages must alternate user/assistant, response is `content[]` not
+    // `choices[]`, and the auth header is `x-api-key` + `anthropic-version`).
+    // Do not select this provider until a format-conversion layer is added.
+    baseUrl: "https://api.anthropic.com/v1/messages",
     apiKeyEnv: "ANTHROPIC_API_KEY",
     defaultModel: "claude-3-5-sonnet-latest",
   },
@@ -211,9 +217,16 @@ export async function setCachedResponse(opts: {
 }) {
   const admin = adminClient();
   if (!admin) return;
+  // Cache rows are scoped per-team. Without a team_id we can't satisfy RLS or
+  // safely partition entries between tenants — skip the write rather than
+  // poison the cache with cross-team data.
+  if (!opts.teamId) {
+    console.warn(`setCachedResponse skipped for ${opts.functionName}: missing teamId`);
+    return;
+  }
   const ttlMs = (opts.ttlHours ?? 24) * 3600_000;
   await admin.from("ai_response_cache").upsert({
-    team_id: opts.teamId ?? null,
+    team_id: opts.teamId,
     function_name: opts.functionName,
     cache_key: opts.cacheKey,
     response_data: opts.responseData,
