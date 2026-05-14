@@ -45,6 +45,13 @@ export function SearchControls({
   const [to, setTo] = useState(initial?.postedTo ?? today);
   const [keyword, setKeyword] = useState(initial?.keyword ?? "");
 
+  // Notify parent of NAICS changes so the dashboard can filter results
+  // client-side without re-running the search.
+  useEffect(() => {
+    onNaicsChange?.(naics);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [naics]);
+
   function toggle(code: string) {
     setNaics((prev) => (prev.includes(code) ? prev.filter((c) => c !== code) : [...prev, code]));
   }
