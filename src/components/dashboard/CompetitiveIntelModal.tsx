@@ -310,7 +310,8 @@ export function CompetitiveIntelModal({
           ) : null}
         </section>
 
-        <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+        <div className="flex justify-between items-center text-[11px] text-muted-foreground gap-3 flex-wrap">
+          <DataProvenance source="USAspending.gov" fetchedAt={data?.cachedAt} note={data?.fromCache ? "Cached result — use Force refresh for live data" : undefined} />
           <span>{data ? (data.fromCache ? `Cached ${new Date(data.cachedAt).toLocaleString()}` : "Fresh data") : ""}</span>
           {opp?.uiLink && (
             <Button asChild variant="outline" size="sm">
