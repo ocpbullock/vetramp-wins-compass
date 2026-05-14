@@ -434,6 +434,45 @@ export type Database = {
           },
         ]
       }
+      proposal_milestones: {
+        Row: {
+          assignee_id: string | null
+          created_at: string
+          due_date: string
+          id: string
+          notes: string | null
+          proposal_id: string
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_id?: string | null
+          created_at?: string
+          due_date: string
+          id?: string
+          notes?: string | null
+          proposal_id: string
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_id?: string | null
+          created_at?: string
+          due_date?: string
+          id?: string
+          notes?: string | null
+          proposal_id?: string
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       proposal_teaming: {
         Row: {
           created_at: string
