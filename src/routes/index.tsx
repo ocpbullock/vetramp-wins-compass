@@ -26,6 +26,8 @@ import {
 } from "@/lib/api";
 import { useLogStore } from "@/lib/log-store";
 import { toast } from "sonner";
+import { generateDefaultMilestones } from "@/lib/milestones";
+import { DeadlinesWidget } from "@/components/dashboard/DeadlinesWidget";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
