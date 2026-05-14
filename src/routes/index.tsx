@@ -244,7 +244,7 @@ function Dashboard() {
     <div className="min-h-screen bg-background">
       <Header />
       <div id="quick-search" className="scroll-mt-24">
-        <SearchControls onSearch={runSearch} busy={busy} initial={lastInput ?? undefined} />
+        <SearchControls onSearch={runSearch} onNaicsChange={setCurrentNaics} busy={busy} initial={lastInput ?? undefined} />
       </div>
       {(busy || progressText) && (
         <div className="max-w-[1400px] mx-auto px-6 pt-3">
