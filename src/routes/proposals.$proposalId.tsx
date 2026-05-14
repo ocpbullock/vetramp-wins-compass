@@ -273,7 +273,7 @@ function ProposalPipeline() {
       });
       if (!resp.ok || !resp.body) {
         const j = await resp.json().catch(() => ({ error: "Failed" }));
-        toast.error(j.error || `HTTP ${resp.status}`); return;
+        toast.error(friendlyError({ status: resp.status, message: j.error, code: j.code })); return;
       }
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
