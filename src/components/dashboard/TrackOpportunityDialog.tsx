@@ -7,11 +7,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, CheckCircle2, AlertTriangle } from "lucide-react";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeamId } from "@/lib/team";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export const CONTRACT_VEHICLES = [
