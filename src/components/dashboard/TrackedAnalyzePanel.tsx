@@ -37,7 +37,7 @@ export function TrackedAnalyzePanel({
     if (!open || !naicsCode) return;
     let cancelled = false;
     setLoading(true); setError(null); setAwards([]);
-    const startDate = format(subYears(new Date(), 5), "yyyy-MM-dd");
+    const startDate = format(subYears(new Date(), 10), "yyyy-MM-dd");
     const endDate = format(new Date(), "yyyy-MM-dd");
     searchUsaspending({ naicsCodes: [naicsCode], startDate, endDate, maxResults: 2000 })
       .then((res) => { if (!cancelled) { setAwards(res.results ?? []); setFetchedAt(new Date().toISOString()); } })
