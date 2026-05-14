@@ -167,7 +167,7 @@ function ProposalPipeline() {
           } else if (eventLine === "warn") {
             toast.warning(payload.message || "Partial parse warning");
           } else if (eventLine === "error") {
-            toast.error(payload.error || "Parse failed");
+            toast.error(friendlyError({ message: payload.error || "Parse failed", code: payload.code }));
           } else if (eventLine === "done") {
             done = payload;
           }
