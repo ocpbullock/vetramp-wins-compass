@@ -24,6 +24,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { PartnersPanel } from "@/components/settings/PartnersPanel";
+import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
@@ -86,11 +87,13 @@ function SettingsPage() {
             {isAdmin && <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>}
             <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
+            <TabsTrigger value="past-performance">Past Performance</TabsTrigger>
           </TabsList>
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
           {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>}
           <TabsContent value="team" className="mt-4"><TeamPanel /></TabsContent>
           <TabsContent value="partners" className="mt-4"><PartnersPanel /></TabsContent>
+          <TabsContent value="past-performance" className="mt-4"><PastPerformancePanel /></TabsContent>
         </Tabs>
       </main>
     </div>
@@ -219,10 +222,9 @@ function CompanyProfilePanel() {
         onChange={(items) => update({ certifications: items })}
       />
 
-      <PastPerformanceCard
-        items={form.past_performance ?? []}
-        onChange={(items) => update({ past_performance: items })}
-      />
+      <Card className="p-4 text-xs text-muted-foreground border-dashed">
+        Past performance is now managed in the structured <strong>Past Performance</strong> tab. The freeform list here is deprecated.
+      </Card>
 
       <div className="flex justify-end">
         <Button onClick={() => saveMut.mutate()} disabled={saveMut.isPending}>

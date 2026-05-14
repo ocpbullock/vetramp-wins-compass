@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { Document, Packer, Paragraph, TextRun, HeadingLevel } from "docx";
 import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
+import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
@@ -160,6 +161,12 @@ function ProposalPipeline() {
         capabilities_summary: e.partner?.capabilities_summary,
         past_performance_summary: e.partner?.past_performance_summary,
       }));
+      let pastPerformance: any[] = [];
+      const selectedPpIds: string[] = proposal.selected_past_performance ?? [];
+      if (selectedPpIds.length > 0) {
+        const { data: pp } = await supabase.from("past_performance").select("*").in("id", selectedPpIds);
+        pastPerformance = pp ?? [];
+      }
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-proposal-section`;
       const resp = await fetch(url, {
@@ -180,6 +187,7 @@ function ProposalPipeline() {
             management: proposal.management_approach, transition: proposal.transition_plan,
           },
           teaming: teaming.length ? teaming : undefined,
+          pastPerformance: pastPerformance.length ? pastPerformance : undefined,
           attachmentsText: attachmentsText || undefined,
         }),
       });
@@ -444,6 +452,15 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           proposalId={proposalId}
           teamId={proposal.team_id ?? null}
           opportunityNaics={proposal.naics_code}
+        />
+
+        <RelevantPastPerformanceCard
+          teamId={proposal.team_id ?? null}
+          naics={proposal.naics_code}
+          agency={proposal.agency}
+          opportunityTitle={proposal.opportunity_title}
+          selectedIds={proposal.selected_past_performance ?? []}
+          onChange={(ids) => onPatch({ selected_past_performance: ids })}
         />
       </div>
 

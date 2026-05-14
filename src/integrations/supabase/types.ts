@@ -157,6 +157,99 @@ export type Database = {
         }
         Relationships: []
       }
+      past_performance: {
+        Row: {
+          agency: string
+          annual_value: number | null
+          client_poc_email: string | null
+          client_poc_name: string | null
+          client_poc_phone: string | null
+          client_poc_title: string | null
+          contract_number: string | null
+          contract_title: string
+          contract_type: string | null
+          contract_vehicle: string | null
+          cpars_rating: string | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          lessons_learned: string | null
+          naics_code: string | null
+          period_of_performance_end: string | null
+          period_of_performance_start: string | null
+          place_of_performance: string | null
+          prime_or_sub: string | null
+          psc_code: string | null
+          relevance_keywords: string[]
+          sub_agency: string | null
+          task_order_number: string | null
+          team_id: string
+          total_value: number | null
+          updated_at: string
+        }
+        Insert: {
+          agency: string
+          annual_value?: number | null
+          client_poc_email?: string | null
+          client_poc_name?: string | null
+          client_poc_phone?: string | null
+          client_poc_title?: string | null
+          contract_number?: string | null
+          contract_title: string
+          contract_type?: string | null
+          contract_vehicle?: string | null
+          cpars_rating?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          lessons_learned?: string | null
+          naics_code?: string | null
+          period_of_performance_end?: string | null
+          period_of_performance_start?: string | null
+          place_of_performance?: string | null
+          prime_or_sub?: string | null
+          psc_code?: string | null
+          relevance_keywords?: string[]
+          sub_agency?: string | null
+          task_order_number?: string | null
+          team_id: string
+          total_value?: number | null
+          updated_at?: string
+        }
+        Update: {
+          agency?: string
+          annual_value?: number | null
+          client_poc_email?: string | null
+          client_poc_name?: string | null
+          client_poc_phone?: string | null
+          client_poc_title?: string | null
+          contract_number?: string | null
+          contract_title?: string
+          contract_type?: string | null
+          contract_vehicle?: string | null
+          cpars_rating?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          lessons_learned?: string | null
+          naics_code?: string | null
+          period_of_performance_end?: string | null
+          period_of_performance_start?: string | null
+          place_of_performance?: string | null
+          prime_or_sub?: string | null
+          psc_code?: string | null
+          relevance_keywords?: string[]
+          sub_agency?: string | null
+          task_order_number?: string | null
+          team_id?: string
+          total_value?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -359,6 +452,7 @@ export type Database = {
           readiness_score: number | null
           response_deadline: string | null
           sections: Json | null
+          selected_past_performance: string[]
           set_aside: string | null
           solicitation_number: string
           staffing_plan: Json | null
@@ -393,6 +487,7 @@ export type Database = {
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
+          selected_past_performance?: string[]
           set_aside?: string | null
           solicitation_number: string
           staffing_plan?: Json | null
@@ -427,6 +522,7 @@ export type Database = {
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
+          selected_past_performance?: string[]
           set_aside?: string | null
           solicitation_number?: string
           staffing_plan?: Json | null
