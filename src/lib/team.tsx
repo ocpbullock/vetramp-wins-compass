@@ -54,6 +54,12 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<TeamRole | null>(null);
   const [loading, setLoading] = useState(true);
   const bootstrappedFor = useRef<string | null>(null);
+  // Race-condition guard: if a bootstrap is already running and another team
+  // switch comes in, queue the latest requested team id and run it once the
+  // current bootstrap settles. We only keep the *latest* queued id — older
+  // pending switches are discarded since they're stale.
+  const bootstrapInFlight = useRef(false);
+  const queuedTeamId = useRef<string | null>(null);
 
   const loadMembers = useCallback(async (teamId: string, uid: string) => {
     const { data: members } = await supabase
