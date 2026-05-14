@@ -54,6 +54,12 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const [userRole, setUserRole] = useState<TeamRole | null>(null);
   const [loading, setLoading] = useState(true);
   const bootstrappedFor = useRef<string | null>(null);
+  // Race-condition guard: if a bootstrap is already running and another team
+  // switch comes in, queue the latest requested team id and run it once the
+  // current bootstrap settles. We only keep the *latest* queued id — older
+  // pending switches are discarded since they're stale.
+  const bootstrapInFlight = useRef(false);
+  const queuedTeamId = useRef<string | null>(null);
 
   const loadMembers = useCallback(async (teamId: string, uid: string) => {
     const { data: members } = await supabase
@@ -83,6 +89,11 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const bootstrap = useCallback(async (uid: string) => {
+    if (bootstrapInFlight.current) {
+      // Should be guarded by callers, but double-check to avoid concurrent runs.
+      return;
+    }
+    bootstrapInFlight.current = true;
     setLoading(true);
     try {
       const { data: memberships, error } = await supabase
@@ -135,6 +146,16 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       }
     } finally {
       setLoading(false);
+      bootstrapInFlight.current = false;
+      // If a team switch came in while we were running, process the latest one.
+      const next = queuedTeamId.current;
+      if (next) {
+        queuedTeamId.current = null;
+        if (typeof window !== "undefined") localStorage.setItem(SELECTED_TEAM_KEY, next);
+        bootstrappedFor.current = null;
+        // Fire-and-forget; errors surface via the inner try/catch above.
+        void bootstrap(uid);
+      }
     }
   }, [loadMembers]);
 
@@ -169,10 +190,15 @@ export function TeamProvider({ children }: { children: ReactNode }) {
 
   const setCurrentTeam = useCallback((id: string) => {
     if (typeof window !== "undefined") localStorage.setItem(SELECTED_TEAM_KEY, id);
-    if (user) {
-      bootstrappedFor.current = null;
-      bootstrap(user.id);
+    if (!user) return;
+    if (bootstrapInFlight.current) {
+      // Defer: the in-flight bootstrap will pick this up when it completes,
+      // overwriting any earlier queued switch with the latest request.
+      queuedTeamId.current = id;
+      return;
     }
+    bootstrappedFor.current = null;
+    void bootstrap(user.id);
   }, [user, bootstrap]);
 
   return (

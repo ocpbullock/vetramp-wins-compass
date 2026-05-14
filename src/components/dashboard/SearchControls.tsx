@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,11 +17,6 @@ export type SearchInput = {
   forceRefresh?: boolean;
 };
 
-const today = format(new Date(), "yyyy-MM-dd");
-// Default remains a 36-month UI window for continuity; the dashboard applies
-// a separate 5-year historical award lookback for recompete matching.
-const defaultFrom = format(subYears(new Date(), 3), "yyyy-MM-dd");
-
 export function SearchControls({
   initial,
   onSearch,
@@ -31,6 +26,18 @@ export function SearchControls({
   onSearch: (i: SearchInput) => void;
   busy: boolean;
 }) {
+  // Recalculate per render (memoized) so a long-lived session doesn't keep
+  // showing yesterday's "today" or a stale 3-year default window.
+  const { today, defaultFrom } = useMemo(() => {
+    const now = new Date();
+    return {
+      today: format(now, "yyyy-MM-dd"),
+      // Default remains a 36-month UI window for continuity; the dashboard
+      // applies a separate 5-year historical award lookback for recompete matching.
+      defaultFrom: format(subYears(now, 3), "yyyy-MM-dd"),
+    };
+  }, []);
+
   const [naics, setNaics] = useState<string[]>(initial?.naicsCodes ?? DEFAULT_NAICS);
   const [from, setFrom] = useState(initial?.postedFrom ?? defaultFrom);
   const [to, setTo] = useState(initial?.postedTo ?? today);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,15 @@ function initials(m?: TeamMember | null) {
   const parts = src.trim().split(/\s+/);
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase();
   return src.slice(0, 2).toUpperCase();
+}
+
+// Convert a <input type="datetime-local"> value ("YYYY-MM-DDTHH:mm") to an ISO
+// string in the user's local timezone. Using date-fns' `parse` makes the local
+// interpretation explicit (avoids relying on Date constructor parsing rules).
+function localInputToIso(value: string): string {
+  if (!value) return "";
+  const d = parse(value, "yyyy-MM-dd'T'HH:mm", new Date());
+  return d.toISOString();
 }
 
 export function MilestoneTimeline({
@@ -81,7 +90,7 @@ export function MilestoneTimeline({
     const { data, error } = await supabase.from("proposal_milestones").insert({
       proposal_id: proposalId,
       title: newTitle.trim(),
-      due_date: new Date(newDate).toISOString(),
+      due_date: localInputToIso(newDate),
       status: "upcoming" as const,
       sort_order: milestones.length,
     }).select().single();
@@ -150,7 +159,7 @@ export function MilestoneTimeline({
                       <Input
                         type="datetime-local"
                         value={format(new Date(m.due_date), "yyyy-MM-dd'T'HH:mm")}
-                        onChange={(e) => patchMilestone(m.id, { due_date: new Date(e.target.value).toISOString() })}
+                        onChange={(e) => patchMilestone(m.id, { due_date: localInputToIso(e.target.value) })}
                         className="h-7 text-xs w-[180px]"
                       />
                       <span className={`text-[10px] font-mono w-16 text-right ${
