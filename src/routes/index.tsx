@@ -66,6 +66,23 @@ function Dashboard() {
     if (h && valid.includes(h)) setTab(h);
   }, [location.hash]);
   const [inProgressCount, setInProgressCount] = useState<number>(0);
+
+  // Fetch in-progress count on mount so the stat card is populated before
+  // the user clicks the tab (Radix Tabs lazy-mount inactive panels, so
+  // InProgressTab's own load() doesn't run until activation).
+  useEffect(() => {
+    if (!user) return;
+    let cancelled = false;
+    (async () => {
+      let q = supabase.from("proposals").select("id", { count: "exact", head: true });
+      if (teamId) q = q.eq("team_id", teamId);
+      else q = q.eq("user_id", user.id);
+      const { count, error } = await q;
+      if (!cancelled && !error && typeof count === "number") setInProgressCount(count);
+    })();
+    return () => { cancelled = true; };
+  }, [user, teamId]);
+
   async function handlePropose(o: SamOpportunity) {
     if (!user) return;
     const { data, error } = await supabase.from("proposals").insert({
