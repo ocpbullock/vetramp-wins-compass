@@ -49,8 +49,14 @@ export function DeadlinesTab() {
                 <TableCell className={`text-xs ${dColor}`}>{dLabel}</TableCell>
                 <TableCell className="text-xs capitalize">{d.status}</TableCell>
                 <TableCell className="text-right pr-4">
-                  {d.href ? (
-                    <Link to={d.href} className="text-xs text-primary hover:underline">Open</Link>
+                  {d.proposalId ? (
+                    <Link
+                      to="/proposals/$proposalId"
+                      params={{ proposalId: d.proposalId }}
+                      className="text-xs text-primary hover:underline"
+                    >
+                      Open
+                    </Link>
                   ) : (
                     <span className="text-xs text-muted-foreground">—</span>
                   )}
