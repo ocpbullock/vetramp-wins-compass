@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/tooltip";
 import { StarButton } from "@/components/dashboard/StarButton";
 import { starInputFromSam } from "@/lib/starred";
+import { AgencyCombobox } from "./AgencyCombobox";
+import { useLogStore } from "@/lib/log-store";
 
 type SortKey = "title" | "agency" | "naics" | "type" | "posted" | "deadline" | "incumbent";
 
