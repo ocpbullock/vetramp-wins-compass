@@ -11,13 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
-import { LogOut, Shield, Settings, ChevronDown, Menu, X } from "lucide-react";
+import { LogOut, BookOpen, ChevronDown, Menu, X, Shield } from "lucide-react";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
 type NavItem = {
@@ -29,17 +23,19 @@ type NavItem = {
 };
 
 const NAV: NavItem[] = [
-  { label: "Dashboard", to: "/" },
   { label: "Search", to: "/", hash: "opportunities", matchHash: "opportunities" },
   { label: "Proposals", to: "/", hash: "in-progress", matchHash: "in-progress" },
-  { label: "Settings", to: "/settings", icon: Settings },
+  { label: "Capture Intel", to: "/settings", icon: BookOpen },
 ];
 
 export function Header() {
   const { user, signOut, isAdmin } = useAuth();
-  const { currentTeam } = useTeam();
+  const { currentTeam, userRole } = useTeam();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const isTeamAdmin = userRole === "owner" || userRole === "admin";
+  const showAdminLink = isAdmin || isTeamAdmin;
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
   const displayName =
@@ -55,8 +51,7 @@ export function Header() {
     if (item.to === "/settings") return location.pathname.startsWith("/settings");
     if (!onHome) return false;
     if (item.matchHash) return currentHash === item.matchHash;
-    // Dashboard: home with no recognized hash
-    return !["opportunities", "historical", "starred", "in-progress", "tracked", "analytics", "logs"].includes(currentHash);
+    return false;
   };
 
   return (
@@ -100,56 +95,46 @@ export function Header() {
 
         <div className="flex-1" />
 
-        <TooltipProvider delayDuration={200}>
-          {isAdmin && (
-            <div className="hidden md:flex items-center gap-1 border-l border-border pl-2">
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Button variant="ghost" size="icon" asChild aria-label="Admin">
-                    <Link to="/admin"><Shield className="w-5 h-5" /></Link>
-                  </Button>
-                </TooltipTrigger>
-                <TooltipContent>Admin</TooltipContent>
-              </Tooltip>
-            </div>
-          )}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-accent transition-colors ml-1">
-                <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
-                  {initials}
-                </div>
-                <div className="hidden sm:block text-left leading-tight">
-                  <div className="text-sm font-semibold">{displayName}</div>
-                  <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">{currentTeam?.name ?? "No team"}</div>
-                </div>
-                <ChevronDown className="w-4 h-4 text-muted-foreground hidden sm:block" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
-              <DropdownMenuLabel className="font-normal">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-accent transition-colors ml-1">
+              <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
+                {initials}
+              </div>
+              <div className="hidden sm:block text-left leading-tight">
                 <div className="text-sm font-semibold">{displayName}</div>
-                <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
-                {currentTeam && <div className="text-xs text-muted-foreground truncate mt-1">Team: {currentTeam.name}</div>}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onSelect={() => signOut()}>
-                <LogOut className="w-4 h-4 mr-2" /> Sign out
+                <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">{currentTeam?.name ?? "No team"}</div>
+              </div>
+              <ChevronDown className="w-4 h-4 text-muted-foreground hidden sm:block" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="font-normal">
+              <div className="text-sm font-semibold">{displayName}</div>
+              <div className="text-xs text-muted-foreground truncate">{user?.email}</div>
+              {currentTeam && <div className="text-xs text-muted-foreground truncate mt-1">Team: {currentTeam.name}</div>}
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {showAdminLink && (
+              <DropdownMenuItem asChild>
+                <Link to="/admin"><Shield className="w-4 h-4 mr-2" /> Admin</Link>
               </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+            <DropdownMenuItem onSelect={() => signOut()}>
+              <LogOut className="w-4 h-4 mr-2" /> Sign out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="md:hidden"
-            aria-label="Toggle navigation"
-            onClick={() => setMobileOpen((v) => !v)}
-          >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-          </Button>
-        </TooltipProvider>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          aria-label="Toggle navigation"
+          onClick={() => setMobileOpen((v) => !v)}
+        >
+          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </Button>
       </div>
 
       {mobileOpen && (
@@ -176,7 +161,7 @@ export function Header() {
                 </Link>
               );
             })}
-            {isAdmin && (
+            {showAdminLink && (
               <Link
                 to="/admin"
                 onClick={() => setMobileOpen(false)}
