@@ -100,6 +100,21 @@ export function TrackedAnalyzePanel({
     return { total, avg, setAside, topVendors, trend, count: agencyAwards.length };
   }, [agencyAwards]);
 
+  // Run the same incumbent matcher used on the Opportunities tab against the
+  // cached Tango/USAspending awards so the analyst sees a likely incumbent
+  // before they decide whether to bid this tracked opportunity.
+  const incumbent = useMemo(() => {
+    if (!naicsCode || !title) return null;
+    const opp = {
+      noticeId: `tracked:${title}`,
+      solicitationNumber: solicitationNumber || "",
+      title,
+      fullParentPathName: agency || "",
+      naicsCode,
+    } as unknown as SamOpportunity;
+    return matchIncumbent(opp, awards);
+  }, [naicsCode, title, agency, solicitationNumber, awards]);
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-full sm:max-w-2xl overflow-y-auto">
