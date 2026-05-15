@@ -90,7 +90,13 @@ function Dashboard() {
     return () => { cancelled = true; };
   }, [user, teamId]);
 
-  async function handlePropose(o: SamOpportunity) {
+  async function handlePropose(
+    o: SamOpportunity,
+    source: { kind: "sam" | "tracked" | "starred"; id: string } = {
+      kind: "sam",
+      id: o.solicitationNumber || o.noticeId || "unknown",
+    },
+  ) {
     if (!user) return;
     const { data, error } = await supabase.from("proposals").insert({
       user_id: user.id,
@@ -103,6 +109,8 @@ function Dashboard() {
       set_aside: o.setAside || o.typeOfSetAside,
       response_deadline: o.responseDeadLine || null,
       opportunity_data: o,
+      opportunity_source: source.kind,
+      opportunity_source_id: source.id,
       status: "intake",
     }).select("id").single();
     if (error) { toast.error(error.message); return; }
