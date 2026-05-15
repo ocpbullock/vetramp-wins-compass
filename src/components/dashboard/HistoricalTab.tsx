@@ -28,14 +28,9 @@ function Row({ index, style, items, onDetails }: RowComponentProps<RowData>) {
   return (
     <div
       style={style}
-      className="grid items-center gap-2 px-3 border-b border-border text-sm hover:bg-muted/40"
-      // eslint-disable-next-line react/forbid-dom-props
-      // @ts-expect-error allow inline grid template
-      data-grid={true}
+      className="px-3 border-b border-border text-sm hover:bg-muted/40"
     >
-      <div className="contents" style={{ gridTemplateColumns: COLS } as any} />
-      <style>{``}</style>
-      <div style={{ display: "grid", gridTemplateColumns: COLS, gap: "0.5rem", alignItems: "center", width: "100%" }}>
+      <div style={{ display: "grid", gridTemplateColumns: COLS, gap: "0.5rem", alignItems: "center", width: "100%", height: "100%" }}>
         <div className="min-w-0">
           {a.generated_internal_id ? (
             <a
