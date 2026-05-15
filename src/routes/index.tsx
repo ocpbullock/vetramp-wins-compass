@@ -154,6 +154,8 @@ function Dashboard() {
     setHistoricalTotal(undefined);
     setSearchedNaics(input.naicsCodes);
     setDataSource(null);
+    setFilteredObligated(null);
+    setLastSearchInput(input);
     try {
       // Persist (sans forceRefresh) so the next page load can restore + auto-hit cache
       const { forceRefresh: _fr, ...persisted } = input;
