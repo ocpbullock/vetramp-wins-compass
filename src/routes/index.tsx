@@ -8,8 +8,7 @@ import { SearchControls, type SearchInput } from "@/components/dashboard/SearchC
 import { StatCards } from "@/components/dashboard/StatCards";
 import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
 import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
-import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
-import { LogsTab } from "@/components/dashboard/LogsTab";
+import { DeadlinesTab } from "@/components/dashboard/DeadlinesTab";
 import { InProgressTab } from "@/components/dashboard/InProgressTab";
 import { TrackedOpportunitiesTab } from "@/components/dashboard/TrackedOpportunitiesTab";
 import { StarredTab } from "@/components/dashboard/StarredTab";
