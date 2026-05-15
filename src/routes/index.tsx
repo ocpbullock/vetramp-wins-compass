@@ -374,7 +374,13 @@ function Dashboard() {
             <InProgressTab onCountChange={setInProgressCount} />
           </TabsContent>
           <TabsContent value="tracked" className="mt-4">
-            <TrackedOpportunitiesTab awards={awards} />
+            <TrackedOpportunitiesTab
+              awards={awards}
+              onCompete={setCompeteOpp}
+              onPropose={(opp, trackedId) =>
+                handlePropose(opp, { kind: "tracked", id: trackedId })
+              }
+            />
           </TabsContent>
           <TabsContent value="deadlines" className="mt-4">
             <DeadlinesTab />
