@@ -480,7 +480,8 @@ function ProposalPipeline() {
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <StepErrorBoundary label="intel">
-              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} attachments={attachments.filter((a) => a.file_type === "customer_intel")} onUpload={uploadFile} onDelete={deleteAttachment} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} />
+            <StepErrorBoundary label="customer-intel">
+              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
