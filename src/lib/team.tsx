@@ -4,11 +4,15 @@ import { useAuth } from "@/lib/auth";
 
 export type TeamRole = "owner" | "admin" | "member" | "viewer";
 
+export type TeamType = "organization" | "opportunity";
+
 export type Team = {
   id: string;
   name: string;
   slug: string;
   created_by: string | null;
+  team_type: TeamType;
+  parent_team_id: string | null;
 };
 
 export type TeamMember = {
@@ -26,6 +30,7 @@ type TeamCtx = {
   teamMembers: TeamMember[];
   userRole: TeamRole | null;
   loading: boolean;
+  availableTeams: Team[];
   refreshTeam: () => Promise<void>;
   refreshMembers: () => Promise<void>;
   setCurrentTeam: (id: string) => void;
@@ -36,6 +41,7 @@ const Ctx = createContext<TeamCtx>({
   teamMembers: [],
   userRole: null,
   loading: true,
+  availableTeams: [],
   refreshTeam: async () => {},
   refreshMembers: async () => {},
   setCurrentTeam: () => {},
@@ -51,6 +57,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [currentTeam, setCurrentTeamState] = useState<Team | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
   const [userRole, setUserRole] = useState<TeamRole | null>(null);
   const [loading, setLoading] = useState(true);
   const bootstrappedFor = useRef<string | null>(null);
@@ -98,17 +105,18 @@ export function TeamProvider({ children }: { children: ReactNode }) {
     try {
       const { data: memberships, error } = await supabase
         .from("team_members")
-        .select("team_id, role, teams:team_id ( id, name, slug, created_by )")
+        .select("team_id, role, teams:team_id ( id, name, slug, created_by, team_type, parent_team_id )")
         .eq("user_id", uid);
       if (error) throw error;
 
       const rows = (memberships ?? []) as Array<{
         team_id: string;
         role: TeamRole;
-        teams: { id: string; name: string; slug: string; created_by: string | null } | null;
+        teams: { id: string; name: string; slug: string; created_by: string | null; team_type: TeamType; parent_team_id: string | null } | null;
       }>;
 
       let chosen: Team | null = null;
+      let allTeams: Team[] = [];
       if (rows.length === 0) {
         // Auto-create personal team
         const { data: profile } = await supabase
@@ -121,8 +129,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         const slug = `${slugify(baseName)}-${uid.slice(0, 8)}`;
         const { data: created, error: tErr } = await supabase
           .from("teams")
-          .insert({ name, slug, created_by: uid })
-          .select("id, name, slug, created_by")
+          .insert({ name, slug, created_by: uid, team_type: "organization" })
+          .select("id, name, slug, created_by, team_type, parent_team_id")
           .single();
         if (tErr) throw tErr;
         const { error: mErr } = await supabase
@@ -130,11 +138,14 @@ export function TeamProvider({ children }: { children: ReactNode }) {
           .insert({ team_id: created.id, user_id: uid, role: "owner" });
         if (mErr) throw mErr;
         chosen = created as Team;
+        allTeams = [created as Team];
       } else {
+        allTeams = rows.map((r) => r.teams).filter((t): t is Team => !!t);
         const stored = typeof window !== "undefined" ? localStorage.getItem(SELECTED_TEAM_KEY) : null;
-        const match = rows.find((r) => r.team_id === stored && r.teams) ?? rows.find((r) => r.teams);
-        chosen = (match?.teams as Team) ?? null;
+        const match = allTeams.find((t) => t.id === stored) ?? allTeams[0] ?? null;
+        chosen = match;
       }
+      setAvailableTeams(allTeams);
 
       setCurrentTeamState(chosen);
       if (chosen) {
@@ -202,7 +213,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }, [user, bootstrap]);
 
   return (
-    <Ctx.Provider value={{ currentTeam, teamMembers, userRole, loading, refreshTeam, refreshMembers, setCurrentTeam }}>
+    <Ctx.Provider value={{ currentTeam, teamMembers, userRole, loading, availableTeams, refreshTeam, refreshMembers, setCurrentTeam }}>
       {children}
     </Ctx.Provider>
   );

@@ -1,65 +1,99 @@
-## Multi-User Team Support — Implementation Plan
+## Opportunity-Scoped Teams
 
-Foundational change: introduce a teams/organizations model so all proposal & tracking data can be shared across team members with role-based permissions.
+Goal: let users spin up an "opportunity team" tied to a single proposal, invite teaming partners to it, and have those partners see only that proposal + read-only org capability data — never the parent org's other opportunities, proposals, starred/tracked lists, or search.
 
-### 1. Database migration
+---
 
-**New tables**
-- `teams`: `id`, `name`, `slug` (unique), `created_by` (uuid, references auth.users), `created_at`
-- `team_members`: `id`, `team_id` (FK teams, on delete cascade), `user_id` (uuid, references auth.users on delete cascade), `role` (text check in `'owner','admin','member','viewer'`), `joined_at`, unique(`team_id`,`user_id`)
+### 1. Schema (single migration)
 
-**Add `team_id` (nullable, FK teams on delete set null) to:**
-- `proposals`, `tracked_opportunities`, `proposal_drafts`, `company_profile`
+`teams`
+- add `team_type text not null default 'organization'` — values: `organization` | `opportunity`
+- add `parent_team_id uuid references teams(id)` — opportunity teams point at their org
 
-**Security definer helpers** (avoid RLS recursion):
-- `public.is_team_member(_team_id uuid, _user_id uuid) returns boolean`
-- `public.team_role(_team_id uuid, _user_id uuid) returns text`
+`proposals`
+- add `opportunity_team_id uuid references teams(id)` — links a proposal to its dedicated opportunity team
 
-**RLS**
-- `teams`: select if member; insert if `created_by = auth.uid()`; update/delete if owner.
-- `team_members`: select rows for teams the user belongs to; insert/update/delete if owner or admin of that team; users can always select their own membership.
-- For `proposals`, `tracked_opportunities`, `proposal_drafts`:
-  - SELECT: `user_id = auth.uid() OR (team_id IS NOT NULL AND is_team_member(team_id, auth.uid())) OR has_role(auth.uid(),'admin')`
-  - INSERT: `user_id = auth.uid()` AND (team_id IS NULL OR is_team_member(team_id, auth.uid()) with role in owner/admin/member)
-  - UPDATE/DELETE: own row, or team_id matches a team where role in owner/admin (delete) / owner/admin/member (update). Viewers cannot write.
-- `company_profile`: SELECT if team member or no team_id (legacy); UPDATE/INSERT if owner/admin of team or global admin (existing behavior preserved as fallback).
+Helper SECURITY DEFINER functions (avoid recursive RLS):
+- `team_type(_team_id uuid) returns text`
+- `parent_team_id(_team_id uuid) returns uuid`
+- `user_opportunity_team_ids(_user_id uuid) returns setof uuid` — every opportunity team the user belongs to
+- `user_parent_org_ids_via_opp(_user_id uuid) returns setof uuid` — parent orgs reachable via opportunity-team membership (for read-only capability data)
 
-Existing per-user policies replaced by these unified ones.
+### 2. RLS rewrites
 
-### 2. Team context provider — `src/lib/team.tsx`
+Opportunity-team members must see ONLY:
+- their proposal (`proposals.opportunity_team_id = their_team`)
+- that proposal's milestones, teaming, attachments (already scoped via proposal_id — no change needed)
+- `teaming_partners` of their opportunity team
+- READ-ONLY `knowledge_base`, `past_performance`, `contract_vehicles` of the parent org
 
-- `TeamProvider` wraps app inside `AuthProvider`.
-- On auth ready: query `team_members` joined with `teams` for current user.
-  - If empty → create a personal team (`name: "<display_name>'s Team"`, `slug: <userId-prefix>`) and insert membership as `owner`.
-  - Else pick first (later: persisted selection).
-- Exposes via `useTeam()`: `currentTeam`, `teamMembers`, `userRole`, `refreshTeam()`, `setCurrentTeam(id)` (for future switching).
-- Helper `useTeamId()` returns `currentTeam?.id` for inserts.
+Opportunity-team members must NOT see:
+- other `proposals` of the parent org
+- `starred_opportunities`, `tracked_opportunities`, `cached_searches`, `tango_cached_*` of the parent org
+- other opportunity teams
 
-### 3. Wire team_id into create flows
+Update SELECT policies on:
+- `proposals` — allow when `is_team_member(team_id)` AND team is org, OR `is_team_member(opportunity_team_id)`
+- `starred_opportunities`, `tracked_opportunities`, `cached_searches`, `tango_cached_*`, `cached_competitive_intel`, `ai_response_cache` — restrict to org-team membership only (exclude opportunity teams)
+- `knowledge_base`, `past_performance`, `contract_vehicles` — allow read for opportunity team members of the parent org (insert/update/delete unchanged, org-only)
+- `teaming_partners` — already team-scoped; works as-is for opportunity teams (each opp team has its own roster)
 
-Find existing inserts to `proposals`, `tracked_opportunities`, `proposal_drafts` and add `team_id: currentTeam.id`. Keep `user_id` set as today.
+Write policies on `proposals`: allow update when user is member of either `team_id` (org) or `opportunity_team_id`.
 
-### 4. Settings — Team tab (`src/routes/settings.tsx`)
+### 3. Backend flow — "Create opportunity team"
 
-Add "Team" tab alongside Company Profile and Knowledge Base.
+New server fn `createOpportunityTeam.functions.ts`:
+- Input: `{ parentTeamId, proposalId?, opportunityTitle, opportunitySource, opportunitySourceId }`
+- Insert into `teams` with `team_type='opportunity'`, `parent_team_id=parentTeamId`, `name=truncate(title,60)`, slug from id
+- Insert `team_members` row making caller `owner`
+- If `proposalId` provided: update proposal's `opportunity_team_id`. Else create a draft proposal stub with the source fields and link it.
+- Return `{ teamId, proposalId }`
 
-Panel contents:
-- Team name (editable for owners) + slug
-- Member list table: avatar/name/email, role select (owner/admin/member/viewer), remove button. Owners can change roles & remove (cannot demote/remove last owner). Non-owners see read-only roles.
-- Invite member form: email + role select + "Add member" button. Looks up `profiles` by email, inserts into `team_members`. If no profile exists, surface a toast: "User must sign up first."
+### 4. UI
 
-### 5. Header update (`src/components/dashboard/Header.tsx`)
+**Trigger points** for "Create Team":
+- StarredTab row action → "Create Team & Propose"
+- TrackedOpportunitiesTab row action → same
+- Proposal intake step → "Invite teaming partners" button (creates opp team if not yet linked, opens invite modal)
 
-In the avatar dropdown area show team name as a small muted line under the user's display name. No new nav item.
+**Header team switcher**
+- Group dropdown into two sections: "Organizations" (team_type=organization) and "Opportunities" (team_type=opportunity, label = team name).
+- When active team is opportunity-type, set a context flag in TeamProvider.
 
-### 6. Files
+**Nav (Header.tsx)**
+- When `activeTeam.team_type === 'opportunity'`: render only `Proposal | Capture Intel | Team`
+- `Proposal` link → `/proposals/{proposalId}` (the linked proposal)
+- `Capture Intel` → existing settings route, but the UI hides editing controls for KB/past perf/vehicles and shows "Read-only — provided by {parent org name}"
+- `Team` → existing team management page filtered to current opp team
 
-- New: `supabase/migrations/<ts>_teams.sql`, `src/lib/team.tsx`, `src/components/settings/TeamPanel.tsx`
-- Edit: `src/routes/__root.tsx` (or wherever AuthProvider lives) to wrap with TeamProvider, `src/routes/settings.tsx`, `src/components/dashboard/Header.tsx`, and any component currently inserting proposals/tracked_opportunities/proposal_drafts to attach `team_id`.
+**Routing guards**
+- `/`, `/admin`, search/starred/tracked tabs: if active team is opportunity-type, redirect to the linked proposal.
 
-### Out of scope (this turn)
-- Email invitations (deferred — invites are direct adds for now)
-- Team switching UI (single current team auto-selected; switcher can come later)
-- Backfilling `team_id` for legacy rows (rows remain personal/null and stay visible to original owner via `user_id` policy)
+**Invite flow**
+- `inviteToTeam` server fn already exists; extend payload to include opportunity context. Email/link copy: when team is opportunity-type, subject = "You're invited to collaborate on {opportunity title}", body mentions opp title and proposal link.
+- Accept-invite handler: after accepting, if joined team is opportunity-type, navigate to `/proposals/{proposalId}` instead of `/`.
 
-Confirm and I'll execute the migration first, then code.
+### 5. Files
+
+Migration:
+- `supabase/migrations/<ts>_opportunity_teams.sql`
+
+Server functions (new):
+- `src/lib/opportunity-teams.functions.ts` — `createOpportunityTeam`, `getOpportunityTeamProposal`
+
+Edits:
+- `src/components/dashboard/Header.tsx` — grouped team switcher + scoped nav
+- `src/components/team/TeamProvider.tsx` (or equivalent) — expose `team_type`, `parent_team_id`
+- `src/components/dashboard/StarredTab.tsx`, `TrackedOpportunitiesTab.tsx` — "Create Team" action
+- `src/routes/proposals.$proposalId.tsx` — "Invite partners" button + opp-team awareness
+- `src/routes/index.tsx`, `src/routes/admin.tsx`, `src/routes/settings.tsx` — guard for opportunity-team context (redirect / read-only)
+- Invite acceptance route (find existing) — redirect to proposal when opp team
+- `src/integrations/supabase/types.ts` — regenerated automatically after migration
+
+### 6. Out of scope (call out, don't build)
+- Backfilling existing proposals with opportunity teams (none exist yet under new model)
+- Cross-opp-team search across a partner's multiple invitations (future)
+
+---
+
+I'll run the migration first, wait for approval, then implement the server fn + UI in one pass.
