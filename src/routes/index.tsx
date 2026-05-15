@@ -235,6 +235,29 @@ function Dashboard() {
     }
   }
 
+  const hasMoreAwards = (historicalTotal ?? 0) > awards.length;
+
+  async function loadMoreAwards() {
+    if (!lastSearchInput || loadingMore || !hasMoreAwards) return;
+    setLoadingMore(true);
+    try {
+      const historicalFrom = historicalLookbackFrom();
+      const usaRes = await searchUsaspending({
+        naicsCodes: lastSearchInput.naicsCodes,
+        startDate: historicalFrom,
+        endDate: lastSearchInput.postedTo,
+        keyword: lastSearchInput.keyword,
+        maxResults: awards.length + 2000,
+      });
+      setAwards(usaRes.results ?? []);
+      setHistoricalTotal(usaRes.page_metadata?.total);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to load more");
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
   const stats = useMemo(() => {
     const activeOpps = opps.filter((o) => !o.type?.toLowerCase().includes("award")).length;
     const totalObligated = awards.reduce((s, a) => s + (Number(a["Award Amount"]) || 0), 0);
