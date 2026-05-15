@@ -52,7 +52,14 @@ function AcceptInvitePage() {
     } else {
       toast.success("Welcome to the team!");
     }
-    navigate({ to: "/" });
+    if (res.teamId) {
+      try { localStorage.setItem("vetramp.currentTeamId", res.teamId); } catch { /* ignore */ }
+    }
+    if (res.proposalId) {
+      navigate({ to: "/proposals/$proposalId", params: { proposalId: res.proposalId } });
+    } else {
+      navigate({ to: "/" });
+    }
   }
 
   async function handleSubmit(e: React.FormEvent) {

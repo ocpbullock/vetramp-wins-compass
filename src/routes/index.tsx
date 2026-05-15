@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
-import { useTeamId } from "@/lib/team";
+import { useTeam, useTeamId } from "@/lib/team";
+import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
 import { Header } from "@/components/dashboard/Header";
 import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
 import { StatCards } from "@/components/dashboard/StatCards";
@@ -40,7 +42,25 @@ function Dashboard() {
   const location = useLocation();
   const { user, loading } = useAuth();
   const teamId = useTeamId();
+  const { currentTeam } = useTeam();
+  const fetchOppProposal = useServerFn(getOpportunityTeamProposal);
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
+
+  // Opportunity-team members don't have a dashboard — redirect to their proposal.
+  useEffect(() => {
+    if (!currentTeam || currentTeam.team_type !== "opportunity") return;
+    let cancelled = false;
+    fetchOppProposal({ data: { teamId: currentTeam.id } })
+      .then((res) => {
+        if (cancelled) return;
+        if (res.proposal?.id) {
+          navigate({ to: "/proposals/$proposalId", params: { proposalId: res.proposal.id }, replace: true });
+        }
+      })
+      .catch(() => { /* stay on dashboard */ });
+    return () => { cancelled = true; };
+  }, [currentTeam, fetchOppProposal, navigate]);
+
   // Auto-restore last search from localStorage on mount (cache hit = instant).
   const didAutoLoad = useRef(false);
   useEffect(() => {

@@ -12,7 +12,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature } from "lucide-react";
+import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users } from "lucide-react";
+import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -95,6 +96,7 @@ export function TrackedOpportunitiesTab({
   const [editing, setEditing] = useState<TrackedOpportunity | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TrackedOpportunity | null>(null);
   const [analyze, setAnalyze] = useState<TrackedOpportunity | null>(null);
+  const [teamRow, setTeamRow] = useState<TrackedOpportunity | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
   // Pick up a "highlight this row" hint stashed by InProgressTab so the user
@@ -299,6 +301,9 @@ export function TrackedOpportunitiesTab({
                       <Button size="sm" variant="ghost" onClick={() => setAnalyze(i)} title="Analyze with USAspending">
                         <BarChart3 className="w-4 h-4" />
                       </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setTeamRow(i)} title="Create opportunity team">
+                        <Users className="w-4 h-4" />
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => { setEditing(i); setDialogOpen(true); }} title="Edit">
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -378,6 +383,19 @@ export function TrackedOpportunitiesTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {teamRow && (
+        <CreateOpportunityTeamDialog
+          open={!!teamRow}
+          onOpenChange={(o) => { if (!o) setTeamRow(null); }}
+          opportunityTitle={teamRow.title}
+          source="tracked"
+          sourceId={teamRow.id}
+          agency={teamRow.agency}
+          naicsCode={teamRow.naics_code}
+          responseDeadline={teamRow.response_deadline ?? null}
+        />
+      )}
     </div>
   );
 }

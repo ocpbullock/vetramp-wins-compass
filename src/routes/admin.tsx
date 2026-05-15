@@ -32,20 +32,24 @@ export const Route = createFileRoute("/admin")({ component: AdminPage });
 
 function AdminPage() {
   const { user, session, loading, isAdmin } = useAuth();
-  const { userRole } = useTeam();
+  const { userRole, currentTeam } = useTeam();
   const navigate = useNavigate();
   const accessToken = session?.access_token;
+  const isOpp = currentTeam?.team_type === "opportunity";
   const isTeamAdmin = userRole === "owner" || userRole === "admin";
-  const canAccess = isAdmin || isTeamAdmin;
+  const canAccess = (isAdmin || isTeamAdmin) && !isOpp;
 
   useEffect(() => {
     if (loading) return;
     if (!user) navigate({ to: "/auth" });
+    else if (isOpp) {
+      navigate({ to: "/" });
+    }
     else if (!canAccess) {
       toast.error("Admins only.");
       navigate({ to: "/" });
     }
-  }, [user, loading, canAccess, navigate]);
+  }, [user, loading, canAccess, isOpp, navigate]);
 
   if (loading || !user || !canAccess) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;

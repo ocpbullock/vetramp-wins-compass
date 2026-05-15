@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Star, FileSignature, ExternalLink, Trash2 } from "lucide-react";
+import { Star, FileSignature, ExternalLink, Trash2, Users } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { format, parseISO } from "date-fns";
 import { useStarred, type StarredRow } from "@/lib/starred";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
 
 export function StarredTab({
   onStartProposal,
@@ -18,6 +19,7 @@ export function StarredTab({
   const [rows, setRows] = useState<StarredRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [teamRow, setTeamRow] = useState<StarredRow | null>(null);
 
   async function reload() {
     setLoading(true);
@@ -121,6 +123,20 @@ export function StarredTab({
                           <TooltipTrigger asChild>
                             <Button
                               size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => setTeamRow(r)}
+                              title="Create opportunity team"
+                            >
+                              <Users className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Create team & invite partners</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
                               variant="ghost"
                               className="h-7 w-7"
                               onClick={() => {
@@ -160,6 +176,18 @@ export function StarredTab({
             </TableBody>
           </Table>
         </div>
+        {teamRow && (
+          <CreateOpportunityTeamDialog
+            open={!!teamRow}
+            onOpenChange={(o) => { if (!o) setTeamRow(null); }}
+            opportunityTitle={teamRow.title || teamRow.notice_id}
+            source="starred"
+            sourceId={teamRow.id}
+            noticeId={teamRow.notice_id}
+            naicsCode={teamRow.naics_code}
+            responseDeadline={teamRow.response_deadline}
+          />
+        )}
       </div>
     </TooltipProvider>
   );
