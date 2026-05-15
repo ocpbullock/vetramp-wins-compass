@@ -109,7 +109,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       const rows = (memberships ?? []) as Array<{
         team_id: string;
         role: TeamRole;
-        teams: { id: string; name: string; slug: string; created_by: string | null } | null;
+        teams: { id: string; name: string; slug: string; created_by: string | null; team_type: TeamType; parent_team_id: string | null } | null;
       }>;
 
       let chosen: Team | null = null;
