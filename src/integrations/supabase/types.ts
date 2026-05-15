@@ -663,6 +663,7 @@ export type Database = {
           opportunity_data: Json | null
           opportunity_source: string | null
           opportunity_source_id: string | null
+          opportunity_team_id: string | null
           opportunity_title: string | null
           opportunity_type: string | null
           parsing_status: string
@@ -703,6 +704,7 @@ export type Database = {
           opportunity_data?: Json | null
           opportunity_source?: string | null
           opportunity_source_id?: string | null
+          opportunity_team_id?: string | null
           opportunity_title?: string | null
           opportunity_type?: string | null
           parsing_status?: string
@@ -743,6 +745,7 @@ export type Database = {
           opportunity_data?: Json | null
           opportunity_source?: string | null
           opportunity_source_id?: string | null
+          opportunity_team_id?: string | null
           opportunity_title?: string | null
           opportunity_type?: string | null
           parsing_status?: string
@@ -766,6 +769,13 @@ export type Database = {
           user_notes?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "proposals_opportunity_team_id_fkey"
+            columns: ["opportunity_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "proposals_team_id_fkey"
             columns: ["team_id"]
@@ -1216,7 +1226,9 @@ export type Database = {
           created_by: string | null
           id: string
           name: string
+          parent_team_id: string | null
           slug: string
+          team_type: string
           updated_at: string
         }
         Insert: {
@@ -1224,7 +1236,9 @@ export type Database = {
           created_by?: string | null
           id?: string
           name: string
+          parent_team_id?: string | null
           slug: string
+          team_type?: string
           updated_at?: string
         }
         Update: {
@@ -1232,10 +1246,20 @@ export type Database = {
           created_by?: string | null
           id?: string
           name?: string
+          parent_team_id?: string | null
           slug?: string
+          team_type?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "teams_parent_team_id_fkey"
+            columns: ["parent_team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       tracked_opportunities: {
         Row: {
@@ -1335,6 +1359,7 @@ export type Database = {
           invited_by: string | null
           role: Database["public"]["Enums"]["app_role"]
           status: string
+          team_id: string | null
           token: string
           updated_at: string
         }
@@ -1346,6 +1371,7 @@ export type Database = {
           invited_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
+          team_id?: string | null
           token?: string
           updated_at?: string
         }
@@ -1357,10 +1383,19 @@ export type Database = {
           invited_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
+          team_id?: string | null
           token?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "user_invites_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_preferences: {
         Row: {
@@ -1412,11 +1447,23 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      has_opp_team_access_to_org: {
+        Args: { _org_team_id: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
+        Returns: boolean
+      }
+      is_opp_team_member: {
+        Args: { _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      is_org_team_member: {
+        Args: { _team_id: string; _user_id: string }
         Returns: boolean
       }
       is_team_member: {
@@ -1429,6 +1476,11 @@ export type Database = {
       }
       team_role_in: {
         Args: { _roles: string[]; _team_id: string; _user_id: string }
+        Returns: boolean
+      }
+      team_type: { Args: { _team_id: string }; Returns: string }
+      user_can_see_proposal: {
+        Args: { _proposal_id: string; _user_id: string }
         Returns: boolean
       }
     }
