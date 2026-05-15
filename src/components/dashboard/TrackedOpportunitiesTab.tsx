@@ -95,6 +95,25 @@ export function TrackedOpportunitiesTab({
   const [editing, setEditing] = useState<TrackedOpportunity | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TrackedOpportunity | null>(null);
   const [analyze, setAnalyze] = useState<TrackedOpportunity | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Pick up a "highlight this row" hint stashed by InProgressTab so the user
+  // sees which tracked opportunity their proposal came from.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem("dash:highlight");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { source: string; id: string };
+      if (parsed.source !== "tracked") return;
+      sessionStorage.removeItem("dash:highlight");
+      setHighlightId(parsed.id);
+      const el = document.querySelector(`[data-tracked-id="${parsed.id}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const t = setTimeout(() => setHighlightId(null), 4000);
+      return () => clearTimeout(t);
+    } catch { /* ignore */ }
+  }, [items]);
 
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterVehicle, setFilterVehicle] = useState<string>("all");
