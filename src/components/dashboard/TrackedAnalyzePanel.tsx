@@ -157,6 +157,65 @@ export function TrackedAnalyzePanel({
                 />
               </div>
 
+              {/* Incumbent analysis (above trend per spec) */}
+              <section>
+                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Trophy className="w-4 h-4" /> Incumbent Analysis
+                </h3>
+                {agencyAwards.length === 0 ? (
+                  <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                    No cached award data for NAICS {naicsCode}{agency ? ` at ${agency}` : ""}.
+                    {onRunSearch && naicsCode && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="ml-2 h-7"
+                        onClick={() => { onRunSearch(naicsCode); onClose(); }}
+                      >
+                        Run a search for NAICS {naicsCode}
+                      </Button>
+                    )}
+                  </div>
+                ) : !incumbent || incumbent.confidence === "none" ? (
+                  <div className="rounded-md border p-3 text-xs text-muted-foreground">
+                    No likely incumbent identified from cached award history. This may be a new requirement or the predecessor isn't in the cached set.
+                  </div>
+                ) : (
+                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">LIKELY INCUMBENT</Badge>
+                      <Badge variant="outline" className="text-[10px] uppercase">{incumbent.confidence}</Badge>
+                      <span className="text-[11px] text-muted-foreground">{incumbent.awards.length} prior award{incumbent.awards.length !== 1 ? "s" : ""}</span>
+                    </div>
+                    <div className="text-sm font-semibold">{incumbent.topRecipient}</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">
+                      Total value: <span className="font-mono">{fmtMoney(incumbent.totalAmount ?? 0)}</span>
+                      {incumbent.latestEndDate && <> · Latest PoP end: <span className="font-mono">{incumbent.latestEndDate.slice(0, 10)}</span></>}
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* Top competitors — above trend per spec */}
+              <section>
+                <h3 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Users className="w-4 h-4" /> Top Competitors
+                </h3>
+                {stats.topVendors.length === 0 ? (
+                  <div className="text-xs text-muted-foreground">No vendors found in cached data.</div>
+                ) : (
+                  <div className="border rounded-md divide-y">
+                    {stats.topVendors.map((v) => (
+                      <div key={v.name} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
+                        <div className="min-w-0 flex-1 truncate">{v.name}</div>
+                        <Badge variant="secondary" className="font-mono">{v.count}</Badge>
+                        <div className="font-medium tabular-nums w-24 text-right">{fmtMoney(v.total)}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
+
               <section>
                 <h3 className="text-sm font-semibold mb-2">Award trend</h3>
                 {stats.trend.length === 0 ? (
@@ -172,23 +231,6 @@ export function TrackedAnalyzePanel({
                         <Bar dataKey="value" fill="#2563eb" />
                       </BarChart>
                     </ResponsiveContainer>
-                  </div>
-                )}
-              </section>
-
-              <section>
-                <h3 className="text-sm font-semibold mb-2">Top awarded vendors</h3>
-                {stats.topVendors.length === 0 ? (
-                  <div className="text-xs text-muted-foreground">No vendors found.</div>
-                ) : (
-                  <div className="border rounded-md divide-y">
-                    {stats.topVendors.map((v) => (
-                      <div key={v.name} className="px-3 py-2 flex items-center justify-between gap-3 text-sm">
-                        <div className="min-w-0 flex-1 truncate">{v.name}</div>
-                        <Badge variant="secondary" className="font-mono">{v.count}</Badge>
-                        <div className="font-medium tabular-nums w-24 text-right">{fmtMoney(v.total)}</div>
-                      </div>
-                    ))}
                   </div>
                 )}
               </section>
