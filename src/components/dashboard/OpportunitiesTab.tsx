@@ -193,6 +193,7 @@ export function OpportunitiesTab({
           <table className="data-table">
             <thead>
               <tr>
+                <th className="w-[120px]">Actions</th>
                 <SortHead k="title" label="Title" />
                 <SortHead k="agency" label="Agency" />
                 <SortHead k="naics" label="NAICS" />
@@ -201,7 +202,6 @@ export function OpportunitiesTab({
                 <SortHead k="posted" label="Posted" />
                 <SortHead k="deadline" label="Deadline" />
                 <th>Sol #</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -215,6 +215,29 @@ export function OpportunitiesTab({
                 const isExpired = !isNaN(dlMs) && dlMs < Date.now();
                 return (
                   <tr key={key} className={isExpired ? "opacity-50" : ""}>
+                    <td className="w-[120px]">
+                      <div className="flex gap-1">
+                        <StarButton input={starInputFromSam(o)} />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="icon" variant="outline" onClick={() => onCompete(o)} className="h-7 w-7 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">
+                              <Swords className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Compete</TooltipContent>
+                        </Tooltip>
+                        {isProposable(o.type) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="icon" onClick={() => onPropose(o)} className="h-7 w-7 bg-money text-money-foreground hover:bg-money/90">
+                                <FileSignature className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Propose</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </td>
                     <td className="max-w-[320px]">
                       {o.uiLink ? (
                         <a href={o.uiLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-start gap-1 line-clamp-2">
@@ -239,29 +262,6 @@ export function OpportunitiesTab({
                       )}
                     </td>
                     <td className="font-mono text-xs">{o.solicitationNumber}</td>
-                    <td>
-                      <div className="flex gap-1">
-                        <StarButton input={starInputFromSam(o)} />
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="icon" variant="outline" onClick={() => onCompete(o)} className="h-7 w-7 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">
-                              <Swords className="w-3.5 h-3.5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Compete</TooltipContent>
-                        </Tooltip>
-                        {isProposable(o.type) && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button size="icon" onClick={() => onPropose(o)} className="h-7 w-7 bg-money text-money-foreground hover:bg-money/90">
-                                <FileSignature className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Propose</TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </td>
                   </tr>
                 );
               })}
