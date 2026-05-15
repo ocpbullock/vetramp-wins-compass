@@ -30,6 +30,7 @@ type TeamCtx = {
   teamMembers: TeamMember[];
   userRole: TeamRole | null;
   loading: boolean;
+  availableTeams: Team[];
   refreshTeam: () => Promise<void>;
   refreshMembers: () => Promise<void>;
   setCurrentTeam: (id: string) => void;
@@ -40,6 +41,7 @@ const Ctx = createContext<TeamCtx>({
   teamMembers: [],
   userRole: null,
   loading: true,
+  availableTeams: [],
   refreshTeam: async () => {},
   refreshMembers: async () => {},
   setCurrentTeam: () => {},
