@@ -7,6 +7,8 @@ type Props = {
   historicalCount: number;
   historicalTotal?: number;
   totalObligated: number;
+  totalObligatedFiltered?: number;
+  totalObligatedIsFiltered?: boolean;
   inProgressCount?: number;
   starredCount?: number;
   deadlines?: DeadlineItem[];
