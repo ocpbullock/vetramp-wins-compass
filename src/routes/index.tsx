@@ -1,8 +1,10 @@
 import { createFileRoute, useNavigate, useLocation } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
-import { useTeamId } from "@/lib/team";
+import { useTeam, useTeamId } from "@/lib/team";
+import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
 import { Header } from "@/components/dashboard/Header";
 import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
 import { StatCards } from "@/components/dashboard/StatCards";
