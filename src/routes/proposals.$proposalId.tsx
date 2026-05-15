@@ -729,6 +729,12 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           opportunityNaics={proposal.naics_code}
         />
 
+        <PartnerResearch
+          proposalId={proposalId}
+          teamId={proposal.team_id ?? null}
+          opportunityNaics={proposal.naics_code}
+        />
+
         <RelevantPastPerformanceCard
           teamId={proposal.team_id ?? null}
           naics={proposal.naics_code}
