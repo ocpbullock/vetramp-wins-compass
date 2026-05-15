@@ -198,13 +198,13 @@ export function TrackedOpportunitiesTab({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[140px]">Actions</TableHead>
               <TableHead>Title / Agency</TableHead>
               <TableHead>Vehicle</TableHead>
               <TableHead>NAICS</TableHead>
               <TableHead className="text-right">Value</TableHead>
               <TableHead>Deadline</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
