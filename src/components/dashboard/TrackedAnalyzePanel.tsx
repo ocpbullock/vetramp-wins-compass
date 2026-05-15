@@ -24,12 +24,16 @@ export function TrackedAnalyzePanel({
   naicsCode,
   agency,
   title,
+  solicitationNumber,
+  onRunSearch,
 }: {
   open: boolean;
   onClose: () => void;
   naicsCode: string | null;
   agency: string | null;
   title: string | null;
+  solicitationNumber?: string | null;
+  onRunSearch?: (naics: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
