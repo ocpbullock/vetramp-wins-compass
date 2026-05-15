@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Star, FileSignature, ExternalLink, Trash2 } from "lucide-react";
+import { Star, FileSignature, ExternalLink, Trash2, Users } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { format, parseISO } from "date-fns";
 import { useStarred, type StarredRow } from "@/lib/starred";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
 
 export function StarredTab({
   onStartProposal,
