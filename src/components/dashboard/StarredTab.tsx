@@ -176,6 +176,18 @@ export function StarredTab({
             </TableBody>
           </Table>
         </div>
+        {teamRow && (
+          <CreateOpportunityTeamDialog
+            open={!!teamRow}
+            onOpenChange={(o) => { if (!o) setTeamRow(null); }}
+            opportunityTitle={teamRow.title || teamRow.notice_id}
+            source="starred"
+            sourceId={teamRow.id}
+            noticeId={teamRow.notice_id}
+            naicsCode={teamRow.naics_code}
+            responseDeadline={teamRow.response_deadline}
+          />
+        )}
       </div>
     </TooltipProvider>
   );
