@@ -28,7 +28,7 @@ import {
 import { useLogStore } from "@/lib/log-store";
 import { toast } from "sonner";
 import { generateDefaultMilestones } from "@/lib/milestones";
-import { DeadlinesWidget } from "@/components/dashboard/DeadlinesWidget";
+import { useDeadlines } from "@/lib/deadlines";
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
