@@ -112,6 +112,9 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
               {ociStatus(p.oci_screening) === "flagged" && (
                 <Badge variant="destructive" title="Potential OCI detected — consult legal counsel"><ShieldAlert className="w-3 h-3 mr-1" />OCI flag</Badge>
               )}
+              <Button size="sm" variant="outline" onClick={() => viewOpportunity(p)} title="View originating opportunity">
+                <Eye className="w-3 h-3 mr-1" /> View Opportunity
+              </Button>
               <Button size="sm" onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: p.id } })}>
                 Resume <ArrowRight className="w-3 h-3 ml-1" />
               </Button>
