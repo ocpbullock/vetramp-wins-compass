@@ -661,6 +661,8 @@ export type Database = {
           notice_id: string | null
           oci_screening: Json
           opportunity_data: Json | null
+          opportunity_source: string | null
+          opportunity_source_id: string | null
           opportunity_title: string | null
           opportunity_type: string | null
           parsing_status: string
@@ -699,6 +701,8 @@ export type Database = {
           notice_id?: string | null
           oci_screening?: Json
           opportunity_data?: Json | null
+          opportunity_source?: string | null
+          opportunity_source_id?: string | null
           opportunity_title?: string | null
           opportunity_type?: string | null
           parsing_status?: string
@@ -737,6 +741,8 @@ export type Database = {
           notice_id?: string | null
           oci_screening?: Json
           opportunity_data?: Json | null
+          opportunity_source?: string | null
+          opportunity_source_id?: string | null
           opportunity_title?: string | null
           opportunity_type?: string | null
           parsing_status?: string
