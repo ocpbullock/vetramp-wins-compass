@@ -133,7 +133,7 @@ function Dashboard() {
       postedDate: row.posted_date ?? undefined,
       setAside: row.set_aside_description ?? undefined,
     } as unknown as SamOpportunity);
-    await handlePropose(o);
+    await handlePropose(o, { kind: "starred", id: row.notice_id });
   }
   const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
   const [vendor, setVendor] = useState<{ id: string; name: string } | null>(null);
