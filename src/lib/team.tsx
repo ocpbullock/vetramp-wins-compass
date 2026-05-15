@@ -4,11 +4,15 @@ import { useAuth } from "@/lib/auth";
 
 export type TeamRole = "owner" | "admin" | "member" | "viewer";
 
+export type TeamType = "organization" | "opportunity";
+
 export type Team = {
   id: string;
   name: string;
   slug: string;
   created_by: string | null;
+  team_type: TeamType;
+  parent_team_id: string | null;
 };
 
 export type TeamMember = {
