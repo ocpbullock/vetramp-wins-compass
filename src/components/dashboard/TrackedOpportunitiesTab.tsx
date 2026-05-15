@@ -223,7 +223,7 @@ export function TrackedOpportunitiesTab({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[140px]">Actions</TableHead>
+              <TableHead className="w-[220px]">Actions</TableHead>
               <TableHead>Title / Agency</TableHead>
               <TableHead>Vehicle</TableHead>
               <TableHead>NAICS</TableHead>
