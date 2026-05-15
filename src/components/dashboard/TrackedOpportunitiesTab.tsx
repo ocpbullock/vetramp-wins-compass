@@ -301,6 +301,9 @@ export function TrackedOpportunitiesTab({
                       <Button size="sm" variant="ghost" onClick={() => setAnalyze(i)} title="Analyze with USAspending">
                         <BarChart3 className="w-4 h-4" />
                       </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setTeamRow(i)} title="Create opportunity team">
+                        <Users className="w-4 h-4" />
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => { setEditing(i); setDialogOpen(true); }} title="Edit">
                         <Pencil className="w-4 h-4" />
                       </Button>
