@@ -57,6 +57,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   const { user, loading: authLoading } = useAuth();
   const [currentTeam, setCurrentTeamState] = useState<Team | null>(null);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
+  const [availableTeams, setAvailableTeams] = useState<Team[]>([]);
   const [userRole, setUserRole] = useState<TeamRole | null>(null);
   const [loading, setLoading] = useState(true);
   const bootstrappedFor = useRef<string | null>(null);
