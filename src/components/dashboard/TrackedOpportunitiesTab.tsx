@@ -81,8 +81,12 @@ function deadlineColor(d: string | null): string {
 
 export function TrackedOpportunitiesTab({
   awards = [],
+  onCompete,
+  onPropose,
 }: {
   awards?: HistoricalAward[];
+  onCompete?: (opp: SamOpportunity) => void;
+  onPropose?: (opp: SamOpportunity, trackedId: string) => void;
 }) {
   const { user } = useAuth();
   const [items, setItems] = useState<TrackedOpportunity[]>([]);
