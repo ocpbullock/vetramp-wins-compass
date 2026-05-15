@@ -31,6 +31,13 @@ function Row({ index, style, items, onDetails }: RowComponentProps<RowData>) {
       className="px-3 border-b border-border text-sm hover:bg-muted/40"
     >
       <div style={{ display: "grid", gridTemplateColumns: COLS, gap: "0.5rem", alignItems: "center", width: "100%", height: "100%" }}>
+        <div>
+          {a.generated_internal_id && (
+            <Button size="sm" variant="outline" onClick={() => onDetails(a.generated_internal_id!)} className="h-7 px-2">
+              <Info className="w-3 h-3 mr-1" /> Details
+            </Button>
+          )}
+        </div>
         <div className="min-w-0">
           {a.generated_internal_id ? (
             <a
@@ -59,13 +66,6 @@ function Row({ index, style, items, onDetails }: RowComponentProps<RowData>) {
         <div className="font-semibold text-money">{fmtMoney(a["Award Amount"])}</div>
         <div className="text-xs">{a["Start Date"]?.slice(0, 10)}</div>
         <div className="font-mono text-xs truncate">{a["Award ID"]}</div>
-        <div>
-          {a.generated_internal_id && (
-            <Button size="sm" variant="outline" onClick={() => onDetails(a.generated_internal_id!)}>
-              <Info className="w-3 h-3 mr-1" /> Details
-            </Button>
-          )}
-        </div>
       </div>
     </div>
   );
