@@ -60,6 +60,9 @@ function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
+  const [filteredObligated, setFilteredObligated] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastSearchInput, setLastSearchInput] = useState<SearchInput | null>(null);
 
   // Sync tab with URL hash from header nav links
   useEffect(() => {
