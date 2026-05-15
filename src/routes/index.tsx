@@ -60,6 +60,9 @@ function Dashboard() {
   const [progress, setProgress] = useState(0);
   const [progressText, setProgressText] = useState("");
   const [tab, setTab] = useState("opportunities");
+  const [filteredObligated, setFilteredObligated] = useState<number | null>(null);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [lastSearchInput, setLastSearchInput] = useState<SearchInput | null>(null);
 
   // Sync tab with URL hash from header nav links
   useEffect(() => {
@@ -151,6 +154,8 @@ function Dashboard() {
     setHistoricalTotal(undefined);
     setSearchedNaics(input.naicsCodes);
     setDataSource(null);
+    setFilteredObligated(null);
+    setLastSearchInput(input);
     try {
       // Persist (sans forceRefresh) so the next page load can restore + auto-hit cache
       const { forceRefresh: _fr, ...persisted } = input;
@@ -194,7 +199,7 @@ function Dashboard() {
         startDate: historicalFrom,
         endDate: input.postedTo,
         keyword: input.keyword,
-        maxResults: 10000,
+        maxResults: 2000,
       });
       setAwards(usaRes.results ?? []);
       setHistoricalTotal(usaRes.page_metadata?.total);
@@ -227,6 +232,29 @@ function Dashboard() {
       toast.error(e.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  const hasMoreAwards = (historicalTotal ?? 0) > awards.length;
+
+  async function loadMoreAwards() {
+    if (!lastSearchInput || loadingMore || !hasMoreAwards) return;
+    setLoadingMore(true);
+    try {
+      const historicalFrom = historicalLookbackFrom();
+      const usaRes = await searchUsaspending({
+        naicsCodes: lastSearchInput.naicsCodes,
+        startDate: historicalFrom,
+        endDate: lastSearchInput.postedTo,
+        keyword: lastSearchInput.keyword,
+        maxResults: awards.length + 2000,
+      });
+      setAwards(usaRes.results ?? []);
+      setHistoricalTotal(usaRes.page_metadata?.total);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to load more");
+    } finally {
+      setLoadingMore(false);
     }
   }
 
@@ -298,6 +326,8 @@ function Dashboard() {
           historicalCount={stats.historicalCount}
           historicalTotal={historicalTotal}
           totalObligated={stats.totalObligated}
+          totalObligatedFiltered={filteredObligated ?? undefined}
+          totalObligatedIsFiltered={filteredObligated != null && filteredObligated !== stats.totalObligated}
           inProgressCount={inProgressCount}
           starredCount={starredCount}
           deadlines={deadlineItems}
@@ -317,7 +347,17 @@ function Dashboard() {
             <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} activeFilterNaics={currentNaics} searchKey={searchedNaics.join(",")} onPropose={handlePropose} onCompete={setCompeteOpp} />
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
-            <HistoricalTab awards={awards} searchedNaics={searchedNaics} searchKey={searchedNaics.join(",")} onDetails={setDetailId} />
+            <HistoricalTab
+              awards={awards}
+              searchedNaics={searchedNaics}
+              searchKey={searchedNaics.join(",")}
+              onDetails={setDetailId}
+              onFilteredTotalChange={setFilteredObligated}
+              onLoadMore={loadMoreAwards}
+              loadingMore={loadingMore}
+              hasMore={hasMoreAwards}
+              totalAvailable={historicalTotal}
+            />
           </TabsContent>
           <TabsContent value="starred" className="mt-4">
             <StarredTab onStartProposal={handleStartFromStarred} />

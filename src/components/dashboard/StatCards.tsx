@@ -7,6 +7,8 @@ type Props = {
   historicalCount: number;
   historicalTotal?: number;
   totalObligated: number;
+  totalObligatedFiltered?: number;
+  totalObligatedIsFiltered?: boolean;
   inProgressCount?: number;
   starredCount?: number;
   deadlines?: DeadlineItem[];
@@ -81,7 +83,11 @@ export function StatCards(p: Props) {
         : p.historicalCount.toLocaleString(),
       icon: History, tab: "historical", color: "text-violet-600",
     },
-    { label: "Total Obligated", value: fmtMoney(p.totalObligated), icon: DollarSign, tab: "historical", color: "text-money" },
+    {
+      label: p.totalObligatedIsFiltered ? "Total Obligated (filtered)" : "Total Obligated",
+      value: fmtMoney(p.totalObligatedIsFiltered ? (p.totalObligatedFiltered ?? 0) : p.totalObligated),
+      icon: DollarSign, tab: "historical", color: "text-money",
+    },
     { label: "Works in Progress", value: (p.inProgressCount ?? 0).toLocaleString(), icon: FileEdit, tab: "in-progress", color: "text-amber-600" },
     { label: "Starred", value: (p.starredCount ?? 0).toLocaleString(), icon: Star, tab: "starred", color: "text-amber-500" },
   ];
