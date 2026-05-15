@@ -326,6 +326,8 @@ function Dashboard() {
           historicalCount={stats.historicalCount}
           historicalTotal={historicalTotal}
           totalObligated={stats.totalObligated}
+          totalObligatedFiltered={filteredObligated ?? undefined}
+          totalObligatedIsFiltered={filteredObligated != null && filteredObligated !== stats.totalObligated}
           inProgressCount={inProgressCount}
           starredCount={starredCount}
           deadlines={deadlineItems}
@@ -345,7 +347,17 @@ function Dashboard() {
             <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} activeFilterNaics={currentNaics} searchKey={searchedNaics.join(",")} onPropose={handlePropose} onCompete={setCompeteOpp} />
           </TabsContent>
           <TabsContent value="historical" className="mt-4">
-            <HistoricalTab awards={awards} searchedNaics={searchedNaics} searchKey={searchedNaics.join(",")} onDetails={setDetailId} />
+            <HistoricalTab
+              awards={awards}
+              searchedNaics={searchedNaics}
+              searchKey={searchedNaics.join(",")}
+              onDetails={setDetailId}
+              onFilteredTotalChange={setFilteredObligated}
+              onLoadMore={loadMoreAwards}
+              loadingMore={loadingMore}
+              hasMore={hasMoreAwards}
+              totalAvailable={historicalTotal}
+            />
           </TabsContent>
           <TabsContent value="starred" className="mt-4">
             <StarredTab onStartProposal={handleStartFromStarred} />
