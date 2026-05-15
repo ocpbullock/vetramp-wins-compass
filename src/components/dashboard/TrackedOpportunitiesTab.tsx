@@ -383,6 +383,19 @@ export function TrackedOpportunitiesTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {teamRow && (
+        <CreateOpportunityTeamDialog
+          open={!!teamRow}
+          onOpenChange={(o) => { if (!o) setTeamRow(null); }}
+          opportunityTitle={teamRow.title}
+          source="tracked"
+          sourceId={teamRow.id}
+          agency={teamRow.agency}
+          naicsCode={teamRow.naics_code}
+          responseDeadline={teamRow.response_deadline ?? null}
+        />
+      )}
     </div>
   );
 }
