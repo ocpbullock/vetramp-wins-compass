@@ -13,9 +13,9 @@ type SortKey = "desc" | "recipient" | "agency" | "naics" | "amount" | "date";
 const fmtMoney = (n: any) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(n) || 0);
 
-// Column template shared by header + rows
+// Column template shared by header + rows. Action column is fixed and lives FIRST.
 const COLS =
-  "minmax(280px,2.2fr) minmax(140px,1fr) minmax(140px,1fr) 90px 110px 130px 110px 130px 100px";
+  "90px minmax(280px,2.2fr) minmax(140px,1fr) minmax(140px,1fr) 90px 110px 130px 110px 130px";
 
 type RowData = {
   items: HistoricalAward[];
