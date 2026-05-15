@@ -65,9 +65,9 @@ function SettingsPage() {
     if (!user) navigate({ to: "/auth" });
   }, [user, loading, navigate]);
 
-  const validTabs = ["company", "knowledge", "team", "partners", "past-performance", "vehicles", "ai-usage", "data-health"];
+  const validTabs = ["company", "knowledge", "team", "partners", "past-performance", "vehicles"];
   const hashTab = (location.hash || "").replace(/^#/, "");
-  const initialTab = validTabs.includes(hashTab) ? hashTab : (isAdmin ? "company" : "team");
+  const initialTab = validTabs.includes(hashTab) ? hashTab : "knowledge";
   const [tab, setTab] = useState<string>(initialTab);
   useEffect(() => {
     if (hashTab && validTabs.includes(hashTab)) setTab(hashTab);
@@ -83,8 +83,8 @@ function SettingsPage() {
       <header className="sticky top-0 z-30 bg-card border-b border-border">
         <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Settings</h1>
-            <p className="text-xs text-muted-foreground">Team, company profile, and knowledge base</p>
+            <h1 className="text-xl font-bold tracking-tight">Capture Intel</h1>
+            <p className="text-xs text-muted-foreground">Company profile, knowledge base, team, partners, and past performance</p>
           </div>
           <Button variant="outline" size="sm" asChild>
             <Link to="/"><ArrowLeft className="w-4 h-4 mr-1" /> Back to dashboard</Link>
@@ -98,22 +98,18 @@ function SettingsPage() {
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
             {isAdmin && <TabsTrigger value="company">Company Profile</TabsTrigger>}
-            {isAdmin && <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>}
+            <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
             <TabsTrigger value="team">Team</TabsTrigger>
             <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
             <TabsTrigger value="past-performance">Past Performance</TabsTrigger>
             <TabsTrigger value="vehicles">Contract Vehicles</TabsTrigger>
-            <TabsTrigger value="ai-usage">API &amp; AI Usage</TabsTrigger>
-            <TabsTrigger value="data-health">Data Health</TabsTrigger>
           </TabsList>
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
-          {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>}
+          <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>
           <TabsContent value="team" className="mt-4"><TeamPanel /></TabsContent>
           <TabsContent value="partners" className="mt-4"><PartnersPanel /></TabsContent>
           <TabsContent value="past-performance" className="mt-4"><PastPerformancePanel /></TabsContent>
           <TabsContent value="vehicles" className="mt-4"><ContractVehiclesPanel /></TabsContent>
-          <TabsContent value="ai-usage" className="mt-4 space-y-4"><TangoUsagePanel /><AIUsagePanel /></TabsContent>
-          <TabsContent value="data-health" className="mt-4"><DataHealthPanel /></TabsContent>
         </Tabs>
       </main>
     </div>
