@@ -213,7 +213,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
   }, [user, bootstrap]);
 
   return (
-    <Ctx.Provider value={{ currentTeam, teamMembers, userRole, loading, refreshTeam, refreshMembers, setCurrentTeam }}>
+    <Ctx.Provider value={{ currentTeam, teamMembers, userRole, loading, availableTeams, refreshTeam, refreshMembers, setCurrentTeam }}>
       {children}
     </Ctx.Provider>
   );
