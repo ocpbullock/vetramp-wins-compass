@@ -6,6 +6,7 @@ import { ExternalLink, ArrowUpDown, Info, Loader2 } from "lucide-react";
 import { mapSetAside } from "@/lib/contracts";
 import type { HistoricalAward } from "@/lib/api";
 import { NaicsFilterChips } from "./NaicsFilterChips";
+import { AgencyCombobox } from "./AgencyCombobox";
 import { List, type RowComponentProps } from "react-window";
 
 type SortKey = "desc" | "recipient" | "agency" | "naics" | "amount" | "date";
@@ -13,9 +14,9 @@ type SortKey = "desc" | "recipient" | "agency" | "naics" | "amount" | "date";
 const fmtMoney = (n: any) =>
   new Intl.NumberFormat("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 }).format(Number(n) || 0);
 
-// Column template shared by header + rows
+// Column template shared by header + rows. Action column is fixed and lives FIRST.
 const COLS =
-  "minmax(280px,2.2fr) minmax(140px,1fr) minmax(140px,1fr) 90px 110px 130px 110px 130px 100px";
+  "90px minmax(280px,2.2fr) minmax(140px,1fr) minmax(140px,1fr) 90px 110px 130px 110px 130px";
 
 type RowData = {
   items: HistoricalAward[];
@@ -31,6 +32,13 @@ function Row({ index, style, items, onDetails }: RowComponentProps<RowData>) {
       className="px-3 border-b border-border text-sm hover:bg-muted/40"
     >
       <div style={{ display: "grid", gridTemplateColumns: COLS, gap: "0.5rem", alignItems: "center", width: "100%", height: "100%" }}>
+        <div>
+          {a.generated_internal_id && (
+            <Button size="sm" variant="outline" onClick={() => onDetails(a.generated_internal_id!)} className="h-7 px-2">
+              <Info className="w-3 h-3 mr-1" /> Details
+            </Button>
+          )}
+        </div>
         <div className="min-w-0">
           {a.generated_internal_id ? (
             <a
@@ -59,13 +67,6 @@ function Row({ index, style, items, onDetails }: RowComponentProps<RowData>) {
         <div className="font-semibold text-money">{fmtMoney(a["Award Amount"])}</div>
         <div className="text-xs">{a["Start Date"]?.slice(0, 10)}</div>
         <div className="font-mono text-xs truncate">{a["Award ID"]}</div>
-        <div>
-          {a.generated_internal_id && (
-            <Button size="sm" variant="outline" onClick={() => onDetails(a.generated_internal_id!)}>
-              <Info className="w-3 h-3 mr-1" /> Details
-            </Button>
-          )}
-        </div>
       </div>
     </div>
   );
@@ -215,13 +216,7 @@ export function HistoricalTab({
           onChange={(e) => setSearchInput(e.target.value)}
           className="max-w-xs"
         />
-        <Select value={agency} onValueChange={setAgency}>
-          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Agency" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All agencies</SelectItem>
-            {agencies.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <AgencyCombobox value={agency} onChange={setAgency} agencies={agencies} width="w-[220px]" />
         <Select value={vendor} onValueChange={setVendor}>
           <SelectTrigger className="w-[200px]"><SelectValue placeholder="Vendor" /></SelectTrigger>
           <SelectContent>
@@ -245,6 +240,7 @@ export function HistoricalTab({
           className="px-3 py-2 border-b border-border bg-muted/30"
           style={{ display: "grid", gridTemplateColumns: COLS, gap: "0.5rem", alignItems: "center" }}
         >
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</span>
           <Head k="desc" label="Description" />
           <Head k="recipient" label="Recipient" />
           <Head k="agency" label="Agency" />
@@ -253,7 +249,6 @@ export function HistoricalTab({
           <Head k="amount" label="Obligated" />
           <Head k="date" label="Award Date" />
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">PIID</span>
-          <span />
         </div>
 
         {/* Virtualized body */}

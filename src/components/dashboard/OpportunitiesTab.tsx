@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/tooltip";
 import { StarButton } from "@/components/dashboard/StarButton";
 import { starInputFromSam } from "@/lib/starred";
+import { AgencyCombobox } from "./AgencyCombobox";
+import { useLogStore } from "@/lib/log-store";
 
 type SortKey = "title" | "agency" | "naics" | "type" | "posted" | "deadline" | "incumbent";
 
@@ -65,14 +67,26 @@ export function OpportunitiesTab({
     [activeFilterNaics, activeNaics],
   );
 
+  const log = useLogStore((s) => s.log);
   const idx = useMemo(() => buildIndex(awards), [awards]);
   const matches = useMemo(() => {
     const m = new Map<string, IncumbentMatch>();
+    const tier = { exact: 0, parent: 0, psc: 0, fuzzy: 0, frequent: 0, none: 0 };
     for (const o of opportunities) {
       const key = (o.solicitationNumber ?? o.noticeId ?? "") as string;
-      m.set(key, matchIncumbent(o, awards, idx));
+      const match = matchIncumbent(o, awards, idx);
+      m.set(key, match);
+      tier[match.confidence]++;
+    }
+    if (opportunities.length > 0) {
+      const matched = opportunities.length - tier.none;
+      log(
+        "info",
+        `Recompete index: ${awards.length} awards, ${idx.byPiid.size} PIIDs, ${idx.byParent.size} parents, ${idx.byAgencyPsc.size} agency+PSC, ${idx.byAgencyNaics.size} agency+NAICS · checked ${opportunities.length} opps → ${matched} matches (exact:${tier.exact} parent:${tier.parent} psc:${tier.psc} fuzzy:${tier.fuzzy} frequent:${tier.frequent})`,
+      );
     }
     return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opportunities, awards, idx]);
 
   const agencies = useMemo(() => {
@@ -151,13 +165,7 @@ export function OpportunitiesTab({
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
           <Input placeholder="Search title or sol #..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-          <Select value={agency} onValueChange={setAgency}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Agency" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All agencies</SelectItem>
-              {agencies.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <AgencyCombobox value={agency} onChange={setAgency} agencies={agencies} width="w-[240px]" />
           <Select value={type} onValueChange={setType}>
             <SelectTrigger className="w-[200px]"><SelectValue placeholder="Notice type" /></SelectTrigger>
             <SelectContent>
@@ -185,6 +193,7 @@ export function OpportunitiesTab({
           <table className="data-table">
             <thead>
               <tr>
+                <th className="w-[120px]">Actions</th>
                 <SortHead k="title" label="Title" />
                 <SortHead k="agency" label="Agency" />
                 <SortHead k="naics" label="NAICS" />
@@ -193,7 +202,6 @@ export function OpportunitiesTab({
                 <SortHead k="posted" label="Posted" />
                 <SortHead k="deadline" label="Deadline" />
                 <th>Sol #</th>
-                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -207,6 +215,29 @@ export function OpportunitiesTab({
                 const isExpired = !isNaN(dlMs) && dlMs < Date.now();
                 return (
                   <tr key={key} className={isExpired ? "opacity-50" : ""}>
+                    <td className="w-[120px]">
+                      <div className="flex gap-1">
+                        <StarButton input={starInputFromSam(o)} />
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="icon" variant="outline" onClick={() => onCompete(o)} className="h-7 w-7 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">
+                              <Swords className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Compete</TooltipContent>
+                        </Tooltip>
+                        {isProposable(o.type) && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button size="icon" onClick={() => onPropose(o)} className="h-7 w-7 bg-money text-money-foreground hover:bg-money/90">
+                                <FileSignature className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Propose</TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    </td>
                     <td className="max-w-[320px]">
                       {o.uiLink ? (
                         <a href={o.uiLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-start gap-1 line-clamp-2">
@@ -231,29 +262,6 @@ export function OpportunitiesTab({
                       )}
                     </td>
                     <td className="font-mono text-xs">{o.solicitationNumber}</td>
-                    <td>
-                      <div className="flex gap-1">
-                        <StarButton input={starInputFromSam(o)} />
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button size="icon" variant="outline" onClick={() => onCompete(o)} className="h-7 w-7 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400">
-                              <Swords className="w-3.5 h-3.5" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Compete</TooltipContent>
-                        </Tooltip>
-                        {isProposable(o.type) && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button size="icon" onClick={() => onPropose(o)} className="h-7 w-7 bg-money text-money-foreground hover:bg-money/90">
-                                <FileSignature className="w-3.5 h-3.5" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>Propose</TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    </td>
                   </tr>
                 );
               })}

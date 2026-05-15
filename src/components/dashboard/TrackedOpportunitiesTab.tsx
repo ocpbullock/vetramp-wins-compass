@@ -198,13 +198,13 @@ export function TrackedOpportunitiesTab({
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[140px]">Actions</TableHead>
               <TableHead>Title / Agency</TableHead>
               <TableHead>Vehicle</TableHead>
               <TableHead>NAICS</TableHead>
               <TableHead className="text-right">Value</TableHead>
               <TableHead>Deadline</TableHead>
               <TableHead>Status</TableHead>
-              <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -226,6 +226,29 @@ export function TrackedOpportunitiesTab({
                 : i.contract_vehicle;
               return (
                 <TableRow key={i.id}>
+                  <TableCell className="w-[140px]">
+                    <div className="flex items-center gap-1">
+                      <StarButton
+                        input={{
+                          noticeId: `tracked:${i.id}`,
+                          title: i.title,
+                          naicsCode: i.naics_code,
+                          responseDeadline: i.response_deadline ?? null,
+                          setAsideDescription: null,
+                          sourceData: i,
+                        }}
+                      />
+                      <Button size="sm" variant="ghost" onClick={() => setAnalyze(i)} title="Analyze with USAspending">
+                        <BarChart3 className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => { setEditing(i); setDialogOpen(true); }} title="Edit">
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(i)} title="Delete">
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </TableCell>
                   <TableCell className="max-w-[340px]">
                     <div className="font-medium truncate flex items-center gap-1.5">
                       {i.title}
@@ -259,29 +282,6 @@ export function TrackedOpportunitiesTab({
                         {TRACKED_STATUSES.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                       </SelectContent>
                     </Select>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <StarButton
-                        input={{
-                          noticeId: `tracked:${i.id}`,
-                          title: i.title,
-                          naicsCode: i.naics_code,
-                          responseDeadline: i.response_deadline ?? null,
-                          setAsideDescription: null,
-                          sourceData: i,
-                        }}
-                      />
-                      <Button size="sm" variant="ghost" onClick={() => setAnalyze(i)} title="Analyze with USAspending">
-                        <BarChart3 className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditing(i); setDialogOpen(true); }} title="Edit">
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(i)} title="Delete">
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
                   </TableCell>
                 </TableRow>
               );
