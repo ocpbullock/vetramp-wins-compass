@@ -215,13 +215,7 @@ export function HistoricalTab({
           onChange={(e) => setSearchInput(e.target.value)}
           className="max-w-xs"
         />
-        <Select value={agency} onValueChange={setAgency}>
-          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Agency" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__all__">All agencies</SelectItem>
-            {agencies.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        <AgencyCombobox value={agency} onChange={setAgency} agencies={agencies} width="w-[220px]" />
         <Select value={vendor} onValueChange={setVendor}>
           <SelectTrigger className="w-[200px]"><SelectValue placeholder="Vendor" /></SelectTrigger>
           <SelectContent>
