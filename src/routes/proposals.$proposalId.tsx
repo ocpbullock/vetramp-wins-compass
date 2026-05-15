@@ -914,7 +914,7 @@ function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, o
   );
 }
 
-function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, attachments = [], onUpload, onDelete, aiBusy, setAiBusy, online }: any) {
+function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBusy, setAiBusy, online }: any) {
   const [busy, setBusy] = useState(false);
   const [skipCache, setSkipCache] = useState(false);
   const intel = proposal.customer_intel || {};
@@ -929,10 +929,6 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, atta
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const url = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/customer-intel`;
-      const attachmentsText = attachments
-        .map((a: any) => a.parsed_content)
-        .filter(Boolean)
-        .join("\n\n---\n\n");
       const r = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${session?.access_token}` },
@@ -944,7 +940,6 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, atta
           },
           companyProfile,
           extraNotes: notes || undefined,
-          attachmentsText: attachmentsText || undefined,
           userId: session?.user?.id,
           proposalId,
           teamId: proposal.team_id ?? null,
@@ -990,39 +985,9 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, atta
               <input id="skipCacheIntel" type="checkbox" checked={skipCache} onChange={(e) => setSkipCache(e.target.checked)} />
               <Label htmlFor="skipCacheIntel" className="text-[11px] text-muted-foreground">Skip cache (force fresh AI run)</Label>
             </div>
-            {attachments.length > 0 && (
-              <div className="text-[11px] text-muted-foreground">
-                Research will include text from {attachments.length} reference document{attachments.length === 1 ? "" : "s"}.
-              </div>
-            )}
             <div className="flex items-center gap-2 pt-2">
               <input id="verified" type="checkbox" checked={!!proposal.customer_intel_verified} onChange={(e) => onPatch({ customer_intel_verified: e.target.checked })} />
               <Label htmlFor="verified" className="text-xs">I have reviewed this intel</Label>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Reference documents</CardTitle>
-            <CardDescription className="text-xs">Incumbent past performance, agency strategic plans, org charts, prior task order SOWs — anything that gives the AI more context.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <label className="block">
-              <input type="file" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f && onUpload) onUpload(f, "customer_intel"); e.target.value = ""; }} />
-              <div className="border-2 border-dashed border-border rounded-md p-3 text-center text-xs cursor-pointer hover:bg-muted">
-                <Upload className="w-3 h-3 inline-block mr-1" />Upload reference document
-              </div>
-            </label>
-            <div className="space-y-1">
-              {attachments.length === 0 && <div className="text-[11px] text-muted-foreground">No reference documents yet.</div>}
-              {attachments.map((a: any) => (
-                <div key={a.id} className="flex items-center gap-2 text-xs border border-border rounded px-2 py-1.5">
-                  <FileText className="w-3 h-3 text-muted-foreground" />
-                  <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
-                  <button onClick={() => onDelete && onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
-                </div>
-              ))}
             </div>
           </CardContent>
         </Card>
