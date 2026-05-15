@@ -7,7 +7,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, ArrowRight, ShieldAlert } from "lucide-react";
+import { Trash2, ArrowRight, ShieldAlert, Eye } from "lucide-react";
 import { ociStatus } from "@/components/proposals/OCIScreeningCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -22,6 +22,8 @@ type Proposal = {
   response_deadline: string | null;
   updated_at: string;
   oci_screening: any;
+  opportunity_source: string | null;
+  opportunity_source_id: string | null;
 };
 
 export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
