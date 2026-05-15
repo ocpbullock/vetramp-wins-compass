@@ -232,9 +232,8 @@ function Dashboard() {
 
   const stats = useMemo(() => {
     const activeOpps = opps.filter((o) => !o.type?.toLowerCase().includes("award")).length;
-    const awardNotices = opps.filter((o) => o.type?.toLowerCase().includes("award")).length;
     const totalObligated = awards.reduce((s, a) => s + (Number(a["Award Amount"]) || 0), 0);
-    return { activeOpps, awardNotices, historicalCount: awards.length, totalObligated };
+    return { activeOpps, historicalCount: awards.length, totalObligated };
   }, [opps, awards]);
 
   if (loading || !user) {
