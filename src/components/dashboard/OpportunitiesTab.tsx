@@ -67,14 +67,26 @@ export function OpportunitiesTab({
     [activeFilterNaics, activeNaics],
   );
 
+  const log = useLogStore((s) => s.log);
   const idx = useMemo(() => buildIndex(awards), [awards]);
   const matches = useMemo(() => {
     const m = new Map<string, IncumbentMatch>();
+    const tier = { exact: 0, parent: 0, psc: 0, fuzzy: 0, frequent: 0, none: 0 };
     for (const o of opportunities) {
       const key = (o.solicitationNumber ?? o.noticeId ?? "") as string;
-      m.set(key, matchIncumbent(o, awards, idx));
+      const match = matchIncumbent(o, awards, idx);
+      m.set(key, match);
+      tier[match.confidence]++;
+    }
+    if (opportunities.length > 0) {
+      const matched = opportunities.length - tier.none;
+      log(
+        "info",
+        `Recompete index: ${awards.length} awards, ${idx.byPiid.size} PIIDs, ${idx.byParent.size} parents, ${idx.byAgencyPsc.size} agency+PSC, ${idx.byAgencyNaics.size} agency+NAICS · checked ${opportunities.length} opps → ${matched} matches (exact:${tier.exact} parent:${tier.parent} psc:${tier.psc} fuzzy:${tier.fuzzy} frequent:${tier.frequent})`,
+      );
     }
     return m;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [opportunities, awards, idx]);
 
   const agencies = useMemo(() => {
