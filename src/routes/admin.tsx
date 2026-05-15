@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useTeam } from "@/lib/team";
 import {
   listUsers, setUserRole, setUserStatus, deleteUser,
   inviteUser, listInvites, resendInvite, cancelInvite,
@@ -21,6 +22,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, ShieldCheck, UserMinus, UserCheck, Trash2, RotateCcw, X, Mail } from "lucide-react";
 import { KnowledgeBaseSections } from "./knowledge-base";
+import { AIUsagePanel } from "@/components/settings/AIUsagePanel";
+import { TangoUsagePanel } from "@/components/settings/TangoUsagePanel";
+import { DataHealthPanel } from "@/components/settings/DataHealthPanel";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -28,19 +32,22 @@ export const Route = createFileRoute("/admin")({ component: AdminPage });
 
 function AdminPage() {
   const { user, session, loading, isAdmin } = useAuth();
+  const { userRole } = useTeam();
   const navigate = useNavigate();
   const accessToken = session?.access_token;
+  const isTeamAdmin = userRole === "owner" || userRole === "admin";
+  const canAccess = isAdmin || isTeamAdmin;
 
   useEffect(() => {
     if (loading) return;
     if (!user) navigate({ to: "/auth" });
-    else if (!isAdmin) {
+    else if (!canAccess) {
       toast.error("Admins only.");
       navigate({ to: "/" });
     }
-  }, [user, loading, isAdmin, navigate]);
+  }, [user, loading, canAccess, navigate]);
 
-  if (loading || !user || !isAdmin || !accessToken) {
+  if (loading || !user || !canAccess) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
   }
 
@@ -49,8 +56,8 @@ function AdminPage() {
       <header className="sticky top-0 z-30 bg-card border-b border-border">
         <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold tracking-tight">Team Administration</h1>
-            <p className="text-xs text-muted-foreground">Manage users, roles, and invitations</p>
+            <h1 className="text-xl font-bold tracking-tight">Admin</h1>
+            <p className="text-xs text-muted-foreground">Users, invitations, usage and data health</p>
           </div>
           <Button variant="outline" size="sm" asChild>
             <Link to="/"><ArrowLeft className="w-4 h-4 mr-1" /> Back to dashboard</Link>
@@ -59,15 +66,19 @@ function AdminPage() {
       </header>
 
       <main className="max-w-[1400px] mx-auto p-6">
-        <Tabs defaultValue="users">
+        <Tabs defaultValue={isAdmin ? "users" : "ai-usage"}>
           <TabsList>
-            <TabsTrigger value="users">Users</TabsTrigger>
-            <TabsTrigger value="invites">Invitations</TabsTrigger>
-            <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
+            {isAdmin && <TabsTrigger value="users">Users</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="invites">Invitations</TabsTrigger>}
+            {isAdmin && <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>}
+            <TabsTrigger value="ai-usage">API &amp; AI Usage</TabsTrigger>
+            <TabsTrigger value="data-health">Data Health</TabsTrigger>
           </TabsList>
-          <TabsContent value="users" className="mt-4"><UsersPanel currentUserId={user.id} accessToken={accessToken} /></TabsContent>
-          <TabsContent value="invites" className="mt-4"><InvitesPanel accessToken={accessToken} /></TabsContent>
-          <TabsContent value="knowledge" className="mt-4"><KnowledgeBaseSections /></TabsContent>
+          {isAdmin && accessToken && <TabsContent value="users" className="mt-4"><UsersPanel currentUserId={user.id} accessToken={accessToken} /></TabsContent>}
+          {isAdmin && accessToken && <TabsContent value="invites" className="mt-4"><InvitesPanel accessToken={accessToken} /></TabsContent>}
+          {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBaseSections /></TabsContent>}
+          <TabsContent value="ai-usage" className="mt-4 space-y-4"><TangoUsagePanel /><AIUsagePanel /></TabsContent>
+          <TabsContent value="data-health" className="mt-4"><DataHealthPanel /></TabsContent>
         </Tabs>
       </main>
     </div>
