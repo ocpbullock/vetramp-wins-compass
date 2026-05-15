@@ -8,8 +8,7 @@ import { SearchControls, type SearchInput } from "@/components/dashboard/SearchC
 import { StatCards } from "@/components/dashboard/StatCards";
 import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
 import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
-import { AnalyticsTab } from "@/components/dashboard/AnalyticsTab";
-import { LogsTab } from "@/components/dashboard/LogsTab";
+import { DeadlinesTab } from "@/components/dashboard/DeadlinesTab";
 import { InProgressTab } from "@/components/dashboard/InProgressTab";
 import { TrackedOpportunitiesTab } from "@/components/dashboard/TrackedOpportunitiesTab";
 import { StarredTab } from "@/components/dashboard/StarredTab";
@@ -29,7 +28,7 @@ import {
 import { useLogStore } from "@/lib/log-store";
 import { toast } from "sonner";
 import { generateDefaultMilestones } from "@/lib/milestones";
-import { DeadlinesWidget } from "@/components/dashboard/DeadlinesWidget";
+import { useDeadlines } from "@/lib/deadlines";
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
@@ -65,10 +64,11 @@ function Dashboard() {
   // Sync tab with URL hash from header nav links
   useEffect(() => {
     const h = (location.hash || "").replace(/^#/, "");
-    const valid = ["opportunities", "historical", "in-progress", "tracked", "starred", "analytics", "logs"];
+    const valid = ["opportunities", "historical", "in-progress", "tracked", "starred", "deadlines"];
     if (h && valid.includes(h)) setTab(h);
   }, [location.hash]);
   const { count: starredCount } = useStarred();
+  const { items: deadlineItems } = useDeadlines();
   const [inProgressCount, setInProgressCount] = useState<number>(0);
 
   // Fetch in-progress count on mount so the stat card is populated before
@@ -232,9 +232,8 @@ function Dashboard() {
 
   const stats = useMemo(() => {
     const activeOpps = opps.filter((o) => !o.type?.toLowerCase().includes("award")).length;
-    const awardNotices = opps.filter((o) => o.type?.toLowerCase().includes("award")).length;
     const totalObligated = awards.reduce((s, a) => s + (Number(a["Award Amount"]) || 0), 0);
-    return { activeOpps, awardNotices, historicalCount: awards.length, totalObligated };
+    return { activeOpps, historicalCount: awards.length, totalObligated };
   }, [opps, awards]);
 
   if (loading || !user) {
@@ -296,16 +295,14 @@ function Dashboard() {
         <SetupBanner />
         <StatCards
           activeOpps={stats.activeOpps}
-          awardNotices={stats.awardNotices}
           historicalCount={stats.historicalCount}
           historicalTotal={historicalTotal}
           totalObligated={stats.totalObligated}
           inProgressCount={inProgressCount}
           starredCount={starredCount}
+          deadlines={deadlineItems}
           onSelect={setTab}
         />
-
-        <DeadlinesWidget />
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
@@ -314,8 +311,7 @@ function Dashboard() {
             <TabsTrigger value="starred">Starred{starredCount ? ` (${starredCount})` : ""}</TabsTrigger>
             <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
             <TabsTrigger value="tracked">Tracked</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
+            <TabsTrigger value="deadlines">Deadlines{deadlineItems.length ? ` (${deadlineItems.length})` : ""}</TabsTrigger>
           </TabsList>
           <TabsContent value="opportunities" className="mt-4">
             <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} activeFilterNaics={currentNaics} searchKey={searchedNaics.join(",")} onPropose={handlePropose} onCompete={setCompeteOpp} />
@@ -332,11 +328,8 @@ function Dashboard() {
           <TabsContent value="tracked" className="mt-4">
             <TrackedOpportunitiesTab awards={awards} />
           </TabsContent>
-          <TabsContent value="analytics" className="mt-4">
-            <AnalyticsTab awards={awards} />
-          </TabsContent>
-          <TabsContent value="logs" className="mt-4">
-            <LogsTab />
+          <TabsContent value="deadlines" className="mt-4">
+            <DeadlinesTab />
           </TabsContent>
         </Tabs>
       </main>
