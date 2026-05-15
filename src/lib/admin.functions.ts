@@ -214,7 +214,7 @@ export const acceptInvite = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { data: invite, error: invErr } = await supabaseAdmin
       .from("user_invites")
-      .select("id,email,role,status,expires_at,invited_by")
+      .select("id,email,role,status,expires_at,invited_by,team_id")
       .eq("token", data.token)
       .maybeSingle();
     if (invErr) throw new Error(invErr.message);
@@ -231,9 +231,11 @@ export const acceptInvite = createServerFn({ method: "POST" })
       throw new Error("Signed-in account does not match the invited email address.");
     }
 
-    // Find the inviter's team (owner/admin role). If multiple, pick the most recent.
-    let teamId: string | null = null;
-    if (invite.invited_by) {
+    // Resolve target team: prefer the invite's explicit team_id (opportunity-team
+    // or team-scoped invite). Otherwise fall back to the inviter's most recent
+    // owner/admin team (legacy admin invite flow).
+    let teamId: string | null = invite.team_id ?? null;
+    if (!teamId && invite.invited_by) {
       const { data: inviterTeams, error: tErr } = await supabaseAdmin
         .from("team_members")
         .select("team_id, role, joined_at")
@@ -245,7 +247,7 @@ export const acceptInvite = createServerFn({ method: "POST" })
     }
     if (!teamId) throw new Error("Could not resolve a team for this invitation. Contact your admin.");
 
-    // Insert membership (idempotent — ignore unique-violation if already a member)
+    // Insert membership (idempotent)
     const { error: mErr } = await supabaseAdmin
       .from("team_members")
       .insert({ team_id: teamId, user_id: context.userId, role: "member" });
@@ -258,5 +260,21 @@ export const acceptInvite = createServerFn({ method: "POST" })
       .eq("id", invite.id);
     if (aErr) throw new Error(aErr.message);
 
-    return { ok: true, teamId };
+    // If this is an opportunity team, return the linked proposal so the UI can redirect.
+    const { data: team } = await supabaseAdmin
+      .from("teams")
+      .select("team_type")
+      .eq("id", teamId)
+      .maybeSingle();
+    let proposalId: string | null = null;
+    if (team?.team_type === "opportunity") {
+      const { data: prop } = await supabaseAdmin
+        .from("proposals")
+        .select("id")
+        .eq("opportunity_team_id", teamId)
+        .maybeSingle();
+      proposalId = prop?.id ?? null;
+    }
+
+    return { ok: true, teamId, proposalId };
   });
