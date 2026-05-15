@@ -19,6 +19,7 @@ export function StarredTab({
   const [rows, setRows] = useState<StarredRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
+  const [teamRow, setTeamRow] = useState<StarredRow | null>(null);
 
   async function reload() {
     setLoading(true);
