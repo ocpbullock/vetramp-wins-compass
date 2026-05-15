@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -25,8 +25,29 @@ import {
 } from "./TrackOpportunityDialog";
 import { TrackedAnalyzePanel } from "./TrackedAnalyzePanel";
 import { NAICS_GROUPS } from "@/lib/contracts";
-import type { HistoricalAward } from "@/lib/api";
+import type { HistoricalAward, SamOpportunity } from "@/lib/api";
 import { StarButton } from "./StarButton";
+
+// Build a SamOpportunity-shaped object from a tracked opportunity so the
+// existing Compete/Propose flows (which expect a SamOpportunity) can be reused.
+function trackedToOpp(t: TrackedOpportunity): SamOpportunity {
+  const path = [t.agency, t.sub_agency].filter(Boolean).join(".");
+  return {
+    noticeId: `tracked:${t.id}`,
+    solicitationNumber: `tracked-${t.id.slice(0, 8)}`,
+    title: t.title,
+    fullParentPathName: path,
+    naicsCode: t.naics_code,
+    classificationCode: undefined,
+    typeOfSetAside: undefined,
+    setAside: undefined,
+    responseDeadLine: t.response_deadline ?? undefined,
+    postedDate: t.created_at,
+    description: t.description ?? "",
+    uiLink: t.source_url ?? undefined,
+    type: t.contract_vehicle,
+  } as unknown as SamOpportunity;
+}
 
 const NAICS_NAME = new Map(NAICS_GROUPS.flatMap((g) => g.codes.map((c) => [c.code, c.name])));
 
@@ -60,8 +81,12 @@ function deadlineColor(d: string | null): string {
 
 export function TrackedOpportunitiesTab({
   awards = [],
+  onCompete,
+  onPropose,
 }: {
   awards?: HistoricalAward[];
+  onCompete?: (opp: SamOpportunity) => void;
+  onPropose?: (opp: SamOpportunity, trackedId: string) => void;
 }) {
   const { user } = useAuth();
   const [items, setItems] = useState<TrackedOpportunity[]>([]);
@@ -70,6 +95,25 @@ export function TrackedOpportunitiesTab({
   const [editing, setEditing] = useState<TrackedOpportunity | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TrackedOpportunity | null>(null);
   const [analyze, setAnalyze] = useState<TrackedOpportunity | null>(null);
+  const [highlightId, setHighlightId] = useState<string | null>(null);
+
+  // Pick up a "highlight this row" hint stashed by InProgressTab so the user
+  // sees which tracked opportunity their proposal came from.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const raw = sessionStorage.getItem("dash:highlight");
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as { source: string; id: string };
+      if (parsed.source !== "tracked") return;
+      sessionStorage.removeItem("dash:highlight");
+      setHighlightId(parsed.id);
+      const el = document.querySelector(`[data-tracked-id="${parsed.id}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      const t = setTimeout(() => setHighlightId(null), 4000);
+      return () => clearTimeout(t);
+    } catch { /* ignore */ }
+  }, [items]);
 
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterVehicle, setFilterVehicle] = useState<string>("all");
@@ -198,7 +242,7 @@ export function TrackedOpportunitiesTab({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[140px]">Actions</TableHead>
+              <TableHead className="w-[220px]">Actions</TableHead>
               <TableHead>Title / Agency</TableHead>
               <TableHead>Vehicle</TableHead>
               <TableHead>NAICS</TableHead>
@@ -225,8 +269,12 @@ export function TrackedOpportunitiesTab({
                 ? i.contract_vehicle_other
                 : i.contract_vehicle;
               return (
-                <TableRow key={i.id}>
-                  <TableCell className="w-[140px]">
+                <TableRow
+                  key={i.id}
+                  data-tracked-id={i.id}
+                  className={highlightId === i.id ? "bg-amber-100/60 dark:bg-amber-500/10 ring-1 ring-amber-400/60" : undefined}
+                >
+                  <TableCell className="w-[220px]">
                     <div className="flex items-center gap-1">
                       <StarButton
                         input={{
@@ -238,6 +286,16 @@ export function TrackedOpportunitiesTab({
                           sourceData: i,
                         }}
                       />
+                      {onCompete && (
+                        <Button size="sm" variant="ghost" onClick={() => onCompete(trackedToOpp(i))} title="Competitive intel">
+                          <Swords className="w-4 h-4 text-primary" />
+                        </Button>
+                      )}
+                      {onPropose && (
+                        <Button size="sm" variant="ghost" onClick={() => onPropose(trackedToOpp(i), i.id)} title="Start proposal">
+                          <FileSignature className="w-4 h-4 text-money" />
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" onClick={() => setAnalyze(i)} title="Analyze with USAspending">
                         <BarChart3 className="w-4 h-4" />
                       </Button>

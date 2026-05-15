@@ -7,7 +7,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Trash2, ArrowRight, ShieldAlert } from "lucide-react";
+import { Trash2, ArrowRight, ShieldAlert, Eye } from "lucide-react";
 import { ociStatus } from "@/components/proposals/OCIScreeningCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -22,6 +22,8 @@ type Proposal = {
   response_deadline: string | null;
   updated_at: string;
   oci_screening: any;
+  opportunity_source: string | null;
+  opportunity_source_id: string | null;
 };
 
 export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
@@ -37,7 +39,7 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
     setLoading(true);
     const { data, error } = await supabase
       .from("proposals")
-      .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at,oci_screening")
+      .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at,oci_screening,opportunity_source,opportunity_source_id")
       .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
     if (error) toast.error(error.message);
@@ -70,6 +72,21 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
     load();
   }
 
+  function viewOpportunity(p: Proposal) {
+    // Map the stored opportunity_source to the right dashboard tab. Stash the
+    // id in sessionStorage so the destination tab can scroll to + highlight it.
+    const src = p.opportunity_source;
+    let tab = "opportunities";
+    let id: string | null = null;
+    if (src === "tracked") { tab = "tracked"; id = p.opportunity_source_id; }
+    else if (src === "starred") { tab = "starred"; id = p.opportunity_source_id; }
+    else { tab = "opportunities"; id = p.opportunity_source_id ?? p.solicitation_number; }
+    if (id) {
+      try { sessionStorage.setItem("dash:highlight", JSON.stringify({ source: src ?? "sam", id })); } catch { /* ignore */ }
+    }
+    navigate({ to: "/", hash: tab });
+  }
+
   if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
   if (!rows.length) return <div className="text-sm text-muted-foreground">No proposals in progress yet. Click "Propose" on an opportunity to start one.</div>;
 
@@ -95,6 +112,9 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
               {ociStatus(p.oci_screening) === "flagged" && (
                 <Badge variant="destructive" title="Potential OCI detected — consult legal counsel"><ShieldAlert className="w-3 h-3 mr-1" />OCI flag</Badge>
               )}
+              <Button size="sm" variant="outline" onClick={() => viewOpportunity(p)} title="View originating opportunity">
+                <Eye className="w-3 h-3 mr-1" /> View Opportunity
+              </Button>
               <Button size="sm" onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: p.id } })}>
                 Resume <ArrowRight className="w-3 h-3 ml-1" />
               </Button>

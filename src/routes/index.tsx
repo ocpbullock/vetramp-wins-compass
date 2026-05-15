@@ -90,7 +90,13 @@ function Dashboard() {
     return () => { cancelled = true; };
   }, [user, teamId]);
 
-  async function handlePropose(o: SamOpportunity) {
+  async function handlePropose(
+    o: SamOpportunity,
+    source: { kind: "sam" | "tracked" | "starred"; id: string } = {
+      kind: "sam",
+      id: o.solicitationNumber || o.noticeId || "unknown",
+    },
+  ) {
     if (!user) return;
     const { data, error } = await supabase.from("proposals").insert({
       user_id: user.id,
@@ -103,6 +109,8 @@ function Dashboard() {
       set_aside: o.setAside || o.typeOfSetAside,
       response_deadline: o.responseDeadLine || null,
       opportunity_data: o,
+      opportunity_source: source.kind,
+      opportunity_source_id: source.id,
       status: "intake",
     }).select("id").single();
     if (error) { toast.error(error.message); return; }
@@ -125,7 +133,7 @@ function Dashboard() {
       postedDate: row.posted_date ?? undefined,
       setAside: row.set_aside_description ?? undefined,
     } as unknown as SamOpportunity);
-    await handlePropose(o);
+    await handlePropose(o, { kind: "starred", id: row.notice_id });
   }
   const [competeOpp, setCompeteOpp] = useState<SamOpportunity | null>(null);
   const [vendor, setVendor] = useState<{ id: string; name: string } | null>(null);
@@ -366,7 +374,13 @@ function Dashboard() {
             <InProgressTab onCountChange={setInProgressCount} />
           </TabsContent>
           <TabsContent value="tracked" className="mt-4">
-            <TrackedOpportunitiesTab awards={awards} />
+            <TrackedOpportunitiesTab
+              awards={awards}
+              onCompete={setCompeteOpp}
+              onPropose={(opp, trackedId) =>
+                handlePropose(opp, { kind: "tracked", id: trackedId })
+              }
+            />
           </TabsContent>
           <TabsContent value="deadlines" className="mt-4">
             <DeadlinesTab />
