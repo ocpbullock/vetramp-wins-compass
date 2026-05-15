@@ -102,6 +102,40 @@ export function StarredTab({
                 const uiLink = sd?.uiLink as string | undefined;
                 return (
                   <TableRow key={r.id}>
+                    <TableCell className="w-[180px]">
+                      <div className="flex items-center gap-1">
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              onClick={() => onStartProposal(r)}
+                              className="h-7 bg-money text-money-foreground hover:bg-money/90"
+                            >
+                              <FileSignature className="w-3.5 h-3.5 mr-1" />
+                              Start
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Promote to full proposal</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              className="h-7 w-7"
+                              onClick={() => {
+                                setRows((cur) => cur.filter((x) => x.id !== r.id));
+                                toggle({ noticeId: r.notice_id });
+                              }}
+                              title="Unstar"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Unstar</TooltipContent>
+                        </Tooltip>
+                      </div>
+                    </TableCell>
                     <TableCell className="max-w-[360px]">
                       <div className="font-medium truncate flex items-center gap-1.5">
                         {uiLink ? (
@@ -120,41 +154,6 @@ export function StarredTab({
                     <TableCell className="text-sm whitespace-nowrap">{fmt(r.posted_date)}</TableCell>
                     <TableCell className="text-xs">{r.set_aside_description || "—"}</TableCell>
                     <TableCell className="text-xs whitespace-nowrap">{fmt(r.created_at)}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="sm"
-                              onClick={() => onStartProposal(r)}
-                              className="h-7 bg-money text-money-foreground hover:bg-money/90"
-                            >
-                              <FileSignature className="w-3.5 h-3.5 mr-1" />
-                              Start Proposal
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Promote to full proposal</TooltipContent>
-                        </Tooltip>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              className="h-7 w-7"
-                              onClick={() => {
-                                // Optimistic remove from local list; provider also updates.
-                                setRows((cur) => cur.filter((x) => x.id !== r.id));
-                                toggle({ noticeId: r.notice_id });
-                              }}
-                              title="Unstar"
-                            >
-                              <Trash2 className="w-3.5 h-3.5 text-destructive" />
-                            </Button>
-                          </TooltipTrigger>
-                          <TooltipContent>Unstar</TooltipContent>
-                        </Tooltip>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 );
               })}
