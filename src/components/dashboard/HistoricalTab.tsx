@@ -240,6 +240,7 @@ export function HistoricalTab({
           className="px-3 py-2 border-b border-border bg-muted/30"
           style={{ display: "grid", gridTemplateColumns: COLS, gap: "0.5rem", alignItems: "center" }}
         >
+          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">Actions</span>
           <Head k="desc" label="Description" />
           <Head k="recipient" label="Recipient" />
           <Head k="agency" label="Agency" />
@@ -248,7 +249,6 @@ export function HistoricalTab({
           <Head k="amount" label="Obligated" />
           <Head k="date" label="Award Date" />
           <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">PIID</span>
-          <span />
         </div>
 
         {/* Virtualized body */}
