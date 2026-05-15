@@ -153,13 +153,7 @@ export function OpportunitiesTab({
       <div className="space-y-3">
         <div className="flex flex-wrap gap-2 items-center">
           <Input placeholder="Search title or sol #..." value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-xs" />
-          <Select value={agency} onValueChange={setAgency}>
-            <SelectTrigger className="w-[220px]"><SelectValue placeholder="Agency" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__all__">All agencies</SelectItem>
-              {agencies.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <AgencyCombobox value={agency} onChange={setAgency} agencies={agencies} width="w-[240px]" />
           <Select value={type} onValueChange={setType}>
             <SelectTrigger className="w-[200px]"><SelectValue placeholder="Notice type" /></SelectTrigger>
             <SelectContent>
