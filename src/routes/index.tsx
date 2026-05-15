@@ -295,16 +295,14 @@ function Dashboard() {
         <SetupBanner />
         <StatCards
           activeOpps={stats.activeOpps}
-          awardNotices={stats.awardNotices}
           historicalCount={stats.historicalCount}
           historicalTotal={historicalTotal}
           totalObligated={stats.totalObligated}
           inProgressCount={inProgressCount}
           starredCount={starredCount}
+          deadlines={deadlineItems}
           onSelect={setTab}
         />
-
-        <DeadlinesWidget />
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
@@ -313,8 +311,7 @@ function Dashboard() {
             <TabsTrigger value="starred">Starred{starredCount ? ` (${starredCount})` : ""}</TabsTrigger>
             <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
             <TabsTrigger value="tracked">Tracked</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="logs">Logs</TabsTrigger>
+            <TabsTrigger value="deadlines">Deadlines{deadlineItems.length ? ` (${deadlineItems.length})` : ""}</TabsTrigger>
           </TabsList>
           <TabsContent value="opportunities" className="mt-4">
             <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} activeFilterNaics={currentNaics} searchKey={searchedNaics.join(",")} onPropose={handlePropose} onCompete={setCompeteOpp} />
@@ -331,11 +328,8 @@ function Dashboard() {
           <TabsContent value="tracked" className="mt-4">
             <TrackedOpportunitiesTab awards={awards} />
           </TabsContent>
-          <TabsContent value="analytics" className="mt-4">
-            <AnalyticsTab awards={awards} />
-          </TabsContent>
-          <TabsContent value="logs" className="mt-4">
-            <LogsTab />
+          <TabsContent value="deadlines" className="mt-4">
+            <DeadlinesTab />
           </TabsContent>
         </Tabs>
       </main>
