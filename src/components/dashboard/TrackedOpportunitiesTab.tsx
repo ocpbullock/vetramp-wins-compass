@@ -250,8 +250,12 @@ export function TrackedOpportunitiesTab({
                 ? i.contract_vehicle_other
                 : i.contract_vehicle;
               return (
-                <TableRow key={i.id}>
-                  <TableCell className="w-[140px]">
+                <TableRow
+                  key={i.id}
+                  data-tracked-id={i.id}
+                  className={highlightId === i.id ? "bg-amber-100/60 dark:bg-amber-500/10 ring-1 ring-amber-400/60" : undefined}
+                >
+                  <TableCell className="w-[220px]">
                     <div className="flex items-center gap-1">
                       <StarButton
                         input={{
@@ -263,6 +267,16 @@ export function TrackedOpportunitiesTab({
                           sourceData: i,
                         }}
                       />
+                      {onCompete && (
+                        <Button size="sm" variant="ghost" onClick={() => onCompete(trackedToOpp(i))} title="Competitive intel">
+                          <Swords className="w-4 h-4 text-primary" />
+                        </Button>
+                      )}
+                      {onPropose && (
+                        <Button size="sm" variant="ghost" onClick={() => onPropose(trackedToOpp(i), i.id)} title="Start proposal">
+                          <FileSignature className="w-4 h-4 text-money" />
+                        </Button>
+                      )}
                       <Button size="sm" variant="ghost" onClick={() => setAnalyze(i)} title="Analyze with USAspending">
                         <BarChart3 className="w-4 h-4" />
                       </Button>
