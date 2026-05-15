@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
 import { Button } from "@/components/ui/button";
@@ -11,7 +12,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, BookOpen, ChevronDown, Menu, X, Shield } from "lucide-react";
+import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check } from "lucide-react";
+import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
 type NavItem = {
@@ -22,7 +24,7 @@ type NavItem = {
   icon?: React.ComponentType<{ className?: string }>;
 };
 
-const NAV: NavItem[] = [
+const ORG_NAV: NavItem[] = [
   { label: "Search", to: "/", hash: "opportunities", matchHash: "opportunities" },
   { label: "Proposals", to: "/", hash: "in-progress", matchHash: "in-progress" },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
@@ -30,12 +32,30 @@ const NAV: NavItem[] = [
 
 export function Header() {
   const { user, signOut, isAdmin } = useAuth();
-  const { currentTeam, userRole } = useTeam();
+  const { currentTeam, userRole, availableTeams, setCurrentTeam } = useTeam();
   const location = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [oppProposalId, setOppProposalId] = useState<string | null>(null);
+  const fetchOppProposal = useServerFn(getOpportunityTeamProposal);
+
+  const isOpp = currentTeam?.team_type === "opportunity";
+
+  // For opportunity teams, look up the linked proposal so the "Proposal" nav
+  // link can deep-link to it.
+  useEffect(() => {
+    let cancelled = false;
+    if (!isOpp || !currentTeam) {
+      setOppProposalId(null);
+      return;
+    }
+    fetchOppProposal({ data: { teamId: currentTeam.id } })
+      .then((res) => { if (!cancelled) setOppProposalId(res.proposal?.id ?? null); })
+      .catch(() => { if (!cancelled) setOppProposalId(null); });
+    return () => { cancelled = true; };
+  }, [isOpp, currentTeam, fetchOppProposal]);
 
   const isTeamAdmin = userRole === "owner" || userRole === "admin";
-  const showAdminLink = isAdmin || isTeamAdmin;
+  const showAdminLink = (isAdmin || isTeamAdmin) && !isOpp;
 
   const initials = user?.email?.slice(0, 2).toUpperCase() ?? "??";
   const displayName =
@@ -47,12 +67,21 @@ export function Header() {
   const currentHash = typeof location.hash === "string" ? location.hash.replace(/^#/, "") : "";
   const onHome = location.pathname === "/";
 
+  const NAV: NavItem[] = isOpp
+    ? [
+        { label: "Capture Intel", to: "/settings", icon: BookOpen },
+      ]
+    : ORG_NAV;
+
   const isActive = (item: NavItem) => {
     if (item.to === "/settings") return location.pathname.startsWith("/settings");
     if (!onHome) return false;
     if (item.matchHash) return currentHash === item.matchHash;
     return false;
   };
+
+  const orgTeams = availableTeams.filter((t) => t.team_type === "organization");
+  const oppTeams = availableTeams.filter((t) => t.team_type === "opportunity");
 
   return (
     <header className="sticky top-0 z-30 bg-card border-b border-border">
@@ -68,6 +97,20 @@ export function Header() {
         </Link>
 
         <nav className="hidden md:flex items-center gap-2 ml-0 xl:ml-4">
+          {isOpp && oppProposalId && (
+            <Link
+              to="/proposals/$proposalId"
+              params={{ proposalId: oppProposalId }}
+              className={[
+                "relative px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5",
+                location.pathname.startsWith("/proposals/")
+                  ? "text-primary"
+                  : "text-muted-foreground hover:text-foreground hover:bg-accent",
+              ].join(" ")}
+            >
+              Proposal
+            </Link>
+          )}
           {NAV.map((item) => {
             const active = isActive(item);
             const Icon = item.icon;
@@ -94,6 +137,50 @@ export function Header() {
         </nav>
 
         <div className="flex-1" />
+
+        {/* Team switcher */}
+        {availableTeams.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 max-w-[220px]">
+                {isOpp ? <Briefcase className="w-3.5 h-3.5 shrink-0" /> : <Building2 className="w-3.5 h-3.5 shrink-0" />}
+                <span className="truncate">{currentTeam?.name ?? "Select team"}</span>
+                <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-64">
+              {orgTeams.length > 0 && (
+                <>
+                  <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Organizations
+                  </DropdownMenuLabel>
+                  {orgTeams.map((t) => (
+                    <DropdownMenuItem key={t.id} onSelect={() => setCurrentTeam(t.id)}>
+                      <Building2 className="w-4 h-4 mr-2 opacity-70" />
+                      <span className="flex-1 truncate">{t.name}</span>
+                      {t.id === currentTeam?.id && <Check className="w-3.5 h-3.5 opacity-70" />}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+              {oppTeams.length > 0 && (
+                <>
+                  {orgTeams.length > 0 && <DropdownMenuSeparator />}
+                  <DropdownMenuLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Opportunities
+                  </DropdownMenuLabel>
+                  {oppTeams.map((t) => (
+                    <DropdownMenuItem key={t.id} onSelect={() => setCurrentTeam(t.id)}>
+                      <Briefcase className="w-4 h-4 mr-2 opacity-70" />
+                      <span className="flex-1 truncate">{t.name}</span>
+                      {t.id === currentTeam?.id && <Check className="w-3.5 h-3.5 opacity-70" />}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
@@ -140,6 +227,16 @@ export function Header() {
       {mobileOpen && (
         <nav className="md:hidden border-t border-border bg-card">
           <div className="max-w-[1400px] mx-auto px-6 py-3 flex flex-col gap-1">
+            {isOpp && oppProposalId && (
+              <Link
+                to="/proposals/$proposalId"
+                params={{ proposalId: oppProposalId }}
+                onClick={() => setMobileOpen(false)}
+                className="px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-accent"
+              >
+                Proposal
+              </Link>
+            )}
             {NAV.map((item) => {
               const active = isActive(item);
               const Icon = item.icon;
