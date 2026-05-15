@@ -194,7 +194,7 @@ function Dashboard() {
         startDate: historicalFrom,
         endDate: input.postedTo,
         keyword: input.keyword,
-        maxResults: 10000,
+        maxResults: 2000,
       });
       setAwards(usaRes.results ?? []);
       setHistoricalTotal(usaRes.page_metadata?.total);
