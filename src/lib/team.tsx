@@ -125,8 +125,8 @@ export function TeamProvider({ children }: { children: ReactNode }) {
         const slug = `${slugify(baseName)}-${uid.slice(0, 8)}`;
         const { data: created, error: tErr } = await supabase
           .from("teams")
-          .insert({ name, slug, created_by: uid })
-          .select("id, name, slug, created_by")
+          .insert({ name, slug, created_by: uid, team_type: "organization" })
+          .select("id, name, slug, created_by, team_type, parent_team_id")
           .single();
         if (tErr) throw tErr;
         const { error: mErr } = await supabase
