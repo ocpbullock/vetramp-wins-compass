@@ -25,8 +25,29 @@ import {
 } from "./TrackOpportunityDialog";
 import { TrackedAnalyzePanel } from "./TrackedAnalyzePanel";
 import { NAICS_GROUPS } from "@/lib/contracts";
-import type { HistoricalAward } from "@/lib/api";
+import type { HistoricalAward, SamOpportunity } from "@/lib/api";
 import { StarButton } from "./StarButton";
+
+// Build a SamOpportunity-shaped object from a tracked opportunity so the
+// existing Compete/Propose flows (which expect a SamOpportunity) can be reused.
+function trackedToOpp(t: TrackedOpportunity): SamOpportunity {
+  const path = [t.agency, t.sub_agency].filter(Boolean).join(".");
+  return {
+    noticeId: `tracked:${t.id}`,
+    solicitationNumber: `tracked-${t.id.slice(0, 8)}`,
+    title: t.title,
+    fullParentPathName: path,
+    naicsCode: t.naics_code,
+    classificationCode: undefined,
+    typeOfSetAside: undefined,
+    setAside: undefined,
+    responseDeadLine: t.response_deadline ?? undefined,
+    postedDate: t.created_at,
+    description: t.description ?? "",
+    uiLink: t.source_url ?? undefined,
+    type: t.contract_vehicle,
+  } as unknown as SamOpportunity;
+}
 
 const NAICS_NAME = new Map(NAICS_GROUPS.flatMap((g) => g.codes.map((c) => [c.code, c.name])));
 
