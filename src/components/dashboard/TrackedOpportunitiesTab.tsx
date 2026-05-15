@@ -96,6 +96,7 @@ export function TrackedOpportunitiesTab({
   const [editing, setEditing] = useState<TrackedOpportunity | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<TrackedOpportunity | null>(null);
   const [analyze, setAnalyze] = useState<TrackedOpportunity | null>(null);
+  const [teamRow, setTeamRow] = useState<TrackedOpportunity | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
 
   // Pick up a "highlight this row" hint stashed by InProgressTab so the user
