@@ -123,6 +123,20 @@ export function StarredTab({
                           <TooltipTrigger asChild>
                             <Button
                               size="icon"
+                              variant="outline"
+                              className="h-7 w-7"
+                              onClick={() => setTeamRow(r)}
+                              title="Create opportunity team"
+                            >
+                              <Users className="w-3.5 h-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Create team & invite partners</TooltipContent>
+                        </Tooltip>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="icon"
                               variant="ghost"
                               className="h-7 w-7"
                               onClick={() => {
