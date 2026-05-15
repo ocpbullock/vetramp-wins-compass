@@ -72,6 +72,21 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
     load();
   }
 
+  function viewOpportunity(p: Proposal) {
+    // Map the stored opportunity_source to the right dashboard tab. Stash the
+    // id in sessionStorage so the destination tab can scroll to + highlight it.
+    const src = p.opportunity_source;
+    let tab = "opportunities";
+    let id: string | null = null;
+    if (src === "tracked") { tab = "tracked"; id = p.opportunity_source_id; }
+    else if (src === "starred") { tab = "starred"; id = p.opportunity_source_id; }
+    else { tab = "opportunities"; id = p.opportunity_source_id ?? p.solicitation_number; }
+    if (id) {
+      try { sessionStorage.setItem("dash:highlight", JSON.stringify({ source: src ?? "sam", id })); } catch { /* ignore */ }
+    }
+    navigate({ to: "/", hash: tab });
+  }
+
   if (loading) return <div className="text-sm text-muted-foreground">Loading…</div>;
   if (!rows.length) return <div className="text-sm text-muted-foreground">No proposals in progress yet. Click "Propose" on an opportunity to start one.</div>;
 
