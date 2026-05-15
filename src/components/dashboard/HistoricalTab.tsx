@@ -6,6 +6,7 @@ import { ExternalLink, ArrowUpDown, Info, Loader2 } from "lucide-react";
 import { mapSetAside } from "@/lib/contracts";
 import type { HistoricalAward } from "@/lib/api";
 import { NaicsFilterChips } from "./NaicsFilterChips";
+import { AgencyCombobox } from "./AgencyCombobox";
 import { List, type RowComponentProps } from "react-window";
 
 type SortKey = "desc" | "recipient" | "agency" | "naics" | "amount" | "date";
