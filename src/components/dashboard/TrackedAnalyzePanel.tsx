@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { searchUsaspending, type HistoricalAward } from "@/lib/api";
+import { Button } from "@/components/ui/button";
+import { Trophy, Users } from "lucide-react";
+import { searchUsaspending, type HistoricalAward, type SamOpportunity } from "@/lib/api";
+import { matchIncumbent } from "@/lib/incumbents";
 import { format, subYears, parseISO } from "date-fns";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid,
