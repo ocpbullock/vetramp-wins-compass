@@ -116,6 +116,7 @@ export function TeamProvider({ children }: { children: ReactNode }) {
       }>;
 
       let chosen: Team | null = null;
+      let allTeams: Team[] = [];
       if (rows.length === 0) {
         // Auto-create personal team
         const { data: profile } = await supabase
@@ -137,11 +138,14 @@ export function TeamProvider({ children }: { children: ReactNode }) {
           .insert({ team_id: created.id, user_id: uid, role: "owner" });
         if (mErr) throw mErr;
         chosen = created as Team;
+        allTeams = [created as Team];
       } else {
+        allTeams = rows.map((r) => r.teams).filter((t): t is Team => !!t);
         const stored = typeof window !== "undefined" ? localStorage.getItem(SELECTED_TEAM_KEY) : null;
-        const match = rows.find((r) => r.team_id === stored && r.teams) ?? rows.find((r) => r.teams);
-        chosen = (match?.teams as Team) ?? null;
+        const match = allTeams.find((t) => t.id === stored) ?? allTeams[0] ?? null;
+        chosen = match;
       }
+      setAvailableTeams(allTeams);
 
       setCurrentTeamState(chosen);
       if (chosen) {
