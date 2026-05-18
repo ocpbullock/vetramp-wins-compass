@@ -10,7 +10,7 @@ import { SearchControls, type SearchInput } from "@/components/dashboard/SearchC
 import { StatCards } from "@/components/dashboard/StatCards";
 import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
 import { HistoricalTab } from "@/components/dashboard/HistoricalTab";
-import { DeadlinesTab } from "@/components/dashboard/DeadlinesTab";
+
 import { InProgressTab } from "@/components/dashboard/InProgressTab";
 import { TrackedOpportunitiesTab } from "@/components/dashboard/TrackedOpportunitiesTab";
 import { StarredTab } from "@/components/dashboard/StarredTab";
@@ -30,7 +30,7 @@ import {
 import { useLogStore } from "@/lib/log-store";
 import { toast } from "sonner";
 import { generateDefaultMilestones } from "@/lib/milestones";
-import { useDeadlines } from "@/lib/deadlines";
+
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
@@ -87,11 +87,10 @@ function Dashboard() {
   // Sync tab with URL hash from header nav links
   useEffect(() => {
     const h = (location.hash || "").replace(/^#/, "");
-    const valid = ["opportunities", "historical", "in-progress", "tracked", "starred", "deadlines"];
+    const valid = ["opportunities", "historical", "in-progress", "tracked", "starred"];
     if (h && valid.includes(h)) setTab(h);
   }, [location.hash]);
   const { count: starredCount } = useStarred();
-  const { items: deadlineItems } = useDeadlines();
   const [inProgressCount, setInProgressCount] = useState<number>(0);
 
   // Fetch in-progress count on mount so the stat card is populated before
@@ -358,7 +357,6 @@ function Dashboard() {
           totalObligatedIsFiltered={filteredObligated != null && filteredObligated !== stats.totalObligated}
           inProgressCount={inProgressCount}
           starredCount={starredCount}
-          deadlines={deadlineItems}
           onSelect={setTab}
         />
 
@@ -369,7 +367,6 @@ function Dashboard() {
             <TabsTrigger value="starred">Starred{starredCount ? ` (${starredCount})` : ""}</TabsTrigger>
             <TabsTrigger value="in-progress">In Progress{inProgressCount ? ` (${inProgressCount})` : ""}</TabsTrigger>
             <TabsTrigger value="tracked">Tracked</TabsTrigger>
-            <TabsTrigger value="deadlines">Deadlines{deadlineItems.length ? ` (${deadlineItems.length})` : ""}</TabsTrigger>
           </TabsList>
           <TabsContent value="opportunities" className="mt-4">
             <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} activeFilterNaics={currentNaics} searchKey={searchedNaics.join(",")} onPropose={handlePropose} onCompete={setCompeteOpp} />
@@ -401,9 +398,6 @@ function Dashboard() {
                 handlePropose(opp, { kind: "tracked", id: trackedId })
               }
             />
-          </TabsContent>
-          <TabsContent value="deadlines" className="mt-4">
-            <DeadlinesTab />
           </TabsContent>
         </Tabs>
       </main>

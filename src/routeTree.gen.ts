@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as KnowledgeBaseRouteImport } from './routes/knowledge-base'
+import { Route as CalendarRouteImport } from './routes/calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
@@ -25,6 +26,11 @@ const SettingsRoute = SettingsRouteImport.update({
 const KnowledgeBaseRoute = KnowledgeBaseRouteImport.update({
   id: '/knowledge-base',
   path: '/knowledge-base',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CalendarRoute = CalendarRouteImport.update({
+  id: '/calendar',
+  path: '/calendar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -58,6 +64,7 @@ export interface FileRoutesByFullPath {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/calendar': typeof CalendarRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/settings': typeof SettingsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
@@ -67,6 +74,7 @@ export interface FileRoutesByTo {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/calendar': typeof CalendarRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/settings': typeof SettingsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
@@ -77,6 +85,7 @@ export interface FileRoutesById {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/calendar': typeof CalendarRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/settings': typeof SettingsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
@@ -88,6 +97,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/calendar'
     | '/knowledge-base'
     | '/settings'
     | '/proposals/$proposalId'
@@ -97,6 +107,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/calendar'
     | '/knowledge-base'
     | '/settings'
     | '/proposals/$proposalId'
@@ -106,6 +117,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/calendar'
     | '/knowledge-base'
     | '/settings'
     | '/proposals/$proposalId'
@@ -116,6 +128,7 @@ export interface RootRouteChildren {
   AcceptInviteRoute: typeof AcceptInviteRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  CalendarRoute: typeof CalendarRoute
   KnowledgeBaseRoute: typeof KnowledgeBaseRoute
   SettingsRoute: typeof SettingsRoute
   ProposalsProposalIdRoute: typeof ProposalsProposalIdRoute
@@ -135,6 +148,13 @@ declare module '@tanstack/react-router' {
       path: '/knowledge-base'
       fullPath: '/knowledge-base'
       preLoaderRoute: typeof KnowledgeBaseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/calendar': {
+      id: '/calendar'
+      path: '/calendar'
+      fullPath: '/calendar'
+      preLoaderRoute: typeof CalendarRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -180,6 +200,7 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptInviteRoute: AcceptInviteRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  CalendarRoute: CalendarRoute,
   KnowledgeBaseRoute: KnowledgeBaseRoute,
   SettingsRoute: SettingsRoute,
   ProposalsProposalIdRoute: ProposalsProposalIdRoute,
