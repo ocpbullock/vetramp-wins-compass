@@ -12,12 +12,23 @@ const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   compliance_matrix: ["boilerplate"],
 };
 
-async function fetchKnowledgeContext(sectionId: string): Promise<string> {
+async function fetchKnowledgeContext(
+  sectionId: string,
+  admin: ReturnType<typeof createClient>,
+  teamId: string | null,
+): Promise<string> {
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
-    if (!supabaseUrl || !serviceKey) return "";
-    const admin = createClient(supabaseUrl, serviceKey);
+    if (!teamId) return "";
+
+    // Include parent org team for opportunity-team proposals so opp teams can
+    // pull from the parent organization's knowledge base (mirrors RLS).
+    const { data: teamRow } = await admin
+      .from("teams")
+      .select("id, team_type, parent_team_id")
+      .eq("id", teamId)
+      .maybeSingle();
+    const teamIds = new Set<string>([teamId]);
+    if (teamRow?.parent_team_id) teamIds.add(teamRow.parent_team_id);
 
     const categories = SECTION_KB_CATEGORIES[sectionId] ?? ["boilerplate"];
     const parts: string[] = [];
@@ -25,6 +36,7 @@ async function fetchKnowledgeContext(sectionId: string): Promise<string> {
       const { data, error } = await admin
         .from("knowledge_base")
         .select("title,content,category")
+        .in("team_id", Array.from(teamIds))
         .eq("category", cat)
         .order("created_at", { ascending: false })
         .limit(5);
