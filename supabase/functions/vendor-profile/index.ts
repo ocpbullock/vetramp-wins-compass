@@ -1,10 +1,14 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { authenticate, authErrorResponse } from "../_shared/auth.ts";
 
 const USA = "https://api.usaspending.gov";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    try { await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
     const { recipientId } = await req.json();
     if (!recipientId) throw new Error("recipientId required");
 

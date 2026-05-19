@@ -1,8 +1,12 @@
 import { corsHeaders } from "../_shared/cors.ts";
+import { authenticate, authErrorResponse } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    try { await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
     const { naicsCodes, startDate, endDate } = await req.json();
     const baseFilters = {
       naics_codes: naicsCodes,

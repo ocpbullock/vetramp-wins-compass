@@ -276,6 +276,15 @@ export async function checkBudget(teamId: string | null, userId: string | null):
 
 export async function callAI(opts: AICallOptions): Promise<any> {
   const provider = opts.provider ?? getProvider();
+  // Anthropic's Messages API uses a different request/response shape than the
+  // OpenAI chat-completions format this client speaks. Until a dedicated
+  // adapter exists, fail fast rather than send a malformed request that would
+  // 4xx after wasting a retry budget (and possibly leak partial prompts).
+  if (provider === "anthropic") {
+    throw new Error(
+      "AI_PROVIDER=anthropic is not supported: the Anthropic Messages API adapter is not implemented. Set AI_PROVIDER to 'lovable' or 'openai'.",
+    );
+  }
   const cfg = PROVIDERS[provider];
   const apiKey = Deno.env.get(cfg.apiKeyEnv);
   if (!apiKey) throw new Error(`${cfg.apiKeyEnv} not configured`);
