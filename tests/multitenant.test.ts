@@ -153,13 +153,43 @@ describe("multi-tenant: proposalId from body is verified before any write", () =
 });
 
 describe("multi-tenant: RLS policies on team-scoped tables", () => {
-  // Concatenate every migration file so we can grep policies regardless of
-  // which migration created them.
-  const migrations = (() => {
+  // Split every migration into individual statements so policy assertions
+  // can't accidentally span unrelated CREATE/DROP statements.
+  const statements: string[] = (() => {
     const dir = resolve(root, "supabase/migrations");
-    const files = readdirSync(dir).filter((f) => f.endsWith(".sql"));
-    return files.map((f) => read(`supabase/migrations/${f}`)).join("\n");
+    const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
+    const all: string[] = [];
+    for (const f of files) {
+      const src = read(`supabase/migrations/${f}`);
+      // Naive split on ';' is fine here — policy bodies don't contain
+      // semicolons outside the trailing terminator.
+      for (const raw of src.split(/;\s*(?:\n|$)/)) {
+        const s = raw.trim();
+        if (s) all.push(s + ";");
+      }
+    }
+    return all;
   })();
+
+  /** Return active (not-yet-dropped) CREATE POLICY statements on a table. */
+  function activePolicies(table: string): string[] {
+    const created: Record<string, string> = {};
+    const reCreate = new RegExp(
+      `^\\s*CREATE\\s+POLICY\\s+"([^"]+)"\\s+ON\\s+(?:public\\.)?${table}\\b`,
+      "i",
+    );
+    const reDrop = new RegExp(
+      `^\\s*DROP\\s+POLICY\\s+(?:IF\\s+EXISTS\\s+)?"([^"]+)"\\s+ON\\s+(?:public\\.)?${table}\\b`,
+      "i",
+    );
+    for (const stmt of statements) {
+      const c = stmt.match(reCreate);
+      if (c) { created[c[1]] = stmt; continue; }
+      const d = stmt.match(reDrop);
+      if (d) { delete created[d[1]]; }
+    }
+    return Object.values(created);
+  }
 
   // Tables that must NEVER widen access to opportunity-team children of a
   // parent org. A partner invited only to one opportunity must NOT be able
@@ -174,54 +204,51 @@ describe("multi-tenant: RLS policies on team-scoped tables", () => {
   ];
 
   for (const table of STRICT_TEAM_TABLES) {
-    it(`${table}: SELECT policy gates on is_team_member, not has_opp_team_access_to_org`, () => {
-      // Find every SELECT policy block on this table and assert isolation.
-      const policyRegex = new RegExp(
-        `(CREATE|create)\\s+POLICY[\\s\\S]*?ON\\s+public\\.${table}[\\s\\S]*?FOR\\s+SELECT[\\s\\S]*?;`,
-        "gi",
-      );
-      const blocks = migrations.match(policyRegex) || [];
-      expect(blocks.length, `${table} should have at least one SELECT policy`).toBeGreaterThan(0);
-      for (const b of blocks) {
-        expect(b).toMatch(/is_team_member/);
+    it(`${table}: active SELECT policies gate on is_team_member only`, () => {
+      const policies = activePolicies(table).filter((p) => /FOR\s+SELECT/i.test(p));
+      expect(policies.length, `${table} should have ≥1 active SELECT policy`).toBeGreaterThan(0);
+      for (const p of policies) {
+        expect(p).toMatch(/is_team_member/);
         // No partner-widening allowed on these tables.
-        expect(b).not.toMatch(/has_opp_team_access_to_org/);
+        expect(p).not.toMatch(/has_opp_team_access_to_org/);
       }
     });
   }
 
-  it("knowledge_base: SELECT widens to parent org for opportunity-team partners (by design)", () => {
+  it("knowledge_base: an active SELECT policy widens to parent org for opportunity-team partners", () => {
+    const policies = activePolicies("knowledge_base").filter((p) => /FOR\s+SELECT/i.test(p));
+    expect(policies.length).toBeGreaterThan(0);
     // This is the *intentional* shared-knowledge path. Lock the design in.
-    expect(migrations).toMatch(
-      /CREATE POLICY[\s\S]*knowledge_base[\s\S]*FOR SELECT[\s\S]*has_opp_team_access_to_org/i,
-    );
+    expect(policies.some((p) => /has_opp_team_access_to_org/.test(p))).toBe(true);
   });
 
-  it("proposals: SELECT allows opportunity-team members only via opportunity_team_id", () => {
-    // A partner sees a proposal only when opportunity_team_id matches a team
-    // they belong to — not when they happen to be in some unrelated team.
-    expect(migrations).toMatch(
-      /proposals[\s\S]*FOR SELECT[\s\S]*opportunity_team_id[\s\S]*is_team_member\(opportunity_team_id/i,
-    );
+  it("proposals: active SELECT policy allows partner access via opportunity_team_id", () => {
+    const policies = activePolicies("proposals").filter((p) => /FOR\s+SELECT/i.test(p));
+    expect(policies.length).toBeGreaterThan(0);
+    expect(
+      policies.some((p) => /is_team_member\(\s*opportunity_team_id/.test(p)),
+    ).toBe(true);
   });
 
-  it("proposal_attachments: every CRUD policy delegates to user_can_see_proposal", () => {
-    const blocks =
-      migrations.match(
-        /CREATE POLICY[\s\S]*?ON\s+public\.proposal_attachments[\s\S]*?;/gi,
-      ) || [];
-    expect(blocks.length).toBeGreaterThanOrEqual(3); // select/insert/delete
-    for (const b of blocks) {
-      expect(b).toMatch(/user_can_see_proposal/);
+  it("proposal_attachments: every active CRUD policy delegates to user_can_see_proposal", () => {
+    const policies = activePolicies("proposal_attachments");
+    expect(policies.length).toBeGreaterThanOrEqual(3);
+    for (const p of policies) {
+      expect(p).toMatch(/user_can_see_proposal/);
     }
   });
 
   it("proposal-attachments storage policies are scoped by user_can_see_proposal", () => {
     // The 20260519... migration adds proposals/{proposalId}/ storage RLS so
     // opportunity-team collaborators can read attachments via the bucket.
-    expect(migrations).toMatch(
-      /storage\.objects[\s\S]*proposal-attachments[\s\S]*user_can_see_proposal/i,
+    const storagePolicies = statements.filter(
+      (s) => /CREATE\s+POLICY[\s\S]*storage\.objects/i.test(s) &&
+             /proposal-attachments/.test(s),
     );
+    expect(storagePolicies.length).toBeGreaterThan(0);
+    for (const p of storagePolicies) {
+      expect(p).toMatch(/user_can_see_proposal/);
+    }
   });
 });
 
