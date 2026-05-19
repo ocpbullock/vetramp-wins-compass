@@ -416,6 +416,7 @@ type KbEntry = {
   source_filename: string | null;
   tags: string[] | null;
   created_at: string;
+  team_id: string | null;
 };
 
 function fileToBase64(file: File): Promise<string> {
