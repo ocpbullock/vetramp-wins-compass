@@ -287,7 +287,12 @@ export async function callAI(opts: AICallOptions): Promise<any> {
   }
 
   const model = (opts.body.model as string) || cfg.defaultModel;
-  const body = { ...opts.body, model };
+  const body: Record<string, unknown> = { ...opts.body, model };
+  // Ask OpenAI-compatible streams for a usage chunk at the end so we can log
+  // real token counts instead of estimates.
+  if (opts.stream && provider !== "anthropic" && body.stream === true && !body.stream_options) {
+    body.stream_options = { include_usage: true };
+  }
   const timeoutMs = opts.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
   let lastErr: any;
@@ -328,15 +333,71 @@ export async function callAI(opts: AICallOptions): Promise<any> {
       }
 
       if (opts.stream) {
-        logUsage({ ...opts, provider, model, inputTokens: approxBodyTokens(body), outputTokens: 0, status: "success" });
-        return res;
+        if (!res.body) {
+          await logUsage({ ...opts, provider, model, inputTokens: approxBodyTokens(body), outputTokens: 0, status: "error", errorMessage: "no_stream_body" });
+          return res;
+        }
+        // Tee the stream so we can forward one branch to the caller and read
+        // the other to measure actual output. logUsage runs after the stream
+        // closes — we keep it alive with EdgeRuntime.waitUntil when available.
+        const [forClient, forAccounting] = res.body.tee();
+        const inputEstimate = approxBodyTokens(body);
+        const accounting = (async () => {
+          let usageIn = 0, usageOut = 0, hasUsage = false;
+          let outputText = "";
+          const reader = forAccounting.getReader();
+          const decoder = new TextDecoder();
+          let buf = "";
+          try {
+            while (true) {
+              const { done, value } = await reader.read();
+              if (done) break;
+              buf += decoder.decode(value, { stream: true });
+              const lines = buf.split("\n");
+              buf = lines.pop() ?? "";
+              for (const line of lines) {
+                const trimmed = line.trim();
+                if (!trimmed.startsWith("data:")) continue;
+                const payload = trimmed.slice(5).trim();
+                if (!payload || payload === "[DONE]") continue;
+                try {
+                  const j = JSON.parse(payload);
+                  const delta = j.choices?.[0]?.delta?.content;
+                  if (typeof delta === "string") outputText += delta;
+                  // Some providers stream non-delta `message.content` chunks too
+                  const msgContent = j.choices?.[0]?.message?.content;
+                  if (typeof msgContent === "string") outputText += msgContent;
+                  if (j.usage) {
+                    hasUsage = true;
+                    usageIn = j.usage.prompt_tokens ?? j.usage.input_tokens ?? usageIn;
+                    usageOut = j.usage.completion_tokens ?? j.usage.output_tokens ?? usageOut;
+                  }
+                } catch { /* skip non-JSON */ }
+              }
+            }
+          } catch (e) {
+            console.error("stream accounting read failed:", e);
+          }
+          const finalIn = hasUsage && usageIn > 0 ? usageIn : inputEstimate;
+          const finalOut = hasUsage && usageOut > 0 ? usageOut : approxTokens(outputText);
+          await logUsage({
+            ...opts,
+            provider,
+            model,
+            inputTokens: finalIn,
+            outputTokens: finalOut,
+            status: "success",
+          });
+        })();
+        try { (globalThis as any).EdgeRuntime?.waitUntil?.(accounting); } catch { /* ignore */ }
+        return new Response(forClient, { status: res.status, headers: res.headers });
       }
 
       const data = await res.json();
       const usage = data.usage || {};
       const inputTokens = usage.prompt_tokens ?? usage.input_tokens ?? approxBodyTokens(body);
       const outputTokens = usage.completion_tokens ?? usage.output_tokens ?? 0;
-      logUsage({ ...opts, provider, model, inputTokens, outputTokens, status: "success" });
+      await logUsage({ ...opts, provider, model, inputTokens, outputTokens, status: "success" });
       // Tag returned data with token counts so callers can persist to cache
       (data as any).__usage = { inputTokens, outputTokens, model };
       return data;
