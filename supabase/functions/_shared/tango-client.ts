@@ -1,7 +1,7 @@
 // Shared Tango API client (https://docs.makegov.com).
 // Free tier: 100 req/day, 25 req/min, 1 webhook. Always cache.
 
-const BASE_URL = "https://tango.makegov.com/api/v1";
+const BASE_URL = "https://tango.makegov.com";
 
 export class TangoError extends Error {
   status: number;
@@ -27,8 +27,8 @@ function buildQuery(params: Record<string, unknown>): string {
   for (const [k, v] of Object.entries(params)) {
     if (v === undefined || v === null || v === "") continue;
     if (Array.isArray(v)) {
-      // Tango typically accepts comma-separated for multi-value
-      sp.set(k, v.join(","));
+      // Tango's current API uses pipe-separated OR filters for multi-value params.
+      sp.set(k, v.join("|"));
     } else {
       sp.set(k, String(v));
     }
@@ -47,7 +47,7 @@ export async function tangoFetch<T = any>(
   const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = `${BASE_URL}${path}${buildQuery(params)}`;
   const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${apiKey}`);
+  headers.set("X-API-KEY", apiKey);
   headers.set("Accept", "application/json");
 
   const doFetch = () => fetch(url, { ...init, headers });
@@ -72,36 +72,49 @@ export type TangoPagedParams = {
 
 export function searchOpportunities(params: {
   naics?: string | string[];
-  keyword?: string;
-  posted_date_from?: string;
-  posted_date_to?: string;
+  search?: string;
+  first_notice_date_after?: string;
+  first_notice_date_before?: string;
   response_deadline_from?: string;
   response_deadline_to?: string;
   set_aside?: string;
+  active?: boolean;
 } & TangoPagedParams) {
-  return tangoFetch<TangoResponse<any>>("/opportunities/", params);
+  const { page_size, ...rest } = params;
+  return tangoFetch<TangoResponse<any>>("/api/opportunities/", { ...rest, limit: page_size });
 }
 
 export function searchContracts(params: {
   naics?: string | string[];
-  vendor_name?: string;
-  agency?: string;
-  award_date_from?: string;
-  award_date_to?: string;
+  recipient?: string;
+  awarding_agency?: string;
+  award_date_gte?: string;
+  award_date_lte?: string;
   award_amount_min?: number;
   award_amount_max?: number;
-  keyword?: string;
+  search?: string;
 } & TangoPagedParams) {
-  return tangoFetch<TangoResponse<any>>("/contracts/", params);
+  const { page_size, page, award_amount_min, award_amount_max, ...rest } = params;
+  const query = {
+    ...rest,
+    obligated_gte: award_amount_min,
+    obligated_lte: award_amount_max,
+    limit: page_size,
+  };
+  return tangoFetch<TangoResponse<any> | any[]>("/api/contracts/", query).then((res) =>
+    Array.isArray(res) ? { results: res, count: res.length, next: null, previous: null } : res,
+  );
 }
 
 export function searchEntities(params: {
-  vendor_name?: string;
+  search?: string;
   uei?: string;
-  naics_code?: string;
-  small_business_type?: string;
+  name?: string;
+  naics?: string;
+  socioeconomic?: string;
 } & TangoPagedParams) {
-  return tangoFetch<TangoResponse<any>>("/entities/", params);
+  const { page_size, ...rest } = params;
+  return tangoFetch<TangoResponse<any>>("/api/entities/", { ...rest, limit: page_size });
 }
 
 export function searchSubawards(params: {
@@ -113,11 +126,11 @@ export function searchSubawards(params: {
 }
 
 export function getOpportunityDetail(id: string) {
-  return tangoFetch<any>(`/opportunities/${encodeURIComponent(id)}/`);
+  return tangoFetch<any>(`/api/opportunities/${encodeURIComponent(id)}/`);
 }
 
 export function getContractDetail(id: string) {
-  return tangoFetch<any>(`/contracts/${encodeURIComponent(id)}/`);
+  return tangoFetch<any>(`/api/contracts/${encodeURIComponent(id)}/`);
 }
 
 // ---------- Field mappers ----------
