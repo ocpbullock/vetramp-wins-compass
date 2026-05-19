@@ -163,3 +163,43 @@ describe("build prerequisites: routes and assets exist", () => {
     }
   });
 });
+
+describe("ai_response_cache writes are service-role only (no client UPDATE)", () => {
+  it("ai-client documents the no-client-UPDATE invariant", () => {
+    const src = read("supabase/functions/_shared/ai-client.ts");
+    expect(src).toMatch(/NO client-facing UPDATE policy/);
+  });
+
+  it("setCachedResponse upserts via the service-role admin client", () => {
+    const src = read("supabase/functions/_shared/ai-client.ts");
+    expect(src).toMatch(/admin\.from\(["']ai_response_cache["']\)\.upsert/);
+  });
+
+  it("no migration grants an UPDATE policy on ai_response_cache", () => {
+    const { execSync } = require("node:child_process");
+    const out = execSync(
+      `grep -rEn "CREATE POLICY[^;]+ON[[:space:]]+public\\.ai_response_cache[^;]+FOR[[:space:]]+UPDATE" supabase/migrations || true`,
+      { cwd: root, encoding: "utf8" },
+    );
+    expect(out.trim()).toBe("");
+  });
+});
+
+describe("proposal-attachments storage uses a single proposal-access model", () => {
+  it("legacy user-folder storage policies are dropped", () => {
+    const { execSync } = require("node:child_process");
+    const drops = execSync(
+      `grep -rEn 'DROP POLICY[^;]+"Users (read|upload|delete) own proposal files"' supabase/migrations || true`,
+      { cwd: root, encoding: "utf8" },
+    );
+    expect(drops).toMatch(/Users read own proposal files/);
+    expect(drops).toMatch(/Users upload own proposal files/);
+    expect(drops).toMatch(/Users delete own proposal files/);
+  });
+
+  it("client upload path is proposal-scoped, not user-folder-scoped", () => {
+    const src = read("src/routes/proposals.$proposalId.tsx");
+    expect(src).toMatch(/proposals\/\$\{proposalId\}\//);
+    expect(src).not.toMatch(/\$\{user\.id\}\/\$\{proposalId\}\//);
+  });
+});
