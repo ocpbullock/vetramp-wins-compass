@@ -145,27 +145,31 @@ function pick(o: any, keys: string[]): any {
 
 /** Map a Tango opportunity to our cache row shape. */
 export function mapOpportunityRow(team_id: string, o: any) {
+  const office = o?.office ?? {};
+  const setAside = pick(o, ["setAside", "set_aside", "typeOfSetAside"]);
+  const setAsideCode = setAside && typeof setAside === "object" ? Object.keys(setAside)[0] : setAside;
+  const setAsideText = setAside && typeof setAside === "object" ? Object.values(setAside).join(", ") : null;
   return {
     team_id,
-    tango_id: String(pick(o, ["id", "tango_id", "noticeId", "notice_id"]) ?? crypto.randomUUID()),
-    notice_id: pick(o, ["noticeId", "notice_id"]),
+    tango_id: String(pick(o, ["id", "tango_id", "opportunity_id", "noticeId", "notice_id"]) ?? crypto.randomUUID()),
+    notice_id: pick(o, ["noticeId", "notice_id", "opportunity_id"]),
     solicitation_number: pick(o, ["solicitationNumber", "solicitation_number"]),
     title: pick(o, ["title", "name"]) ?? "Untitled",
     description: pick(o, ["description", "summary"]),
-    naics_code: pick(o, ["naicsCode", "naics_code", "naics"]),
+    naics_code: pick(o, ["naicsCode", "naics_code", "naics"])?.toString(),
     naics_description: pick(o, ["naicsDescription", "naics_description"]),
-    set_aside: pick(o, ["setAside", "set_aside", "typeOfSetAside"]),
-    set_aside_description: pick(o, ["setAsideDescription", "set_aside_description"]),
-    classification_code: pick(o, ["classificationCode", "classification_code", "psc"]),
-    posted_date: pick(o, ["postedDate", "posted_date"]),
+    set_aside: setAsideCode,
+    set_aside_description: pick(o, ["setAsideDescription", "set_aside_description"]) ?? setAsideText,
+    classification_code: pick(o, ["classificationCode", "classification_code", "psc", "psc_code"]),
+    posted_date: pick(o, ["postedDate", "posted_date", "first_notice_date", "last_notice_date"]),
     response_deadline: pick(o, ["responseDeadLine", "response_deadline", "responseDeadline"]),
     archive_date: pick(o, ["archiveDate", "archive_date"]),
-    agency: pick(o, ["agency", "fullParentPathName", "department"]),
-    office: pick(o, ["office", "subAgency"]),
+    agency: pick(o, ["agency", "fullParentPathName", "department"]) ?? [office.department_name, office.agency_name].filter(Boolean).join(" / "),
+    office: pick(o, ["office", "subAgency"]) ?? office.office_name,
     place_of_performance: pick(o, ["placeOfPerformance", "place_of_performance"]) ?? null,
     point_of_contact: pick(o, ["pointOfContact", "point_of_contact", "contacts"]) ?? null,
     award_info: pick(o, ["award", "award_info", "awardInfo"]) ?? null,
-    source_url: pick(o, ["uiLink", "url", "source_url"]),
+    source_url: pick(o, ["uiLink", "url", "source_url", "sam_url"]),
     raw_data: o,
   };
 }
@@ -174,13 +178,16 @@ export function mapOpportunityRow(team_id: string, o: any) {
 export function mapContractRow(team_id: string, c: any) {
   const naicsObj = c?.NAICS;
   const naicsCode = typeof naicsObj === "object" ? naicsObj?.code : pick(c, ["naicsCode", "naics_code", "naics"]);
+  const awardingOffice = c?.awarding_office ?? {};
+  const fundingOffice = c?.funding_office ?? {};
+  const recipient = c?.recipient ?? {};
   return {
     team_id,
-    tango_id: String(pick(c, ["id", "tango_id", "generated_internal_id", "Award ID"]) ?? crypto.randomUUID()),
+    tango_id: String(pick(c, ["id", "tango_id", "key", "generated_internal_id", "Award ID"]) ?? crypto.randomUUID()),
     piid: pick(c, ["piid", "Award ID"]),
-    agency: pick(c, ["awarding_agency", "Awarding Agency", "agency"]),
-    vendor_name: pick(c, ["recipient_name", "Recipient Name", "vendor_name"]),
-    vendor_uei: pick(c, ["recipient_uei", "Recipient UEI", "vendor_uei", "uei"]),
+    agency: pick(c, ["awarding_agency", "Awarding Agency", "agency"]) ?? [awardingOffice.department_name, awardingOffice.agency_name].filter(Boolean).join(" / "),
+    vendor_name: pick(c, ["recipient_name", "Recipient Name", "vendor_name"]) ?? recipient.display_name,
+    vendor_uei: pick(c, ["recipient_uei", "Recipient UEI", "vendor_uei", "uei"]) ?? recipient.uei,
     vendor_duns: pick(c, ["recipient_duns", "vendor_duns", "duns"]),
     naics_code: naicsCode ? String(naicsCode) : null,
     psc_code: pick(c, ["psc_code", "Product or Service Code", "classification_code"]),
