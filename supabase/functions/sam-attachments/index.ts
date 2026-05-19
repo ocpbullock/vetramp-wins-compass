@@ -97,7 +97,9 @@ Deno.serve(async (req) => {
           const name = filenameFromHeaders(r.headers, guessedName || fallback);
           const safeName = name.replace(/[^a-zA-Z0-9._-]/g, "_");
           const buf = new Uint8Array(await r.arrayBuffer());
-          const path = `${userId}/${proposalId}/${crypto.randomUUID()}-${safeName}`;
+          // Proposal-scoped path so opportunity-team collaborators can access
+          // via storage RLS (see "Read proposal files by proposal access").
+          const path = `proposals/${proposalId}/${crypto.randomUUID()}-${safeName}`;
           const { error: upErr } = await supabase.storage.from("proposal-attachments")
             .upload(path, buf, { contentType, upsert: true });
           if (upErr) throw upErr;
