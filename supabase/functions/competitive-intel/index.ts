@@ -258,8 +258,9 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title } = await req.json();
+    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title, teamId } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
+    if (!teamId) throw new Error("teamId required");
 
     const { sub, top } = parseAgency(agency || "");
     const agencyName = sub || top;
@@ -271,9 +272,10 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Cache check
+    // Cache check — scoped to team
     const { data: cached } = await supabase
       .from("cached_competitive_intel").select("payload, created_at")
+      .eq("team_id", teamId)
       .eq("cache_key", cacheKey).gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
