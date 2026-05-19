@@ -159,8 +159,8 @@ Output the markdown for this section now. Do NOT include other sections.`;
     try {
       res = await callAI({
         functionName: "generate-proposal-section",
-        teamId: teamId ?? null,
-        userId: userId ?? null,
+        teamId: verifiedTeamId,
+        userId,
         proposalId: proposalId ?? null,
         timeoutMs: 90_000,
         stream: true,
