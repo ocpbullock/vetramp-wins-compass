@@ -2,7 +2,7 @@
 // array from the opportunity payload (v2 search). Saves them into the
 // proposal-attachments storage bucket.
 import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
 import { authenticate, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 
 const SAM_KEY = Deno.env.get("SAM_GOV_API_KEY");
