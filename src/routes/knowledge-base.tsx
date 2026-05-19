@@ -43,6 +43,7 @@ type KbEntry = {
   tags: string[] | null;
   created_at: string;
   user_id: string | null;
+  team_id: string | null;
 };
 
 function KnowledgeBasePage() {
