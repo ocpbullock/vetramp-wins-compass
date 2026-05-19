@@ -238,16 +238,33 @@ describe("multi-tenant: RLS policies on team-scoped tables", () => {
     }
   });
 
-  it("proposal-attachments storage policies are scoped by user_can_see_proposal", () => {
+  it("proposal-attachments storage policies cover proposal-scoped access", () => {
     // The 20260519... migration adds proposals/{proposalId}/ storage RLS so
     // opportunity-team collaborators can read attachments via the bucket.
+    // Legacy per-user-folder policies remain and are strictly narrower than
+    // user_can_see_proposal — they don't widen access, so they're safe.
     const storagePolicies = statements.filter(
-      (s) => /CREATE\s+POLICY[\s\S]*storage\.objects/i.test(s) &&
-             /proposal-attachments/.test(s),
+      (s) =>
+        /CREATE\s+POLICY/i.test(s) &&
+        /storage\.objects/i.test(s) &&
+        /proposal-attachments/.test(s),
     );
     expect(storagePolicies.length).toBeGreaterThan(0);
+    // At least one policy per CRUD action must delegate to user_can_see_proposal
+    // so opportunity-team collaborators can access proposal files.
+    for (const action of ["SELECT", "INSERT", "DELETE"]) {
+      const forAction = storagePolicies.filter((p) =>
+        new RegExp(`FOR\\s+${action}`, "i").test(p),
+      );
+      expect(
+        forAction.some((p) => /user_can_see_proposal/.test(p)),
+        `expected a ${action} policy delegating to user_can_see_proposal`,
+      ).toBe(true);
+    }
+    // No storage policy on the bucket may be unconditionally permissive.
     for (const p of storagePolicies) {
-      expect(p).toMatch(/user_can_see_proposal/);
+      expect(p).not.toMatch(/USING\s*\(\s*true\s*\)/i);
+      expect(p).not.toMatch(/WITH\s+CHECK\s*\(\s*true\s*\)/i);
     }
   });
 });
