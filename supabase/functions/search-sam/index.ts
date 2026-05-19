@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
     const admin = createClient(sbUrl, sbService);
 
     const body = await req.json();
-    const { naicsCodes = [], postedFrom, postedTo, keyword, setAside, teamId } = body;
+    const { naicsCodes = [], postedFrom, postedTo, keyword, setAside, teamId, forceRefresh = false } = body;
 
     // Resolve team_id (prefer caller-provided; else first membership)
     let team_id: string | null = teamId ?? null;
@@ -70,16 +70,19 @@ Deno.serve(async (req) => {
 
     // Cache lookup: rows fetched within TTL matching NAICS + window
     const cacheCutoff = new Date(Date.now() - CACHE_TTL_HOURS * 3600 * 1000).toISOString();
-    let cacheQuery = admin
-      .from("tango_cached_opportunities")
-      .select("*")
-      .eq("team_id", team_id)
-      .gte("fetched_at", cacheCutoff);
-    if (naicsCodes.length) cacheQuery = cacheQuery.in("naics_code", naicsCodes);
-    if (postedFrom) cacheQuery = cacheQuery.gte("posted_date", new Date(fromIso).toISOString());
-    if (postedTo) cacheQuery = cacheQuery.lte("posted_date", new Date(toIso + "T23:59:59Z").toISOString());
-
-    const { data: cachedRows } = await cacheQuery.limit(2000);
+    let cachedRows: any[] | null = null;
+    if (!forceRefresh) {
+      let cacheQuery = admin
+        .from("tango_cached_opportunities")
+        .select("*")
+        .eq("team_id", team_id)
+        .gte("fetched_at", cacheCutoff);
+      if (naicsCodes.length) cacheQuery = cacheQuery.in("naics_code", naicsCodes);
+      if (postedFrom) cacheQuery = cacheQuery.gte("posted_date", new Date(fromIso).toISOString());
+      if (postedTo) cacheQuery = cacheQuery.lte("posted_date", new Date(toIso + "T23:59:59Z").toISOString());
+      const { data } = await cacheQuery.limit(2000);
+      cachedRows = data;
+    }
     if (cachedRows && cachedRows.length > 0) {
       await logUsage(admin, { team_id, endpoint: "/opportunities/", params: body, cached: true, response_status: 200 });
       const opportunities = cachedRows.map(opportunityRowToSamShape);
