@@ -154,18 +154,18 @@ describe("multi-tenant: proposalId from body is verified before any write", () =
 
 describe("multi-tenant: RLS policies on team-scoped tables", () => {
   // Split every migration into individual statements so policy assertions
-  // can't accidentally span unrelated CREATE/DROP statements.
+  // can't accidentally span unrelated CREATE/DROP statements. Strip leading
+  // SQL line comments so anchored regex matches work even when a statement
+  // is preceded by a comment in the source file.
   const statements: string[] = (() => {
     const dir = resolve(root, "supabase/migrations");
     const files = readdirSync(dir).filter((f) => f.endsWith(".sql")).sort();
     const all: string[] = [];
     for (const f of files) {
       const src = read(`supabase/migrations/${f}`);
-      // Naive split on ';' is fine here — policy bodies don't contain
-      // semicolons outside the trailing terminator.
       for (const raw of src.split(/;\s*(?:\n|$)/)) {
-        const s = raw.trim();
-        if (s) all.push(s + ";");
+        const stripped = raw.replace(/^(?:\s*--[^\n]*\n)+/, "").trim();
+        if (stripped) all.push(stripped + ";");
       }
     }
     return all;
