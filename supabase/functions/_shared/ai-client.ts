@@ -228,11 +228,19 @@ export async function setCachedResponse(opts: {
   // Cache rows are scoped per-team. Without a team_id we can't satisfy RLS or
   // safely partition entries between tenants — skip the write rather than
   // poison the cache with cross-team data.
+  //
+  // NOTE: ai_response_cache intentionally has NO client-facing UPDATE policy.
+  // All writes (insert + upsert refresh) happen via the service-role admin
+  // client from edge functions only — clients can never UPDATE cache rows,
+  // including their own team's. This prevents an authenticated user from
+  // tampering with cached AI output. The upsert below works because the
+  // service role bypasses RLS.
   if (!opts.teamId) {
     console.warn(`setCachedResponse skipped for ${opts.functionName}: missing teamId`);
     return;
   }
   const ttlMs = (opts.ttlHours ?? 24) * 3600_000;
+
   await admin.from("ai_response_cache").upsert({
     team_id: opts.teamId,
     function_name: opts.functionName,
