@@ -55,6 +55,7 @@ export async function searchSam(input: {
   postedFrom: string;
   postedTo: string;
   keyword?: string;
+  forceRefresh?: boolean;
 }) {
   logCall(`SAM.gov for ${input.naicsCodes.length} NAICS codes`);
   const { data, error } = await supabase.functions.invoke("search-sam", { body: input });
