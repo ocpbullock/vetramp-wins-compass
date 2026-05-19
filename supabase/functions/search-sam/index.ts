@@ -127,11 +127,12 @@ Deno.serve(async (req) => {
     try {
       const params: Record<string, unknown> = {
         page_size: 100,
-        posted_date_from: fromIso,
-        posted_date_to: toIso,
+        first_notice_date_after: fromIso,
+        first_notice_date_before: toIso,
+        active: true,
       };
       if (naicsCodes.length) params.naics = naicsCodes;
-      if (keyword) params.keyword = keyword;
+      if (keyword) params.search = keyword;
       if (setAside) params.set_aside = setAside;
       const resp = await searchOpportunities(params as any);
       calls++;
@@ -153,10 +154,11 @@ Deno.serve(async (req) => {
           const params: Record<string, unknown> = {
             page_size: 100,
             naics: code,
-            posted_date_from: fromIso,
-            posted_date_to: toIso,
+            first_notice_date_after: fromIso,
+            first_notice_date_before: toIso,
+            active: true,
           };
-          if (keyword) params.keyword = keyword;
+          if (keyword) params.search = keyword;
           if (setAside) params.set_aside = setAside;
           const resp = await searchOpportunities(params as any);
           calls++;
