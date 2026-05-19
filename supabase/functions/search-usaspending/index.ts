@@ -1,5 +1,4 @@
 import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import {
   searchContracts,
   mapContractRow,
@@ -8,6 +7,7 @@ import {
   logUsage,
   TangoError,
 } from "../_shared/tango-client.ts";
+import { authenticate, resolveTeamId, authErrorResponse, jsonError } from "../_shared/auth.ts";
 
 const CACHE_TTL_HOURS = 24 * 7; // contracts change less frequently
 const MAX_RESULTS = 500;
@@ -23,41 +23,21 @@ function fmt(iso: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const authHeader = req.headers.get("Authorization") || "";
-    if (!authHeader.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const sbUrl = Deno.env.get("SUPABASE_URL")!;
-    const sbKey = Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY")!;
-    const sbService = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const userClient = createClient(sbUrl, sbKey, { global: { headers: { Authorization: authHeader } } });
-    const { data: { user } } = await userClient.auth.getUser();
-    if (!user) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const admin = createClient(sbUrl, sbService);
+    let ctx;
+    try { ctx = await authenticate(req); } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    const admin = ctx.admin;
 
     const body = await req.json();
     const { naicsCodes = [], startDate, endDate, keyword, agency, vendorName, maxResults = MAX_RESULTS, teamId } = body;
 
-    let team_id: string | null = teamId ?? null;
-    if (!team_id) {
-      const { data: tm } = await admin
-        .from("team_members").select("team_id").eq("user_id", user.id).limit(1).maybeSingle();
-      team_id = tm?.team_id ?? null;
-    }
-    if (!team_id) {
-      return new Response(JSON.stringify({ error: "no_team", results: [] }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    let team_id: string | null;
+    try { team_id = await resolveTeamId(ctx, teamId ?? null); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    if (!team_id) return jsonError(400, "no_team", corsHeaders);
 
     const fromIso = fmt(startDate);
     const toIso = fmt(endDate);
+
 
     // Cache check
     const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 3600 * 1000).toISOString();
