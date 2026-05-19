@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
     const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
       `Write the section titled "${sectionTitle}". Be specific to this customer; avoid boilerplate.`;
 
-    const knowledgeContext = await fetchKnowledgeContext(sectionId);
+    const knowledgeContext = await fetchKnowledgeContext(sectionId, ctx.admin, verifiedTeamId);
 
     const systemPrompt = `You are a senior federal capture manager writing for LGE Consulting, LLC dba VetRamp (SBA-certified SDVOSB).
 You are writing ONE section of a proposal at a time. Output MARKDOWN only — no preamble, no closing remarks.
