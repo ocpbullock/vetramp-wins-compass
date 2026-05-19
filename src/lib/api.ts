@@ -290,7 +290,7 @@ export async function writeCache(payload: {
       summary: { ...payload.summary, historicalFrom: payload.historicalFrom },
       expires_at: expiresAt,
     },
-    { onConflict: "cache_key" },
+    { onConflict: "team_id,cache_key" },
   );
   useLogStore.getState().log("info", `↳ cache written (${TTL_DAYS}d TTL)`);
 }
