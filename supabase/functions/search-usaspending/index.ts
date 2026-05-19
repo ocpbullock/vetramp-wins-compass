@@ -114,13 +114,13 @@ Deno.serve(async (req) => {
       const params: Record<string, unknown> = {
         page,
         page_size: PAGE_SIZE,
-        award_date_from: fromIso,
-        award_date_to: toIso,
+        award_date_gte: fromIso,
+        award_date_lte: toIso,
       };
       if (naicsCodes.length) params.naics = naicsCodes;
-      if (keyword) params.keyword = keyword;
-      if (agency) params.agency = agency;
-      if (vendorName) params.vendor_name = vendorName;
+      if (keyword) params.search = keyword;
+      if (agency) params.awarding_agency = agency;
+      if (vendorName) params.recipient = vendorName;
       try {
         const resp = await searchContracts(params as any);
         calls++;
