@@ -1,7 +1,7 @@
 // Shared Tango API client (https://docs.makegov.com).
 // Free tier: 100 req/day, 25 req/min, 1 webhook. Always cache.
 
-const BASE_URL = "https://tango.makegov.com/api/v1";
+const BASE_URL = "https://tango.makegov.com";
 
 export class TangoError extends Error {
   status: number;
@@ -27,8 +27,8 @@ function buildQuery(params: Record<string, unknown>): string {
   for (const [k, v] of Object.entries(params)) {
     if (v === undefined || v === null || v === "") continue;
     if (Array.isArray(v)) {
-      // Tango typically accepts comma-separated for multi-value
-      sp.set(k, v.join(","));
+      // Tango's current API uses pipe-separated OR filters for multi-value params.
+      sp.set(k, v.join("|"));
     } else {
       sp.set(k, String(v));
     }
@@ -47,7 +47,7 @@ export async function tangoFetch<T = any>(
   const path = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
   const url = `${BASE_URL}${path}${buildQuery(params)}`;
   const headers = new Headers(init.headers);
-  headers.set("Authorization", `Bearer ${apiKey}`);
+  headers.set("X-API-KEY", apiKey);
   headers.set("Accept", "application/json");
 
   const doFetch = () => fetch(url, { ...init, headers });
@@ -72,36 +72,58 @@ export type TangoPagedParams = {
 
 export function searchOpportunities(params: {
   naics?: string | string[];
-  keyword?: string;
-  posted_date_from?: string;
-  posted_date_to?: string;
+  search?: string;
+  first_notice_date_after?: string;
+  first_notice_date_before?: string;
   response_deadline_from?: string;
   response_deadline_to?: string;
   set_aside?: string;
+  active?: boolean;
 } & TangoPagedParams) {
-  return tangoFetch<TangoResponse<any>>("/opportunities/", params);
+  const { page_size, ...rest } = params;
+  return tangoFetch<TangoResponse<any>>("/api/opportunities/", { ...rest, limit: page_size });
 }
 
 export function searchContracts(params: {
   naics?: string | string[];
-  vendor_name?: string;
-  agency?: string;
-  award_date_from?: string;
-  award_date_to?: string;
+  recipient?: string;
+  awarding_agency?: string;
+  award_date_gte?: string;
+  award_date_lte?: string;
   award_amount_min?: number;
   award_amount_max?: number;
-  keyword?: string;
+  search?: string;
 } & TangoPagedParams) {
-  return tangoFetch<TangoResponse<any>>("/contracts/", params);
+  const { page_size, page, award_amount_min, award_amount_max, ...rest } = params;
+  const query = {
+    ...rest,
+    obligated_gte: award_amount_min,
+    obligated_lte: award_amount_max,
+    limit: page_size,
+  };
+  return tangoFetch<TangoResponse<any> | any[]>("/api/contracts/", query).then((res) =>
+    Array.isArray(res) ? { results: res, count: res.length, next: null, previous: null } : res,
+  );
 }
 
 export function searchEntities(params: {
   vendor_name?: string;
+  search?: string;
   uei?: string;
+  name?: string;
   naics_code?: string;
+  naics?: string;
   small_business_type?: string;
+  socioeconomic?: string;
 } & TangoPagedParams) {
-  return tangoFetch<TangoResponse<any>>("/entities/", params);
+  const { page_size, vendor_name, naics_code, small_business_type, ...rest } = params;
+  return tangoFetch<TangoResponse<any>>("/api/entities/", {
+    ...rest,
+    name: rest.name ?? vendor_name,
+    naics: rest.naics ?? naics_code,
+    socioeconomic: rest.socioeconomic ?? small_business_type,
+    limit: page_size,
+  });
 }
 
 export function searchSubawards(params: {
@@ -113,11 +135,11 @@ export function searchSubawards(params: {
 }
 
 export function getOpportunityDetail(id: string) {
-  return tangoFetch<any>(`/opportunities/${encodeURIComponent(id)}/`);
+  return tangoFetch<any>(`/api/opportunities/${encodeURIComponent(id)}/`);
 }
 
 export function getContractDetail(id: string) {
-  return tangoFetch<any>(`/contracts/${encodeURIComponent(id)}/`);
+  return tangoFetch<any>(`/api/contracts/${encodeURIComponent(id)}/`);
 }
 
 // ---------- Field mappers ----------
@@ -132,27 +154,31 @@ function pick(o: any, keys: string[]): any {
 
 /** Map a Tango opportunity to our cache row shape. */
 export function mapOpportunityRow(team_id: string, o: any) {
+  const office = o?.office ?? {};
+  const setAside = pick(o, ["setAside", "set_aside", "typeOfSetAside"]);
+  const setAsideCode = setAside && typeof setAside === "object" ? Object.keys(setAside)[0] : setAside;
+  const setAsideText = setAside && typeof setAside === "object" ? Object.values(setAside).join(", ") : null;
   return {
     team_id,
-    tango_id: String(pick(o, ["id", "tango_id", "noticeId", "notice_id"]) ?? crypto.randomUUID()),
-    notice_id: pick(o, ["noticeId", "notice_id"]),
+    tango_id: String(pick(o, ["id", "tango_id", "opportunity_id", "noticeId", "notice_id"]) ?? crypto.randomUUID()),
+    notice_id: pick(o, ["noticeId", "notice_id", "opportunity_id"]),
     solicitation_number: pick(o, ["solicitationNumber", "solicitation_number"]),
     title: pick(o, ["title", "name"]) ?? "Untitled",
     description: pick(o, ["description", "summary"]),
-    naics_code: pick(o, ["naicsCode", "naics_code", "naics"]),
+    naics_code: pick(o, ["naicsCode", "naics_code", "naics"])?.toString(),
     naics_description: pick(o, ["naicsDescription", "naics_description"]),
-    set_aside: pick(o, ["setAside", "set_aside", "typeOfSetAside"]),
-    set_aside_description: pick(o, ["setAsideDescription", "set_aside_description"]),
-    classification_code: pick(o, ["classificationCode", "classification_code", "psc"]),
-    posted_date: pick(o, ["postedDate", "posted_date"]),
+    set_aside: setAsideCode,
+    set_aside_description: pick(o, ["setAsideDescription", "set_aside_description"]) ?? setAsideText,
+    classification_code: pick(o, ["classificationCode", "classification_code", "psc", "psc_code"]),
+    posted_date: pick(o, ["postedDate", "posted_date", "first_notice_date", "last_notice_date"]),
     response_deadline: pick(o, ["responseDeadLine", "response_deadline", "responseDeadline"]),
     archive_date: pick(o, ["archiveDate", "archive_date"]),
-    agency: pick(o, ["agency", "fullParentPathName", "department"]),
-    office: pick(o, ["office", "subAgency"]),
+    agency: pick(o, ["agency", "fullParentPathName", "department"]) ?? [office.department_name, office.agency_name].filter(Boolean).join(" / "),
+    office: pick(o, ["office", "subAgency"]) ?? office.office_name,
     place_of_performance: pick(o, ["placeOfPerformance", "place_of_performance"]) ?? null,
     point_of_contact: pick(o, ["pointOfContact", "point_of_contact", "contacts"]) ?? null,
     award_info: pick(o, ["award", "award_info", "awardInfo"]) ?? null,
-    source_url: pick(o, ["uiLink", "url", "source_url"]),
+    source_url: pick(o, ["uiLink", "url", "source_url", "sam_url"]),
     raw_data: o,
   };
 }
@@ -161,13 +187,16 @@ export function mapOpportunityRow(team_id: string, o: any) {
 export function mapContractRow(team_id: string, c: any) {
   const naicsObj = c?.NAICS;
   const naicsCode = typeof naicsObj === "object" ? naicsObj?.code : pick(c, ["naicsCode", "naics_code", "naics"]);
+  const awardingOffice = c?.awarding_office ?? {};
+  const fundingOffice = c?.funding_office ?? {};
+  const recipient = c?.recipient ?? {};
   return {
     team_id,
-    tango_id: String(pick(c, ["id", "tango_id", "generated_internal_id", "Award ID"]) ?? crypto.randomUUID()),
+    tango_id: String(pick(c, ["id", "tango_id", "key", "generated_internal_id", "Award ID"]) ?? crypto.randomUUID()),
     piid: pick(c, ["piid", "Award ID"]),
-    agency: pick(c, ["awarding_agency", "Awarding Agency", "agency"]),
-    vendor_name: pick(c, ["recipient_name", "Recipient Name", "vendor_name"]),
-    vendor_uei: pick(c, ["recipient_uei", "Recipient UEI", "vendor_uei", "uei"]),
+    agency: pick(c, ["awarding_agency", "Awarding Agency", "agency"]) ?? [awardingOffice.department_name, awardingOffice.agency_name].filter(Boolean).join(" / "),
+    vendor_name: pick(c, ["recipient_name", "Recipient Name", "vendor_name"]) ?? recipient.display_name,
+    vendor_uei: pick(c, ["recipient_uei", "Recipient UEI", "vendor_uei", "uei"]) ?? recipient.uei,
     vendor_duns: pick(c, ["recipient_duns", "vendor_duns", "duns"]),
     naics_code: naicsCode ? String(naicsCode) : null,
     psc_code: pick(c, ["psc_code", "Product or Service Code", "classification_code"]),
@@ -175,13 +204,13 @@ export function mapContractRow(team_id: string, c: any) {
     award_date: pick(c, ["award_date", "action_date", "Start Date"]),
     period_of_performance_start: pick(c, ["period_of_performance_start_date", "Start Date"]),
     period_of_performance_end: pick(c, ["period_of_performance_current_end_date", "End Date"]),
-    obligated_amount: Number(pick(c, ["obligated_amount", "Award Amount", "amount"]) ?? 0) || null,
-    base_and_all_options: Number(pick(c, ["base_and_all_options_value", "base_and_all_options"]) ?? 0) || null,
+    obligated_amount: Number(pick(c, ["obligated_amount", "Award Amount", "amount", "obligated"]) ?? 0) || null,
+    base_and_all_options: Number(pick(c, ["base_and_all_options_value", "base_and_all_options", "total_contract_value"]) ?? 0) || null,
     contract_type: pick(c, ["contract_type", "Contract Award Type", "type"]),
     set_aside: pick(c, ["set_aside", "Type of Set Aside", "type_set_aside"]),
     vehicle: pick(c, ["vehicle", "contract_vehicle", "idv_type"]),
-    idv_piid: pick(c, ["idv_piid", "Parent Award ID"]),
-    parent_award_id: pick(c, ["parent_award_id", "Parent Award ID"]),
+    idv_piid: pick(c, ["idv_piid", "Parent Award ID"]) ?? c?.parent_award?.piid,
+    parent_award_id: pick(c, ["parent_award_id", "Parent Award ID"]) ?? c?.parent_award?.piid,
     raw_data: c,
   };
 }
@@ -192,13 +221,13 @@ export function mapEntityRow(team_id: string, e: any) {
     tango_id: String(pick(e, ["id", "tango_id", "uei", "duns"]) ?? crypto.randomUUID()),
     uei: pick(e, ["uei", "UEI"]),
     cage_code: pick(e, ["cage_code", "cageCode", "cage"]),
-    legal_name: pick(e, ["legal_name", "legalBusinessName", "name"]),
+    legal_name: pick(e, ["legal_name", "legalBusinessName", "legal_business_name", "name"]),
     dba_name: pick(e, ["dba_name", "dbaName"]),
-    naics_codes: pick(e, ["naics_codes", "naicsCodes"]) ?? [],
-    small_business_types: pick(e, ["small_business_types", "businessTypes", "certifications"]) ?? [],
-    city: pick(e, ["city", "address.city"]),
-    state: pick(e, ["state", "address.state"]),
-    country: pick(e, ["country", "address.country"]),
+    naics_codes: pick(e, ["naics_codes", "naicsCodes"]) ?? (e.primary_naics ? [e.primary_naics] : []),
+    small_business_types: pick(e, ["small_business_types", "businessTypes", "business_types", "sba_business_types", "certifications"]) ?? [],
+    city: pick(e, ["city", "address.city", "physical_address.city"]),
+    state: pick(e, ["state", "address.state", "physical_address.state"]),
+    country: pick(e, ["country", "address.country", "physical_address.country"]),
     raw_data: e,
   };
 }
@@ -211,14 +240,14 @@ export function opportunityRowToSamShape(row: any): any {
   return {
     title: row.title ?? r.title,
     solicitationNumber: row.solicitation_number ?? r.solicitationNumber,
-    noticeId: row.notice_id ?? r.noticeId ?? row.tango_id,
+    noticeId: row.notice_id ?? r.noticeId ?? r.opportunity_id ?? row.tango_id,
     fullParentPathName: row.agency ?? r.fullParentPathName,
     type: r.type ?? r.opportunity_type ?? null,
-    postedDate: row.posted_date ?? r.postedDate,
+    postedDate: row.posted_date ?? r.postedDate ?? r.first_notice_date ?? r.last_notice_date,
     responseDeadLine: row.response_deadline ?? r.responseDeadLine,
-    naicsCode: row.naics_code ?? r.naicsCode,
-    classificationCode: row.classification_code ?? r.classificationCode,
-    uiLink: row.source_url ?? r.uiLink,
+    naicsCode: row.naics_code ?? r.naicsCode ?? r.naics_code?.toString(),
+    classificationCode: row.classification_code ?? r.classificationCode ?? r.psc_code,
+    uiLink: row.source_url ?? r.uiLink ?? r.sam_url,
     description: row.description ?? r.description,
     setAside: row.set_aside ?? r.setAside,
     typeOfSetAside: row.set_aside ?? r.typeOfSetAside,

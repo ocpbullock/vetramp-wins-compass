@@ -55,6 +55,7 @@ export async function searchSam(input: {
   postedFrom: string;
   postedTo: string;
   keyword?: string;
+  forceRefresh?: boolean;
 }) {
   logCall(`SAM.gov for ${input.naicsCodes.length} NAICS codes`);
   const { data, error } = await supabase.functions.invoke("search-sam", { body: input });
@@ -201,7 +202,7 @@ export function makeCacheKey(input: {
   historicalFrom?: string;
 }) {
   return [
-    "v3", // bump when fetched fields/shape change
+    "v4", // bump when fetched fields/shape change
     [...input.naicsCodes].sort().join(","),
     input.postedFrom,
     input.postedTo,

@@ -106,6 +106,7 @@ Deno.serve(async (req) => {
     // Hit Tango with pagination
     const all: any[] = [];
     let page = 1;
+    let cursor: string | null = null;
     let calls = 0;
     let hasNext = true;
     while (hasNext && all.length < maxResults) {
@@ -114,19 +115,21 @@ Deno.serve(async (req) => {
       const params: Record<string, unknown> = {
         page,
         page_size: PAGE_SIZE,
-        award_date_from: fromIso,
-        award_date_to: toIso,
+        award_date_gte: fromIso,
+        award_date_lte: toIso,
       };
+      if (cursor) params.cursor = cursor;
       if (naicsCodes.length) params.naics = naicsCodes;
-      if (keyword) params.keyword = keyword;
-      if (agency) params.agency = agency;
-      if (vendorName) params.vendor_name = vendorName;
+      if (keyword) params.search = keyword;
+      if (agency) params.awarding_agency = agency;
+      if (vendorName) params.recipient = vendorName;
       try {
         const resp = await searchContracts(params as any);
         calls++;
         await logUsage(admin, { team_id, endpoint: "/contracts/", params, cached: false, response_status: 200 });
         const batch = resp.results ?? [];
         all.push(...batch);
+        cursor = resp.next ? new URL(resp.next).searchParams.get("cursor") : null;
         hasNext = !!resp.next && batch.length === PAGE_SIZE;
         page++;
       } catch (e) {
