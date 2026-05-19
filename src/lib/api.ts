@@ -272,7 +272,11 @@ export async function writeCache(payload: {
     useLogStore.getState().log("info", "↳ cache skipped (no team selected)");
     return;
   }
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  // Cache TTL: 7 days. SAM opportunities and USAspending awards don't
+  // change minute-to-minute; a week balances freshness vs. API quota.
+  // Users can click "Force refresh" any time to bypass.
+  const TTL_DAYS = 7;
+  const expiresAt = new Date(Date.now() + TTL_DAYS * 24 * 60 * 60 * 1000).toISOString();
   await supabase.from("cached_searches").upsert(
     {
       team_id: payload.teamId,
@@ -288,5 +292,5 @@ export async function writeCache(payload: {
     },
     { onConflict: "cache_key" },
   );
-  useLogStore.getState().log("info", `↳ cache written (24h TTL)`);
+  useLogStore.getState().log("info", `↳ cache written (${TTL_DAYS}d TTL)`);
 }
