@@ -67,7 +67,7 @@ serve(async (req) => {
       attachmentsHash: typeof attachmentsText === "string" && attachmentsText.length > 0 ? await hashCacheKey(attachmentsText) : "",
     });
     if (!skipCache) {
-      const cached = await getCachedResponse("customer-intel", cacheKey, teamId ?? null);
+      const cached = await getCachedResponse("customer-intel", cacheKey, verifiedTeamId);
       if (cached) {
         const intel = { ...cached.response_data, _cached: true, _cached_at: cached.created_at };
         return new Response(
@@ -96,8 +96,8 @@ Research this customer and return structured intel. Focus on: who actually uses 
     try {
       data = await callAI({
         functionName: "customer-intel",
-        teamId: teamId ?? null,
-        userId: userId ?? null,
+        teamId: verifiedTeamId,
+        userId,
         proposalId: proposalId ?? null,
         timeoutMs: 60_000,
         body: {
@@ -123,7 +123,7 @@ Research this customer and return structured intel. Focus on: who actually uses 
       await setCachedResponse({
         functionName: "customer-intel",
         cacheKey,
-        teamId: teamId ?? null,
+        teamId: verifiedTeamId,
         responseData: intel,
         model: pickModel("customer-intel"),
         inputTokens: data.__usage?.inputTokens,
