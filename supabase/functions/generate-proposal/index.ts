@@ -52,7 +52,15 @@ Use markdown tables for all structured data. Use clear section headers. Be speci
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
     const { opportunity, teamId } = await req.json();
+
+    let verifiedTeamId: string | null;
+    try { verifiedTeamId = await resolveTeamId(ctx, teamId ?? null); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
     const userPrompt = `Generate a complete proposal for the following solicitation:
 
