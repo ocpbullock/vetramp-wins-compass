@@ -189,14 +189,21 @@ function UploadCard() {
 
 function LibraryCard() {
   const qc = useQueryClient();
+  const { currentTeam } = useTeam();
   const [filter, setFilter] = useState<string>("all");
 
+  const teamIds = currentTeam
+    ? [currentTeam.id, ...(currentTeam.parent_team_id ? [currentTeam.parent_team_id] : [])]
+    : [];
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["knowledge-base"],
+    queryKey: ["knowledge-base", teamIds.join(",")],
+    enabled: teamIds.length > 0,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("knowledge_base")
-        .select("id,category,title,content,source_filename,tags,created_at,user_id")
+        .select("id,category,title,content,source_filename,tags,created_at,user_id,team_id")
+        .in("team_id", teamIds)
         .order("created_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as KbEntry[];
