@@ -445,6 +445,7 @@ function KnowledgeBasePanel() {
 
 function KbUploadCard() {
   const qc = useQueryClient();
+  const { currentTeam } = useTeam();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<string>("past_performance");
   const [tagsInput, setTagsInput] = useState("");
@@ -455,6 +456,7 @@ function KbUploadCard() {
     mutationFn: async () => {
       if (!file) throw new Error("Choose a file first.");
       if (!title.trim()) throw new Error("Title is required.");
+      if (!currentTeam?.id) throw new Error("No active team. Select a team first.");
       const fileBase64 = await fileToBase64(file);
       const tags = tagsInput
         .split(",").map((t) => t.trim()).filter(Boolean);
@@ -466,6 +468,7 @@ function KbUploadCard() {
           category,
           title: title.trim(),
           tags,
+          teamId: currentTeam.id,
         },
       });
       if (error) throw new Error(error.message);
