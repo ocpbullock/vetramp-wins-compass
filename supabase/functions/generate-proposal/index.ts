@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAI, aiErrorResponse } from "../_shared/ai-client.ts";
+import { authenticate, resolveTeamId, authErrorResponse } from "../_shared/auth.ts";
 
 const SYSTEM_PROMPT = `You are a senior federal proposal writer for LGE Consulting, LLC dba VetRamp, a Service-Disabled Veteran-Owned Small Business (SDVOSB).
 
