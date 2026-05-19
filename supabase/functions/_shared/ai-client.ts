@@ -191,12 +191,20 @@ export interface CachedEntry {
   created_at: string;
 }
 
-export async function getCachedResponse(functionName: string, cacheKey: string): Promise<CachedEntry | null> {
+export async function getCachedResponse(
+  functionName: string,
+  cacheKey: string,
+  teamId: string | null | undefined,
+): Promise<CachedEntry | null> {
   const admin = adminClient();
   if (!admin) return null;
+  // Cache rows are team-scoped. Without a teamId we can't safely identify
+  // which tenant's entry to return — treat as a miss rather than leak data.
+  if (!teamId) return null;
   const { data, error } = await admin
     .from("ai_response_cache")
     .select("response_data, model, input_tokens, output_tokens, created_at, expires_at")
+    .eq("team_id", teamId)
     .eq("function_name", functionName)
     .eq("cache_key", cacheKey)
     .gt("expires_at", new Date().toISOString())
@@ -234,7 +242,7 @@ export async function setCachedResponse(opts: {
     input_tokens: opts.inputTokens ?? 0,
     output_tokens: opts.outputTokens ?? 0,
     expires_at: new Date(Date.now() + ttlMs).toISOString(),
-  }, { onConflict: "function_name,cache_key" });
+  }, { onConflict: "team_id,function_name,cache_key" });
 }
 
 // ---------- Budget ----------

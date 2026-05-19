@@ -54,7 +54,7 @@ serve(async (req) => {
       attachmentsHash: typeof attachmentsText === "string" && attachmentsText.length > 0 ? await hashCacheKey(attachmentsText) : "",
     });
     if (!skipCache) {
-      const cached = await getCachedResponse("customer-intel", cacheKey);
+      const cached = await getCachedResponse("customer-intel", cacheKey, teamId ?? null);
       if (cached) {
         const intel = { ...cached.response_data, _cached: true, _cached_at: cached.created_at };
         return new Response(

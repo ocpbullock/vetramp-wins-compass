@@ -110,6 +110,7 @@ export function CompetitiveIntelModal({
 
   useEffect(() => {
     if (!opp) { setData(null); setError(null); return; }
+    if (!teamId) { setData(null); setError("Select a team to load competitive intel."); return; }
     setLoading(true); setError(null); setData(null);
     getCompetitiveIntel({
       solicitationNumber: opp.solicitationNumber,
@@ -119,11 +120,12 @@ export function CompetitiveIntelModal({
       setAside: opp.typeOfSetAside || undefined,
       postedDate: opp.postedDate,
       responseDeadLine: opp.responseDeadLine,
+      teamId,
     })
       .then(setData)
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
-  }, [opp]);
+  }, [opp, teamId]);
 
   const days = daysUntil(opp?.responseDeadLine);
   const deadlineColor = days == null ? "" : days <= 3 ? "text-red-500" : days <= 14 ? "text-amber-500" : "text-muted-foreground";

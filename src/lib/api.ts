@@ -161,6 +161,7 @@ export async function getCompetitiveIntel(input: {
   setAside?: string;
   postedDate?: string;
   responseDeadLine?: string;
+  teamId: string;
 }) {
   logCall(`competitive-intel ${input.naicsCode}`);
   const { data, error } = await supabase.functions.invoke("competitive-intel", { body: input });
@@ -290,7 +291,7 @@ export async function writeCache(payload: {
       summary: { ...payload.summary, historicalFrom: payload.historicalFrom },
       expires_at: expiresAt,
     },
-    { onConflict: "cache_key" },
+    { onConflict: "team_id,cache_key" },
   );
   useLogStore.getState().log("info", `↳ cache written (${TTL_DAYS}d TTL)`);
 }

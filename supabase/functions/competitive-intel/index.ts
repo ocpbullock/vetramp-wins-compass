@@ -258,8 +258,9 @@ Deno.serve(async (req) => {
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title } = await req.json();
+    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title, teamId } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
+    if (!teamId) throw new Error("teamId required");
 
     const { sub, top } = parseAgency(agency || "");
     const agencyName = sub || top;
@@ -271,9 +272,10 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    // Cache check
+    // Cache check — scoped to team
     const { data: cached } = await supabase
       .from("cached_competitive_intel").select("payload, created_at")
+      .eq("team_id", teamId)
       .eq("cache_key", cacheKey).gt("expires_at", new Date().toISOString())
       .maybeSingle();
 
@@ -342,13 +344,14 @@ Deno.serve(async (req) => {
     if (!cached) {
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
       await supabase.from("cached_competitive_intel").upsert({
+        team_id: teamId,
         cache_key: cacheKey,
         agency: agencyName,
         naics_code: naicsCode,
         set_aside: setAside || null,
         payload: { ...payload, _raw: { agency: agencyRows.filter((r) => !piidRows.some((p) => p.generated_internal_id && p.generated_internal_id === r.generated_internal_id)), market: marketRows } },
         expires_at: expiresAt,
-      }, { onConflict: "cache_key" });
+      }, { onConflict: "team_id,cache_key" });
     }
 
     return new Response(JSON.stringify(payload), {
