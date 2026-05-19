@@ -205,7 +205,7 @@ function Dashboard() {
           supersetCount: cachedNaics.length > input.naicsCodes.length ? cachedNaics.length : undefined,
           requestedCount: input.naicsCodes.length,
         });
-        toast.success("Loaded from shared cache (24h TTL) — use Force refresh to bypass");
+        toast.success("Loaded from shared cache (7-day TTL) — use Force refresh to bypass");
         setBusy(false);
         return;
       }
