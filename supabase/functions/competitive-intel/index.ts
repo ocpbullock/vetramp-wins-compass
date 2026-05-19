@@ -256,22 +256,16 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     let ctx;
-    try { ctx = await (await import("../_shared/auth.ts")).authenticate(req); }
-    catch (e) {
-      const { authErrorResponse } = await import("../_shared/auth.ts");
-      const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e;
-    }
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
     const authHeader = ctx.authHeader;
 
     const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title, teamId } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
 
     // Verify the caller is a member of the requested team BEFORE any cache R/W.
-    try { await (await import("../_shared/auth.ts")).assertTeamMember(ctx, teamId); }
-    catch (e) {
-      const { authErrorResponse } = await import("../_shared/auth.ts");
-      const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e;
-    }
+    try { await assertTeamMember(ctx, teamId); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
     const { sub, top } = parseAgency(agency || "");
     const agencyName = sub || top;
@@ -282,6 +276,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
+
 
 
     // Cache check — scoped to team
