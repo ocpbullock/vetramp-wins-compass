@@ -202,7 +202,7 @@ export function makeCacheKey(input: {
   historicalFrom?: string;
 }) {
   return [
-    "v3", // bump when fetched fields/shape change
+    "v4", // bump when fetched fields/shape change
     [...input.naicsCodes].sort().join(","),
     input.postedFrom,
     input.postedTo,
