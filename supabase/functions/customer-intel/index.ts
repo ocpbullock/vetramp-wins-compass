@@ -45,7 +45,19 @@ const SCHEMA = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { opportunity, companyProfile, extraNotes, attachmentsText, teamId, userId, proposalId, skipCache } = await req.json();
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
+    const { opportunity, companyProfile, extraNotes, attachmentsText, teamId, userId: _ignoredUserId, proposalId, skipCache } = await req.json();
+
+    // Verify team membership (and/or proposal access) BEFORE touching team cache.
+    let verifiedTeamId: string | null;
+    try {
+      verifiedTeamId = await resolveTeamId(ctx, teamId ?? null);
+      if (proposalId) await assertProposalAccess(ctx, proposalId);
+    } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    const userId = ctx.user.id;
 
     // Cache key over the inputs that materially affect the result
     const cacheKey = await hashCacheKey({
