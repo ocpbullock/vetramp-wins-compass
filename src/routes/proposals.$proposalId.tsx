@@ -119,7 +119,9 @@ function ProposalPipeline() {
   async function uploadFile(file: File, fileType?: string) {
     if (!user) return null;
     const ft = fileType || classifyFilename(file.name);
-    const path = `${user.id}/${proposalId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+    // Proposal-scoped path so opportunity-team collaborators (not just uploader)
+    // can read/manage attachments via storage RLS.
+    const path = `proposals/${proposalId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const { error: upErr } = await supabase.storage.from("proposal-attachments").upload(path, file);
     if (upErr) { toast.error(upErr.message); return null; }
     const { data: row, error: insErr } = await supabase.from("proposal_attachments").insert({
