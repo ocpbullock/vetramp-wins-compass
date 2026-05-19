@@ -107,14 +107,23 @@ export function searchContracts(params: {
 }
 
 export function searchEntities(params: {
+  vendor_name?: string;
   search?: string;
   uei?: string;
   name?: string;
+  naics_code?: string;
   naics?: string;
+  small_business_type?: string;
   socioeconomic?: string;
 } & TangoPagedParams) {
-  const { page_size, ...rest } = params;
-  return tangoFetch<TangoResponse<any>>("/api/entities/", { ...rest, limit: page_size });
+  const { page_size, vendor_name, naics_code, small_business_type, ...rest } = params;
+  return tangoFetch<TangoResponse<any>>("/api/entities/", {
+    ...rest,
+    name: rest.name ?? vendor_name,
+    naics: rest.naics ?? naics_code,
+    socioeconomic: rest.socioeconomic ?? small_business_type,
+    limit: page_size,
+  });
 }
 
 export function searchSubawards(params: {
@@ -212,13 +221,13 @@ export function mapEntityRow(team_id: string, e: any) {
     tango_id: String(pick(e, ["id", "tango_id", "uei", "duns"]) ?? crypto.randomUUID()),
     uei: pick(e, ["uei", "UEI"]),
     cage_code: pick(e, ["cage_code", "cageCode", "cage"]),
-    legal_name: pick(e, ["legal_name", "legalBusinessName", "name"]),
+    legal_name: pick(e, ["legal_name", "legalBusinessName", "legal_business_name", "name"]),
     dba_name: pick(e, ["dba_name", "dbaName"]),
-    naics_codes: pick(e, ["naics_codes", "naicsCodes"]) ?? [],
-    small_business_types: pick(e, ["small_business_types", "businessTypes", "certifications"]) ?? [],
-    city: pick(e, ["city", "address.city"]),
-    state: pick(e, ["state", "address.state"]),
-    country: pick(e, ["country", "address.country"]),
+    naics_codes: pick(e, ["naics_codes", "naicsCodes"]) ?? (e.primary_naics ? [e.primary_naics] : []),
+    small_business_types: pick(e, ["small_business_types", "businessTypes", "business_types", "sba_business_types", "certifications"]) ?? [],
+    city: pick(e, ["city", "address.city", "physical_address.city"]),
+    state: pick(e, ["state", "address.state", "physical_address.state"]),
+    country: pick(e, ["country", "address.country", "physical_address.country"]),
     raw_data: e,
   };
 }
