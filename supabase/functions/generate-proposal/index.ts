@@ -83,7 +83,7 @@ Generate the FULL proposal now following all sections from the system prompt.`;
     try {
       res = await callAI({
         functionName: "generate-proposal",
-        teamId: teamId ?? null,
+        teamId: verifiedTeamId,
         stream: true,
         body: {
           model: "google/gemini-3-flash-preview",
