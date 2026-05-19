@@ -86,6 +86,10 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
     const body = await req.json();
     const {
       sectionId,
@@ -99,9 +103,16 @@ Deno.serve(async (req) => {
       teaming,
       pastPerformance,
       teamId,
-      userId,
+      userId: _ignoredUserId,
       proposalId,
     } = body;
+
+    let verifiedTeamId: string | null;
+    try {
+      verifiedTeamId = await resolveTeamId(ctx, teamId ?? null);
+      if (proposalId) await assertProposalAccess(ctx, proposalId);
+    } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    const userId = ctx.user.id;
 
     const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
       `Write the section titled "${sectionTitle}". Be specific to this customer; avoid boilerplate.`;
