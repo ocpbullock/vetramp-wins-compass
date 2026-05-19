@@ -1,6 +1,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAI, aiErrorResponse, pickModel } from "../_shared/ai-client.ts";
+import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 
 const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   past_performance: ["past_performance"],
@@ -85,6 +86,10 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
     const body = await req.json();
     const {
       sectionId,
@@ -98,9 +103,16 @@ Deno.serve(async (req) => {
       teaming,
       pastPerformance,
       teamId,
-      userId,
+      userId: _ignoredUserId,
       proposalId,
     } = body;
+
+    let verifiedTeamId: string | null;
+    try {
+      verifiedTeamId = await resolveTeamId(ctx, teamId ?? null);
+      if (proposalId) await assertProposalAccess(ctx, proposalId);
+    } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    const userId = ctx.user.id;
 
     const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
       `Write the section titled "${sectionTitle}". Be specific to this customer; avoid boilerplate.`;
@@ -147,8 +159,8 @@ Output the markdown for this section now. Do NOT include other sections.`;
     try {
       res = await callAI({
         functionName: "generate-proposal-section",
-        teamId: teamId ?? null,
-        userId: userId ?? null,
+        teamId: verifiedTeamId,
+        userId,
         proposalId: proposalId ?? null,
         timeoutMs: 90_000,
         stream: true,

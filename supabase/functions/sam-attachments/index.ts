@@ -2,7 +2,8 @@
 // array from the opportunity payload (v2 search). Saves them into the
 // proposal-attachments storage bucket.
 import { corsHeaders } from "../_shared/cors.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+
+import { authenticate, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 
 const SAM_KEY = Deno.env.get("SAM_GOV_API_KEY");
 
@@ -39,29 +40,23 @@ Deno.serve(async (req) => {
 
   try {
     if (!SAM_KEY) throw new Error("SAM_GOV_API_KEY not configured");
-    const auth = req.headers.get("Authorization");
-    if (!auth) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
-    const userClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: auth } } },
-    );
-    const { data: ures } = await userClient.auth.getUser();
-    const userId = ures?.user?.id;
-    if (!userId) return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    const supabase = ctx.admin;
 
     const { proposalId, action } = await req.json();
-    if (!proposalId) throw new Error("proposalId required");
+
+    // Verify the caller can see this proposal BEFORE using service-role to read.
+    try { await assertProposalAccess(ctx, proposalId); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
     // Pull the proposal and its opportunity_data to find resourceLinks
     const { data: prop, error: propErr } = await supabase
       .from("proposals").select("opportunity_data, notice_id").eq("id", proposalId).single();
     if (propErr) throw propErr;
+
 
     const od: any = prop?.opportunity_data ?? {};
     const links: string[] = Array.isArray(od.resourceLinks) ? od.resourceLinks.filter(Boolean) : [];

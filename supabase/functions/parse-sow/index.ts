@@ -213,17 +213,31 @@ async function callAI(_apiKey: string, system: string, user: string, teamId: str
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const { authenticate, assertProposalAccess, authErrorResponse } = await import("../_shared/auth.ts");
+
   const { proposalId, skipCache } = await req.json().catch(() => ({}));
   if (!proposalId) {
     return new Response(JSON.stringify({ error: "proposalId required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
+  // Verify the caller can see this proposal BEFORE doing anything else.
+  let ctx;
+  try {
+    ctx = await authenticate(req);
+    await assertProposalAccess(ctx, proposalId);
+  } catch (e) {
+    const r = authErrorResponse(e, corsHeaders);
+    if (r) return r;
+    throw e;
+  }
+
   const apiKey = Deno.env.get("LOVABLE_API_KEY");
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-  const authHeader = req.headers.get("Authorization") || "";
-  const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, { global: { headers: { Authorization: authHeader } } });
-  const admin = createClient(supabaseUrl, serviceKey);
+  const authHeader = ctx.authHeader;
+  const userClient = ctx.userClient;
+  const admin = ctx.admin;
+  void supabaseUrl; void serviceKey; void authHeader;
 
   const encoder = new TextEncoder();
   const stream = new ReadableStream({

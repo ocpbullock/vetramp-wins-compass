@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAI, aiErrorResponse } from "../_shared/ai-client.ts";
+import { authenticate, resolveTeamId, authErrorResponse } from "../_shared/auth.ts";
 
 const SYSTEM_PROMPT = `You are a senior federal proposal writer for LGE Consulting, LLC dba VetRamp, a Service-Disabled Veteran-Owned Small Business (SDVOSB).
 
@@ -51,7 +52,15 @@ Use markdown tables for all structured data. Use clear section headers. Be speci
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
     const { opportunity, teamId } = await req.json();
+
+    let verifiedTeamId: string | null;
+    try { verifiedTeamId = await resolveTeamId(ctx, teamId ?? null); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
     const userPrompt = `Generate a complete proposal for the following solicitation:
 
@@ -74,7 +83,7 @@ Generate the FULL proposal now following all sections from the system prompt.`;
     try {
       res = await callAI({
         functionName: "generate-proposal",
-        teamId: teamId ?? null,
+        teamId: verifiedTeamId,
         stream: true,
         body: {
           model: "google/gemini-3-flash-preview",

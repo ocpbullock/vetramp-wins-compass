@@ -1,5 +1,6 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { authenticate, assertTeamMember, authErrorResponse } from "../_shared/auth.ts";
 
 const USA = "https://api.usaspending.gov/api/v2/search/spending_by_award/";
 const FIELDS = [
@@ -254,13 +255,17 @@ function buildScorecard(opts: {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    const authHeader = ctx.authHeader;
+
     const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title, teamId } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
-    if (!teamId) throw new Error("teamId required");
+
+    // Verify the caller is a member of the requested team BEFORE any cache R/W.
+    try { await assertTeamMember(ctx, teamId); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
     const { sub, top } = parseAgency(agency || "");
     const agencyName = sub || top;
@@ -271,6 +276,8 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
+
+
 
     // Cache check — scoped to team
     const { data: cached } = await supabase

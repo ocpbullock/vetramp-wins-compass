@@ -1,6 +1,7 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
+import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -44,7 +45,19 @@ const SCHEMA = {
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
-    const { opportunity, companyProfile, extraNotes, attachmentsText, teamId, userId, proposalId, skipCache } = await req.json();
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
+    const { opportunity, companyProfile, extraNotes, attachmentsText, teamId, userId: _ignoredUserId, proposalId, skipCache } = await req.json();
+
+    // Verify team membership (and/or proposal access) BEFORE touching team cache.
+    let verifiedTeamId: string | null;
+    try {
+      verifiedTeamId = await resolveTeamId(ctx, teamId ?? null);
+      if (proposalId) await assertProposalAccess(ctx, proposalId);
+    } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    const userId = ctx.user.id;
 
     // Cache key over the inputs that materially affect the result
     const cacheKey = await hashCacheKey({
@@ -54,7 +67,7 @@ serve(async (req) => {
       attachmentsHash: typeof attachmentsText === "string" && attachmentsText.length > 0 ? await hashCacheKey(attachmentsText) : "",
     });
     if (!skipCache) {
-      const cached = await getCachedResponse("customer-intel", cacheKey, teamId ?? null);
+      const cached = await getCachedResponse("customer-intel", cacheKey, verifiedTeamId);
       if (cached) {
         const intel = { ...cached.response_data, _cached: true, _cached_at: cached.created_at };
         return new Response(
@@ -83,8 +96,8 @@ Research this customer and return structured intel. Focus on: who actually uses 
     try {
       data = await callAI({
         functionName: "customer-intel",
-        teamId: teamId ?? null,
-        userId: userId ?? null,
+        teamId: verifiedTeamId,
+        userId,
         proposalId: proposalId ?? null,
         timeoutMs: 60_000,
         body: {
@@ -110,7 +123,7 @@ Research this customer and return structured intel. Focus on: who actually uses 
       await setCachedResponse({
         functionName: "customer-intel",
         cacheKey,
-        teamId: teamId ?? null,
+        teamId: verifiedTeamId,
         responseData: intel,
         model: pickModel("customer-intel"),
         inputTokens: data.__usage?.inputTokens,
