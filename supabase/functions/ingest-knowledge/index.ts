@@ -1,10 +1,10 @@
 import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 import { corsHeaders } from "../_shared/cors.ts";
+import { authenticate, resolveTeamId, authErrorResponse } from "../_shared/auth.ts";
 
 const ALLOWED_CATEGORIES = [
   "past_performance", "personnel", "capability",
@@ -79,7 +79,11 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { filename, category, title, fileBase64, fileType, tags } = await req.json();
+    let ctx;
+    try { ctx = await authenticate(req); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+
+    const { filename, category, title, fileBase64, fileType, tags, teamId } = await req.json();
     if (!filename || !category || !title || !fileBase64) {
       return jsonResponse({ error: "filename, category, title, and fileBase64 are required" }, 400);
     }
@@ -87,14 +91,12 @@ serve(async (req) => {
       return jsonResponse({ error: `Invalid category. Must be one of: ${ALLOWED_CATEGORIES.join(", ")}` }, 400);
     }
 
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const authHeader = req.headers.get("Authorization") || "";
-    const userClient = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
-      global: { headers: { Authorization: authHeader } },
-    });
-
-    const { data: { user }, error: uErr } = await userClient.auth.getUser();
-    if (uErr || !user) return jsonResponse({ error: "Unauthorized" }, 401);
+    let verifiedTeamId: string | null;
+    try { verifiedTeamId = await resolveTeamId(ctx, teamId ?? null); }
+    catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
+    if (!verifiedTeamId) {
+      return jsonResponse({ error: "No team available for this user" }, 400);
+    }
 
     let bytes: Uint8Array;
     try { bytes = base64ToBytes(fileBase64); }
@@ -127,10 +129,11 @@ serve(async (req) => {
         ? tags.split(",").map((t) => t.trim()).filter(Boolean)
         : [];
 
-    const { data: inserted, error: insErr } = await userClient
+    const { data: inserted, error: insErr } = await ctx.userClient
       .from("knowledge_base")
       .insert({
-        user_id: user.id,
+        user_id: ctx.user.id,
+        team_id: verifiedTeamId,
         category,
         title,
         content,

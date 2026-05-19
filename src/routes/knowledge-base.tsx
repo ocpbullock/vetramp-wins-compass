@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth";
+import { useTeam } from "@/lib/team";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,6 +43,7 @@ type KbEntry = {
   tags: string[] | null;
   created_at: string;
   user_id: string | null;
+  team_id: string | null;
 };
 
 function KnowledgeBasePage() {
@@ -105,6 +107,7 @@ function fileToBase64(file: File): Promise<string> {
 
 function UploadCard() {
   const qc = useQueryClient();
+  const { currentTeam } = useTeam();
   const [file, setFile] = useState<File | null>(null);
   const [category, setCategory] = useState<string>("past_performance");
   const [title, setTitle] = useState("");
@@ -113,9 +116,16 @@ function UploadCard() {
     mutationFn: async () => {
       if (!file) throw new Error("Choose a file first.");
       if (!title.trim()) throw new Error("Title is required.");
+      if (!currentTeam?.id) throw new Error("No active team. Select a team first.");
       const fileBase64 = await fileToBase64(file);
       const { data, error } = await supabase.functions.invoke("ingest-knowledge", {
-        body: { fileBase64, filename: file.name, category, title: title.trim() },
+        body: {
+          fileBase64,
+          filename: file.name,
+          category,
+          title: title.trim(),
+          teamId: currentTeam.id,
+        },
       });
       if (error) throw new Error(error.message);
       if ((data as any)?.error) throw new Error((data as any).error);
@@ -180,14 +190,21 @@ function UploadCard() {
 
 function LibraryCard() {
   const qc = useQueryClient();
+  const { currentTeam } = useTeam();
   const [filter, setFilter] = useState<string>("all");
 
+  const teamIds = currentTeam
+    ? [currentTeam.id, ...(currentTeam.parent_team_id ? [currentTeam.parent_team_id] : [])]
+    : [];
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["knowledge-base"],
+    queryKey: ["knowledge-base", teamIds.join(",")],
+    enabled: teamIds.length > 0,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("knowledge_base")
-        .select("id,category,title,content,source_filename,tags,created_at,user_id")
+        .select("id,category,title,content,source_filename,tags,created_at,user_id,team_id")
+        .in("team_id", teamIds)
         .order("created_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as KbEntry[];

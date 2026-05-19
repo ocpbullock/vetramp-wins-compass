@@ -24,6 +24,7 @@ import { ArrowLeft, Plus, Trash2, Save, Loader2, Upload, FileText } from "lucide
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { TeamPanel } from "@/components/settings/TeamPanel";
+import { useTeam } from "@/lib/team";
 import { PartnersPanel } from "@/components/settings/PartnersPanel";
 import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 import { ContractVehiclesPanel } from "@/components/settings/ContractVehiclesPanel";
@@ -415,6 +416,7 @@ type KbEntry = {
   source_filename: string | null;
   tags: string[] | null;
   created_at: string;
+  team_id: string | null;
 };
 
 function fileToBase64(file: File): Promise<string> {
@@ -444,6 +446,7 @@ function KnowledgeBasePanel() {
 
 function KbUploadCard() {
   const qc = useQueryClient();
+  const { currentTeam } = useTeam();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<string>("past_performance");
   const [tagsInput, setTagsInput] = useState("");
@@ -454,6 +457,7 @@ function KbUploadCard() {
     mutationFn: async () => {
       if (!file) throw new Error("Choose a file first.");
       if (!title.trim()) throw new Error("Title is required.");
+      if (!currentTeam?.id) throw new Error("No active team. Select a team first.");
       const fileBase64 = await fileToBase64(file);
       const tags = tagsInput
         .split(",").map((t) => t.trim()).filter(Boolean);
@@ -465,6 +469,7 @@ function KbUploadCard() {
           category,
           title: title.trim(),
           tags,
+          teamId: currentTeam.id,
         },
       });
       if (error) throw new Error(error.message);
@@ -570,14 +575,21 @@ function KbUploadCard() {
 
 function KbLibraryCard() {
   const qc = useQueryClient();
+  const { currentTeam } = useTeam();
   const [filter, setFilter] = useState<string>("all");
 
+  const teamIds = currentTeam
+    ? [currentTeam.id, ...(currentTeam.parent_team_id ? [currentTeam.parent_team_id] : [])]
+    : [];
+
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["kb-entries"],
+    queryKey: ["kb-entries", teamIds.join(",")],
+    enabled: teamIds.length > 0,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("knowledge_base")
-        .select("id,category,title,content,source_filename,tags,created_at")
+        .select("id,category,title,content,source_filename,tags,created_at,team_id")
+        .in("team_id", teamIds)
         .order("created_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as KbEntry[];
