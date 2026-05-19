@@ -294,7 +294,7 @@ serve(async (req) => {
           naics_code: proposal.naics_code,
         });
         if (!skipCache) {
-          const cached = await getCachedResponse("parse-sow", cacheKey);
+          const cached = await getCachedResponse("parse-sow", cacheKey, teamId);
           if (cached) {
             send("status", { phase: "cache_hit", message: "Using previous result — documents unchanged." });
             const matrix = cached.response_data;
