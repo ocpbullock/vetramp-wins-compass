@@ -131,6 +131,10 @@ export function TeamCompositionAnalyzer({
   // --- build members state
   const [members, setMembers] = useState<PwinTeamMember[]>([]);
   const [scenarioName, setScenarioName] = useState("");
+  const [relationshipModel, setRelationshipModel] = useState<RelationshipModel>(
+    proposal.engagement_type === "sub" ? "sub_to_prime" : "prime_with_subs",
+  );
+  const [scopeAreas, setScopeAreas] = useState<string>(proposal.targeted_scope_areas ?? "");
 
   // Initialize members when data ready
   useEffect(() => {
