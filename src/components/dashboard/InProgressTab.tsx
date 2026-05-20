@@ -37,10 +37,13 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
   async function load() {
     if (!user) return;
     setLoading(true);
+    // Rely on RLS for visibility: a user sees proposals they own, proposals
+    // owned by an org team they belong to, and proposals on an opportunity
+    // team they were invited to. Filtering by user_id here would hide
+    // teammates' proposals even though RLS would allow reading them.
     const { data, error } = await supabase
       .from("proposals")
       .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at,oci_screening,opportunity_source,opportunity_source_id")
-      .eq("user_id", user.id)
       .order("updated_at", { ascending: false });
     if (error) toast.error(error.message);
     else {
