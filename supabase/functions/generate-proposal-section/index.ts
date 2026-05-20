@@ -129,6 +129,9 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
   cap_differentiators: `Write DIFFERENTIATORS FOR THE TARGETED SCOPE.
 - 5 bullet differentiators, each tied to a specific proof point from the COMPANY PROFILE or past performance.
 - No generic claims.`,
+};
+
+
 
 
 Deno.serve(async (req) => {
