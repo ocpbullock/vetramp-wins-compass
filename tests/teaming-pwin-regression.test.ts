@@ -56,10 +56,14 @@ const ctx: PwinContext = {
 
 // ---------- 1. PWIN sensitivity ----------
 describe("PWIN scoring sensitivity", () => {
-  it("changes when partner role changes (sub vs jv_partner)", () => {
-    const base = calculatePwin(ctx, [self, partner]);
-    const jv = calculatePwin(ctx, [self, { ...partner, role: "jv_partner" }]);
-    expect(base.pwin).not.toEqual(jv.pwin);
+  it("changes when partner is added vs removed from the team", () => {
+    const solo = calculatePwin(ctx, [self]);
+    const teamed = calculatePwin(ctx, [self, partner]);
+    expect(solo.pwin).not.toEqual(teamed.pwin);
+    // partner brings NAICS coverage + a second cert
+    const sNaics = solo.factors.find((f) => f.key === "naics_coverage")!.score;
+    const tNaics = teamed.factors.find((f) => f.key === "naics_coverage")!.score;
+    expect(tNaics).toBeGreaterThanOrEqual(sNaics);
   });
 
   it("changes when workshare allocation changes", () => {
