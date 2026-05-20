@@ -324,7 +324,16 @@ export function TrackedOpportunitiesTab({
                           <Swords className="w-4 h-4 text-primary" />
                         </Button>
                       )}
-                      {onPropose && (
+                      {proposalByTracked[i.id] ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: proposalByTracked[i.id] } })}
+                          title="Open existing team proposal workspace"
+                        >
+                          <FolderOpen className="w-4 h-4 text-primary" />
+                        </Button>
+                      ) : onPropose && (
                         <Button size="sm" variant="ghost" onClick={() => onPropose(trackedToOpp(i), i.id)} title="Start proposal">
                           <FileSignature className="w-4 h-4 text-money" />
                         </Button>
