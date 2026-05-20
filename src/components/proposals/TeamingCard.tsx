@@ -131,8 +131,13 @@ export function TeamingCard({
         <div>
           <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Teaming</CardTitle>
           <CardDescription>Partners on this bid, their role, and work share.</CardDescription>
-        </div>
-        <Popover open={picker} onOpenChange={setPicker}>
+        <div className="flex items-center gap-2">
+          {proposal && (
+            <Button size="sm" variant="secondary" onClick={() => setAnalyzerOpen(true)} disabled={!teamId}>
+              <Sparkles className="w-4 h-4 mr-1" /> Analyze team
+            </Button>
+          )}
+          <Popover open={picker} onOpenChange={setPicker}>
           <PopoverTrigger asChild>
             <Button size="sm" variant="outline" disabled={!teamId}>
               <Plus className="w-4 h-4 mr-1" /> Add partner
