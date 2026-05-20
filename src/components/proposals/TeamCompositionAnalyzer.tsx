@@ -507,13 +507,20 @@ function CompareView({ scenarios, onDelete, currentScore }: {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-medium text-sm truncate">{s.scenario_name}</div>
-                  <div className="text-[10px] uppercase text-muted-foreground">{s.engagement_type}</div>
+                  <div className="text-[10px] uppercase text-muted-foreground">
+                    {RELATIONSHIP_MODELS.find((r) => r.value === s.relationship_model)?.label ?? s.engagement_type}
+                  </div>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => onDelete(s.id)} aria-label="Delete">
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
               <div className={`text-4xl font-bold tabular-nums my-2 ${head}`}>{Number(s.pwin_score)}%</div>
+              {s.targeted_scope_areas && (
+                <div className="text-[11px] text-muted-foreground italic mb-2 line-clamp-2">
+                  Scope: {s.targeted_scope_areas}
+                </div>
+              )}
               <div className="space-y-1">
                 {allKeys.map((k) => {
                   const f = (s.factor_scores ?? []).find((x: any) => x.key === k);
@@ -533,7 +540,39 @@ function CompareView({ scenarios, onDelete, currentScore }: {
                   );
                 })}
               </div>
+
+              {Array.isArray(s.strengths) && s.strengths.length > 0 && (
+                <div className="mt-3">
+                  <div className="text-[10px] uppercase text-green-700 font-semibold flex items-center gap-1">
+                    <ThumbsUp className="w-3 h-3" /> Strengths
+                  </div>
+                  <ul className="text-[11px] mt-1 space-y-0.5 list-disc list-inside">
+                    {s.strengths.slice(0, 3).map((x: any, i: number) => (
+                      <li key={i} className="truncate">{x.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {Array.isArray(s.weaknesses) && s.weaknesses.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-[10px] uppercase text-destructive font-semibold flex items-center gap-1">
+                    <ThumbsDown className="w-3 h-3" /> Weaknesses
+                  </div>
+                  <ul className="text-[11px] mt-1 space-y-0.5 list-disc list-inside">
+                    {s.weaknesses.slice(0, 3).map((x: any, i: number) => (
+                      <li key={i} className="truncate">{x.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {s.recommended_action && (
+                <div className="mt-2 text-[11px] flex items-start gap-1">
+                  <ArrowRight className="w-3 h-3 mt-0.5 text-primary shrink-0" />
+                  <span>{s.recommended_action}</span>
+                </div>
+              )}
             </div>
+
           );
         })}
       </div>
