@@ -246,9 +246,21 @@ export function TeamingCard({
                     )}
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => removeEntry(e.id)} aria-label="Remove">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {proposal && e.partner && (
+                    <Button
+                      variant="ghost" size="sm"
+                      onClick={() => openOutreach({ ...(e.partner as any), id: e.partner!.id })}
+                      title="Generate outreach"
+                    >
+                      <Mail className="w-3.5 h-3.5 mr-1" /> Outreach
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => removeEntry(e.id)} aria-label="Remove">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
