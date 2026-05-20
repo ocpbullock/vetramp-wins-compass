@@ -82,8 +82,8 @@ function normSetAside(s?: string | null): string | null {
 }
 
 function holdsCert(certs: string[], target: string): boolean {
-  const norm = certs.map((c) => c.toUpperCase().replace(/[^A-Z0-9()]/g, ""));
-  const t = target.replace(/[()]/g, "");
+  const norm = certs.map((c) => c.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+  const t = target.toUpperCase().replace(/[^A-Z0-9]/g, "");
   return norm.some((c) => c.includes(t));
 }
 
