@@ -99,7 +99,37 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
   compliance_matrix: `Write the COMPLIANCE CROSS-REFERENCE MATRIX as the proposal's final appendix.
 - One markdown TABLE: | Req # | SOW Reference | Requirement (verbatim quote) | Proposal Section | Page # |.
 - If complianceMatrix is provided, render those rows. Otherwise, derive a best-effort matrix from the SOW text or attachments.`,
-};
+
+  // ----- Capabilities statement sections (engagement_type = "sub") -----
+  cap_cover_letter: `Write a one-page COVER LETTER addressed to the PRIME contractor's capture/business-development lead.
+- Reference the opportunity by title and solicitation number.
+- State explicitly that the offeror is pursuing this as a SUBCONTRACTOR under the prime.
+- Connect the offeror's experience (from COMPANY PROFILE) to the prime's needs on this opportunity.
+- 3 short paragraphs. No generic boilerplate.`,
+  cap_company_overview: `Write a CAPABILITIES OVERVIEW (1 page).
+- Who we are (legal name, certifications, UEI/CAGE only if present in profile).
+- Core services and competencies, narrowed to the TARGETED SCOPE AREAS.
+- Geographic reach and clearance posture.`,
+  cap_relevant_past_performance: `Write RELEVANT PAST PERFORMANCE for the targeted scope area.
+- One markdown TABLE: | Contract | Agency | Value | Period | Scope Relevance |.
+- Use ONLY entries from the PAST PERFORMANCE LIBRARY / company profile past_performance.
+- For each row include a one-sentence relevance note tied to the targeted scope.`,
+  cap_key_personnel: `Write KEY PERSONNEL.
+- TABLE: | Name | Role | Years Experience | Clearance | Relevance to Scope |.
+- If a name is unknown use "[TO BE NAMED]" — never invent identities.`,
+  cap_certifications_clearances: `Write CERTIFICATIONS & CLEARANCES.
+- Business certifications TABLE built strictly from the COMPANY PROFILE.
+- Map each cert to the prime's likely small-business subcontracting plan needs.
+- Personnel clearance posture aligned with the targeted scope.`,
+  cap_fit_for_prime: `Write WHY WE FIT THIS PRIME ON THIS OPPORTUNITY.
+- 2-3 paragraphs.
+- Reference the prime by name (from PRIME CONTRACTOR in the engagement block).
+- Tie offeror differentiators to the prime's known win themes / sub needs (use CUSTOMER INTELLIGENCE when present).
+- Close with a clear ask (subcontract scope, work-share, role).`,
+  cap_differentiators: `Write DIFFERENTIATORS FOR THE TARGETED SCOPE.
+- 5 bullet differentiators, each tied to a specific proof point from the COMPANY PROFILE or past performance.
+- No generic claims.`,
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
