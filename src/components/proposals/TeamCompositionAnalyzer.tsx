@@ -108,7 +108,7 @@ export function TeamCompositionAnalyzer({
   });
 
   // --- load all teaming partners
-  const { data: partners = [] } = useQuery({
+  const { data: partnersData } = useQuery({
     queryKey: ["pwin-partners", teamId],
     enabled: !!teamId && open,
     queryFn: async () => {
@@ -116,21 +116,23 @@ export function TeamCompositionAnalyzer({
       return (data ?? []) as Partner[];
     },
   });
+  const partners: Partner[] = partnersData ?? EMPTY_PARTNERS;
 
   // --- load existing teaming entries on this proposal (for prefill)
-  const { data: entries = [] } = useQuery({
+  const { data: entriesData } = useQuery({
     queryKey: ["pwin-entries", proposalId],
     enabled: open,
     queryFn: async () => {
       const { data } = await supabase.from("proposal_teaming")
         .select("partner_id, role, work_share_pct")
         .eq("proposal_id", proposalId);
-      return data ?? [];
+      return (data ?? []) as EntryRow[];
     },
   });
+  const entries: EntryRow[] = entriesData ?? EMPTY_ENTRIES;
 
   // --- load saved scenarios
-  const { data: scenarios = [], refetch: refetchScenarios } = useQuery({
+  const { data: scenariosData, refetch: refetchScenarios } = useQuery({
     queryKey: ["pwin-scenarios", proposalId],
     enabled: open,
     queryFn: async () => {
@@ -139,6 +141,7 @@ export function TeamCompositionAnalyzer({
       return data ?? [];
     },
   });
+  const scenarios: any[] = scenariosData ?? EMPTY_SCENARIOS;
 
   // --- build members state
   const [members, setMembers] = useState<PwinTeamMember[]>([]);
@@ -148,17 +151,78 @@ export function TeamCompositionAnalyzer({
   );
   const [scopeAreas, setScopeAreas] = useState<string>(proposal.targeted_scope_areas ?? "");
 
-  // Initialize members when data ready
+  // Pull out scalar proposal fields the initializer depends on. Depending on
+  // the whole `proposal` object would re-run this effect every time the
+  // parent re-renders with a fresh object reference, even when nothing
+  // relevant changed.
+  const engagementType = proposal.engagement_type;
+  const primeContractorId = proposal.prime_contractor_id;
+  const primeContractorName = proposal.prime_contractor_name;
+  const incumbentName: string | null =
+    proposal.customer_intel?.predecessor_contract?.incumbent ?? null;
+
+  // Initialization guard: only (re)build `members` when the analyzer opens
+  // for a different proposal, when the underlying data identity actually
+  // changes (new partners/entries/self payloads land), or when the relevant
+  // scalar proposal fields change. We do NOT re-run while the user is
+  // editing partners, roles, or work share — those edits flow through
+  // updateMember and must not be overwritten.
+  const initSigRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!self || !open) return;
-    const incumbentName: string | null = proposal.customer_intel?.predecessor_contract?.incumbent ?? null;
-    const isSelfPrime = proposal.engagement_type === "prime";
+    // Reset the signature when the dialog closes so re-opening rebuilds fresh.
+    if (!open) {
+      initSigRef.current = null;
+      return;
+    }
+    // Wait for all required queries to actually resolve. While any of them is
+    // still `undefined` we keep the empty members state and bail — this is
+    // the key fix for the render loop: we no longer write state on every
+    // render that happens to land between query resolutions.
+    if (!self || !partnersData || !entriesData) return;
+
+    const sig = [
+      proposalId,
+      // Reference identities — queries return stable references between
+      // renders once resolved, so this only changes when data actually
+      // refetched.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (self as any),
+      partnersData,
+      entriesData,
+      engagementType,
+      primeContractorId,
+      primeContractorName,
+      incumbentName,
+    ]
+      .map((x) => (x == null ? "" : typeof x === "string" ? x : `@${(x as any)?.length ?? "o"}`))
+      .join("|");
+    // More robust: use a WeakRef-ish identity tag via a counter on the refs.
+    // For simplicity we serialize lengths + scalars and also compare object
+    // identity via a side map below.
+    const identityKey = `${proposalId}|sf:${self === lastSelfRef.current ? "=" : "≠"}|p:${
+      partnersData === lastPartnersRef.current ? "=" : "≠"
+    }|e:${entriesData === lastEntriesRef.current ? "=" : "≠"}|${engagementType ?? ""}|${
+      primeContractorId ?? ""
+    }|${primeContractorName ?? ""}|${incumbentName ?? ""}`;
+
+    // If only "=" identity markers (nothing changed) and we've already
+    // initialized for this proposal, skip.
+    if (initSigRef.current && identityKey.includes("sf:=") && identityKey.includes("p:=") && identityKey.includes("e:=") && initSigRef.current.startsWith(proposalId)) {
+      return;
+    }
+
+    lastSelfRef.current = self;
+    lastPartnersRef.current = partnersData;
+    lastEntriesRef.current = entriesData;
+    initSigRef.current = `${proposalId}|${sig}`;
+
+    const isSelfPrime = engagementType === "prime";
     const selfMember: PwinTeamMember = {
       id: "self",
       name: self.profile.company_name,
       isSelf: true,
       role: isSelfPrime ? "prime" : "sub",
-      workShare: 0, // computed as remainder
+      workShare: 0,
       active: true,
       certifications: self.profile.certifications,
       naicsCodes: self.profile.naics_codes,
@@ -167,14 +231,14 @@ export function TeamCompositionAnalyzer({
       isIncumbent: !!incumbentName && self.profile.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
     };
 
-    const entryMap = new Map(entries.map((e: any) => [e.partner_id, e]));
-    const primeName = (proposal.prime_contractor_name ?? "").toLowerCase();
+    const entryMap = new Map(entriesData.map((e) => [e.partner_id, e]));
+    const primeNameLower = (primeContractorName ?? "").toLowerCase();
 
-    const partnerMembers: PwinTeamMember[] = partners.map((p) => {
-      const e: any = entryMap.get(p.id);
+    const partnerMembers: PwinTeamMember[] = partnersData.map((p) => {
+      const e = entryMap.get(p.id);
       const isThePrime = !isSelfPrime
-        && (p.id === proposal.prime_contractor_id
-          || (primeName && p.company_name.toLowerCase() === primeName));
+        && (p.id === primeContractorId
+          || (primeNameLower && p.company_name.toLowerCase() === primeNameLower));
       const defaultRole: PwinRole = isThePrime ? "prime" : (e?.role ?? "sub");
       return {
         id: p.id,
@@ -186,7 +250,7 @@ export function TeamCompositionAnalyzer({
         certifications: p.certifications ?? [],
         naicsCodes: p.naics_codes ?? [],
         contractVehicles: (p as any).contract_vehicles ?? [],
-        pastPerformance: [], // partner-level PP not modeled in roster; relies on capability summary
+        pastPerformance: [],
         isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
         workedWithIncumbent: false,
         primeRelationshipStrength: isThePrime ? 50 : 0,
@@ -194,7 +258,18 @@ export function TeamCompositionAnalyzer({
     });
 
     setMembers([selfMember, ...partnerMembers]);
-  }, [self, partners, entries, open, proposal]);
+  }, [
+    open,
+    proposalId,
+    self,
+    partnersData,
+    entriesData,
+    engagementType,
+    primeContractorId,
+    primeContractorName,
+    incumbentName,
+  ]);
+
 
   // --- context for calc
   const ctx: PwinContext = useMemo(() => {
