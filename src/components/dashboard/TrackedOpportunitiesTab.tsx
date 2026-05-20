@@ -134,7 +134,35 @@ export function TrackedOpportunitiesTab({
       .order("created_at", { ascending: false });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
-    setItems((data ?? []) as TrackedOpportunity[]);
+    const rows = (data ?? []) as TrackedOpportunity[];
+    setItems(rows);
+    // Look up existing proposals for these tracked opps so we can offer
+    // "Open existing proposal" instead of silently creating a duplicate.
+    // RLS scopes results to proposals the caller can already see.
+    const ids = rows.map((r) => r.id);
+    if (ids.length) {
+      const { data: props } = await supabase
+        .from("proposals")
+        .select("id, opportunity_source_id, created_at")
+        .eq("opportunity_source", "tracked")
+        .in("opportunity_source_id", ids)
+        .order("created_at", { ascending: true });
+      const map: Record<string, string> = {};
+      const dupes = new Set<string>();
+      for (const p of props ?? []) {
+        const k = p.opportunity_source_id as string | null;
+        if (!k) continue;
+        if (map[k]) dupes.add(k); else map[k] = p.id;
+      }
+      setProposalByTracked(map);
+      if (dupes.size > 0) {
+        // Non-destructive: just surface the duplicates so a human can decide.
+        // eslint-disable-next-line no-console
+        console.warn("[tracked-opps] duplicate proposals detected for", Array.from(dupes));
+      }
+    } else {
+      setProposalByTracked({});
+    }
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user]);
