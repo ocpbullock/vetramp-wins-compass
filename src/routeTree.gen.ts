@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as KnowledgeBaseRouteImport } from './routes/knowledge-base'
 import { Route as CalendarRouteImport } from './routes/calendar'
@@ -18,6 +19,11 @@ import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProposalsProposalIdRouteImport } from './routes/proposals.$proposalId'
 
+const TeamsRoute = TeamsRouteImport.update({
+  id: '/teams',
+  path: '/teams',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -67,6 +73,7 @@ export interface FileRoutesByFullPath {
   '/calendar': typeof CalendarRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/settings': typeof SettingsRoute
+  '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRoutesByTo {
@@ -77,6 +84,7 @@ export interface FileRoutesByTo {
   '/calendar': typeof CalendarRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/settings': typeof SettingsRoute
+  '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRoutesById {
@@ -88,6 +96,7 @@ export interface FileRoutesById {
   '/calendar': typeof CalendarRoute
   '/knowledge-base': typeof KnowledgeBaseRoute
   '/settings': typeof SettingsRoute
+  '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRouteTypes {
@@ -100,6 +109,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/knowledge-base'
     | '/settings'
+    | '/teams'
     | '/proposals/$proposalId'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -110,6 +120,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/knowledge-base'
     | '/settings'
+    | '/teams'
     | '/proposals/$proposalId'
   id:
     | '__root__'
@@ -120,6 +131,7 @@ export interface FileRouteTypes {
     | '/calendar'
     | '/knowledge-base'
     | '/settings'
+    | '/teams'
     | '/proposals/$proposalId'
   fileRoutesById: FileRoutesById
 }
@@ -131,11 +143,19 @@ export interface RootRouteChildren {
   CalendarRoute: typeof CalendarRoute
   KnowledgeBaseRoute: typeof KnowledgeBaseRoute
   SettingsRoute: typeof SettingsRoute
+  TeamsRoute: typeof TeamsRoute
   ProposalsProposalIdRoute: typeof ProposalsProposalIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/teams': {
+      id: '/teams'
+      path: '/teams'
+      fullPath: '/teams'
+      preLoaderRoute: typeof TeamsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
@@ -203,8 +223,19 @@ const rootRouteChildren: RootRouteChildren = {
   CalendarRoute: CalendarRoute,
   KnowledgeBaseRoute: KnowledgeBaseRoute,
   SettingsRoute: SettingsRoute,
+  TeamsRoute: TeamsRoute,
   ProposalsProposalIdRoute: ProposalsProposalIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
