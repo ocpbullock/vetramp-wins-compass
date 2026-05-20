@@ -57,6 +57,15 @@ export function TeamingCard({
   const [search, setSearch] = useState("");
   const [picker, setPicker] = useState(false);
   const [analyzerOpen, setAnalyzerOpen] = useState(false);
+  const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [outreachPicker, setOutreachPicker] = useState(false);
+
+  const openOutreach = (p: OutreachPartnerInput) => {
+    setOutreachPartner(p);
+    setOutreachOpen(true);
+  };
+
 
   const { data: partners = [] } = useQuery({
     queryKey: ["teaming-partners", teamId],
