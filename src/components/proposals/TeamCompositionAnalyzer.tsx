@@ -402,10 +402,13 @@ function PwinPanel({ result }: { result: PwinResult }) {
   return (
     <div>
       <div className="text-center py-4 border rounded-md">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">Probability of win</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">Estimated win probability</div>
         <div className={`text-6xl font-bold tabular-nums ${headColor}`}>{result.pwin}%</div>
         <div className="text-[11px] text-muted-foreground mt-1">
           Partners allocated {result.totalPartnerShare}% · your share {result.selfShare}%
+        </div>
+        <div className="text-[10px] text-muted-foreground mt-1 italic">
+          Scenario estimate based on team inputs — not a guaranteed probability.
         </div>
       </div>
 
