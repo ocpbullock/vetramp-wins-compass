@@ -175,7 +175,8 @@ export function TeamingCard({
               ))}
             </div>
           </PopoverContent>
-        </Popover>
+          </Popover>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {entries.length === 0 && (
