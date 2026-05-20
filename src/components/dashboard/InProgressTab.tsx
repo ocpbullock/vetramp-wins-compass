@@ -24,7 +24,10 @@ type Proposal = {
   oci_screening: any;
   opportunity_source: string | null;
   opportunity_source_id: string | null;
+  engagement_type: string | null;
+  prime_contractor_name: string | null;
 };
+
 
 export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
   const { user } = useAuth();
