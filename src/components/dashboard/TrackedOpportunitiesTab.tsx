@@ -91,7 +91,9 @@ export function TrackedOpportunitiesTab({
   onPropose?: (opp: SamOpportunity, trackedId: string) => void;
 }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<TrackedOpportunity[]>([]);
+  const [proposalByTracked, setProposalByTracked] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TrackedOpportunity | null>(null);
