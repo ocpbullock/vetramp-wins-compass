@@ -125,6 +125,8 @@ Deno.serve(async (req) => {
       proposalId,
     } = body;
 
+    if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
+
     let verifiedTeamId: string | null;
     try {
       verifiedTeamId = await resolveTeamId(ctx, teamId ?? null);
@@ -137,15 +139,19 @@ Deno.serve(async (req) => {
 
     const knowledgeContext = await fetchKnowledgeContext(sectionId, ctx.admin, verifiedTeamId);
 
-    const systemPrompt = `You are a senior federal capture manager writing for LGE Consulting, LLC dba VetRamp (SBA-certified SDVOSB).
-You are writing ONE section of a proposal at a time. Output MARKDOWN only — no preamble, no closing remarks.
+    const identity = companyIdentity(companyProfile);
+    const profileBlock = renderCompanyProfileBlock(companyProfile);
+
+    const systemPrompt = `You are a senior federal capture manager writing ONE section of a proposal for ${identity}.
+Output MARKDOWN only — no preamble, no closing remarks.
 Every "shall" requirement in the SOW must be addressed if this section covers it. Use the unit's terminology, not generic federal-speak.
 Use markdown tables for structured data. Quote SOW requirements verbatim when referencing them.
+The COMPANY PROFILE below is the sole source of truth for who the offeror is — do not invent identity, certifications, locations, past performance, or recruiting pipelines that are not listed.
 
 COMPANY PROFILE:
-${JSON.stringify(companyProfile, null, 2)}
+${profileBlock}
 
-${knowledgeContext ? `KNOWLEDGE BASE (authoritative VetRamp content — prefer this over general knowledge when writing):\n${knowledgeContext}\n` : ""}
+${knowledgeContext ? `KNOWLEDGE BASE (authoritative offeror-provided content — prefer this over general knowledge when writing):\n${knowledgeContext}\n` : ""}
 OPPORTUNITY:
 Title: ${opportunity?.title || "N/A"}
 Solicitation #: ${opportunity?.solicitationNumber || "N/A"}
