@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -32,6 +32,17 @@ const ROLES: { value: PwinRole; label: string }[] = [
   { value: "protege", label: "Protégé" },
   { value: "jv_partner", label: "JV Partner" },
 ];
+
+// Stable empty fallbacks so destructured defaults don't allocate fresh arrays
+// each render while queries are loading. A fresh `[]` literal in a useQuery
+// destructure default (`= []`) gets a new identity every render, which makes
+// dependency-array comparisons in effects always-changed and can loop
+// setState -> render -> effect -> setState (React error #185).
+const EMPTY_PARTNERS: Partner[] = [];
+type EntryRow = { partner_id: string; role: PwinRole; work_share_pct: number | null };
+const EMPTY_ENTRIES: EntryRow[] = [];
+const EMPTY_SCENARIOS: any[] = [];
+
 
 type ProposalLite = {
   id: string;
@@ -97,7 +108,7 @@ export function TeamCompositionAnalyzer({
   });
 
   // --- load all teaming partners
-  const { data: partners = [] } = useQuery({
+  const { data: partnersData } = useQuery({
     queryKey: ["pwin-partners", teamId],
     enabled: !!teamId && open,
     queryFn: async () => {
@@ -105,21 +116,23 @@ export function TeamCompositionAnalyzer({
       return (data ?? []) as Partner[];
     },
   });
+  const partners: Partner[] = partnersData ?? EMPTY_PARTNERS;
 
   // --- load existing teaming entries on this proposal (for prefill)
-  const { data: entries = [] } = useQuery({
+  const { data: entriesData } = useQuery({
     queryKey: ["pwin-entries", proposalId],
     enabled: open,
     queryFn: async () => {
       const { data } = await supabase.from("proposal_teaming")
         .select("partner_id, role, work_share_pct")
         .eq("proposal_id", proposalId);
-      return data ?? [];
+      return (data ?? []) as EntryRow[];
     },
   });
+  const entries: EntryRow[] = entriesData ?? EMPTY_ENTRIES;
 
   // --- load saved scenarios
-  const { data: scenarios = [], refetch: refetchScenarios } = useQuery({
+  const { data: scenariosData, refetch: refetchScenarios } = useQuery({
     queryKey: ["pwin-scenarios", proposalId],
     enabled: open,
     queryFn: async () => {
@@ -128,6 +141,7 @@ export function TeamCompositionAnalyzer({
       return data ?? [];
     },
   });
+  const scenarios: any[] = scenariosData ?? EMPTY_SCENARIOS;
 
   // --- build members state
   const [members, setMembers] = useState<PwinTeamMember[]>([]);
@@ -137,17 +151,83 @@ export function TeamCompositionAnalyzer({
   );
   const [scopeAreas, setScopeAreas] = useState<string>(proposal.targeted_scope_areas ?? "");
 
-  // Initialize members when data ready
+  // Pull out scalar proposal fields the initializer depends on. Depending on
+  // the whole `proposal` object would re-run this effect every time the
+  // parent re-renders with a fresh object reference, even when nothing
+  // relevant changed.
+  const engagementType = proposal.engagement_type;
+  const primeContractorId = proposal.prime_contractor_id;
+  const primeContractorName = proposal.prime_contractor_name;
+  const incumbentName: string | null =
+    proposal.customer_intel?.predecessor_contract?.incumbent ?? null;
+
+  // Initialization guard: only (re)build `members` when the analyzer opens
+  // for a different proposal, when the underlying data identity actually
+  // changes (new partners/entries/self payloads land), or when the relevant
+  // scalar proposal fields change. We do NOT re-run while the user is
+  // editing partners, roles, or work share — those edits flow through
+  // updateMember and must not be overwritten.
+  const lastInitRef = useRef<{
+    proposalId: string;
+    self: unknown;
+    partners: unknown;
+    entries: unknown;
+    engagementType: string | null | undefined;
+    primeContractorId: string | null | undefined;
+    primeContractorName: string | null | undefined;
+    incumbentName: string | null;
+  } | null>(null);
   useEffect(() => {
-    if (!self || !open) return;
-    const incumbentName: string | null = proposal.customer_intel?.predecessor_contract?.incumbent ?? null;
-    const isSelfPrime = proposal.engagement_type === "prime";
+    // Reset when dialog closes so re-opening rebuilds fresh.
+    if (!open) {
+      lastInitRef.current = null;
+      return;
+    }
+    // Wait until every required query has actually resolved. While any of
+    // these is still `undefined` we keep the existing members state and
+    // bail — this is the key fix for the render loop: we no longer write
+    // state on every render that lands between query resolutions, and the
+    // deps are stable query-result identities + scalar proposal fields
+    // (not the whole proposal object or fresh `[]` defaults).
+    if (!self || !partnersData || !entriesData) return;
+
+    // Skip if nothing relevant changed since the last initialization. This
+    // prevents reinitializing while the user is toggling partners, changing
+    // roles, or adjusting work share — those edits flow through
+    // updateMember and must not be overwritten.
+    const prev = lastInitRef.current;
+    if (
+      prev
+      && prev.proposalId === proposalId
+      && prev.self === self
+      && prev.partners === partnersData
+      && prev.entries === entriesData
+      && prev.engagementType === engagementType
+      && prev.primeContractorId === primeContractorId
+      && prev.primeContractorName === primeContractorName
+      && prev.incumbentName === incumbentName
+    ) {
+      return;
+    }
+    lastInitRef.current = {
+      proposalId,
+      self,
+      partners: partnersData,
+      entries: entriesData,
+      engagementType,
+      primeContractorId,
+      primeContractorName,
+      incumbentName,
+    };
+
+
+    const isSelfPrime = engagementType === "prime";
     const selfMember: PwinTeamMember = {
       id: "self",
       name: self.profile.company_name,
       isSelf: true,
       role: isSelfPrime ? "prime" : "sub",
-      workShare: 0, // computed as remainder
+      workShare: 0,
       active: true,
       certifications: self.profile.certifications,
       naicsCodes: self.profile.naics_codes,
@@ -156,14 +236,14 @@ export function TeamCompositionAnalyzer({
       isIncumbent: !!incumbentName && self.profile.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
     };
 
-    const entryMap = new Map(entries.map((e: any) => [e.partner_id, e]));
-    const primeName = (proposal.prime_contractor_name ?? "").toLowerCase();
+    const entryMap = new Map(entriesData.map((e) => [e.partner_id, e]));
+    const primeNameLower = (primeContractorName ?? "").toLowerCase();
 
-    const partnerMembers: PwinTeamMember[] = partners.map((p) => {
-      const e: any = entryMap.get(p.id);
+    const partnerMembers: PwinTeamMember[] = partnersData.map((p) => {
+      const e = entryMap.get(p.id);
       const isThePrime = !isSelfPrime
-        && (p.id === proposal.prime_contractor_id
-          || (primeName && p.company_name.toLowerCase() === primeName));
+        && (p.id === primeContractorId
+          || (primeNameLower && p.company_name.toLowerCase() === primeNameLower));
       const defaultRole: PwinRole = isThePrime ? "prime" : (e?.role ?? "sub");
       return {
         id: p.id,
@@ -175,7 +255,7 @@ export function TeamCompositionAnalyzer({
         certifications: p.certifications ?? [],
         naicsCodes: p.naics_codes ?? [],
         contractVehicles: (p as any).contract_vehicles ?? [],
-        pastPerformance: [], // partner-level PP not modeled in roster; relies on capability summary
+        pastPerformance: [],
         isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
         workedWithIncumbent: false,
         primeRelationshipStrength: isThePrime ? 50 : 0,
@@ -183,7 +263,18 @@ export function TeamCompositionAnalyzer({
     });
 
     setMembers([selfMember, ...partnerMembers]);
-  }, [self, partners, entries, open, proposal]);
+  }, [
+    open,
+    proposalId,
+    self,
+    partnersData,
+    entriesData,
+    engagementType,
+    primeContractorId,
+    primeContractorName,
+    incumbentName,
+  ]);
+
 
   // --- context for calc
   const ctx: PwinContext = useMemo(() => {
@@ -205,7 +296,10 @@ export function TeamCompositionAnalyzer({
       scopeKeywords,
       incumbentName: proposal.customer_intel?.predecessor_contract?.incumbent ?? null,
     };
-  }, [proposal, relationshipModel, scopeAreas]);
+  }, [
+    proposal.naics_code, proposal.contract_type, proposal.agency, proposal.set_aside,
+    incumbentName, relationshipModel, scopeAreas,
+  ]);
 
   const result: PwinResult = useMemo(() => calculatePwin(ctx, members), [ctx, members]);
   const insights: ScenarioInsights = useMemo(
