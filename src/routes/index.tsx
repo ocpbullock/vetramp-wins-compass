@@ -100,10 +100,11 @@ function Dashboard() {
     if (!user) return;
     let cancelled = false;
     (async () => {
-      let q = supabase.from("proposals").select("id", { count: "exact", head: true });
-      if (teamId) q = q.eq("team_id", teamId);
-      else q = q.eq("user_id", user.id);
-      const { count, error } = await q;
+      // Rely on RLS so teammates' in-progress proposals are counted too —
+      // a user_id filter would under-count for org/opportunity-team members.
+      const { count, error } = await supabase
+        .from("proposals")
+        .select("id", { count: "exact", head: true });
       if (!cancelled && !error && typeof count === "number") setInProgressCount(count);
     })();
     return () => { cancelled = true; };
