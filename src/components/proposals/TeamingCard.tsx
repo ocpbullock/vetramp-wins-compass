@@ -237,6 +237,13 @@ export function TeamingCard({
           <TotalShare entries={entries} />
         )}
       </CardContent>
+      {proposal && (
+        <TeamCompositionAnalyzer
+          open={analyzerOpen}
+          onOpenChange={setAnalyzerOpen}
+          proposal={proposal}
+        />
+      )}
     </Card>
   );
 }
