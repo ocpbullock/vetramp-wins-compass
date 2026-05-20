@@ -10,9 +10,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Plus, Trash2, Users, Search } from "lucide-react";
+import { Plus, Trash2, Users, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { Partner } from "@/components/settings/PartnersPanel";
+import { TeamCompositionAnalyzer } from "./TeamCompositionAnalyzer";
 
 const ROLES = [
   { value: "prime", label: "Prime" },
