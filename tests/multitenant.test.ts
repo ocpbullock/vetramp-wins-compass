@@ -301,9 +301,8 @@ describe("multi-tenant: in-progress proposal lists rely on RLS, not user_id filt
 
   it("dashboard in-progress count does not filter by user_id either", () => {
     const src = r("src/routes/index.tsx");
-    // The head-count query for the In Progress stat card.
-    const m = src.match(/\.from\(["']proposals["']\)\.select\(["']id["'],\s*\{\s*count:\s*["']exact["'],\s*head:\s*true\s*\}\)[\s\S]{0,200}/);
-    expect(m, "expected an in-progress count query").toBeTruthy();
+    const m = src.match(/setInProgressCount[\s\S]*?\}\)\(\);/);
+    expect(m, "expected an in-progress count effect").toBeTruthy();
     expect(m![0]).not.toMatch(/\.eq\(["']user_id["']/);
   });
 });
