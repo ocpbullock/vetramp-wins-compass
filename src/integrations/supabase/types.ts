@@ -800,7 +800,7 @@ export type Database = {
       pwin_scenarios: {
         Row: {
           created_at: string
-          created_by: string | null
+          created_by: string
           engagement_type: string
           factor_scores: Json
           id: string
@@ -812,7 +812,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          created_by?: string | null
+          created_by: string
           engagement_type?: string
           factor_scores?: Json
           id?: string
@@ -824,7 +824,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          created_by?: string | null
+          created_by?: string
           engagement_type?: string
           factor_scores?: Json
           id?: string
@@ -834,7 +834,15 @@ export type Database = {
           team_composition?: Json
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "pwin_scenarios_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       starred_opportunities: {
         Row: {
