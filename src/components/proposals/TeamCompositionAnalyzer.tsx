@@ -43,6 +43,7 @@ type ProposalLite = {
   engagement_type: EngagementType;
   prime_contractor_id: string | null;
   prime_contractor_name: string | null;
+  targeted_scope_areas?: string | null;
   customer_intel: any;
   opportunity_data: any;
 };
