@@ -240,7 +240,7 @@ export function TeamCompositionAnalyzer({
             <Sparkles className="w-4 h-4 text-primary" /> Team Composition Analyzer
           </DialogTitle>
           <DialogDescription>
-            Toggle partners, set roles and work share, and watch the win-probability score react.
+            Toggle partners, set roles and work share to compare scenario estimates of win probability. Scores are heuristic estimates, not guaranteed probabilities.
           </DialogDescription>
         </DialogHeader>
 
