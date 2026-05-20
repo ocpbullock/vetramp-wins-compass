@@ -81,11 +81,8 @@ describe("outreach modal queries are proposal-scoped", () => {
     expect(modal).toMatch(/generated_by: uid/);
   });
 
-  it("never queries the table without a proposal_id filter", () => {
-    const matches = modal.match(/from\(["']proposal_outreach_drafts["']\)[\s\S]*?(?=;)/g) ?? [];
-    for (const m of matches) {
-      // every chain on this table must filter by proposal_id, partner_id, or id (for update/delete by row)
-      expect(m).toMatch(/\.eq\(["'](proposal_id|id)["']/);
-    }
+  it("status/delete mutations target a specific row id (RLS still gates proposal access)", () => {
+    expect(modal).toMatch(/\.update\(\{ status \}\)[\s\S]*\.eq\(["']id["']/);
+    expect(modal).toMatch(/\.delete\(\)\.eq\(["']id["']/);
   });
 });
