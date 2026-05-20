@@ -654,6 +654,7 @@ export type Database = {
           created_at: string
           customer_intel: Json | null
           customer_intel_verified: boolean | null
+          engagement_type: string
           estimated_value: number | null
           id: string
           management_approach: Json | null
@@ -671,6 +672,8 @@ export type Database = {
           pop_option_months: number | null
           price_strategy: Json | null
           pricing: Json | null
+          prime_contractor_id: string | null
+          prime_contractor_name: string | null
           readiness_score: number | null
           response_deadline: string | null
           sections: Json | null
@@ -679,6 +682,7 @@ export type Database = {
           solicitation_number: string
           staffing_plan: Json | null
           status: string
+          targeted_scope_areas: string | null
           team_id: string | null
           technical_approach: Json | null
           transition_plan: Json | null
@@ -695,6 +699,7 @@ export type Database = {
           created_at?: string
           customer_intel?: Json | null
           customer_intel_verified?: boolean | null
+          engagement_type?: string
           estimated_value?: number | null
           id?: string
           management_approach?: Json | null
@@ -712,6 +717,8 @@ export type Database = {
           pop_option_months?: number | null
           price_strategy?: Json | null
           pricing?: Json | null
+          prime_contractor_id?: string | null
+          prime_contractor_name?: string | null
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
@@ -720,6 +727,7 @@ export type Database = {
           solicitation_number: string
           staffing_plan?: Json | null
           status?: string
+          targeted_scope_areas?: string | null
           team_id?: string | null
           technical_approach?: Json | null
           transition_plan?: Json | null
@@ -736,6 +744,7 @@ export type Database = {
           created_at?: string
           customer_intel?: Json | null
           customer_intel_verified?: boolean | null
+          engagement_type?: string
           estimated_value?: number | null
           id?: string
           management_approach?: Json | null
@@ -753,6 +762,8 @@ export type Database = {
           pop_option_months?: number | null
           price_strategy?: Json | null
           pricing?: Json | null
+          prime_contractor_id?: string | null
+          prime_contractor_name?: string | null
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
@@ -761,6 +772,7 @@ export type Database = {
           solicitation_number?: string
           staffing_plan?: Json | null
           status?: string
+          targeted_scope_areas?: string | null
           team_id?: string | null
           technical_approach?: Json | null
           transition_plan?: Json | null

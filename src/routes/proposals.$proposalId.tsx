@@ -426,6 +426,13 @@ function ProposalPipeline() {
         <div className="flex items-center gap-3 flex-wrap">
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to opportunities</Link>
           <div className="flex-1" />
+          {proposal.engagement_type === "sub" ? (
+            <Badge className="bg-amber-500 hover:bg-amber-500/90" title={proposal.prime_contractor_name ? `Sub to: ${proposal.prime_contractor_name}` : "Subcontractor pursuit"}>
+              SUB{proposal.prime_contractor_name ? ` · Sub to: ${proposal.prime_contractor_name}` : ""}
+            </Badge>
+          ) : (
+            <Badge className="bg-blue-600 hover:bg-blue-600/90">PRIME</Badge>
+          )}
           <Badge variant="outline">{proposal.status}</Badge>
           {dataIssues.length > 0 && (
             <TooltipProvider delayDuration={200}>
@@ -649,6 +656,54 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 space-y-4">
+        <Card className="border-primary/40">
+          <CardHeader className="pb-2"><CardTitle className="text-base">Engagement type</CardTitle><CardDescription className="text-xs">This fundamentally changes the pipeline. Choose carefully.</CardDescription></CardHeader>
+          <CardContent className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onPatch({ engagement_type: "prime", prime_contractor_id: null, prime_contractor_name: null })}
+                className={`rounded-md border-2 p-4 text-left transition ${proposal.engagement_type !== "sub" ? "border-blue-600 bg-blue-600/5" : "border-border hover:bg-muted"}`}
+              >
+                <div className="text-sm font-semibold">Pursuing as Prime</div>
+                <div className="text-[11px] text-muted-foreground mt-1">Full Section L/M proposal volumes. We own the response.</div>
+              </button>
+              <button
+                type="button"
+                onClick={() => onPatch({ engagement_type: "sub" })}
+                className={`rounded-md border-2 p-4 text-left transition ${proposal.engagement_type === "sub" ? "border-amber-500 bg-amber-500/5" : "border-border hover:bg-muted"}`}
+              >
+                <div className="text-sm font-semibold">Pursuing as Sub</div>
+                <div className="text-[11px] text-muted-foreground mt-1">Capabilities statement / teaming submission directed at a prime.</div>
+              </button>
+            </div>
+            {proposal.engagement_type === "sub" && (
+              <div className="space-y-3 pt-2 border-t border-border">
+                <div>
+                  <Label>Prime contractor *</Label>
+                  <Input
+                    value={local.prime_contractor_name ?? ""}
+                    onChange={(e) => setLocal({ ...local, prime_contractor_name: e.target.value })}
+                    onBlur={() => onPatch({ prime_contractor_name: local.prime_contractor_name || null })}
+                    placeholder="Enter prime name (search teaming partners coming soon)"
+                  />
+                  <div className="text-[11px] text-muted-foreground mt-1">Pull from your teaming partner roster, or type a new prime.</div>
+                </div>
+                <div>
+                  <Label>Relevant scope areas *</Label>
+                  <Textarea
+                    rows={3}
+                    value={local.targeted_scope_areas ?? ""}
+                    onChange={(e) => setLocal({ ...local, targeted_scope_areas: e.target.value })}
+                    onBlur={() => onPatch({ targeted_scope_areas: local.targeted_scope_areas || null })}
+                    placeholder="Describe the portion of work you're targeting under the prime."
+                  />
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader><CardTitle className="text-base">Auto-populated from SAM.gov</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-3 text-sm">
@@ -664,6 +719,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             )}
           </CardContent>
         </Card>
+
 
         <Card>
           <CardHeader><CardTitle className="text-base">Capture details (you fill these in)</CardTitle></CardHeader>

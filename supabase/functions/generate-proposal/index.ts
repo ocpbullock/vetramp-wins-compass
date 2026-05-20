@@ -61,7 +61,8 @@ Deno.serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { opportunity, teamId, companyProfile } = await req.json();
+    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas } = await req.json();
+    const engagement = engagementType === "sub" ? "sub" : "prime";
 
     if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
 
@@ -69,9 +70,29 @@ Deno.serve(async (req) => {
     try { verifiedTeamId = await resolveTeamId(ctx, teamId ?? null); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const systemPrompt = buildSystemPrompt(companyProfile);
+    const systemPrompt = engagement === "sub"
+      ? `You are a senior federal capture manager writing a CAPABILITIES STATEMENT / TEAMING SUBMISSION for ${companyIdentity(companyProfile)}, who is pursuing this opportunity as a SUBCONTRACTOR under the prime named below. Do NOT write a full Section L/M proposal volume. Produce a concise document tailored to convince the prime to bring the offeror onto their team for the targeted scope.
 
-    const userPrompt = `Generate a complete proposal for the following solicitation:
+PRIME CONTRACTOR: ${primeContractorName || "(unspecified)"}
+TARGETED SCOPE AREAS: ${targetedScopeAreas || "(unspecified)"}
+
+COMPANY PROFILE (sole source of truth — do not invent identity, certifications, locations, past performance):
+${renderCompanyProfileBlock(companyProfile)}
+
+Generate the document in markdown with these sections IN ORDER:
+1. COVER LETTER to the prime's capture/BD lead — reference the solicitation by name and number; state explicitly pursuing as a sub.
+2. COMPANY OVERVIEW — narrowed to the targeted scope areas.
+3. RELEVANT PAST PERFORMANCE — TABLE using only entries from the company profile past_performance; one-sentence relevance note per row.
+4. KEY PERSONNEL — TABLE | Name | Role | Years | Clearance | Relevance |; use [TO BE NAMED] when unknown.
+5. CERTIFICATIONS & CLEARANCES — TABLE strictly from the profile; tie each to the prime's small-business subcontracting needs.
+6. WHY WE FIT THIS PRIME ON THIS OPPORTUNITY — 2-3 paragraphs naming the prime; tie our differentiators to what the prime needs from subs.
+7. DIFFERENTIATORS FOR THE TARGETED SCOPE — 5 bullets, each with a proof point.
+8. PROPOSED TEAMING ROLE — work-share request, scope boundaries, contract vehicle posture.
+
+Use markdown tables for structured data. Be specific. If a field is missing from the company profile, insert "[TO BE VERIFIED — update in Capture Intel]" rather than inventing details.`
+      : buildSystemPrompt(companyProfile);
+
+    const userPrompt = `Generate ${engagement === "sub" ? "a CAPABILITIES STATEMENT / TEAMING SUBMISSION" : "a complete proposal"} for the following solicitation:
 
 Title: ${opportunity.title || "N/A"}
 Solicitation #: ${opportunity.solicitationNumber || "N/A"}
@@ -86,7 +107,8 @@ Place of Performance: ${JSON.stringify(opportunity.placeOfPerformance || {})}
 Description:
 ${opportunity.description || "(No description provided — infer from title and agency)"}
 
-Generate the FULL proposal now following all sections from the system prompt.`;
+${engagement === "sub" ? `Generate the FULL capabilities/teaming document now following all sections from the system prompt.` : `Generate the FULL proposal now following all sections from the system prompt.`}`;
+
 
     let res: Response;
     try {

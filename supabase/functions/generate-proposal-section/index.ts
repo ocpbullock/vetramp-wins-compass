@@ -99,7 +99,40 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
   compliance_matrix: `Write the COMPLIANCE CROSS-REFERENCE MATRIX as the proposal's final appendix.
 - One markdown TABLE: | Req # | SOW Reference | Requirement (verbatim quote) | Proposal Section | Page # |.
 - If complianceMatrix is provided, render those rows. Otherwise, derive a best-effort matrix from the SOW text or attachments.`,
+
+  // ----- Capabilities statement sections (engagement_type = "sub") -----
+  cap_cover_letter: `Write a one-page COVER LETTER addressed to the PRIME contractor's capture/business-development lead.
+- Reference the opportunity by title and solicitation number.
+- State explicitly that the offeror is pursuing this as a SUBCONTRACTOR under the prime.
+- Connect the offeror's experience (from COMPANY PROFILE) to the prime's needs on this opportunity.
+- 3 short paragraphs. No generic boilerplate.`,
+  cap_company_overview: `Write a CAPABILITIES OVERVIEW (1 page).
+- Who we are (legal name, certifications, UEI/CAGE only if present in profile).
+- Core services and competencies, narrowed to the TARGETED SCOPE AREAS.
+- Geographic reach and clearance posture.`,
+  cap_relevant_past_performance: `Write RELEVANT PAST PERFORMANCE for the targeted scope area.
+- One markdown TABLE: | Contract | Agency | Value | Period | Scope Relevance |.
+- Use ONLY entries from the PAST PERFORMANCE LIBRARY / company profile past_performance.
+- For each row include a one-sentence relevance note tied to the targeted scope.`,
+  cap_key_personnel: `Write KEY PERSONNEL.
+- TABLE: | Name | Role | Years Experience | Clearance | Relevance to Scope |.
+- If a name is unknown use "[TO BE NAMED]" — never invent identities.`,
+  cap_certifications_clearances: `Write CERTIFICATIONS & CLEARANCES.
+- Business certifications TABLE built strictly from the COMPANY PROFILE.
+- Map each cert to the prime's likely small-business subcontracting plan needs.
+- Personnel clearance posture aligned with the targeted scope.`,
+  cap_fit_for_prime: `Write WHY WE FIT THIS PRIME ON THIS OPPORTUNITY.
+- 2-3 paragraphs.
+- Reference the prime by name (from PRIME CONTRACTOR in the engagement block).
+- Tie offeror differentiators to the prime's known win themes / sub needs (use CUSTOMER INTELLIGENCE when present).
+- Close with a clear ask (subcontract scope, work-share, role).`,
+  cap_differentiators: `Write DIFFERENTIATORS FOR THE TARGETED SCOPE.
+- 5 bullet differentiators, each tied to a specific proof point from the COMPANY PROFILE or past performance.
+- No generic claims.`,
 };
+
+
+
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -123,7 +156,11 @@ Deno.serve(async (req) => {
       teamId,
       userId: _ignoredUserId,
       proposalId,
+      engagementType,
+      primeContractorName,
+      targetedScopeAreas,
     } = body;
+    const engagement = engagementType === "sub" ? "sub" : "prime";
 
     if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
 
@@ -142,12 +179,21 @@ Deno.serve(async (req) => {
     const identity = companyIdentity(companyProfile);
     const profileBlock = renderCompanyProfileBlock(companyProfile);
 
+    const engagementBlock = engagement === "sub"
+      ? `ENGAGEMENT MODE: SUBCONTRACTOR. The offeror is pursuing this opportunity as a SUB under the prime contractor named below — NOT as the prime. Write content appropriate for a capabilities statement / teaming submission directed at the prime, focused on the targeted scope area. Do NOT produce full Section L/M proposal volumes. Reference the prime by name, explain fit for the prime, and emphasize relevant past performance, key personnel, certifications/clearances, and differentiators for the targeted scope.
+PRIME CONTRACTOR: ${primeContractorName || "(unspecified)"}
+TARGETED SCOPE AREAS: ${targetedScopeAreas || "(unspecified)"}
+`
+      : `ENGAGEMENT MODE: PRIME. The offeror is pursuing this opportunity as the PRIME contractor. Address Section L instructions and Section M evaluation criteria in full.
+`;
+
     const systemPrompt = `You are a senior federal capture manager writing ONE section of a proposal for ${identity}.
 Output MARKDOWN only — no preamble, no closing remarks.
 Every "shall" requirement in the SOW must be addressed if this section covers it. Use the unit's terminology, not generic federal-speak.
 Use markdown tables for structured data. Quote SOW requirements verbatim when referencing them.
 The COMPANY PROFILE below is the sole source of truth for who the offeror is — do not invent identity, certifications, locations, past performance, or recruiting pipelines that are not listed.
 
+${engagementBlock}
 COMPANY PROFILE:
 ${profileBlock}
 
@@ -171,6 +217,7 @@ ${pastPerformance && pastPerformance.length ? `PAST PERFORMANCE LIBRARY (selecte
 ${attachmentsText ? `SOLICITATION ATTACHMENT TEXT (truncated):\n${String(attachmentsText).slice(0, 30000)}\n` : ""}
 
 CRITICAL: Before writing, briefly research the end-user unit from context (mission, facility, terminology) and weave at least 3 unit-specific details into the section. If you cannot identify the unit, say so explicitly with [TO BE VERIFIED].`;
+
 
     const userPrompt = `Write the proposal section: "${sectionTitle}" (id: ${sectionId}).
 
