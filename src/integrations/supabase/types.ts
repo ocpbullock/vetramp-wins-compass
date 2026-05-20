@@ -593,6 +593,69 @@ export type Database = {
           },
         ]
       }
+      proposal_outreach_drafts: {
+        Row: {
+          content: string
+          created_at: string
+          fit_rationale: Json
+          generated_by: string
+          id: string
+          outreach_type: string
+          partner_id: string | null
+          partner_name: string
+          proposal_id: string
+          relationship_model: string
+          status: string
+          subject: string | null
+          updated_at: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          fit_rationale?: Json
+          generated_by: string
+          id?: string
+          outreach_type?: string
+          partner_id?: string | null
+          partner_name: string
+          proposal_id: string
+          relationship_model?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          fit_rationale?: Json
+          generated_by?: string
+          id?: string
+          outreach_type?: string
+          partner_id?: string | null
+          partner_name?: string
+          proposal_id?: string
+          relationship_model?: string
+          status?: string
+          subject?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "proposal_outreach_drafts_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "teaming_partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposal_outreach_drafts_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       proposal_teaming: {
         Row: {
           created_at: string
