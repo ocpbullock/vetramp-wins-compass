@@ -421,8 +421,9 @@ function ProposalPipeline() {
       score += Math.round((verified / reqs.length) * 10);
     }
     if (proposal.staffing_plan) score += 10;
-    const generated = SECTIONS.filter((s) => proposal.sections?.[s.id]?.content).length;
-    score += Math.round((generated / SECTIONS.length) * 20);
+    const secs = sectionsFor(proposal);
+    const generated = secs.filter((s) => proposal.sections?.[s.id]?.content).length;
+    score += Math.round((generated / secs.length) * 20);
     if (ociStatus(proposal.oci_screening) === "incomplete") score -= 5;
     return Math.max(0, Math.min(100, score));
   }, [proposal, attachments]);
