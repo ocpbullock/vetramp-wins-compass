@@ -201,12 +201,16 @@ export function TeamCompositionAnalyzer({
   const updateMember = (id: string, patch: Partial<PwinTeamMember>) =>
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
 
+  const MAX_SCENARIOS = 6;
   const saveScenario = async () => {
     const name = scenarioName.trim() || `Scenario ${scenarios.length + 1}`;
-    if (scenarios.length >= 3) {
-      toast.error("Maximum 3 scenarios saved. Delete one first.");
+    if (scenarios.length >= MAX_SCENARIOS) {
+      toast.error(`Maximum ${MAX_SCENARIOS} scenarios saved. Delete one first.`);
       return;
     }
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id;
+    if (!uid) { toast.error("You must be signed in to save a scenario."); return; }
     const { error } = await supabase.from("pwin_scenarios").insert({
       proposal_id: proposalId,
       scenario_name: name,
@@ -214,6 +218,7 @@ export function TeamCompositionAnalyzer({
       pwin_score: result.pwin,
       factor_scores: result.factors as any,
       engagement_type: ctx.engagementType,
+      created_by: uid,
     });
     if (error) { toast.error(error.message); return; }
     toast.success(`Saved "${name}"`);
@@ -235,7 +240,7 @@ export function TeamCompositionAnalyzer({
             <Sparkles className="w-4 h-4 text-primary" /> Team Composition Analyzer
           </DialogTitle>
           <DialogDescription>
-            Toggle partners, set roles and work share, and watch the win-probability score react.
+            Toggle partners, set roles and work share to compare scenario estimates of win probability. Scores are heuristic estimates, not guaranteed probabilities.
           </DialogDescription>
         </DialogHeader>
 
@@ -271,7 +276,7 @@ export function TeamCompositionAnalyzer({
                 <PwinPanel result={result} />
 
                 <div className="mt-6 border-t pt-4 space-y-3">
-                  <Label className="text-xs">Save this scenario ({scenarios.length}/3)</Label>
+                  <Label className="text-xs">Save this scenario ({scenarios.length}/{MAX_SCENARIOS})</Label>
                   <div className="flex gap-2">
                     <Input
                       value={scenarioName}
@@ -279,7 +284,7 @@ export function TeamCompositionAnalyzer({
                       placeholder="e.g. Us as prime with TechCorp"
                       className="h-8 text-sm"
                     />
-                    <Button size="sm" onClick={saveScenario} disabled={scenarios.length >= 3}>
+                    <Button size="sm" onClick={saveScenario} disabled={scenarios.length >= MAX_SCENARIOS}>
                       <Save className="w-3.5 h-3.5 mr-1" /> Save
                     </Button>
                   </div>
@@ -397,10 +402,13 @@ function PwinPanel({ result }: { result: PwinResult }) {
   return (
     <div>
       <div className="text-center py-4 border rounded-md">
-        <div className="text-xs uppercase tracking-wider text-muted-foreground">Probability of win</div>
+        <div className="text-xs uppercase tracking-wider text-muted-foreground">Estimated win probability</div>
         <div className={`text-6xl font-bold tabular-nums ${headColor}`}>{result.pwin}%</div>
         <div className="text-[11px] text-muted-foreground mt-1">
           Partners allocated {result.totalPartnerShare}% · your share {result.selfShare}%
+        </div>
+        <div className="text-[10px] text-muted-foreground mt-1 italic">
+          Scenario estimate based on team inputs — not a guaranteed probability.
         </div>
       </div>
 
