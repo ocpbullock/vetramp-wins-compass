@@ -273,9 +273,39 @@ export function TeamCompositionAnalyzer({
           </TabsList>
 
           <TabsContent value="builder" className="mt-0">
+            {/* Relationship model + targeted scope — drive PWIN weighting */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
+              <div>
+                <Label className="text-xs">Relationship model</Label>
+                <Select
+                  value={relationshipModel}
+                  onValueChange={(v) => setRelationshipModel(v as RelationshipModel)}
+                >
+                  <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {RELATIONSHIP_MODELS.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  Reweights factors — e.g. sub mode emphasizes prime relationship and scope fit.
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Targeted scope areas (comma or newline separated)</Label>
+                <Textarea
+                  value={scopeAreas}
+                  onChange={(e) => setScopeAreas(e.target.value)}
+                  placeholder="e.g. cybersecurity engineering, zero trust, cloud migration"
+                  className="text-sm mt-1 min-h-[68px]"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4 pb-6">
               {/* LEFT: Team Builder */}
-              <ScrollArea className="h-[62vh] pr-3">
+              <ScrollArea className="h-[58vh] pr-3">
                 <div className="space-y-3">
                   {members.filter((m) => m.isSelf).map((m) => (
                     <SelfCard key={m.id} member={m} selfShare={result.selfShare} overAllocated={result.overAllocated} />
@@ -294,8 +324,9 @@ export function TeamCompositionAnalyzer({
               </ScrollArea>
 
               {/* RIGHT: Pwin score & factors */}
-              <ScrollArea className="h-[62vh] pr-3">
+              <ScrollArea className="h-[58vh] pr-3">
                 <PwinPanel result={result} />
+                <InsightsPanel insights={insights} />
 
                 <div className="mt-6 border-t pt-4 space-y-3">
                   <Label className="text-xs">Save this scenario ({scenarios.length}/{MAX_SCENARIOS})</Label>
@@ -314,6 +345,7 @@ export function TeamCompositionAnalyzer({
               </ScrollArea>
             </div>
           </TabsContent>
+
 
           <TabsContent value="compare" className="mt-0">
             <ScrollArea className="h-[62vh] pt-4 pb-6 pr-3">
