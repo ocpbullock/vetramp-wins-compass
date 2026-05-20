@@ -296,7 +296,10 @@ export function TeamCompositionAnalyzer({
       scopeKeywords,
       incumbentName: proposal.customer_intel?.predecessor_contract?.incumbent ?? null,
     };
-  }, [proposal, relationshipModel, scopeAreas]);
+  }, [
+    proposal.naics_code, proposal.contract_type, proposal.agency, proposal.set_aside,
+    incumbentName, relationshipModel, scopeAreas,
+  ]);
 
   const result: PwinResult = useMemo(() => calculatePwin(ctx, members), [ctx, members]);
   const insights: ScenarioInsights = useMemo(
