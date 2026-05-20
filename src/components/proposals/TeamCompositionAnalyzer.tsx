@@ -164,7 +164,7 @@ export function TeamCompositionAnalyzer({
         isSelf: false,
         role: defaultRole,
         workShare: e?.work_share_pct ?? 0,
-        active: !!e || isThePrime,
+        active: !!e || !!isThePrime,
         certifications: p.certifications ?? [],
         naicsCodes: p.naics_codes ?? [],
         contractVehicles: (p as any).contract_vehicles ?? [],
