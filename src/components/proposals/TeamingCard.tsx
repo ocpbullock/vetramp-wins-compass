@@ -44,15 +44,17 @@ export type TeamingEntry = {
 };
 
 export function TeamingCard({
-  proposalId, teamId, opportunityNaics,
+  proposalId, teamId, opportunityNaics, proposal,
 }: {
   proposalId: string;
   teamId: string | null;
   opportunityNaics?: string | null;
+  proposal?: any;
 }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [picker, setPicker] = useState(false);
+  const [analyzerOpen, setAnalyzerOpen] = useState(false);
 
   const { data: partners = [] } = useQuery({
     queryKey: ["teaming-partners", teamId],
