@@ -33,7 +33,7 @@ import { validateProposal, validateComplianceMatrix, type ValidationIssue } from
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
-const SECTIONS: { id: string; title: string }[] = [
+const PRIME_SECTIONS: { id: string; title: string }[] = [
   { id: "cover_letter", title: "Cover Letter" },
   { id: "executive_summary", title: "Executive Summary" },
   { id: "technical_approach", title: "Technical Approach" },
@@ -42,6 +42,19 @@ const SECTIONS: { id: string; title: string }[] = [
   { id: "staffing_plan", title: "Staffing Plan" },
   { id: "compliance_matrix", title: "Compliance Cross-Reference Matrix" },
 ];
+
+const SUB_SECTIONS: { id: string; title: string }[] = [
+  { id: "cap_cover_letter", title: "Cover Letter to Prime" },
+  { id: "cap_company_overview", title: "Company Overview" },
+  { id: "cap_core_capabilities", title: "Core Capabilities" },
+  { id: "cap_relevant_past_performance", title: "Relevant Past Performance" },
+  { id: "cap_differentiators", title: "Differentiators" },
+  { id: "cap_proposed_scope", title: "Proposed Scope Under Prime" },
+];
+
+function sectionsFor(proposal: any) {
+  return proposal?.engagement_type === "sub" ? SUB_SECTIONS : PRIME_SECTIONS;
+}
 
 type Section = { content: string; status: "draft" | "reviewed" | "final"; word_count: number };
 
