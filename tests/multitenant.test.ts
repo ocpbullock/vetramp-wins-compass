@@ -284,3 +284,90 @@ describe("multi-tenant: outsider has no path into team data", () => {
     );
   });
 });
+
+describe("multi-tenant: in-progress proposal lists rely on RLS, not user_id filter", () => {
+  const root = resolve(__dirname, "..");
+  const r = (p: string) => readFileSync(resolve(root, p), "utf8");
+
+  it("InProgressTab does not over-filter by user_id (would hide teammates)", () => {
+    const src = r("src/components/dashboard/InProgressTab.tsx");
+    // The list query selects from proposals and must NOT add an
+    // .eq("user_id", ...) filter — RLS already restricts visibility to
+    // owner / org-team member / opp-team member.
+    const queryBlock = src.split('.from("proposals")')[1] ?? "";
+    const upToOrder = queryBlock.split(".order(")[0];
+    expect(upToOrder).not.toMatch(/\.eq\(["']user_id["']/);
+  });
+
+  it("dashboard in-progress count does not filter by user_id either", () => {
+    const src = r("src/routes/index.tsx");
+    const m = src.match(/setInProgressCount[\s\S]*?\}\)\(\);/);
+    expect(m, "expected an in-progress count effect").toBeTruthy();
+    expect(m![0]).not.toMatch(/\.eq\(["']user_id["']/);
+  });
+});
+
+describe("multi-tenant: proposals from tracked opportunities inherit the org team", () => {
+  const root = resolve(__dirname, "..");
+  const src = readFileSync(resolve(root, "src/routes/index.tsx"), "utf8");
+
+  it("handlePropose looks up tracked_opportunities.team_id for tracked source", () => {
+    expect(src).toMatch(/source\.kind === ["']tracked["']/);
+    expect(src).toMatch(/from\(["']tracked_opportunities["']\)[\s\S]{0,200}select\(["']team_id["']\)/);
+  });
+
+  it("handlePropose reuses an existing accessible proposal instead of duplicating", () => {
+    // Before insert, the function checks for an existing proposal scoped
+    // by opportunity_source + opportunity_source_id (RLS-scoped to caller).
+    expect(src).toMatch(/\.eq\(["']opportunity_source["'],\s*["']tracked["']\)/);
+    expect(src).toMatch(/\.eq\(["']opportunity_source_id["'],\s*source\.id\)/);
+    expect(src).toMatch(/navigate\(\{\s*to:\s*["']\/proposals\/\$proposalId["']/);
+  });
+
+  it("new proposal insert uses the tracked opp's team_id, not the currently-selected team", () => {
+    expect(src).toMatch(/effectiveTeamId/);
+    expect(src).toMatch(/team_id:\s*effectiveTeamId/);
+  });
+});
+
+describe("multi-tenant: proposal RLS lets org teammates read documents/research", () => {
+  // The acceptance criterion "User B in the same organization sees User A's
+  // documents/research" depends on three RLS layers, all already present in
+  // earlier migrations but worth pinning so regressions show up here.
+  const root = resolve(__dirname, "..");
+  const ddl = readdirSync(resolve(root, "supabase/migrations"))
+    .map((f) => readFileSync(resolve(root, "supabase/migrations", f), "utf8"))
+    .join("\n");
+
+  it("proposals SELECT widens to is_team_member(team_id)", () => {
+    expect(ddl).toMatch(/proposals[\s\S]*FOR\s+SELECT[\s\S]*is_team_member\(\s*team_id/i);
+  });
+
+  it("proposal_attachments visibility delegates to user_can_see_proposal", () => {
+    expect(ddl).toMatch(/proposal_attachments[\s\S]*FOR\s+SELECT[\s\S]*user_can_see_proposal/i);
+  });
+
+  it("user_can_see_proposal includes team_id and opportunity_team_id paths", () => {
+    expect(ddl).toMatch(/user_can_see_proposal[\s\S]*is_team_member\(\s*p\.team_id/);
+    expect(ddl).toMatch(/user_can_see_proposal[\s\S]*is_team_member\(\s*p\.opportunity_team_id/);
+  });
+});
+
+describe("multi-tenant: tracked opportunity row links to the existing shared proposal", () => {
+  const root = resolve(__dirname, "..");
+  const src = readFileSync(resolve(root, "src/components/dashboard/TrackedOpportunitiesTab.tsx"), "utf8");
+
+  it("loads a tracked-id → proposal-id map for already-existing proposals", () => {
+    expect(src).toMatch(/proposalByTracked/);
+    expect(src).toMatch(/\.eq\(["']opportunity_source["'],\s*["']tracked["']\)/);
+    expect(src).toMatch(/\.in\(["']opportunity_source_id["'],\s*ids\)/);
+  });
+
+  it("renders an Open-proposal control when a proposal already exists", () => {
+    expect(src).toMatch(/Open existing team proposal workspace/);
+  });
+
+  it("does not destructively merge duplicates — just warns", () => {
+    expect(src).toMatch(/duplicate proposals detected/);
+  });
+});

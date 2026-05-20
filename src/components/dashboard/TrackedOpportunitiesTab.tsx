@@ -12,7 +12,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users } from "lucide-react";
+import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users, FolderOpen } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -90,7 +91,9 @@ export function TrackedOpportunitiesTab({
   onPropose?: (opp: SamOpportunity, trackedId: string) => void;
 }) {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [items, setItems] = useState<TrackedOpportunity[]>([]);
+  const [proposalByTracked, setProposalByTracked] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<TrackedOpportunity | null>(null);
@@ -131,7 +134,35 @@ export function TrackedOpportunitiesTab({
       .order("created_at", { ascending: false });
     setLoading(false);
     if (error) { toast.error(error.message); return; }
-    setItems((data ?? []) as TrackedOpportunity[]);
+    const rows = (data ?? []) as TrackedOpportunity[];
+    setItems(rows);
+    // Look up existing proposals for these tracked opps so we can offer
+    // "Open existing proposal" instead of silently creating a duplicate.
+    // RLS scopes results to proposals the caller can already see.
+    const ids = rows.map((r) => r.id);
+    if (ids.length) {
+      const { data: props } = await supabase
+        .from("proposals")
+        .select("id, opportunity_source_id, created_at")
+        .eq("opportunity_source", "tracked")
+        .in("opportunity_source_id", ids)
+        .order("created_at", { ascending: true });
+      const map: Record<string, string> = {};
+      const dupes = new Set<string>();
+      for (const p of props ?? []) {
+        const k = p.opportunity_source_id as string | null;
+        if (!k) continue;
+        if (map[k]) dupes.add(k); else map[k] = p.id;
+      }
+      setProposalByTracked(map);
+      if (dupes.size > 0) {
+        // Non-destructive: just surface the duplicates so a human can decide.
+        // eslint-disable-next-line no-console
+        console.warn("[tracked-opps] duplicate proposals detected for", Array.from(dupes));
+      }
+    } else {
+      setProposalByTracked({});
+    }
   };
 
   useEffect(() => { load(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [user]);
@@ -293,7 +324,16 @@ export function TrackedOpportunitiesTab({
                           <Swords className="w-4 h-4 text-primary" />
                         </Button>
                       )}
-                      {onPropose && (
+                      {proposalByTracked[i.id] ? (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: proposalByTracked[i.id] } })}
+                          title="Open existing team proposal workspace"
+                        >
+                          <FolderOpen className="w-4 h-4 text-primary" />
+                        </Button>
+                      ) : onPropose && (
                         <Button size="sm" variant="ghost" onClick={() => onPropose(trackedToOpp(i), i.id)} title="Start proposal">
                           <FileSignature className="w-4 h-4 text-money" />
                         </Button>
