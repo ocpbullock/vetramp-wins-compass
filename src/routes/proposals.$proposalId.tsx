@@ -1023,6 +1023,10 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
           userId: session?.user?.id,
           proposalId,
           teamId: proposal.team_id ?? null,
+          engagementType: proposal.engagement_type ?? "prime",
+          primeContractorName: proposal.prime_contractor_name ?? null,
+          primeContractorId: proposal.prime_contractor_id ?? null,
+          targetedScopeAreas: proposal.targeted_scope_areas ?? null,
           skipCache,
         }),
       });
