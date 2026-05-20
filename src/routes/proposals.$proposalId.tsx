@@ -396,7 +396,7 @@ function ProposalPipeline() {
 
   async function exportDocx() {
     try {
-      await exportProposalDocx({ proposal, companyProfile, sectionDefs: SECTIONS });
+      await exportProposalDocx({ proposal, companyProfile, sectionDefs: sectionsFor(proposal) });
       toast.success("Proposal exported");
     } catch (e: any) {
       toast.error(`Export failed: ${e?.message ?? e}`);
