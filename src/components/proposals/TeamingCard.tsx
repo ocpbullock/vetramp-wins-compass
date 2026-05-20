@@ -143,12 +143,44 @@ export function TeamingCard({
           <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Teaming</CardTitle>
           <CardDescription>Partners on this bid, their role, and work share.</CardDescription>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {proposal && (
             <Button size="sm" variant="secondary" onClick={() => setAnalyzerOpen(true)} disabled={!teamId}>
               <Sparkles className="w-4 h-4 mr-1" /> Analyze team
             </Button>
           )}
+          {proposal && (
+            <Popover open={outreachPicker} onOpenChange={setOutreachPicker}>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="secondary" disabled={!teamId}>
+                  <Mail className="w-4 h-4 mr-1" /> Draft outreach
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-2" align="end">
+                <div className="text-xs text-muted-foreground px-1 pb-2">Pick a partner to draft outreach for.</div>
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {partners.length === 0 && (
+                    <div className="text-xs text-muted-foreground p-2">No partners yet. Add some in Settings → Teaming Partners.</div>
+                  )}
+                  {partners.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => { setOutreachPicker(false); openOutreach(p); }}
+                      className="w-full text-left px-2 py-1.5 rounded hover:bg-accent text-sm"
+                    >
+                      <div className="font-medium">{p.company_name}</div>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {p.certifications.slice(0, 4).map((c) => (
+                          <Badge key={c} variant="outline" className="text-[10px]">{c}</Badge>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+
           <Popover open={picker} onOpenChange={setPicker}>
           <PopoverTrigger asChild>
             <Button size="sm" variant="outline" disabled={!teamId}>
