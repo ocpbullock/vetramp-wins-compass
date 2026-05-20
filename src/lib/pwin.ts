@@ -47,6 +47,7 @@ export type PwinTeamMember = {
 
 export type PwinContext = {
   engagementType: EngagementType;
+  relationshipModel?: RelationshipModel; // optional: reweights factors per teaming model
   opportunityNaics: string[];     // codes for the opp
   opportunityAgency?: string | null;
   setAside?: string | null;       // e.g. "SDVOSB", "8(a)", "WOSB", "Total_Small_Business", null
