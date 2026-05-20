@@ -699,13 +699,16 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
               <div className="space-y-3 pt-2 border-t border-border">
                 <div>
                   <Label>Prime contractor *</Label>
-                  <Input
-                    value={local.prime_contractor_name ?? ""}
-                    onChange={(e) => setLocal({ ...local, prime_contractor_name: e.target.value })}
-                    onBlur={() => onPatch({ prime_contractor_name: local.prime_contractor_name || null })}
-                    placeholder="Enter prime name (search teaming partners coming soon)"
+                  <PrimeContractorCombobox
+                    teamId={proposal.team_id}
+                    valueId={proposal.prime_contractor_id}
+                    valueName={proposal.prime_contractor_name}
+                    onChange={(next) => {
+                      setLocal({ ...local, prime_contractor_name: next.prime_contractor_name });
+                      onPatch(next);
+                    }}
                   />
-                  <div className="text-[11px] text-muted-foreground mt-1">Pull from your teaming partner roster, or type a new prime.</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">Pull from your teaming partner roster, or type a new prime to use as free text.</div>
                 </div>
                 <div>
                   <Label>Relevant scope areas *</Label>
