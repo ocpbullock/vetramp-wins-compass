@@ -832,43 +832,59 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Solicitation documents</CardTitle><CardDescription>SOW, Section L/M, amendments</CardDescription></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {proposal.engagement_type === "sub" ? "Scope reference (optional)" : "Solicitation documents"}
+          </CardTitle>
+          <CardDescription>
+            {proposal.engagement_type === "sub"
+              ? "Sub mode: only attach the scope blurb or partner brief if you have one. Full SOW parsing is skipped."
+              : "SOW, Section L/M, amendments"}
+          </CardDescription>
+        </CardHeader>
         <CardContent className="space-y-3">
-          <Button onClick={onAutoFetch} variant="outline" size="sm" className="w-full" disabled={fetching}>
-            {fetching ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
-            {fetching ? "Fetching from SAM.gov…" : "Try auto-fetch from SAM.gov"}
-          </Button>
-
-          <SamFetchResults results={fetchResults} samUrl={proposal.opportunity_data?.uiLink} />
+          {proposal.engagement_type !== "sub" && (
+            <>
+              <Button onClick={onAutoFetch} variant="outline" size="sm" className="w-full" disabled={fetching}>
+                {fetching ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+                {fetching ? "Fetching from SAM.gov…" : "Try auto-fetch from SAM.gov"}
+              </Button>
+              <SamFetchResults results={fetchResults} samUrl={proposal.opportunity_data?.uiLink} />
+            </>
+          )}
 
           <DropZoneUpload onUpload={onUpload} />
 
-          <Button
-            onClick={onParse}
-            disabled={parsing || sowAttachments.length === 0}
-            size="sm"
-            className="w-full"
-          >
-            {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
-            {parsing ? (parseProgress || "Parsing…") : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
-          </Button>
-          {proposal.compliance_matrix && !parsing && (
-            <Button
-              onClick={() => onParse?.({ skipCache: true })}
-              variant="ghost"
-              size="sm"
-              className="w-full text-[11px] h-7"
-              disabled={sowAttachments.length === 0}
-            >
-              <RefreshCw className="w-3 h-3 mr-1" /> Force regenerate (bypass cache)
-            </Button>
+          {proposal.engagement_type !== "sub" && (
+            <>
+              <Button
+                onClick={onParse}
+                disabled={parsing || sowAttachments.length === 0}
+                size="sm"
+                className="w-full"
+              >
+                {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
+                {parsing ? (parseProgress || "Parsing…") : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
+              </Button>
+              {proposal.compliance_matrix && !parsing && (
+                <Button
+                  onClick={() => onParse?.({ skipCache: true })}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-[11px] h-7"
+                  disabled={sowAttachments.length === 0}
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" /> Force regenerate (bypass cache)
+                </Button>
+              )}
+              {parsing && proposal.parsing_status === "parsing" && (
+                <div className="text-[11px] text-muted-foreground">Do not navigate away — parsing in progress.</div>
+              )}
+              <div className="text-[11px] text-muted-foreground">
+                Parsing extracts requirements (Section L/M, "shall" statements) AND auto-fills capture details below — title, agency, contract type, value, PoP, clearance, etc.
+              </div>
+            </>
           )}
-          {parsing && proposal.parsing_status === "parsing" && (
-            <div className="text-[11px] text-muted-foreground">Do not navigate away — parsing in progress.</div>
-          )}
-          <div className="text-[11px] text-muted-foreground">
-            Parsing extracts requirements (Section L/M, "shall" statements) AND auto-fills capture details below — title, agency, contract type, value, PoP, clearance, etc.
-          </div>
           {largeDoc && (
             <div className="text-[11px] rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 px-2 py-1.5">
               <AlertTriangle className="w-3 h-3 inline-block mr-1" />
