@@ -201,12 +201,16 @@ export function TeamCompositionAnalyzer({
   const updateMember = (id: string, patch: Partial<PwinTeamMember>) =>
     setMembers((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
 
+  const MAX_SCENARIOS = 6;
   const saveScenario = async () => {
     const name = scenarioName.trim() || `Scenario ${scenarios.length + 1}`;
-    if (scenarios.length >= 3) {
-      toast.error("Maximum 3 scenarios saved. Delete one first.");
+    if (scenarios.length >= MAX_SCENARIOS) {
+      toast.error(`Maximum ${MAX_SCENARIOS} scenarios saved. Delete one first.`);
       return;
     }
+    const { data: userRes } = await supabase.auth.getUser();
+    const uid = userRes.user?.id;
+    if (!uid) { toast.error("You must be signed in to save a scenario."); return; }
     const { error } = await supabase.from("pwin_scenarios").insert({
       proposal_id: proposalId,
       scenario_name: name,
@@ -214,6 +218,7 @@ export function TeamCompositionAnalyzer({
       pwin_score: result.pwin,
       factor_scores: result.factors as any,
       engagement_type: ctx.engagementType,
+      created_by: uid,
     });
     if (error) { toast.error(error.message); return; }
     toast.success(`Saved "${name}"`);
