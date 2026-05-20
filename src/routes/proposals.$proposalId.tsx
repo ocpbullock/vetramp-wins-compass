@@ -808,6 +808,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           proposalId={proposalId}
           teamId={proposal.team_id ?? null}
           opportunityNaics={proposal.naics_code}
+          proposal={proposal}
         />
 
         <PartnerResearch

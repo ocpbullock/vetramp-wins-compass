@@ -10,9 +10,10 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Plus, Trash2, Users, Search } from "lucide-react";
+import { Plus, Trash2, Users, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import type { Partner } from "@/components/settings/PartnersPanel";
+import { TeamCompositionAnalyzer } from "./TeamCompositionAnalyzer";
 
 const ROLES = [
   { value: "prime", label: "Prime" },
@@ -43,15 +44,17 @@ export type TeamingEntry = {
 };
 
 export function TeamingCard({
-  proposalId, teamId, opportunityNaics,
+  proposalId, teamId, opportunityNaics, proposal,
 }: {
   proposalId: string;
   teamId: string | null;
   opportunityNaics?: string | null;
+  proposal?: any;
 }) {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [picker, setPicker] = useState(false);
+  const [analyzerOpen, setAnalyzerOpen] = useState(false);
 
   const { data: partners = [] } = useQuery({
     queryKey: ["teaming-partners", teamId],
@@ -129,7 +132,13 @@ export function TeamingCard({
           <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Teaming</CardTitle>
           <CardDescription>Partners on this bid, their role, and work share.</CardDescription>
         </div>
-        <Popover open={picker} onOpenChange={setPicker}>
+        <div className="flex items-center gap-2">
+          {proposal && (
+            <Button size="sm" variant="secondary" onClick={() => setAnalyzerOpen(true)} disabled={!teamId}>
+              <Sparkles className="w-4 h-4 mr-1" /> Analyze team
+            </Button>
+          )}
+          <Popover open={picker} onOpenChange={setPicker}>
           <PopoverTrigger asChild>
             <Button size="sm" variant="outline" disabled={!teamId}>
               <Plus className="w-4 h-4 mr-1" /> Add partner
@@ -166,7 +175,8 @@ export function TeamingCard({
               ))}
             </div>
           </PopoverContent>
-        </Popover>
+          </Popover>
+        </div>
       </CardHeader>
       <CardContent className="space-y-3">
         {entries.length === 0 && (
@@ -227,6 +237,13 @@ export function TeamingCard({
           <TotalShare entries={entries} />
         )}
       </CardContent>
+      {proposal && (
+        <TeamCompositionAnalyzer
+          open={analyzerOpen}
+          onOpenChange={setAnalyzerOpen}
+          proposal={proposal}
+        />
+      )}
     </Card>
   );
 }

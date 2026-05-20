@@ -797,6 +797,45 @@ export type Database = {
           },
         ]
       }
+      pwin_scenarios: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          engagement_type: string
+          factor_scores: Json
+          id: string
+          proposal_id: string
+          pwin_score: number
+          scenario_name: string
+          team_composition: Json
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          engagement_type?: string
+          factor_scores?: Json
+          id?: string
+          proposal_id: string
+          pwin_score?: number
+          scenario_name: string
+          team_composition?: Json
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          engagement_type?: string
+          factor_scores?: Json
+          id?: string
+          proposal_id?: string
+          pwin_score?: number
+          scenario_name?: string
+          team_composition?: Json
+          updated_at?: string
+        }
+        Relationships: []
+      }
       starred_opportunities: {
         Row: {
           created_at: string
