@@ -123,7 +123,11 @@ Deno.serve(async (req) => {
       teamId,
       userId: _ignoredUserId,
       proposalId,
+      engagementType,
+      primeContractorName,
+      targetedScopeAreas,
     } = body;
+    const engagement = engagementType === "sub" ? "sub" : "prime";
 
     if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
 
@@ -142,12 +146,21 @@ Deno.serve(async (req) => {
     const identity = companyIdentity(companyProfile);
     const profileBlock = renderCompanyProfileBlock(companyProfile);
 
+    const engagementBlock = engagement === "sub"
+      ? `ENGAGEMENT MODE: SUBCONTRACTOR. The offeror is pursuing this opportunity as a SUB under the prime contractor named below — NOT as the prime. Write content appropriate for a capabilities statement / teaming submission directed at the prime, focused on the targeted scope area. Do NOT produce full Section L/M proposal volumes. Reference the prime by name, explain fit for the prime, and emphasize relevant past performance, key personnel, certifications/clearances, and differentiators for the targeted scope.
+PRIME CONTRACTOR: ${primeContractorName || "(unspecified)"}
+TARGETED SCOPE AREAS: ${targetedScopeAreas || "(unspecified)"}
+`
+      : `ENGAGEMENT MODE: PRIME. The offeror is pursuing this opportunity as the PRIME contractor. Address Section L instructions and Section M evaluation criteria in full.
+`;
+
     const systemPrompt = `You are a senior federal capture manager writing ONE section of a proposal for ${identity}.
 Output MARKDOWN only — no preamble, no closing remarks.
 Every "shall" requirement in the SOW must be addressed if this section covers it. Use the unit's terminology, not generic federal-speak.
 Use markdown tables for structured data. Quote SOW requirements verbatim when referencing them.
 The COMPANY PROFILE below is the sole source of truth for who the offeror is — do not invent identity, certifications, locations, past performance, or recruiting pipelines that are not listed.
 
+${engagementBlock}
 COMPANY PROFILE:
 ${profileBlock}
 
@@ -171,6 +184,7 @@ ${pastPerformance && pastPerformance.length ? `PAST PERFORMANCE LIBRARY (selecte
 ${attachmentsText ? `SOLICITATION ATTACHMENT TEXT (truncated):\n${String(attachmentsText).slice(0, 30000)}\n` : ""}
 
 CRITICAL: Before writing, briefly research the end-user unit from context (mission, facility, terminology) and weave at least 3 unit-specific details into the section. If you cannot identify the unit, say so explicitly with [TO BE VERIFIED].`;
+
 
     const userPrompt = `Write the proposal section: "${sectionTitle}" (id: ${sectionId}).
 
