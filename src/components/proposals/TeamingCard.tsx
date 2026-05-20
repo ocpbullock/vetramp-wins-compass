@@ -148,6 +148,7 @@ export function TeamingCard({
   };
 
   return (
+    <div className="space-y-4">
     <Card>
       <CardHeader className="flex-row items-start justify-between gap-2 space-y-0">
         <div>
