@@ -15,11 +15,13 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Save, Trash2, AlertTriangle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Save, Trash2, AlertTriangle, ThumbsUp, ThumbsDown, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import {
-  calculatePwin, colorFor,
+  calculatePwin, colorFor, deriveInsights, engagementForModel, RELATIONSHIP_MODELS,
   type PwinTeamMember, type PwinContext, type PwinRole, type EngagementType, type PwinResult,
+  type RelationshipModel, type ScenarioInsights,
 } from "@/lib/pwin";
 import type { Partner } from "@/components/settings/PartnersPanel";
 
@@ -41,6 +43,7 @@ type ProposalLite = {
   engagement_type: EngagementType;
   prime_contractor_id: string | null;
   prime_contractor_name: string | null;
+  targeted_scope_areas?: string | null;
   customer_intel: any;
   opportunity_data: any;
 };
@@ -129,6 +132,10 @@ export function TeamCompositionAnalyzer({
   // --- build members state
   const [members, setMembers] = useState<PwinTeamMember[]>([]);
   const [scenarioName, setScenarioName] = useState("");
+  const [relationshipModel, setRelationshipModel] = useState<RelationshipModel>(
+    proposal.engagement_type === "sub" ? "sub_to_prime" : "prime_with_subs",
+  );
+  const [scopeAreas, setScopeAreas] = useState<string>(proposal.targeted_scope_areas ?? "");
 
   // Initialize members when data ready
   useEffect(() => {
@@ -184,18 +191,27 @@ export function TeamCompositionAnalyzer({
     const reqVehicles: string[] = [];
     const ct = proposal.contract_type;
     if (ct && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(ct)) reqVehicles.push(ct);
+    const scopeKeywords = scopeAreas
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     return {
-      engagementType: proposal.engagement_type,
+      engagementType: engagementForModel(relationshipModel),
+      relationshipModel,
       opportunityNaics: oppNaics,
       opportunityAgency: proposal.agency,
       setAside: proposal.set_aside,
       requiredVehicles: reqVehicles,
-      scopeKeywords: [],
+      scopeKeywords,
       incumbentName: proposal.customer_intel?.predecessor_contract?.incumbent ?? null,
     };
-  }, [proposal]);
+  }, [proposal, relationshipModel, scopeAreas]);
 
   const result: PwinResult = useMemo(() => calculatePwin(ctx, members), [ctx, members]);
+  const insights: ScenarioInsights = useMemo(
+    () => deriveInsights(result, relationshipModel),
+    [result, relationshipModel],
+  );
 
   // --- mutations
   const updateMember = (id: string, patch: Partial<PwinTeamMember>) =>
@@ -218,6 +234,11 @@ export function TeamCompositionAnalyzer({
       pwin_score: result.pwin,
       factor_scores: result.factors as any,
       engagement_type: ctx.engagementType,
+      relationship_model: relationshipModel,
+      targeted_scope_areas: scopeAreas || null,
+      strengths: insights.strengths as any,
+      weaknesses: insights.weaknesses as any,
+      recommended_action: insights.recommendedAction,
       created_by: uid,
     });
     if (error) { toast.error(error.message); return; }
@@ -225,6 +246,7 @@ export function TeamCompositionAnalyzer({
     setScenarioName("");
     refetchScenarios();
   };
+
 
   const deleteScenario = async (id: string) => {
     const { error } = await supabase.from("pwin_scenarios").delete().eq("id", id);
@@ -251,9 +273,39 @@ export function TeamCompositionAnalyzer({
           </TabsList>
 
           <TabsContent value="builder" className="mt-0">
+            {/* Relationship model + targeted scope — drive PWIN weighting */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
+              <div>
+                <Label className="text-xs">Relationship model</Label>
+                <Select
+                  value={relationshipModel}
+                  onValueChange={(v) => setRelationshipModel(v as RelationshipModel)}
+                >
+                  <SelectTrigger className="h-9 text-sm mt-1"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {RELATIONSHIP_MODELS.map((r) => (
+                      <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="text-[11px] text-muted-foreground mt-1">
+                  Reweights factors — e.g. sub mode emphasizes prime relationship and scope fit.
+                </div>
+              </div>
+              <div>
+                <Label className="text-xs">Targeted scope areas (comma or newline separated)</Label>
+                <Textarea
+                  value={scopeAreas}
+                  onChange={(e) => setScopeAreas(e.target.value)}
+                  placeholder="e.g. cybersecurity engineering, zero trust, cloud migration"
+                  className="text-sm mt-1 min-h-[68px]"
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4 pb-6">
               {/* LEFT: Team Builder */}
-              <ScrollArea className="h-[62vh] pr-3">
+              <ScrollArea className="h-[58vh] pr-3">
                 <div className="space-y-3">
                   {members.filter((m) => m.isSelf).map((m) => (
                     <SelfCard key={m.id} member={m} selfShare={result.selfShare} overAllocated={result.overAllocated} />
@@ -272,8 +324,9 @@ export function TeamCompositionAnalyzer({
               </ScrollArea>
 
               {/* RIGHT: Pwin score & factors */}
-              <ScrollArea className="h-[62vh] pr-3">
+              <ScrollArea className="h-[58vh] pr-3">
                 <PwinPanel result={result} />
+                <InsightsPanel insights={insights} />
 
                 <div className="mt-6 border-t pt-4 space-y-3">
                   <Label className="text-xs">Save this scenario ({scenarios.length}/{MAX_SCENARIOS})</Label>
@@ -292,6 +345,7 @@ export function TeamCompositionAnalyzer({
               </ScrollArea>
             </div>
           </TabsContent>
+
 
           <TabsContent value="compare" className="mt-0">
             <ScrollArea className="h-[62vh] pt-4 pb-6 pr-3">
@@ -453,13 +507,20 @@ function CompareView({ scenarios, onDelete, currentScore }: {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="font-medium text-sm truncate">{s.scenario_name}</div>
-                  <div className="text-[10px] uppercase text-muted-foreground">{s.engagement_type}</div>
+                  <div className="text-[10px] uppercase text-muted-foreground">
+                    {RELATIONSHIP_MODELS.find((r) => r.value === s.relationship_model)?.label ?? s.engagement_type}
+                  </div>
                 </div>
                 <Button variant="ghost" size="icon" onClick={() => onDelete(s.id)} aria-label="Delete">
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
               <div className={`text-4xl font-bold tabular-nums my-2 ${head}`}>{Number(s.pwin_score)}%</div>
+              {s.targeted_scope_areas && (
+                <div className="text-[11px] text-muted-foreground italic mb-2 line-clamp-2">
+                  Scope: {s.targeted_scope_areas}
+                </div>
+              )}
               <div className="space-y-1">
                 {allKeys.map((k) => {
                   const f = (s.factor_scores ?? []).find((x: any) => x.key === k);
@@ -479,10 +540,87 @@ function CompareView({ scenarios, onDelete, currentScore }: {
                   );
                 })}
               </div>
+
+              {Array.isArray(s.strengths) && s.strengths.length > 0 && (
+                <div className="mt-3">
+                  <div className="text-[10px] uppercase text-green-700 font-semibold flex items-center gap-1">
+                    <ThumbsUp className="w-3 h-3" /> Strengths
+                  </div>
+                  <ul className="text-[11px] mt-1 space-y-0.5 list-disc list-inside">
+                    {s.strengths.slice(0, 3).map((x: any, i: number) => (
+                      <li key={i} className="truncate">{x.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {Array.isArray(s.weaknesses) && s.weaknesses.length > 0 && (
+                <div className="mt-2">
+                  <div className="text-[10px] uppercase text-destructive font-semibold flex items-center gap-1">
+                    <ThumbsDown className="w-3 h-3" /> Weaknesses
+                  </div>
+                  <ul className="text-[11px] mt-1 space-y-0.5 list-disc list-inside">
+                    {s.weaknesses.slice(0, 3).map((x: any, i: number) => (
+                      <li key={i} className="truncate">{x.label}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              {s.recommended_action && (
+                <div className="mt-2 text-[11px] flex items-start gap-1">
+                  <ArrowRight className="w-3 h-3 mt-0.5 text-primary shrink-0" />
+                  <span>{s.recommended_action}</span>
+                </div>
+              )}
             </div>
+
           );
         })}
       </div>
     </div>
   );
 }
+
+function InsightsPanel({ insights }: { insights: ScenarioInsights }) {
+  return (
+    <div className="mt-4 border rounded-md p-3 space-y-3">
+      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Scenario insights
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold text-green-700 flex items-center gap-1">
+          <ThumbsUp className="w-3 h-3" /> Strengths
+        </div>
+        {insights.strengths.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground italic mt-1">No standout strengths yet.</div>
+        ) : (
+          <ul className="mt-1 space-y-1 text-[12px]">
+            {insights.strengths.map((s, i) => (
+              <li key={i}><span className="font-medium">{s.label}.</span> <span className="text-muted-foreground">{s.detail}</span></li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold text-destructive flex items-center gap-1">
+          <ThumbsDown className="w-3 h-3" /> Weaknesses
+        </div>
+        {insights.weaknesses.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground italic mt-1">No critical gaps detected.</div>
+        ) : (
+          <ul className="mt-1 space-y-1 text-[12px]">
+            {insights.weaknesses.map((s, i) => (
+              <li key={i}><span className="font-medium">{s.label}.</span> <span className="text-muted-foreground">{s.detail}</span></li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="border-t pt-2">
+        <div className="text-[11px] font-semibold text-primary flex items-center gap-1">
+          <ArrowRight className="w-3 h-3" /> Recommended next action
+        </div>
+        <div className="text-[12px] mt-1">{insights.recommendedAction}</div>
+      </div>
+    </div>
+  );
+}
+

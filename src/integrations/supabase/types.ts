@@ -806,9 +806,14 @@ export type Database = {
           id: string
           proposal_id: string
           pwin_score: number
+          recommended_action: string | null
+          relationship_model: string
           scenario_name: string
+          strengths: Json
+          targeted_scope_areas: string | null
           team_composition: Json
           updated_at: string
+          weaknesses: Json
         }
         Insert: {
           created_at?: string
@@ -818,9 +823,14 @@ export type Database = {
           id?: string
           proposal_id: string
           pwin_score?: number
+          recommended_action?: string | null
+          relationship_model?: string
           scenario_name: string
+          strengths?: Json
+          targeted_scope_areas?: string | null
           team_composition?: Json
           updated_at?: string
+          weaknesses?: Json
         }
         Update: {
           created_at?: string
@@ -830,9 +840,14 @@ export type Database = {
           id?: string
           proposal_id?: string
           pwin_score?: number
+          recommended_action?: string | null
+          relationship_model?: string
           scenario_name?: string
+          strengths?: Json
+          targeted_scope_areas?: string | null
           team_composition?: Json
           updated_at?: string
+          weaknesses?: Json
         }
         Relationships: [
           {
