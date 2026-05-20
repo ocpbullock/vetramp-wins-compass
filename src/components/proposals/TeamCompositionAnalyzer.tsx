@@ -167,54 +167,59 @@ export function TeamCompositionAnalyzer({
   // scalar proposal fields change. We do NOT re-run while the user is
   // editing partners, roles, or work share — those edits flow through
   // updateMember and must not be overwritten.
-  const initSigRef = useRef<string | null>(null);
+  const lastInitRef = useRef<{
+    proposalId: string;
+    self: unknown;
+    partners: unknown;
+    entries: unknown;
+    engagementType: string | null | undefined;
+    primeContractorId: string | null | undefined;
+    primeContractorName: string | null | undefined;
+    incumbentName: string | null;
+  } | null>(null);
   useEffect(() => {
-    // Reset the signature when the dialog closes so re-opening rebuilds fresh.
+    // Reset when dialog closes so re-opening rebuilds fresh.
     if (!open) {
-      initSigRef.current = null;
+      lastInitRef.current = null;
       return;
     }
-    // Wait for all required queries to actually resolve. While any of them is
-    // still `undefined` we keep the empty members state and bail — this is
-    // the key fix for the render loop: we no longer write state on every
-    // render that happens to land between query resolutions.
+    // Wait until every required query has actually resolved. While any of
+    // these is still `undefined` we keep the existing members state and
+    // bail — this is the key fix for the render loop: we no longer write
+    // state on every render that lands between query resolutions, and the
+    // deps are stable query-result identities + scalar proposal fields
+    // (not the whole proposal object or fresh `[]` defaults).
     if (!self || !partnersData || !entriesData) return;
 
-    const sig = [
+    // Skip if nothing relevant changed since the last initialization. This
+    // prevents reinitializing while the user is toggling partners, changing
+    // roles, or adjusting work share — those edits flow through
+    // updateMember and must not be overwritten.
+    const prev = lastInitRef.current;
+    if (
+      prev
+      && prev.proposalId === proposalId
+      && prev.self === self
+      && prev.partners === partnersData
+      && prev.entries === entriesData
+      && prev.engagementType === engagementType
+      && prev.primeContractorId === primeContractorId
+      && prev.primeContractorName === primeContractorName
+      && prev.incumbentName === incumbentName
+    ) {
+      return;
+    }
+    lastInitRef.current = {
       proposalId,
-      // Reference identities — queries return stable references between
-      // renders once resolved, so this only changes when data actually
-      // refetched.
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (self as any),
-      partnersData,
-      entriesData,
+      self,
+      partners: partnersData,
+      entries: entriesData,
       engagementType,
       primeContractorId,
       primeContractorName,
       incumbentName,
-    ]
-      .map((x) => (x == null ? "" : typeof x === "string" ? x : `@${(x as any)?.length ?? "o"}`))
-      .join("|");
-    // More robust: use a WeakRef-ish identity tag via a counter on the refs.
-    // For simplicity we serialize lengths + scalars and also compare object
-    // identity via a side map below.
-    const identityKey = `${proposalId}|sf:${self === lastSelfRef.current ? "=" : "≠"}|p:${
-      partnersData === lastPartnersRef.current ? "=" : "≠"
-    }|e:${entriesData === lastEntriesRef.current ? "=" : "≠"}|${engagementType ?? ""}|${
-      primeContractorId ?? ""
-    }|${primeContractorName ?? ""}|${incumbentName ?? ""}`;
+    };
 
-    // If only "=" identity markers (nothing changed) and we've already
-    // initialized for this proposal, skip.
-    if (initSigRef.current && identityKey.includes("sf:=") && identityKey.includes("p:=") && identityKey.includes("e:=") && initSigRef.current.startsWith(proposalId)) {
-      return;
-    }
-
-    lastSelfRef.current = self;
-    lastPartnersRef.current = partnersData;
-    lastEntriesRef.current = entriesData;
-    initSigRef.current = `${proposalId}|${sig}`;
 
     const isSelfPrime = engagementType === "prime";
     const selfMember: PwinTeamMember = {
