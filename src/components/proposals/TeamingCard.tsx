@@ -299,7 +299,16 @@ export function TeamingCard({
           proposal={proposal}
         />
       )}
+      {proposal && (
+        <TeamingOutreachModal
+          open={outreachOpen}
+          onOpenChange={setOutreachOpen}
+          proposal={proposal}
+          partner={outreachPartner}
+        />
+      )}
     </Card>
+
   );
 }
 
