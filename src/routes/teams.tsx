@@ -270,21 +270,22 @@ function CreateTeamDialog({
     setBusy(true);
     try {
       const slug = `${slugify(trimmed)}-${crypto.randomUUID().slice(0, 8)}`;
-      const insertPayload: Record<string, unknown> = {
-        name: trimmed,
-        slug,
-        created_by: user.id,
-        team_type: teamType,
-      };
+      let parentTeamId: string | null = null;
       if (teamType === "opportunity") {
         if (!currentTeam || currentTeam.team_type !== "organization") {
           throw new Error("Switch to an organization team before creating an opportunity team.");
         }
-        insertPayload.parent_team_id = currentTeam.id;
+        parentTeamId = currentTeam.id;
       }
       const { data: team, error: tErr } = await supabase
         .from("teams")
-        .insert(insertPayload)
+        .insert({
+          name: trimmed,
+          slug,
+          created_by: user.id,
+          team_type: teamType,
+          parent_team_id: parentTeamId,
+        })
         .select("id")
         .single();
       if (tErr) throw new Error(tErr.message);
