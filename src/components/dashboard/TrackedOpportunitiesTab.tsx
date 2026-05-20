@@ -322,7 +322,7 @@ export function TrackedOpportunitiesTab({
                         }}
                       />
                       {onCompete && (
-                        <Button size="sm" variant="ghost" onClick={() => onCompete(trackedToOpp(i))} title="Competitive intel">
+                        <Button size="sm" variant="ghost" onClick={() => onCompete(trackedToSamOpp(i))} title="Competitive intel">
                           <Swords className="w-4 h-4 text-primary" />
                         </Button>
                       )}
@@ -336,7 +336,7 @@ export function TrackedOpportunitiesTab({
                           <FolderOpen className="w-4 h-4 text-primary" />
                         </Button>
                       ) : onPropose && (
-                        <Button size="sm" variant="ghost" onClick={() => onPropose(trackedToOpp(i), i.id)} title="Start proposal">
+                        <Button size="sm" variant="ghost" onClick={() => onPropose(trackedToSamOpp(i), i.id)} title="Start proposal">
                           <FileSignature className="w-4 h-4 text-money" />
                         </Button>
                       )}
