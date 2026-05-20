@@ -27,13 +27,14 @@ import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-clas
 import { DataProvenance } from "@/components/dashboard/DataSourceBadge";
 import { OCIScreeningCard, ociStatus, type OciAnswers } from "@/components/proposals/OCIScreeningCard";
 import { StepErrorBoundary } from "@/components/StepErrorBoundary";
+import { PrimeContractorCombobox } from "@/components/proposals/PrimeContractorCombobox";
 import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
 import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
 import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
-const SECTIONS: { id: string; title: string }[] = [
+const PRIME_SECTIONS: { id: string; title: string }[] = [
   { id: "cover_letter", title: "Cover Letter" },
   { id: "executive_summary", title: "Executive Summary" },
   { id: "technical_approach", title: "Technical Approach" },
@@ -42,6 +43,19 @@ const SECTIONS: { id: string; title: string }[] = [
   { id: "staffing_plan", title: "Staffing Plan" },
   { id: "compliance_matrix", title: "Compliance Cross-Reference Matrix" },
 ];
+
+const SUB_SECTIONS: { id: string; title: string }[] = [
+  { id: "cap_cover_letter", title: "Cover Letter to Prime" },
+  { id: "cap_company_overview", title: "Company Overview" },
+  { id: "cap_core_capabilities", title: "Core Capabilities" },
+  { id: "cap_relevant_past_performance", title: "Relevant Past Performance" },
+  { id: "cap_differentiators", title: "Differentiators" },
+  { id: "cap_proposed_scope", title: "Proposed Scope Under Prime" },
+];
+
+function sectionsFor(proposal: any) {
+  return proposal?.engagement_type === "sub" ? SUB_SECTIONS : PRIME_SECTIONS;
+}
 
 type Section = { content: string; status: "draft" | "reviewed" | "final"; word_count: number };
 
@@ -81,7 +95,7 @@ function ProposalPipeline() {
 
       // Run integrity checks; auto-assign team_id if missing
       let proposalRow: any = p;
-      const knownSectionIds = SECTIONS.map((s) => s.id);
+      const knownSectionIds = [...PRIME_SECTIONS, ...SUB_SECTIONS].map((s) => s.id);
       const initial = validateProposal(proposalRow, knownSectionIds);
       if (initial.needsTeamAssignment) {
         const { data: tm } = await supabase
@@ -207,7 +221,7 @@ function ProposalPipeline() {
       let freshRow: any = fresh;
       // Client-side compliance matrix integrity pass
       if (freshRow?.compliance_matrix) {
-        const knownIds = SECTIONS.map((s) => s.id);
+        const knownIds = [...PRIME_SECTIONS, ...SUB_SECTIONS].map((s) => s.id);
         const { fixedCount, fixes, matrix: cleaned } = validateComplianceMatrix(freshRow.compliance_matrix, knownIds);
         if (fixedCount > 0) {
           await supabase.from("proposals").update({ compliance_matrix: cleaned }).eq("id", proposalId);
@@ -318,6 +332,10 @@ function ProposalPipeline() {
           teaming: teaming.length ? teaming : undefined,
           pastPerformance: pastPerformance.length ? pastPerformance : undefined,
           attachmentsText: attachmentsText || undefined,
+          engagementType: proposal.engagement_type ?? "prime",
+          primeContractorName: proposal.prime_contractor_name ?? null,
+          primeContractorId: proposal.prime_contractor_id ?? null,
+          targetedScopeAreas: proposal.targeted_scope_areas ?? null,
         }),
       });
       if (!resp.ok || !resp.body) {
@@ -363,7 +381,7 @@ function ProposalPipeline() {
   }
 
   async function generateAll() {
-    const remaining = SECTIONS.filter((s) => !proposal.sections?.[s.id]?.content);
+    const remaining = sectionsFor(proposal).filter((s) => !proposal.sections?.[s.id]?.content);
     if (remaining.length === 0) { toast.info("All sections already drafted"); return; }
     for (let i = 0; i < remaining.length; i++) {
       const s = remaining[i];
@@ -383,7 +401,7 @@ function ProposalPipeline() {
 
   async function exportDocx() {
     try {
-      await exportProposalDocx({ proposal, companyProfile, sectionDefs: SECTIONS });
+      await exportProposalDocx({ proposal, companyProfile, sectionDefs: sectionsFor(proposal) });
       toast.success("Proposal exported");
     } catch (e: any) {
       toast.error(`Export failed: ${e?.message ?? e}`);
@@ -408,8 +426,9 @@ function ProposalPipeline() {
       score += Math.round((verified / reqs.length) * 10);
     }
     if (proposal.staffing_plan) score += 10;
-    const generated = SECTIONS.filter((s) => proposal.sections?.[s.id]?.content).length;
-    score += Math.round((generated / SECTIONS.length) * 20);
+    const secs = sectionsFor(proposal);
+    const generated = secs.filter((s) => proposal.sections?.[s.id]?.content).length;
+    score += Math.round((generated / secs.length) * 20);
     if (ociStatus(proposal.oci_screening) === "incomplete") score -= 5;
     return Math.max(0, Math.min(100, score));
   }, [proposal, attachments]);
@@ -478,7 +497,7 @@ function ProposalPipeline() {
             <TabsTrigger value="intake">1. Intake</TabsTrigger>
             <TabsTrigger value="intel">2. Customer Intel</TabsTrigger>
             <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
-            <TabsTrigger value="solution">4. Solution Design</TabsTrigger>
+            <TabsTrigger value="solution">4. {proposal.engagement_type === "sub" ? "Capabilities" : "Solution Design"}</TabsTrigger>
             <TabsTrigger value="generate">5. Generate</TabsTrigger>
           </TabsList>
 
@@ -681,13 +700,16 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
               <div className="space-y-3 pt-2 border-t border-border">
                 <div>
                   <Label>Prime contractor *</Label>
-                  <Input
-                    value={local.prime_contractor_name ?? ""}
-                    onChange={(e) => setLocal({ ...local, prime_contractor_name: e.target.value })}
-                    onBlur={() => onPatch({ prime_contractor_name: local.prime_contractor_name || null })}
-                    placeholder="Enter prime name (search teaming partners coming soon)"
+                  <PrimeContractorCombobox
+                    teamId={proposal.team_id}
+                    valueId={proposal.prime_contractor_id}
+                    valueName={proposal.prime_contractor_name}
+                    onChange={(next) => {
+                      setLocal({ ...local, prime_contractor_name: next.prime_contractor_name });
+                      onPatch(next);
+                    }}
                   />
-                  <div className="text-[11px] text-muted-foreground mt-1">Pull from your teaming partner roster, or type a new prime.</div>
+                  <div className="text-[11px] text-muted-foreground mt-1">Pull from your teaming partner roster, or type a new prime to use as free text.</div>
                 </div>
                 <div>
                   <Label>Relevant scope areas *</Label>
@@ -810,43 +832,59 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-base">Solicitation documents</CardTitle><CardDescription>SOW, Section L/M, amendments</CardDescription></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">
+            {proposal.engagement_type === "sub" ? "Scope reference (optional)" : "Solicitation documents"}
+          </CardTitle>
+          <CardDescription>
+            {proposal.engagement_type === "sub"
+              ? "Sub mode: only attach the scope blurb or partner brief if you have one. Full SOW parsing is skipped."
+              : "SOW, Section L/M, amendments"}
+          </CardDescription>
+        </CardHeader>
         <CardContent className="space-y-3">
-          <Button onClick={onAutoFetch} variant="outline" size="sm" className="w-full" disabled={fetching}>
-            {fetching ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
-            {fetching ? "Fetching from SAM.gov…" : "Try auto-fetch from SAM.gov"}
-          </Button>
-
-          <SamFetchResults results={fetchResults} samUrl={proposal.opportunity_data?.uiLink} />
+          {proposal.engagement_type !== "sub" && (
+            <>
+              <Button onClick={onAutoFetch} variant="outline" size="sm" className="w-full" disabled={fetching}>
+                {fetching ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1" />}
+                {fetching ? "Fetching from SAM.gov…" : "Try auto-fetch from SAM.gov"}
+              </Button>
+              <SamFetchResults results={fetchResults} samUrl={proposal.opportunity_data?.uiLink} />
+            </>
+          )}
 
           <DropZoneUpload onUpload={onUpload} />
 
-          <Button
-            onClick={onParse}
-            disabled={parsing || sowAttachments.length === 0}
-            size="sm"
-            className="w-full"
-          >
-            {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
-            {parsing ? (parseProgress || "Parsing…") : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
-          </Button>
-          {proposal.compliance_matrix && !parsing && (
-            <Button
-              onClick={() => onParse?.({ skipCache: true })}
-              variant="ghost"
-              size="sm"
-              className="w-full text-[11px] h-7"
-              disabled={sowAttachments.length === 0}
-            >
-              <RefreshCw className="w-3 h-3 mr-1" /> Force regenerate (bypass cache)
-            </Button>
+          {proposal.engagement_type !== "sub" && (
+            <>
+              <Button
+                onClick={onParse}
+                disabled={parsing || sowAttachments.length === 0}
+                size="sm"
+                className="w-full"
+              >
+                {parsing ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <ListChecks className="w-4 h-4 mr-1" />}
+                {parsing ? (parseProgress || "Parsing…") : proposal.compliance_matrix ? "Re-parse documents" : "Parse documents & auto-fill capture"}
+              </Button>
+              {proposal.compliance_matrix && !parsing && (
+                <Button
+                  onClick={() => onParse?.({ skipCache: true })}
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-[11px] h-7"
+                  disabled={sowAttachments.length === 0}
+                >
+                  <RefreshCw className="w-3 h-3 mr-1" /> Force regenerate (bypass cache)
+                </Button>
+              )}
+              {parsing && proposal.parsing_status === "parsing" && (
+                <div className="text-[11px] text-muted-foreground">Do not navigate away — parsing in progress.</div>
+              )}
+              <div className="text-[11px] text-muted-foreground">
+                Parsing extracts requirements (Section L/M, "shall" statements) AND auto-fills capture details below — title, agency, contract type, value, PoP, clearance, etc.
+              </div>
+            </>
           )}
-          {parsing && proposal.parsing_status === "parsing" && (
-            <div className="text-[11px] text-muted-foreground">Do not navigate away — parsing in progress.</div>
-          )}
-          <div className="text-[11px] text-muted-foreground">
-            Parsing extracts requirements (Section L/M, "shall" statements) AND auto-fills capture details below — title, agency, contract type, value, PoP, clearance, etc.
-          </div>
           {largeDoc && (
             <div className="text-[11px] rounded border border-yellow-500/40 bg-yellow-500/10 text-yellow-700 dark:text-yellow-300 px-2 py-1.5">
               <AlertTriangle className="w-3 h-3 inline-block mr-1" />
@@ -910,9 +948,10 @@ function ComingSoon({ title, description, fieldLabel, value, onSave }: { title: 
 }
 
 function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
-  const [active, setActive] = useState(SECTIONS[0].id);
+  const SECS = sectionsFor(proposal);
+  const [active, setActive] = useState(SECS[0].id);
   const sections = proposal.sections || {};
-  const generatedCount = SECTIONS.filter((s) => sections[s.id]?.content).length;
+  const generatedCount = SECS.filter((s) => sections[s.id]?.content).length;
   const current = sections[active] as Section | undefined;
   const anySectionBusy = Object.values(sectionGen || {}).some(Boolean);
   const lockButtons = !!aiBusy || anySectionBusy;
@@ -930,11 +969,14 @@ function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, o
       <Card className="lg:col-span-1">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Generation queue</CardTitle>
-          <CardDescription className="text-xs">{generatedCount} of {SECTIONS.length} drafted</CardDescription>
+          <CardDescription className="text-xs">
+            {generatedCount} of {SECS.length} drafted
+            {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Capabilities mode</span>}
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-2 space-y-1">
           <Button size="sm" className="w-full mb-2" onClick={onGenerateAll} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
-          {SECTIONS.map((s) => {
+          {SECS.map((s) => {
             const has = !!sections[s.id]?.content;
             const busy = sectionGen[s.id];
             return (
@@ -952,10 +994,10 @@ function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, o
       <Card className="lg:col-span-3">
         <CardHeader className="pb-2 flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base">{SECTIONS.find((s) => s.id === active)?.title}</CardTitle>
+            <CardTitle className="text-base">{SECS.find((s) => s.id === active)?.title}</CardTitle>
             <CardDescription className="text-xs">{current?.word_count ?? 0} words</CardDescription>
           </div>
-          <Button size="sm" onClick={() => onGenerate(active, SECTIONS.find((s) => s.id === active)!.title)} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
+          <Button size="sm" onClick={() => onGenerate(active, SECS.find((s) => s.id === active)!.title)} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
             <Sparkles className="w-4 h-4 mr-1" />{sectionGen[active] ? "Generating…" : current?.content ? "Regenerate" : "Generate"}
           </Button>
         </CardHeader>
@@ -1001,6 +1043,10 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
           userId: session?.user?.id,
           proposalId,
           teamId: proposal.team_id ?? null,
+          engagementType: proposal.engagement_type ?? "prime",
+          primeContractorName: proposal.prime_contractor_name ?? null,
+          primeContractorId: proposal.prime_contractor_id ?? null,
+          targetedScopeAreas: proposal.targeted_scope_areas ?? null,
           skipCache,
         }),
       });

@@ -50,7 +50,15 @@ export function ProposalModal({ opp, onClose }: { opp: SamOpportunity | null; on
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ opportunity: opp, teamId, companyProfile }),
+        body: JSON.stringify({
+          opportunity: opp,
+          teamId,
+          companyProfile,
+          engagementType: "prime",
+          primeContractorName: null,
+          primeContractorId: null,
+          targetedScopeAreas: null,
+        }),
       });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Failed" }));
