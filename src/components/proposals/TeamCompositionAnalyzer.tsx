@@ -15,11 +15,13 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Sparkles, Save, Trash2, AlertTriangle } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Sparkles, Save, Trash2, AlertTriangle, ThumbsUp, ThumbsDown, ArrowRight } from "lucide-react";
 import { toast } from "sonner";
 import {
-  calculatePwin, colorFor,
+  calculatePwin, colorFor, deriveInsights, engagementForModel, RELATIONSHIP_MODELS,
   type PwinTeamMember, type PwinContext, type PwinRole, type EngagementType, type PwinResult,
+  type RelationshipModel, type ScenarioInsights,
 } from "@/lib/pwin";
 import type { Partner } from "@/components/settings/PartnersPanel";
 
