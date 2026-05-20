@@ -46,7 +46,7 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
     // teammates' proposals even though RLS would allow reading them.
     const { data, error } = await supabase
       .from("proposals")
-      .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at,oci_screening,opportunity_source,opportunity_source_id")
+      .select("id,opportunity_title,agency,solicitation_number,status,response_deadline,updated_at,oci_screening,opportunity_source,opportunity_source_id,engagement_type,prime_contractor_name")
       .order("updated_at", { ascending: false });
     if (error) toast.error(error.message);
     else {
