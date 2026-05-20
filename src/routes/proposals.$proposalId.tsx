@@ -27,6 +27,7 @@ import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-clas
 import { DataProvenance } from "@/components/dashboard/DataSourceBadge";
 import { OCIScreeningCard, ociStatus, type OciAnswers } from "@/components/proposals/OCIScreeningCard";
 import { StepErrorBoundary } from "@/components/StepErrorBoundary";
+import { PrimeContractorCombobox } from "@/components/proposals/PrimeContractorCombobox";
 import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
 import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
 import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
