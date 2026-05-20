@@ -204,6 +204,9 @@ export function Header() {
               {currentTeam && <div className="text-xs text-muted-foreground truncate mt-1">Team: {currentTeam.name}</div>}
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <DropdownMenuItem asChild>
+              <Link to="/teams"><Users className="w-4 h-4 mr-2" /> Manage Teams</Link>
+            </DropdownMenuItem>
             {showAdminLink && (
               <DropdownMenuItem asChild>
                 <Link to="/admin"><Shield className="w-4 h-4 mr-2" /> Admin</Link>
