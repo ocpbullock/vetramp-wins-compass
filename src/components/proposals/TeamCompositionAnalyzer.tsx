@@ -191,18 +191,27 @@ export function TeamCompositionAnalyzer({
     const reqVehicles: string[] = [];
     const ct = proposal.contract_type;
     if (ct && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(ct)) reqVehicles.push(ct);
+    const scopeKeywords = scopeAreas
+      .split(/[,;\n]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
     return {
-      engagementType: proposal.engagement_type,
+      engagementType: engagementForModel(relationshipModel),
+      relationshipModel,
       opportunityNaics: oppNaics,
       opportunityAgency: proposal.agency,
       setAside: proposal.set_aside,
       requiredVehicles: reqVehicles,
-      scopeKeywords: [],
+      scopeKeywords,
       incumbentName: proposal.customer_intel?.predecessor_contract?.incumbent ?? null,
     };
-  }, [proposal]);
+  }, [proposal, relationshipModel, scopeAreas]);
 
   const result: PwinResult = useMemo(() => calculatePwin(ctx, members), [ctx, members]);
+  const insights: ScenarioInsights = useMemo(
+    () => deriveInsights(result, relationshipModel),
+    [result, relationshipModel],
+  );
 
   // --- mutations
   const updateMember = (id: string, patch: Partial<PwinTeamMember>) =>
@@ -225,6 +234,11 @@ export function TeamCompositionAnalyzer({
       pwin_score: result.pwin,
       factor_scores: result.factors as any,
       engagement_type: ctx.engagementType,
+      relationship_model: relationshipModel,
+      targeted_scope_areas: scopeAreas || null,
+      strengths: insights.strengths as any,
+      weaknesses: insights.weaknesses as any,
+      recommended_action: insights.recommendedAction,
       created_by: uid,
     });
     if (error) { toast.error(error.message); return; }
@@ -232,6 +246,7 @@ export function TeamCompositionAnalyzer({
     setScenarioName("");
     refetchScenarios();
   };
+
 
   const deleteScenario = async (id: string) => {
     const { error } = await supabase.from("pwin_scenarios").delete().eq("id", id);
