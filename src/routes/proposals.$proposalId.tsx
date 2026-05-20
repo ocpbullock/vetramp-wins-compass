@@ -376,7 +376,7 @@ function ProposalPipeline() {
   }
 
   async function generateAll() {
-    const remaining = SECTIONS.filter((s) => !proposal.sections?.[s.id]?.content);
+    const remaining = sectionsFor(proposal).filter((s) => !proposal.sections?.[s.id]?.content);
     if (remaining.length === 0) { toast.info("All sections already drafted"); return; }
     for (let i = 0; i < remaining.length; i++) {
       const s = remaining[i];
