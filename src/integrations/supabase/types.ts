@@ -1240,6 +1240,7 @@ export type Database = {
           name: string
           parent_team_id: string | null
           slug: string
+          status: string
           team_type: string
           updated_at: string
         }
@@ -1250,6 +1251,7 @@ export type Database = {
           name: string
           parent_team_id?: string | null
           slug: string
+          status?: string
           team_type?: string
           updated_at?: string
         }
@@ -1260,6 +1262,7 @@ export type Database = {
           name?: string
           parent_team_id?: string | null
           slug?: string
+          status?: string
           team_type?: string
           updated_at?: string
         }
