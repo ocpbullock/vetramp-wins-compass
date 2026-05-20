@@ -331,6 +331,10 @@ function ProposalPipeline() {
           teaming: teaming.length ? teaming : undefined,
           pastPerformance: pastPerformance.length ? pastPerformance : undefined,
           attachmentsText: attachmentsText || undefined,
+          engagementType: proposal.engagement_type ?? "prime",
+          primeContractorName: proposal.prime_contractor_name ?? null,
+          primeContractorId: proposal.prime_contractor_id ?? null,
+          targetedScopeAreas: proposal.targeted_scope_areas ?? null,
         }),
       });
       if (!resp.ok || !resp.body) {
