@@ -4,6 +4,26 @@
 export type PwinRole = "prime" | "sub" | "mentor" | "protege" | "jv_partner";
 export type EngagementType = "prime" | "sub";
 
+// Higher-level teaming strategy. Drives factor reweighting in calculatePwin.
+export type RelationshipModel =
+  | "prime_with_subs"   // we prime, others sub
+  | "sub_to_prime"      // we sub to a named prime
+  | "joint_venture"     // formal JV with a partner
+  | "mentor_protege"    // SBA mentor-protege arrangement
+  | "niche_sub";        // narrow niche capability sub on a larger team
+
+export const RELATIONSHIP_MODELS: { value: RelationshipModel; label: string; engagement: EngagementType }[] = [
+  { value: "prime_with_subs", label: "We prime with selected subs", engagement: "prime" },
+  { value: "sub_to_prime",    label: "We sub to a named prime",     engagement: "sub"   },
+  { value: "joint_venture",   label: "Joint venture",                engagement: "prime" },
+  { value: "mentor_protege",  label: "Mentor-protégé",               engagement: "prime" },
+  { value: "niche_sub",       label: "Niche subcontractor",          engagement: "sub"   },
+];
+
+export function engagementForModel(m: RelationshipModel): EngagementType {
+  return RELATIONSHIP_MODELS.find((r) => r.value === m)?.engagement ?? "prime";
+}
+
 export type PwinTeamMember = {
   id: string;                     // partner id or "self"
   name: string;
