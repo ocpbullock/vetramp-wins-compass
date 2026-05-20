@@ -38,3 +38,6 @@ verify_jwt = true
 
 [functions.ingest-knowledge]
 verify_jwt = true
+
+[functions.generate-teaming-outreach]
+verify_jwt = true

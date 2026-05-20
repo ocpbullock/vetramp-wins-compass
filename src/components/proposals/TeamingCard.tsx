@@ -10,10 +10,12 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Plus, Trash2, Users, Search, Sparkles } from "lucide-react";
+import { Plus, Trash2, Users, Search, Sparkles, Mail } from "lucide-react";
 import { toast } from "sonner";
 import type { Partner } from "@/components/settings/PartnersPanel";
 import { TeamCompositionAnalyzer } from "./TeamCompositionAnalyzer";
+import { TeamingOutreachModal, type OutreachPartnerInput } from "./TeamingOutreachModal";
+
 
 const ROLES = [
   { value: "prime", label: "Prime" },
@@ -55,6 +57,15 @@ export function TeamingCard({
   const [search, setSearch] = useState("");
   const [picker, setPicker] = useState(false);
   const [analyzerOpen, setAnalyzerOpen] = useState(false);
+  const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [outreachPicker, setOutreachPicker] = useState(false);
+
+  const openOutreach = (p: OutreachPartnerInput) => {
+    setOutreachPartner(p);
+    setOutreachOpen(true);
+  };
+
 
   const { data: partners = [] } = useQuery({
     queryKey: ["teaming-partners", teamId],
@@ -132,12 +143,44 @@ export function TeamingCard({
           <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Teaming</CardTitle>
           <CardDescription>Partners on this bid, their role, and work share.</CardDescription>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           {proposal && (
             <Button size="sm" variant="secondary" onClick={() => setAnalyzerOpen(true)} disabled={!teamId}>
               <Sparkles className="w-4 h-4 mr-1" /> Analyze team
             </Button>
           )}
+          {proposal && (
+            <Popover open={outreachPicker} onOpenChange={setOutreachPicker}>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="secondary" disabled={!teamId}>
+                  <Mail className="w-4 h-4 mr-1" /> Draft outreach
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-80 p-2" align="end">
+                <div className="text-xs text-muted-foreground px-1 pb-2">Pick a partner to draft outreach for.</div>
+                <div className="max-h-64 overflow-y-auto space-y-1">
+                  {partners.length === 0 && (
+                    <div className="text-xs text-muted-foreground p-2">No partners yet. Add some in Settings → Teaming Partners.</div>
+                  )}
+                  {partners.map((p) => (
+                    <button
+                      key={p.id}
+                      onClick={() => { setOutreachPicker(false); openOutreach(p); }}
+                      className="w-full text-left px-2 py-1.5 rounded hover:bg-accent text-sm"
+                    >
+                      <div className="font-medium">{p.company_name}</div>
+                      <div className="flex flex-wrap gap-1 mt-0.5">
+                        {p.certifications.slice(0, 4).map((c) => (
+                          <Badge key={c} variant="outline" className="text-[10px]">{c}</Badge>
+                        ))}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </PopoverContent>
+            </Popover>
+          )}
+
           <Popover open={picker} onOpenChange={setPicker}>
           <PopoverTrigger asChild>
             <Button size="sm" variant="outline" disabled={!teamId}>
@@ -203,9 +246,21 @@ export function TeamingCard({
                     )}
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => removeEntry(e.id)} aria-label="Remove">
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  {proposal && e.partner && (
+                    <Button
+                      variant="ghost" size="sm"
+                      onClick={() => openOutreach({ ...(e.partner as any), id: e.partner!.id })}
+                      title="Generate outreach"
+                    >
+                      <Mail className="w-3.5 h-3.5 mr-1" /> Outreach
+                    </Button>
+                  )}
+                  <Button variant="ghost" size="icon" onClick={() => removeEntry(e.id)} aria-label="Remove">
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+
               </div>
               <div className="grid grid-cols-2 gap-2">
                 <div>
@@ -244,7 +299,16 @@ export function TeamingCard({
           proposal={proposal}
         />
       )}
+      {proposal && (
+        <TeamingOutreachModal
+          open={outreachOpen}
+          onOpenChange={setOutreachOpen}
+          proposal={proposal}
+          partner={outreachPartner}
+        />
+      )}
     </Card>
+
   );
 }
 
