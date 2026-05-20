@@ -94,7 +94,7 @@ function ProposalPipeline() {
 
       // Run integrity checks; auto-assign team_id if missing
       let proposalRow: any = p;
-      const knownSectionIds = SECTIONS.map((s) => s.id);
+      const knownSectionIds = [...PRIME_SECTIONS, ...SUB_SECTIONS].map((s) => s.id);
       const initial = validateProposal(proposalRow, knownSectionIds);
       if (initial.needsTeamAssignment) {
         const { data: tm } = await supabase
