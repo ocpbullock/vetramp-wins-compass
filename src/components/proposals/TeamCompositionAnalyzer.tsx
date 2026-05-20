@@ -276,7 +276,7 @@ export function TeamCompositionAnalyzer({
                 <PwinPanel result={result} />
 
                 <div className="mt-6 border-t pt-4 space-y-3">
-                  <Label className="text-xs">Save this scenario ({scenarios.length}/3)</Label>
+                  <Label className="text-xs">Save this scenario ({scenarios.length}/{MAX_SCENARIOS})</Label>
                   <div className="flex gap-2">
                     <Input
                       value={scenarioName}
@@ -284,7 +284,7 @@ export function TeamCompositionAnalyzer({
                       placeholder="e.g. Us as prime with TechCorp"
                       className="h-8 text-sm"
                     />
-                    <Button size="sm" onClick={saveScenario} disabled={scenarios.length >= 3}>
+                    <Button size="sm" onClick={saveScenario} disabled={scenarios.length >= MAX_SCENARIOS}>
                       <Save className="w-3.5 h-3.5 mr-1" /> Save
                     </Button>
                   </div>
