@@ -49,7 +49,20 @@ serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { opportunity, companyProfile, extraNotes, attachmentsText, teamId, userId: _ignoredUserId, proposalId, skipCache } = await req.json();
+    const {
+      opportunity,
+      companyProfile,
+      extraNotes,
+      attachmentsText,
+      teamId,
+      userId: _ignoredUserId,
+      proposalId,
+      skipCache,
+      engagementType,
+      primeContractorName,
+      targetedScopeAreas,
+    } = await req.json();
+    const engagement = engagementType === "sub" ? "sub" : "prime";
 
     // Verify team membership (and/or proposal access) BEFORE touching team cache.
     let verifiedTeamId: string | null;
@@ -65,6 +78,9 @@ serve(async (req) => {
       profile: companyProfile,
       extraNotes: extraNotes ?? "",
       attachmentsHash: typeof attachmentsText === "string" && attachmentsText.length > 0 ? await hashCacheKey(attachmentsText) : "",
+      engagement,
+      primeContractorName: primeContractorName ?? "",
+      targetedScopeAreas: targetedScopeAreas ?? "",
     });
     if (!skipCache) {
       const cached = await getCachedResponse("customer-intel", cacheKey, verifiedTeamId);
@@ -77,10 +93,16 @@ serve(async (req) => {
       }
     }
 
-    const system = `You are a senior federal capture manager doing pre-RFP customer intelligence. Use your knowledge of US federal agencies, DoD components, USA Spending, FPDS, SAM.gov, agency strategic plans, and recent press to build a deep profile of the buying customer. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`;
+    const system = engagement === "sub"
+      ? `You are a senior federal capture manager doing pre-RFP intelligence for a SUBCONTRACTOR pursuit. The offeror is teaming UNDER a prime contractor. Profile BOTH (a) the END CUSTOMER (buying agency / end-user unit) and (b) the PRIME CONTRACTOR the offeror is teaming with: what the prime has won before in this domain, their small-business subcontracting history and posture, what scope they typically self-perform vs. sub out, and what they look for in subs. Use your knowledge of US federal agencies, FPDS, USA Spending, SAM.gov, agency strategic plans, recent press, and SubAward data. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`
+      : `You are a senior federal capture manager doing pre-RFP customer intelligence. Use your knowledge of US federal agencies, DoD components, USA Spending, FPDS, SAM.gov, agency strategic plans, and recent press to build a deep profile of the buying customer. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`;
 
     const trimmedAttachments = typeof attachmentsText === "string" && attachmentsText.length > 0
       ? attachmentsText.slice(0, 60000)
+      : "";
+
+    const subContext = engagement === "sub"
+      ? `\nENGAGEMENT MODE: SUBCONTRACTOR pursuit.\nPRIME CONTRACTOR being teamed with: ${primeContractorName || "(unspecified — note this gap)"}\nTARGETED SCOPE AREAS (portion of work the offeror wants under the prime): ${targetedScopeAreas || "(unspecified)"}\nIn your output, weave findings about the prime into mission_priorities/evaluation_signals/win_themes (e.g. what makes a good sub for this prime on this opportunity).\n`
       : "";
 
     const user = `OPPORTUNITY:
@@ -88,9 +110,10 @@ ${JSON.stringify(opportunity, null, 2)}
 
 OUR COMPANY PROFILE (for win-theme alignment):
 ${JSON.stringify(companyProfile, null, 2)}
-
+${subContext}
 ${extraNotes ? `ADDITIONAL CONTEXT FROM USER:\n${extraNotes}\n` : ""}${trimmedAttachments ? `\nREFERENCE DOCUMENTS PROVIDED BY USER (incumbent past performance, agency plans, prior SOWs, org charts, etc.):\n${trimmedAttachments}\n` : ""}
-Research this customer and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.`;
+Research this customer${engagement === "sub" ? " AND the named prime contractor" : ""} and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.`;
+
 
     let data: any;
     try {
