@@ -51,8 +51,17 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
       onCountChange?.(data?.length || 0);
       const ids = (data || []).map((p) => p.id);
       if (ids.length > 0) {
-        const { reconcileOverdue } = await import("@/lib/milestones");
-        await reconcileOverdue(ids);
+        // Guard reconcileOverdue so it doesn't write to proposal_milestones on
+        // every tab mount. 15-minute throttle via sessionStorage.
+        const RECONCILE_INTERVAL = 15 * 60 * 1000;
+        try {
+          const lastRun = Number(sessionStorage.getItem("vetramp_last_reconcile") || "0");
+          if (Date.now() - lastRun > RECONCILE_INTERVAL) {
+            const { reconcileOverdue } = await import("@/lib/milestones");
+            await reconcileOverdue(ids);
+            sessionStorage.setItem("vetramp_last_reconcile", String(Date.now()));
+          }
+        } catch { /* sessionStorage unavailable — skip reconcile */ }
         const { data: ms } = await supabase
           .from("proposal_milestones")
           .select("proposal_id,status")
