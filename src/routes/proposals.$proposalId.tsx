@@ -924,9 +924,10 @@ function ComingSoon({ title, description, fieldLabel, value, onSave }: { title: 
 }
 
 function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
-  const [active, setActive] = useState(SECTIONS[0].id);
+  const SECS = sectionsFor(proposal);
+  const [active, setActive] = useState(SECS[0].id);
   const sections = proposal.sections || {};
-  const generatedCount = SECTIONS.filter((s) => sections[s.id]?.content).length;
+  const generatedCount = SECS.filter((s) => sections[s.id]?.content).length;
   const current = sections[active] as Section | undefined;
   const anySectionBusy = Object.values(sectionGen || {}).some(Boolean);
   const lockButtons = !!aiBusy || anySectionBusy;
@@ -944,11 +945,14 @@ function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, o
       <Card className="lg:col-span-1">
         <CardHeader className="pb-2">
           <CardTitle className="text-sm">Generation queue</CardTitle>
-          <CardDescription className="text-xs">{generatedCount} of {SECTIONS.length} drafted</CardDescription>
+          <CardDescription className="text-xs">
+            {generatedCount} of {SECS.length} drafted
+            {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Capabilities mode</span>}
+          </CardDescription>
         </CardHeader>
         <CardContent className="p-2 space-y-1">
           <Button size="sm" className="w-full mb-2" onClick={onGenerateAll} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
-          {SECTIONS.map((s) => {
+          {SECS.map((s) => {
             const has = !!sections[s.id]?.content;
             const busy = sectionGen[s.id];
             return (
@@ -966,10 +970,10 @@ function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, o
       <Card className="lg:col-span-3">
         <CardHeader className="pb-2 flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base">{SECTIONS.find((s) => s.id === active)?.title}</CardTitle>
+            <CardTitle className="text-base">{SECS.find((s) => s.id === active)?.title}</CardTitle>
             <CardDescription className="text-xs">{current?.word_count ?? 0} words</CardDescription>
           </div>
-          <Button size="sm" onClick={() => onGenerate(active, SECTIONS.find((s) => s.id === active)!.title)} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
+          <Button size="sm" onClick={() => onGenerate(active, SECS.find((s) => s.id === active)!.title)} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
             <Sparkles className="w-4 h-4 mr-1" />{sectionGen[active] ? "Generating…" : current?.content ? "Regenerate" : "Generate"}
           </Button>
         </CardHeader>
