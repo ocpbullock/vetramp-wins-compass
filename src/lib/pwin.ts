@@ -282,6 +282,48 @@ function scorePrimeRelationship(ctx: PwinContext, active: PwinTeamMember[]): Fac
   };
 }
 
+// ---------- model-specific reweighting ----------
+
+// Multiplicative bumps applied before renormalizing to sum-to-1.
+// Values reflect what tends to matter most under each teaming model.
+const MODEL_MULTIPLIERS: Record<RelationshipModel, Partial<Record<FactorKey, number>>> = {
+  prime_with_subs: {},
+  sub_to_prime: {
+    prime_relationship: 2.0, // who you sub to dominates
+    past_performance:   1.3, // scope fit / proof on similar work matters more
+    set_aside:          0.6, // prime carries the set-aside
+    incumbent:          0.9,
+  },
+  joint_venture: {
+    set_aside:          1.4, // JVs commonly stack set-aside qualification
+    past_performance:   1.2,
+    completeness:       1.1,
+  },
+  mentor_protege: {
+    set_aside:          1.5, // mentor enables protégé to bid
+    past_performance:   1.2,
+    prime_relationship: 1.3,
+  },
+  niche_sub: {
+    past_performance:   1.6, // niche capability proof dominates
+    naics_coverage:     0.5, // team NAICS isn't ours to cover
+    set_aside:          0.5,
+    prime_relationship: 1.4,
+    incumbent:          0.8,
+  },
+};
+
+function applyModelWeights(factors: FactorScore[], model?: RelationshipModel): void {
+  if (!model) return;
+  const mult = MODEL_MULTIPLIERS[model] ?? {};
+  for (const f of factors) {
+    const m = mult[f.key];
+    if (m && m !== 1) f.weight = f.weight * m;
+  }
+  const total = factors.reduce((s, f) => s + f.weight, 0);
+  if (total > 0) for (const f of factors) f.weight = +(f.weight / total).toFixed(4);
+}
+
 // ---------- main ----------
 
 export function calculatePwin(ctx: PwinContext, members: PwinTeamMember[]): PwinResult {
@@ -310,6 +352,9 @@ export function calculatePwin(ctx: PwinContext, members: PwinTeamMember[]): Pwin
     factors.push(rel);
   }
 
+  // Apply per-relationship-model reweighting after baseline weights are set.
+  applyModelWeights(factors, ctx.relationshipModel);
+
   const pwinRaw = factors.reduce((s, f) => s + f.score * f.weight, 0);
   const pwin = overAllocated ? Math.round(pwinRaw * 0.7) : Math.round(pwinRaw);
 
@@ -321,3 +366,63 @@ export function colorFor(score: number): "green" | "amber" | "red" {
   if (score >= 40) return "amber";
   return "red";
 }
+
+// ---------- scenario narrative helpers ----------
+
+export type ScenarioInsights = {
+  strengths: { label: string; detail: string }[];
+  weaknesses: { label: string; detail: string }[];
+  recommendedAction: string;
+};
+
+const NEXT_ACTION_BY_FACTOR: Record<FactorKey, (model?: RelationshipModel) => string> = {
+  set_aside: (m) =>
+    m === "mentor_protege"
+      ? "Confirm the SBA-approved mentor-protégé agreement covers this set-aside."
+      : m === "joint_venture"
+        ? "Verify the JV's set-aside eligibility is documented and current."
+        : "Add a teaming partner that holds the required socioeconomic certification.",
+  past_performance: (m) =>
+    m === "niche_sub"
+      ? "Surface two more niche-capability past performance references with recent end dates."
+      : "Attach 2–3 recent, scope-relevant past performance citations from the team.",
+  naics_coverage: () => "Bring in a partner whose primary NAICS matches the solicitation.",
+  vehicle_access: (m) =>
+    m === "sub_to_prime"
+      ? "Confirm the prime holds the required contract vehicle."
+      : "Confirm vehicle access — team in a holder or pursue a direct-award path.",
+  incumbent: () => "Recruit incumbent staff or an incumbent-adjacent partner before proposal start.",
+  completeness: () => "Rebalance work share so allocations sum to ~100% across the team.",
+  prime_relationship: () =>
+    "Schedule a discovery call with the prime and document prior teaming wins in the file.",
+};
+
+export function deriveInsights(result: PwinResult, model?: RelationshipModel): ScenarioInsights {
+  const strengths = result.factors
+    .filter((f) => f.score >= 75)
+    .sort((a, b) => b.score * b.weight - a.score * a.weight)
+    .slice(0, 3)
+    .map((f) => ({ label: f.label, detail: f.explanation }));
+
+  const weaknesses = result.factors
+    .filter((f) => f.score <= 45)
+    .sort((a, b) => a.score * b.weight - b.score * a.weight)
+    .slice(0, 3)
+    .map((f) => ({ label: f.label, detail: f.explanation }));
+
+  // Recommended action targets the lowest weighted-score factor.
+  const lowest = [...result.factors].sort(
+    (a, b) => a.score * a.weight - b.score * b.weight,
+  )[0];
+
+  let recommendedAction = lowest
+    ? NEXT_ACTION_BY_FACTOR[lowest.key](model)
+    : "Document the teaming plan and lock in partner commitments.";
+
+  if (result.overAllocated) {
+    recommendedAction = "Reduce partner work shares — current total exceeds 100%.";
+  }
+
+  return { strengths, weaknesses, recommendedAction };
+}
+
