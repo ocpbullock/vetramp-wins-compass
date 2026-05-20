@@ -107,15 +107,15 @@ export function TeamingCard({
     );
   }, [partners, usedIds, search]);
 
-  const addPartner = async (partner: Partner) => {
+  const addPartner = async (partner: Partner, overrides?: { role?: RoleValue; workShare?: number | null }) => {
     const overlap = opportunityNaics
       ? partner.naics_codes.filter((n) => n === opportunityNaics)
       : [];
     const { error } = await supabase.from("proposal_teaming").insert({
       proposal_id: proposalId,
       partner_id: partner.id,
-      role: "sub",
-      work_share_pct: null,
+      role: overrides?.role ?? "sub",
+      work_share_pct: overrides?.workShare ?? null,
       naics_contribution: overlap,
     });
     if (error) { toast.error(error.message); return; }
@@ -124,6 +124,15 @@ export function TeamingCard({
     setSearch("");
     refetch();
     qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
+  };
+
+  const addSuggested = async (s: PartnerSuggestion) => {
+    const p = partners.find((x) => x.id === s.partnerId);
+    if (!p) { toast.error("Partner not found in roster"); return; }
+    const role: RoleValue = (ROLES.find((r) => r.value === s.bestRole)?.value
+      ?? "sub") as RoleValue;
+    const midShare = Math.round((s.workshareRange[0] + s.workshareRange[1]) / 2);
+    await addPartner(p, { role, workShare: midShare });
   };
 
   const updateEntry = async (id: string, patch: Partial<Pick<TeamingEntry, "role" | "work_share_pct">>) => {
