@@ -118,9 +118,43 @@ function Dashboard() {
     },
   ) {
     if (!user) return;
+    // For tracked opportunities, the workspace is org-team-shared. Look up
+    // the tracked row's team_id so the new proposal lands on the same team
+    // (regardless of which org team is currently selected) and check whether
+    // a proposal already exists so we don't create a duplicate private copy.
+    let effectiveTeamId: string | null = teamId;
+    if (source.kind === "tracked") {
+      const { data: tracked } = await supabase
+        .from("tracked_opportunities")
+        .select("team_id")
+        .eq("id", source.id)
+        .maybeSingle();
+      if (tracked?.team_id) effectiveTeamId = tracked.team_id;
+
+      // Reuse any existing accessible proposal for this tracked opportunity.
+      // RLS scopes the result to proposals the caller can already see, so
+      // partners only match invited workspaces.
+      const { data: existing } = await supabase
+        .from("proposals")
+        .select("id")
+        .eq("opportunity_source", "tracked")
+        .eq("opportunity_source_id", source.id)
+        .order("created_at", { ascending: true })
+        .limit(2);
+      if (existing && existing.length > 0) {
+        if (existing.length > 1) {
+          toast.message("Multiple proposals exist for this tracked opportunity — opening the earliest.", {
+            description: "Review and archive duplicates from the In Progress tab.",
+          });
+        }
+        navigate({ to: "/proposals/$proposalId", params: { proposalId: existing[0].id } });
+        return;
+      }
+    }
+
     const { data, error } = await supabase.from("proposals").insert({
       user_id: user.id,
-      team_id: teamId,
+      team_id: effectiveTeamId,
       solicitation_number: o.solicitationNumber || o.noticeId || "unknown",
       notice_id: o.noticeId,
       opportunity_title: o.title,
