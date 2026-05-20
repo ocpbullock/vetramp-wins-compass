@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -16,9 +16,29 @@ export function ProposalModal({ opp, onClose }: { opp: SamOpportunity | null; on
   const teamId = useTeamId();
   const [content, setContent] = useState("");
   const [generating, setGenerating] = useState(false);
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("company_profile")
+        .select("profile_data")
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (!cancelled) setCompanyProfile(data?.profile_data ?? null);
+    })();
+    return () => { cancelled = true; };
+  }, [open]);
 
   async function generate() {
     if (!opp) return;
+    if (!companyProfile || !companyProfile.legal_name) {
+      toast.error("Company profile is required. Please complete your profile in Capture Intel before generating proposals.");
+      return;
+    }
     setGenerating(true);
     setContent("");
     try {
@@ -30,7 +50,7 @@ export function ProposalModal({ opp, onClose }: { opp: SamOpportunity | null; on
           "Content-Type": "application/json",
           Authorization: `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ opportunity: opp }),
+        body: JSON.stringify({ opportunity: opp, teamId, companyProfile }),
       });
       if (!resp.ok || !resp.body) {
         const err = await resp.json().catch(() => ({ error: "Failed" }));

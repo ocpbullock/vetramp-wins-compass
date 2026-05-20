@@ -2,6 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAI, aiErrorResponse, pickModel } from "../_shared/ai-client.ts";
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
+import {
+  companyIdentity,
+  hasCompanyProfile,
+  missingProfileResponse,
+  renderCompanyProfileBlock,
+} from "../_shared/company-profile.ts";
 
 const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   past_performance: ["past_performance"],
@@ -61,34 +67,34 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
   cover_letter: `Write a one-page COVER LETTER addressed to the Contracting Officer at the named contracting office.
 - Reference the END-USER unit by name (parse from the agency hierarchy).
 - Acknowledge the operating environment in 2-3 specific sentences.
-- Connect VetRamp's experience to the unit's mission. No generic boilerplate.`,
+- Connect the offeror's experience (from the COMPANY PROFILE) to the unit's mission. No generic boilerplate.`,
   executive_summary: `Write the EXECUTIVE SUMMARY.
 - Open with the end-user unit's mission and how this contract supports it (use customer intel if present).
 - Demonstrate Understanding of the Requirement: name the facility, reference standards/frameworks, mention customer base. Zero generic language.
 - 3-4 paragraphs covering technical / management / staffing at high level.
-- Include a 5-row markdown TABLE of discriminators: | Discriminator | How It Benefits the Customer |.
-- 30-day Full Operational Capability commitment.
-- Close tying VetRamp's veteran workforce to the military mission.`,
+- Include a 5-row markdown TABLE of discriminators: | Discriminator | How It Benefits the Customer | (draw discriminators from the COMPANY PROFILE's Differentiators when available).
+- Operational capability commitment with a realistic timeline.
+- Close by tying the offeror's workforce strengths (from the COMPANY PROFILE) to the customer mission.`,
   technical_approach: `Write the TECHNICAL APPROACH.
 - Mirror the SOW section numbering (3.1, 3.2, ...). Every "shall" must have a response.
-- Subsections: 1.1 Understanding of the Requirement, 1.2 Service Delivery Model (3-tier), 1.3 Technology & Security Framework (NIST 800-171, CMMC, DISA STIGs, ServiceNow, SIEM, DevSecOps), 1.4 Support Coverage Areas, 1.5 SLOs, 1.6 Transition Plan.
-- Include an SLO TABLE: | Priority | Response Time | Resolution Target | Escalation Path | with Critical/High/Medium/Low rows and 99.5% uptime.
+- Subsections: 1.1 Understanding of the Requirement, 1.2 Service/Solution Delivery Model, 1.3 Technology & Security Framework (cite only frameworks relevant to the SOW, e.g. NIST 800-171, CMMC, DISA STIGs, ServiceNow, SIEM, DevSecOps when applicable), 1.4 Support Coverage Areas, 1.5 SLOs, 1.6 Transition Plan.
+- Include an SLO TABLE: | Priority | Response Time | Resolution Target | Escalation Path | with Critical/High/Medium/Low rows and an uptime target.
 - Include a transition timeline TABLE with week-by-week milestones.`,
   management_approach: `Write the MANAGEMENT APPROACH.
 - 2.1 Org Structure TABLE: | Role | Reports To | Key Responsibility |.
 - 2.2 Governance TABLE: | Deliverable | Frequency | Contents | Recipient | (weekly/monthly/quarterly).
-- 2.3 QA TABLE: | Metric | Target | Measurement Method | Reporting Frequency | (15% ticket audits, 90%+ satisfaction, Lean/Kaizen).
+- 2.3 QA TABLE: | Metric | Target | Measurement Method | Reporting Frequency | with measurable audit and satisfaction targets and a continuous-improvement method.
 - 2.4 Risk Register TABLE of 5 risks: | Risk | Likelihood | Impact | Mitigation | Responsible | — include CONTRACT-SPECIFIC risks derived from the SOW, not just boilerplate.`,
   past_performance: `Write PAST PERFORMANCE.
 - 3.1 Relevant Contracts TABLE: | Contract Name | Agency | Value | Period | Scope | CPARS |. Use ONLY entries provided in the PAST PERFORMANCE LIBRARY block (selected by the capture team) plus the company profile past_performance array if no library is supplied. Do not fabricate contracts, values, periods, POCs, or CPARS ratings.
 - 3.2 For each entry, write a 1-2 paragraph narrative anchored on the entry's description, drawing out scope relevance to the current SOW. Reference the actual contract number, task order number, and POC when present.
 - 3.3 Relevance Matrix: map each past performance entry to specific current SOW tasks/PWS sections.
 - 3.4 References paragraph listing client POCs (name, title, phone, email) verbatim from the supplied entries.
-- If a teaming partner brings additional past performance, cite it after VetRamp's own.`,
+- If a teaming partner brings additional past performance, cite it after the offeror's own.`,
   staffing_plan: `Write the STAFFING PLAN.
 - 4.1 Team Composition TABLE: | Role | FTE | Clearance | Required Certs | Location |. If solutionDesign.staffing is present, use those rows verbatim.
 - 4.2 Key Personnel: bios with required qualifications. If a candidate name is missing, use "[KEY PERSONNEL — TO BE NAMED]" with the required qualifications listed.
-- 4.3 Recruiting pipeline (VetHUB, military installations, UT Austin / Texas A&M).
+- 4.3 Recruiting pipeline — describe the offeror's recruiting channels in general terms; only name specific partners, programs, or universities if they appear in the COMPANY PROFILE.
 - 4.4 Mobilization timeline TABLE (4 phases).`,
   compliance_matrix: `Write the COMPLIANCE CROSS-REFERENCE MATRIX as the proposal's final appendix.
 - One markdown TABLE: | Req # | SOW Reference | Requirement (verbatim quote) | Proposal Section | Page # |.
@@ -119,6 +125,8 @@ Deno.serve(async (req) => {
       proposalId,
     } = body;
 
+    if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
+
     let verifiedTeamId: string | null;
     try {
       verifiedTeamId = await resolveTeamId(ctx, teamId ?? null);
@@ -131,15 +139,19 @@ Deno.serve(async (req) => {
 
     const knowledgeContext = await fetchKnowledgeContext(sectionId, ctx.admin, verifiedTeamId);
 
-    const systemPrompt = `You are a senior federal capture manager writing for LGE Consulting, LLC dba VetRamp (SBA-certified SDVOSB).
-You are writing ONE section of a proposal at a time. Output MARKDOWN only — no preamble, no closing remarks.
+    const identity = companyIdentity(companyProfile);
+    const profileBlock = renderCompanyProfileBlock(companyProfile);
+
+    const systemPrompt = `You are a senior federal capture manager writing ONE section of a proposal for ${identity}.
+Output MARKDOWN only — no preamble, no closing remarks.
 Every "shall" requirement in the SOW must be addressed if this section covers it. Use the unit's terminology, not generic federal-speak.
 Use markdown tables for structured data. Quote SOW requirements verbatim when referencing them.
+The COMPANY PROFILE below is the sole source of truth for who the offeror is — do not invent identity, certifications, locations, past performance, or recruiting pipelines that are not listed.
 
 COMPANY PROFILE:
-${JSON.stringify(companyProfile, null, 2)}
+${profileBlock}
 
-${knowledgeContext ? `KNOWLEDGE BASE (authoritative VetRamp content — prefer this over general knowledge when writing):\n${knowledgeContext}\n` : ""}
+${knowledgeContext ? `KNOWLEDGE BASE (authoritative offeror-provided content — prefer this over general knowledge when writing):\n${knowledgeContext}\n` : ""}
 OPPORTUNITY:
 Title: ${opportunity?.title || "N/A"}
 Solicitation #: ${opportunity?.solicitationNumber || "N/A"}
