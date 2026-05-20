@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Calendar as CalendarIcon } from "lucide-react";
+import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Calendar as CalendarIcon, Users } from "lucide-react";
 import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
