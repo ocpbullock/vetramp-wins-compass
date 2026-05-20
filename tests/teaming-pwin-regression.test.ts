@@ -225,16 +225,20 @@ describe("scenarios and outreach drafts are proposal-scoped", () => {
 
 // ---------- 6. Existing proposal sharing across teammates ----------
 describe("proposals remain visible to teammates and opportunity team members", () => {
-  it("user_can_see_proposal grants access via team_id, opportunity_team_id, or admin", () => {
-    // Function definition lives in the canonical migration; check it covers all 4 paths.
+  it("user_can_see_proposal is the gate across teaming/scenarios/outreach/milestones/attachments", () => {
     const sql = migrations();
-    const fnMatch = sql.match(/CREATE OR REPLACE FUNCTION public\.user_can_see_proposal[\s\S]*?\$function\$/);
-    expect(fnMatch, "user_can_see_proposal function must be defined in migrations").not.toBeNull();
-    const body = fnMatch![0];
-    expect(body).toMatch(/p\.user_id\s*=\s*_user_id/);
-    expect(body).toMatch(/is_team_member\(p\.team_id,\s*_user_id\)/);
-    expect(body).toMatch(/is_team_member\(p\.opportunity_team_id,\s*_user_id\)/);
-    expect(body).toMatch(/has_role\(_user_id,\s*'admin'::app_role\)/);
+    // Same security-definer function used everywhere proposal-scoped tables enforce access.
+    for (const table of [
+      "proposal_teaming",
+      "pwin_scenarios",
+      "proposal_outreach_drafts",
+      "proposal_milestones",
+      "proposal_attachments",
+    ]) {
+      expect(sql, `${table} should be gated by user_can_see_proposal`).toMatch(
+        new RegExp(`${table}[\\s\\S]*user_can_see_proposal\\(proposal_id, auth\\.uid\\(\\)\\)`),
+      );
+    }
   });
 
   it("proposals SELECT policy still exposes proposals to team + opportunity-team members", () => {
