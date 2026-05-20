@@ -320,9 +320,19 @@ export function TeamingCard({
         />
       )}
     </Card>
+    {proposal && (
+      <SuggestedPartnersCard
+        proposal={proposal}
+        existingPartnerIds={entries.map((e) => e.partner_id)}
+        onAdd={addSuggested}
+        onOutreach={openOutreach}
+      />
+    )}
+    </div>
 
   );
 }
+
 
 function TotalShare({ entries }: { entries: TeamingEntry[] }) {
   const total = entries.reduce((s, e) => s + (e.work_share_pct ?? 0), 0);
