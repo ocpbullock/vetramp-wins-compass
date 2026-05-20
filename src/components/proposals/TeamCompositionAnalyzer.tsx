@@ -579,3 +579,48 @@ function CompareView({ scenarios, onDelete, currentScore }: {
     </div>
   );
 }
+
+function InsightsPanel({ insights }: { insights: ScenarioInsights }) {
+  return (
+    <div className="mt-4 border rounded-md p-3 space-y-3">
+      <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+        Scenario insights
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold text-green-700 flex items-center gap-1">
+          <ThumbsUp className="w-3 h-3" /> Strengths
+        </div>
+        {insights.strengths.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground italic mt-1">No standout strengths yet.</div>
+        ) : (
+          <ul className="mt-1 space-y-1 text-[12px]">
+            {insights.strengths.map((s, i) => (
+              <li key={i}><span className="font-medium">{s.label}.</span> <span className="text-muted-foreground">{s.detail}</span></li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div>
+        <div className="text-[11px] font-semibold text-destructive flex items-center gap-1">
+          <ThumbsDown className="w-3 h-3" /> Weaknesses
+        </div>
+        {insights.weaknesses.length === 0 ? (
+          <div className="text-[11px] text-muted-foreground italic mt-1">No critical gaps detected.</div>
+        ) : (
+          <ul className="mt-1 space-y-1 text-[12px]">
+            {insights.weaknesses.map((s, i) => (
+              <li key={i}><span className="font-medium">{s.label}.</span> <span className="text-muted-foreground">{s.detail}</span></li>
+            ))}
+          </ul>
+        )}
+      </div>
+      <div className="border-t pt-2">
+        <div className="text-[11px] font-semibold text-primary flex items-center gap-1">
+          <ArrowRight className="w-3 h-3" /> Recommended next action
+        </div>
+        <div className="text-[12px] mt-1">{insights.recommendedAction}</div>
+      </div>
+    </div>
+  );
+}
+
