@@ -1,5 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+
+// Stable empty fallbacks so destructured defaults don't allocate fresh arrays
+// each render while queries are loading (which would otherwise cause the
+// initialization effect below to re-run and loop setMembers).
+const EMPTY_PARTNERS: Partner[] = [];
+const EMPTY_ENTRIES: Array<{ partner_id: string; role: PwinRole; work_share_pct: number | null }> = [];
+const EMPTY_SCENARIOS: any[] = [];
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
