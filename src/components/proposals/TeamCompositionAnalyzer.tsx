@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-
-// Stable empty fallbacks so destructured defaults don't allocate fresh arrays
-// each render while queries are loading (which would otherwise cause the
-// initialization effect below to re-run and loop setMembers).
-const EMPTY_PARTNERS: Partner[] = [];
-const EMPTY_ENTRIES: Array<{ partner_id: string; role: PwinRole; work_share_pct: number | null }> = [];
-const EMPTY_SCENARIOS: any[] = [];
 import { supabase } from "@/integrations/supabase/client";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription,
@@ -39,6 +32,17 @@ const ROLES: { value: PwinRole; label: string }[] = [
   { value: "protege", label: "Protégé" },
   { value: "jv_partner", label: "JV Partner" },
 ];
+
+// Stable empty fallbacks so destructured defaults don't allocate fresh arrays
+// each render while queries are loading. A fresh `[]` literal in a useQuery
+// destructure default (`= []`) gets a new identity every render, which makes
+// dependency-array comparisons in effects always-changed and can loop
+// setState -> render -> effect -> setState (React error #185).
+const EMPTY_PARTNERS: Partner[] = [];
+type EntryRow = { partner_id: string; role: PwinRole; work_share_pct: number | null };
+const EMPTY_ENTRIES: EntryRow[] = [];
+const EMPTY_SCENARIOS: any[] = [];
+
 
 type ProposalLite = {
   id: string;
