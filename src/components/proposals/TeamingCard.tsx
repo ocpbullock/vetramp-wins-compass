@@ -15,6 +15,8 @@ import { toast } from "sonner";
 import type { Partner } from "@/components/settings/PartnersPanel";
 import { TeamCompositionAnalyzer } from "./TeamCompositionAnalyzer";
 import { TeamingOutreachModal, type OutreachPartnerInput } from "./TeamingOutreachModal";
+import { SuggestedPartnersCard } from "./SuggestedPartnersCard";
+import type { PartnerSuggestion } from "@/lib/partner-suggest";
 
 
 const ROLES = [
