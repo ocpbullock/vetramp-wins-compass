@@ -5,7 +5,11 @@ import { routeTree } from "./routeTree.gen";
 export const getRouter = () => {
   const queryClient = new QueryClient({
     defaultOptions: {
-      queries: { staleTime: 4 * 60 * 60 * 1000, refetchOnWindowFocus: false },
+      // 5-minute default: this is a collaborative tool, so teammates' edits
+      // (proposals, milestones, tracked, starred) need to surface quickly.
+      // Slow-moving data (company profile, contract vehicles, KB, etc.)
+      // overrides this at the call site.
+      queries: { staleTime: 5 * 60 * 1000, refetchOnWindowFocus: true },
     },
   });
 

@@ -52,6 +52,7 @@ export function PastPerformancePanel() {
   const { data, isLoading } = useQuery({
     queryKey: ["past-performance", currentTeam?.id],
     enabled: !!currentTeam,
+    staleTime: 30 * 60 * 1000, // Slow-moving reference data
     queryFn: async () => {
       const { data, error } = await supabase
         .from("past_performance")

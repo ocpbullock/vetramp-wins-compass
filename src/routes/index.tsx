@@ -268,18 +268,22 @@ function Dashboard() {
       setProgress(95);
 
       const totalObligated = (usaRes.results ?? []).reduce((s, a) => s + (Number(a["Award Amount"]) || 0), 0);
-      await writeCache({
-        cacheKey,
-        teamId: teamId ?? "",
-        naicsCodes: input.naicsCodes,
-        dateFrom: input.postedFrom,
-        dateTo: input.postedTo,
-        historicalFrom,
-        keyword: input.keyword,
-        opportunities: samRes.opportunities,
-        historical: usaRes,
-        summary: { activeOpps: samRes.opportunities.length, totalObligated },
-      });
+      if (teamId) {
+        await writeCache({
+          cacheKey,
+          teamId,
+          naicsCodes: input.naicsCodes,
+          dateFrom: input.postedFrom,
+          dateTo: input.postedTo,
+          historicalFrom,
+          keyword: input.keyword,
+          opportunities: samRes.opportunities,
+          historical: usaRes,
+          summary: { activeOpps: samRes.opportunities.length, totalObligated },
+        });
+      } else {
+        log("info", "↳ cache skipped (no team selected)");
+      }
 
       setProgress(100);
       setProgressText("Done");

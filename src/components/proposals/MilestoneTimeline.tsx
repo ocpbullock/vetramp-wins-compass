@@ -48,7 +48,17 @@ export function MilestoneTimeline({
 
   async function load() {
     setLoading(true);
-    await reconcileOverdue([proposalId]);
+    // Throttle reconcileOverdue across the whole tab session — same 15-minute
+    // window used by InProgressTab — to avoid redundant writes to
+    // proposal_milestones whenever this component remounts.
+    const RECONCILE_INTERVAL = 15 * 60 * 1000;
+    try {
+      const lastRun = Number(sessionStorage.getItem("vetramp_last_reconcile") || "0");
+      if (Date.now() - lastRun > RECONCILE_INTERVAL) {
+        await reconcileOverdue([proposalId]);
+        sessionStorage.setItem("vetramp_last_reconcile", String(Date.now()));
+      }
+    } catch { /* sessionStorage unavailable — skip reconcile */ }
     const { data, error } = await supabase
       .from("proposal_milestones")
       .select("*")

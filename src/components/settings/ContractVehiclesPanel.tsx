@@ -71,6 +71,7 @@ export function ContractVehiclesPanel() {
   const { data, isLoading } = useQuery({
     queryKey: ["contract-vehicles", currentTeam?.id],
     enabled: !!currentTeam,
+    staleTime: 30 * 60 * 1000, // Slow-moving reference data
     queryFn: async () => {
       const { data, error } = await supabase
         .from("contract_vehicles")

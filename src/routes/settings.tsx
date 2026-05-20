@@ -141,6 +141,7 @@ function CompanyProfilePanel() {
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["company-profile"],
+    staleTime: 30 * 60 * 1000, // Slow-moving reference data
     queryFn: async () => {
       const { data, error } = await supabase
         .from("company_profile")
