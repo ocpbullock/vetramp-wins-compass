@@ -131,6 +131,7 @@ export function TeamingCard({
         <div>
           <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Teaming</CardTitle>
           <CardDescription>Partners on this bid, their role, and work share.</CardDescription>
+        </div>
         <div className="flex items-center gap-2">
           {proposal && (
             <Button size="sm" variant="secondary" onClick={() => setAnalyzerOpen(true)} disabled={!teamId}>
