@@ -200,6 +200,7 @@ function LibraryCard() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["knowledge-base", teamIds.join(",")],
     enabled: teamIds.length > 0,
+    staleTime: 15 * 60 * 1000, // Knowledge base entries change infrequently
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("knowledge_base")
