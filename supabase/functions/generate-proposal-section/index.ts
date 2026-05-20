@@ -2,6 +2,12 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { corsHeaders } from "../_shared/cors.ts";
 import { callAI, aiErrorResponse, pickModel } from "../_shared/ai-client.ts";
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
+import {
+  companyIdentity,
+  hasCompanyProfile,
+  missingProfileResponse,
+  renderCompanyProfileBlock,
+} from "../_shared/company-profile.ts";
 
 const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   past_performance: ["past_performance"],
