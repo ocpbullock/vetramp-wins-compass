@@ -23,7 +23,7 @@ import {
   type PwinTeamMember, type PwinContext, type PwinRole, type EngagementType, type PwinResult,
   type RelationshipModel, type ScenarioInsights,
 } from "@/lib/pwin";
-import type { Partner } from "@/components/settings/PartnersPanel";
+import { listPartnerCompanies, type PartnerView as Partner } from "@/lib/companies";
 
 const ROLES: { value: PwinRole; label: string }[] = [
   { value: "prime", label: "Prime" },
@@ -107,14 +107,11 @@ export function TeamCompositionAnalyzer({
     },
   });
 
-  // --- load all teaming partners
+  // --- load all teaming partners (from unified companies table)
   const { data: partnersData } = useQuery({
     queryKey: ["pwin-partners", teamId],
     enabled: !!teamId && open,
-    queryFn: async () => {
-      const { data } = await supabase.from("teaming_partners").select("*").eq("team_id", teamId!);
-      return (data ?? []) as Partner[];
-    },
+    queryFn: async () => listPartnerCompanies(teamId!),
   });
   const partners: Partner[] = partnersData ?? EMPTY_PARTNERS;
 
@@ -124,9 +121,11 @@ export function TeamCompositionAnalyzer({
     enabled: open,
     queryFn: async () => {
       const { data } = await supabase.from("proposal_teaming")
-        .select("partner_id, role, work_share_pct")
+        .select("company_id, role, work_share_pct")
         .eq("proposal_id", proposalId);
-      return (data ?? []) as EntryRow[];
+      return ((data ?? []) as any[]).map((r) => ({
+        partner_id: r.company_id, role: r.role, work_share_pct: r.work_share_pct,
+      })) as EntryRow[];
     },
   });
   const entries: EntryRow[] = entriesData ?? EMPTY_ENTRIES;

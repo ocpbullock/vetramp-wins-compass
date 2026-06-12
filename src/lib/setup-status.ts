@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeamId } from "@/lib/team";
+import { countPartnerCompanies } from "@/lib/companies";
+
 
 export type SetupItem = {
   key: string;
@@ -34,7 +36,7 @@ export function useSetupStatus(): SetupStatus {
         ppRes,
         cvRes,
         membersRes,
-        partnersRes,
+        partnerCount,
       ] = await Promise.all([
         supabase.from("company_profile").select("profile_data").limit(1).maybeSingle(),
         supabase.from("knowledge_base").select("id", { count: "exact", head: true }),
@@ -43,7 +45,8 @@ export function useSetupStatus(): SetupStatus {
         teamId
           ? supabase.from("team_members").select("id", { count: "exact", head: true }).eq("team_id", teamId)
           : Promise.resolve({ count: 0, error: null } as { count: number | null; error: null }),
-        supabase.from("teaming_partners").select("id", { count: "exact", head: true }),
+        teamId ? countPartnerCompanies(teamId) : Promise.resolve(0),
+
       ]);
 
       const profile = (profileRes.data?.profile_data ?? {}) as Record<string, unknown>;
@@ -58,7 +61,7 @@ export function useSetupStatus(): SetupStatus {
         ppCount: ppRes.count ?? 0,
         cvCount: cvRes.count ?? 0,
         memberCount: membersRes.count ?? 0,
-        partnerCount: partnersRes.count ?? 0,
+        partnerCount: partnerCount ?? 0,
       };
     },
     enabled: true,

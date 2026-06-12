@@ -78,11 +78,12 @@ export function CompetitiveIntelModal({
     enabled: !!teamId,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("teaming_partners")
+        .from("companies")
         .select("contract_vehicles")
-        .eq("team_id", teamId!);
+        .eq("team_id", teamId!)
+        .eq("is_own_company", false);
       if (error) throw new Error(error.message);
-      return (data ?? []).flatMap((r) => r.contract_vehicles ?? []);
+      return (data ?? []).flatMap((r: any) => r.contract_vehicles ?? []);
     },
   });
 

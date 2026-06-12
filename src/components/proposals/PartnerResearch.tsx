@@ -11,7 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Search, Plus, UserPlus, Loader2, Users, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { searchEntities } from "@/lib/api";
-import type { Partner } from "@/components/settings/PartnersPanel";
+import { listPartnerCompanies, findOrInsertPartnerFromSamEntity, type PartnerView as Partner } from "@/lib/companies";
 
 const SB_TYPES = [
   { value: "SDVOSB", label: "SDVOSB" },
@@ -32,19 +32,14 @@ export function PartnerResearch({
   const { data: partners = [] } = useQuery({
     queryKey: ["teaming-partners", teamId],
     enabled: !!teamId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teaming_partners").select("*").eq("team_id", teamId!).order("company_name");
-      if (error) throw new Error(error.message);
-      return (data ?? []) as Partner[];
-    },
+    queryFn: async () => listPartnerCompanies(teamId!),
   });
 
   const { data: existingTeaming = [] } = useQuery({
     queryKey: ["proposal-teaming", proposalId],
     queryFn: async () => {
-      const { data } = await supabase.from("proposal_teaming").select("partner_id").eq("proposal_id", proposalId);
-      return (data ?? []).map((r: any) => r.partner_id as string);
+      const { data } = await supabase.from("proposal_teaming").select("company_id").eq("proposal_id", proposalId);
+      return (data ?? []).map((r: any) => r.company_id as string);
     },
   });
 
@@ -61,7 +56,7 @@ export function PartnerResearch({
       ? partner.naics_codes.filter((n) => n === opportunityNaics)
       : [];
     const { error } = await supabase.from("proposal_teaming").insert({
-      proposal_id: proposalId, partner_id: partner.id, role: "sub", work_share_pct: null, naics_contribution: overlap,
+      proposal_id: proposalId, company_id: partner.id, role: "sub", work_share_pct: null, naics_contribution: overlap,
     });
     if (error) { toast.error(error.message); return; }
     toast.success(`Added ${partner.company_name} to this proposal`);
@@ -116,28 +111,18 @@ export function PartnerResearch({
 
   const addToRoster = async (entity: any): Promise<Partner | null> => {
     if (!teamId) { toast.error("No team selected"); return null; }
-    // Look for an existing roster partner by UEI or legal_name
-    const existing = partners.find((p) =>
-      (entity.uei && p.uei === entity.uei) || p.company_name === (entity.legal_name || entity.dba_name),
-    );
-    if (existing) return existing;
-    const insert = {
-      team_id: teamId,
-      company_name: entity.legal_name || entity.dba_name || "Unknown",
-      uei: entity.uei ?? null,
-      cage_code: entity.cage_code ?? null,
-      certifications: entity.small_business_types ?? [],
-      naics_codes: entity.naics_codes ?? [],
-      capabilities_summary: null,
-      relationship_status: "prospective" as const,
-      contract_vehicles: [] as string[],
-      notes: `Imported from Tango entity search · ${entity.city ?? ""} ${entity.state ?? ""}`.trim(),
-    };
-    const { data, error } = await supabase.from("teaming_partners").insert(insert).select().single();
-    if (error) { toast.error(error.message); return null; }
-    toast.success(`Added ${insert.company_name} to roster`);
-    qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
-    return data as Partner;
+    try {
+      const partner = await findOrInsertPartnerFromSamEntity(teamId, entity);
+      if (partner) {
+        toast.success(`Added ${partner.company_name} to roster`);
+        qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
+        qc.invalidateQueries({ queryKey: ["companies", teamId] });
+      }
+      return partner;
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to add to roster");
+      return null;
+    }
   };
 
   const addEntityToProposal = async (entity: any) => {

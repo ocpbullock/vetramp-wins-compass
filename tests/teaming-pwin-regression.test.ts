@@ -160,7 +160,7 @@ describe("partner suggestions are team-scoped", () => {
     expect(out.find((s) => s.partnerId === "A")).toBeUndefined();
   });
 
-  it("every teaming_partners query in UI components filters by team_id", () => {
+  it("every companies-roster query in UI components filters by team_id", () => {
     const files = [
       "src/components/proposals/TeamingCard.tsx",
       "src/components/proposals/TeamCompositionAnalyzer.tsx",
@@ -168,14 +168,14 @@ describe("partner suggestions are team-scoped", () => {
     ];
     for (const f of files) {
       const src = read(f);
-      const matches = src.match(/\.from\(["']teaming_partners["']\)[\s\S]{0,400}/g) ?? [];
-      expect(matches.length, `${f} should query teaming_partners`).toBeGreaterThan(0);
-      for (const block of matches) {
-        expect(block, `${f}: teaming_partners query missing .eq("team_id", ...)`)
-          .toMatch(/\.eq\(["']team_id["'],\s*teamId/);
-      }
-      // queries must also be gated on a truthy teamId
+      // Components now load partners via listPartnerCompanies(teamId!) from @/lib/companies.
+      expect(src, `${f} should pull partners from companies via lib helper`).toMatch(
+        /listPartnerCompanies\(\s*teamId!?\s*\)/,
+      );
+      // queries must be gated on a truthy teamId
       expect(src).toMatch(/enabled:\s*!!\s*teamId/);
+      // and the legacy table name must not appear anywhere in component src
+      expect(src).not.toMatch(/from\(["']teaming_partners["']\)/);
     }
   });
 });

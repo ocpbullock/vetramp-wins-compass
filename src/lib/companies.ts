@@ -105,6 +105,140 @@ export async function deleteCompany(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+// ---------------------------------------------------------------------------
+// Companies-as-partners adapter
+// ---------------------------------------------------------------------------
+// The proposal-side UI used to read its teaming roster from `teaming_partners`.
+// That table is now a back-compat shim; `companies` is the source of truth.
+// These helpers expose the legacy row shape so consumers can migrate without
+// rewriting every render path.
+
+export type PartnerView = {
+  id: string;
+  team_id: string;
+  company_name: string;
+  uei: string | null;
+  cage_code: string | null;
+  poc_name: string | null;
+  poc_email: string | null;
+  poc_phone: string | null;
+  certifications: string[];
+  naics_codes: string[];
+  capabilities_summary: string | null;
+  past_performance_summary: string | null;
+  contract_vehicles: string[];
+  relationship_status: "active" | "prospective" | "inactive";
+  relationship_strength: number | null;
+  worked_together_before: boolean;
+  is_existing_partner: boolean;
+  notes: string | null;
+};
+
+export function companyToPartnerView(c: Company): PartnerView {
+  const ppSummary = Array.isArray(c.past_performance) && c.past_performance.length > 0
+    ? (c.past_performance[0]?.summary ?? null)
+    : null;
+  return {
+    id: c.id,
+    team_id: c.team_id,
+    company_name: c.name,
+    uei: c.uei,
+    cage_code: c.cage_code,
+    poc_name: c.poc_name,
+    poc_email: c.poc_email,
+    poc_phone: c.poc_phone,
+    certifications: c.certifications ?? [],
+    naics_codes: c.naics_codes ?? [],
+    capabilities_summary: c.capabilities_narrative,
+    past_performance_summary: ppSummary,
+    contract_vehicles: c.contract_vehicles ?? [],
+    relationship_status: c.relationship_status,
+    relationship_strength: c.relationship_strength,
+    worked_together_before: c.worked_together_before,
+    is_existing_partner: c.is_existing_partner,
+    notes: c.notes,
+  };
+}
+
+/** All non-own companies on a team, mapped to the legacy partner shape. */
+export async function listPartnerCompanies(teamId: string): Promise<PartnerView[]> {
+  const { data, error } = await supabase
+    .from("companies" as any)
+    .select("*")
+    .eq("team_id", teamId)
+    .eq("is_own_company", false)
+    .order("name");
+  if (error) throw new Error(error.message);
+  return ((data ?? []) as unknown as Company[]).map(companyToPartnerView);
+}
+
+/** Count companies on the team flagged as existing teaming partners. */
+export async function countPartnerCompanies(teamId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("companies" as any)
+    .select("id", { count: "exact", head: true })
+    .eq("team_id", teamId)
+    .eq("is_existing_partner", true)
+    .eq("is_own_company", false);
+  if (error) throw new Error(error.message);
+  return count ?? 0;
+}
+
+/** Distinct set of contract vehicles held by partner companies. */
+export async function listPartnerContractVehicles(teamId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("companies" as any)
+    .select("contract_vehicles")
+    .eq("team_id", teamId)
+    .eq("is_own_company", false);
+  if (error) throw new Error(error.message);
+  const out = new Set<string>();
+  for (const row of (data ?? []) as { contract_vehicles?: string[] | null }[]) {
+    for (const v of row.contract_vehicles ?? []) out.add(v);
+  }
+  return Array.from(out);
+}
+
+/**
+ * Find an existing companies row matching a SAM/Tango entity (by UEI or
+ * exact name) or insert a new one flagged as an existing teaming partner.
+ */
+export async function findOrInsertPartnerFromSamEntity(
+  teamId: string,
+  entity: any,
+): Promise<PartnerView | null> {
+  // Normalize both SAM.gov-shaped and Tango-shaped entities into a draft.
+  const samDraft = companyFromSamEntity(entity, teamId);
+  const tangoName = entity.legal_name || entity.dba_name || null;
+  const tangoUei = entity.uei || null;
+  const draft: CompanyDraft = {
+    ...samDraft,
+    name: samDraft.name === "Unknown entity" && tangoName ? tangoName : samDraft.name,
+    uei: samDraft.uei ?? tangoUei,
+    cage_code: samDraft.cage_code ?? (entity.cage_code ?? null),
+    certifications: samDraft.certifications?.length ? samDraft.certifications : (entity.small_business_types ?? []),
+    naics_codes: samDraft.naics_codes?.length ? samDraft.naics_codes : (entity.naics_codes ?? []),
+  };
+  const matchCol = draft.uei ? "uei" : "name";
+  const matchVal = draft.uei ?? draft.name;
+  const { data: existing, error: lookupErr } = await supabase
+    .from("companies" as any)
+    .select("*")
+    .eq("team_id", teamId)
+    .eq(matchCol, matchVal)
+    .limit(1)
+    .maybeSingle();
+  if (lookupErr) throw new Error(lookupErr.message);
+  if (existing) return companyToPartnerView(existing as unknown as Company);
+
+  const inserted = await upsertCompany({
+    ...draft,
+    is_existing_partner: true,
+    notes: `Imported from entity search · ${entity.city ?? ""} ${entity.state ?? ""}`.trim(),
+  });
+  return companyToPartnerView(inserted);
+}
+
 /** Build a company draft from a vendor-profile lookup (USAspending/our getVendorProfile). */
 export function companyFromVendorLookup(payload: any, teamId: string): CompanyDraft {
   const p = payload?.profile ?? {};

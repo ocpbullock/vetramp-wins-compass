@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/popover";
 import { Plus, Trash2, Users, Search, Sparkles, Mail } from "lucide-react";
 import { toast } from "sonner";
-import type { Partner } from "@/components/settings/PartnersPanel";
+import type { PartnerView as Partner } from "@/lib/companies";
+import { listPartnerCompanies, companyToPartnerView, type Company } from "@/lib/companies";
 import { TeamCompositionAnalyzer } from "./TeamCompositionAnalyzer";
 import { TeamingSandbox } from "./TeamingSandbox";
 import { TeamingOutreachModal, type OutreachPartnerInput } from "./TeamingOutreachModal";
@@ -74,14 +75,7 @@ export function TeamingCard({
   const { data: partners = [] } = useQuery({
     queryKey: ["teaming-partners", teamId],
     enabled: !!teamId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teaming_partners").select("*")
-        .eq("team_id", teamId!)
-        .order("company_name");
-      if (error) throw new Error(error.message);
-      return (data ?? []) as Partner[];
-    },
+    queryFn: async () => listPartnerCompanies(teamId!),
   });
 
   const { data: entries = [], refetch } = useQuery({
@@ -89,11 +83,15 @@ export function TeamingCard({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposal_teaming")
-        .select("*, partner:partner_id ( * )")
+        .select("*, company:company_id ( * )")
         .eq("proposal_id", proposalId)
         .order("created_at");
       if (error) throw new Error(error.message);
-      return (data ?? []) as TeamingEntry[];
+      return (data ?? []).map((row: any) => ({
+        ...row,
+        partner_id: row.company_id ?? row.partner_id,
+        partner: row.company ? companyToPartnerView(row.company as Company) : undefined,
+      })) as TeamingEntry[];
     },
   });
 
@@ -115,7 +113,7 @@ export function TeamingCard({
       : [];
     const { error } = await supabase.from("proposal_teaming").insert({
       proposal_id: proposalId,
-      partner_id: partner.id,
+      company_id: partner.id,
       role: overrides?.role ?? "sub",
       work_share_pct: overrides?.workShare ?? null,
       naics_contribution: overlap,
@@ -376,8 +374,12 @@ function TotalShare({ entries }: { entries: TeamingEntry[] }) {
 export async function fetchTeamingForProposal(proposalId: string): Promise<TeamingEntry[]> {
   const { data, error } = await supabase
     .from("proposal_teaming")
-    .select("*, partner:partner_id ( * )")
+    .select("*, company:company_id ( * )")
     .eq("proposal_id", proposalId);
   if (error) return [];
-  return (data ?? []) as TeamingEntry[];
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    partner_id: row.company_id ?? row.partner_id,
+    partner: row.company ? companyToPartnerView(row.company as Company) : undefined,
+  })) as TeamingEntry[];
 }

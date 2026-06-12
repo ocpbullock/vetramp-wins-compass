@@ -55,8 +55,12 @@ export function SolutionDesignStep({
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("teaming_partners").select("id,company_name").order("company_name");
-      setPartners(data || []);
+      const { data } = await supabase
+        .from("companies")
+        .select("id,name")
+        .eq("is_own_company", false)
+        .order("name");
+      setPartners(((data as any[]) ?? []).map((r) => ({ id: r.id, company_name: r.name })));
     })();
   }, []);
 

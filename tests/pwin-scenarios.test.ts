@@ -69,7 +69,7 @@ describe("pwin_scenarios schema invariants", () => {
   });
 });
 
-describe("teaming partner queries are team-scoped", () => {
+describe("teaming roster queries are team-scoped via companies", () => {
   const files = [
     "src/components/proposals/TeamCompositionAnalyzer.tsx",
     "src/components/proposals/TeamingCard.tsx",
@@ -77,19 +77,16 @@ describe("teaming partner queries are team-scoped", () => {
   ];
 
   for (const f of files) {
-    it(`${f}: every teaming_partners query filters by team_id`, () => {
+    it(`${f}: pulls from companies (team-scoped) and not legacy teaming_partners`, () => {
       const src = read(f);
-      // For each .from("teaming_partners") usage, require .eq("team_id", ...) within the next 400 chars.
-      const re = /\.from\(["']teaming_partners["']\)([\s\S]{0,400})/g;
-      let m: RegExpExecArray | null;
-      let count = 0;
-      while ((m = re.exec(src)) !== null) {
-        count++;
-        expect(m[1], `${f}: teaming_partners query missing .eq("team_id"`).toMatch(
-          /\.eq\(["']team_id["']/,
-        );
-      }
-      expect(count, `${f}: expected at least one teaming_partners query`).toBeGreaterThan(0);
+      expect(src, `${f} must not query legacy teaming_partners`).not.toMatch(
+        /\.from\(["']teaming_partners["']\)/,
+      );
+      // Either uses the lib helper (which is team-scoped + own-company filtered)
+      // or a direct companies query gated on team_id.
+      const usesHelper = /listPartnerCompanies\(\s*teamId/.test(src);
+      const usesDirect = /\.from\(["']companies["']\)[\s\S]{0,400}?\.eq\(["']team_id["']/.test(src);
+      expect(usesHelper || usesDirect, `${f}: expected team-scoped companies query`).toBe(true);
     });
   }
 });

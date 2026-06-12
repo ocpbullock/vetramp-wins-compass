@@ -183,10 +183,9 @@ describe("rankPartnerSuggestions — basic ranking", () => {
 describe("Suggested Partners UI — team isolation", () => {
   const src = read("src/components/proposals/SuggestedPartnersCard.tsx");
 
-  it("teaming_partners query is filtered by team_id", () => {
-    const m = src.match(/\.from\(["']teaming_partners["']\)([\s\S]{0,400})/);
-    expect(m, "expected a teaming_partners query").not.toBeNull();
-    expect(m![1]).toMatch(/\.eq\(["']team_id["']/);
+  it("partner roster comes from companies via listPartnerCompanies(teamId)", () => {
+    expect(src).toMatch(/listPartnerCompanies\(\s*teamId!?\s*\)/);
+    expect(src).not.toMatch(/from\(["']teaming_partners["']\)/);
   });
 
   it("company_profile / contract_vehicles queries are team-scoped", () => {
