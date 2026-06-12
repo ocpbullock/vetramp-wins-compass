@@ -42,7 +42,16 @@ export type PwinTeamMember = {
   }>;
   isIncumbent?: boolean;
   workedWithIncumbent?: boolean;
-  primeRelationshipStrength?: number; // 0..100, sub-mode only
+  /** 0..100 baseline relationship strength (subjective). Used by both
+   *  prime_relationship (sub mode) and partner_fit (prime mode). */
+  primeRelationshipStrength?: number;
+  // ----- Established-partnership signals. Each contributes an explicit
+  // bonus to the partner-fit / prime-relationship factor and is shown in
+  // the factor breakdown so users can see WHY the score moved.
+  isEstablishedPartner?: boolean;       // is_existing_partner on the company
+  priorContractTogether?: boolean;      // worked_together_before / prior_contract_together
+  hasNda?: boolean;                     // mutual NDA signed
+  hasTeamingAgreement?: boolean;        // TA on file
 };
 
 export type PwinContext = {
@@ -63,7 +72,8 @@ export type FactorKey =
   | "vehicle_access"
   | "incumbent"
   | "completeness"
-  | "prime_relationship";
+  | "prime_relationship"
+  | "partner_fit";
 
 export type FactorScore = {
   key: FactorKey;
