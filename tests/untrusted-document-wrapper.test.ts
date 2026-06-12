@@ -24,6 +24,8 @@ const PROMPT_FNS = [
   "supabase/functions/parse-sow/index.ts",
   "supabase/functions/generate-proposal/index.ts",
   "supabase/functions/generate-proposal-section/index.ts",
+  "supabase/functions/customer-intel/index.ts",
+  "supabase/functions/generate-teaming-outreach/index.ts",
 ];
 
 describe.each(PROMPT_FNS)("%s wraps untrusted document content", (file) => {

@@ -3,6 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 import { normalizeUserContext, appliedFacts, renderUserContextPrompt } from "../_shared/user-context.ts";
+import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -97,12 +98,12 @@ serve(async (req) => {
       }
     }
 
-    const system = engagement === "sub"
+    const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + (engagement === "sub"
       ? `You are a senior federal capture manager doing pre-RFP intelligence for a SUBCONTRACTOR pursuit. The offeror is teaming UNDER a prime contractor. Profile BOTH (a) the END CUSTOMER (buying agency / end-user unit) and (b) the PRIME CONTRACTOR the offeror is teaming with: what the prime has won before in this domain, their small-business subcontracting history and posture, what scope they typically self-perform vs. sub out, and what they look for in subs. Use your knowledge of US federal agencies, FPDS, USA Spending, SAM.gov, agency strategic plans, recent press, and SubAward data. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`
-      : `You are a senior federal capture manager doing pre-RFP customer intelligence. Use your knowledge of US federal agencies, DoD components, USA Spending, FPDS, SAM.gov, agency strategic plans, and recent press to build a deep profile of the buying customer. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`;
+      : `You are a senior federal capture manager doing pre-RFP customer intelligence. Use your knowledge of US federal agencies, DoD components, USA Spending, FPDS, SAM.gov, agency strategic plans, and recent press to build a deep profile of the buying customer. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`);
 
-    const trimmedAttachments = typeof attachmentsText === "string" && attachmentsText.length > 0
-      ? attachmentsText.slice(0, 60000)
+    const attachmentsBlock = typeof attachmentsText === "string" && attachmentsText.length > 0
+      ? wrapUntrusted("user-attachments", attachmentsText.slice(0, 60000))
       : "";
 
     const subContext = engagement === "sub"
@@ -115,7 +116,7 @@ ${JSON.stringify(opportunity, null, 2)}
 OUR COMPANY PROFILE (for win-theme alignment):
 ${JSON.stringify(companyProfile, null, 2)}
 ${subContext}${userContextBlock}
-${trimmedAttachments ? `\nREFERENCE DOCUMENTS PROVIDED BY USER (incumbent past performance, agency plans, prior SOWs, org charts, etc.):\n${trimmedAttachments}\n` : ""}
+${attachmentsBlock ? `\nREFERENCE DOCUMENTS PROVIDED BY USER (incumbent past performance, agency plans, prior SOWs, org charts, etc.):\n${attachmentsBlock}\n` : ""}
 Research this customer${engagement === "sub" ? " AND the named prime contractor" : ""} and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.${userContext?.knownIncumbent ? `\n\nNote: the offeror has confirmed the incumbent as "${userContext.knownIncumbent}". Use this as the predecessor_contract.incumbent value and do not propose a different incumbent.` : ""}`;
 
 
