@@ -535,6 +535,19 @@ function ProposalPipeline() {
           ) : (
             <Badge className="bg-blue-600 hover:bg-blue-600/90">PRIME</Badge>
           )}
+          <Badge
+            variant="outline"
+            className={
+              proposal.pursuit_type === "rfi_sources_sought"
+                ? "border-purple-500/60 text-purple-700 dark:text-purple-400"
+                : proposal.pursuit_type === "capability_statement"
+                ? "border-emerald-500/60 text-emerald-700 dark:text-emerald-400"
+                : "border-blue-500/60 text-blue-700 dark:text-blue-400"
+            }
+            title={PURSUIT_TYPES.find((t) => t.value === (proposal.pursuit_type ?? "rfp_rfq"))?.description}
+          >
+            {pursuitTypeLabel(proposal.pursuit_type)}
+          </Badge>
           <Badge variant="outline">{proposal.status}</Badge>
           {dataIssues.length > 0 && (
             <TooltipProvider delayDuration={200}>
