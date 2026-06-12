@@ -27,8 +27,24 @@ import {
   deleteCompany,
 } from "@/lib/companies";
 
-// Back-compat alias: existing code imports `Partner` from this module.
-export type Partner = Company & { company_name: string; capabilities_summary: string | null; past_performance_summary: string | null };
+// Back-compat: existing code imports `Partner` (legacy teaming_partners row shape) from this module.
+export type Partner = {
+  id: string;
+  team_id: string;
+  company_name: string;
+  uei: string | null;
+  cage_code: string | null;
+  poc_name: string | null;
+  poc_email: string | null;
+  poc_phone: string | null;
+  certifications: string[];
+  naics_codes: string[];
+  capabilities_summary: string | null;
+  past_performance_summary: string | null;
+  contract_vehicles: string[];
+  relationship_status: "active" | "prospective" | "inactive";
+  notes: string | null;
+};
 
 const STATUS_VARIANT: Record<Company["relationship_status"], "default" | "secondary" | "outline"> = {
   active: "default",
