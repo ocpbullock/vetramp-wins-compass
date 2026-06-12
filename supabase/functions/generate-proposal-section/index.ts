@@ -270,6 +270,14 @@ RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, 
     const identity = companyIdentity(companyProfile);
     const profileBlock = renderCompanyProfileBlock(companyProfile);
 
+    const pursuitBlock = pursuit === "rfi_sources_sought"
+      ? `PURSUIT TYPE: RFI / SOURCES SOUGHT response. This is a market-research reply to the contracting officer — NOT a proposal. Do NOT propose a price, do NOT sign anything binding, and do NOT produce Section L/M volumes. Voice: concise, factual, third person. Focus on capabilities, relevant past performance, and acquisition-strategy guidance that influences how the agency competes the work. The SET-ASIDE RECOMMENDATION section must advocate for SDVOSB when the offeror is SDVOSB-certified and the NAICS allows it (cite Rule of Two, 38 USC 8127 for VA, and SBA SDVOSB authority).
+`
+      : pursuit === "capability_statement"
+      ? `PURSUIT TYPE: CAPABILITY STATEMENT. This is a 1-2 page standalone marketing document, NOT tied to any solicitation. Tone: crisp, scannable, evaluator-friendly. No SOW response, no Section L/M, no compliance matrix. Pull every fact strictly from the COMPANY PROFILE.
+`
+      : "";
+
     const engagementBlock = engagement === "sub"
       ? `ENGAGEMENT MODE: SUBCONTRACTOR (supporting the prime's bid). The offeror is teamed UNDER the prime named below — the prime is leading the proposal. Produce drop-in content the prime can paste into THEIR volumes with minimal editing. Default voice: PRIME'S voice, THIRD PERSON, addressed to the GOVERNMENT EVALUATOR. Refer to the offeror by name as a teammate to the prime (e.g. "[Offeror], teamed with [Prime], will…"). Do NOT pitch the offeror to the prime — assume the offeror is already on the team. The ONE exception is a section explicitly labeled "Teaming Pitch", which is a secondary 1-page artifact addressed to the prime's capture lead and must be prefixed "[SECONDARY ARTIFACT — Teaming Pitch, not for the prime's volume]". Every other section must begin with a one-line insertion hint: "> Insert into: <Prime Volume Name>".
 PRIME CONTRACTOR (lead offeror): ${primeContractorName || "(unspecified)"}
@@ -277,6 +285,7 @@ OFFEROR'S TARGETED SCOPE (our work-share under the prime): ${targetedScopeAreas 
 `
       : `ENGAGEMENT MODE: PRIME. The offeror is pursuing this opportunity as the PRIME contractor. Address Section L instructions and Section M evaluation criteria in full.
 `;
+    const modeBlock = pursuitBlock + engagementBlock;
 
     const systemPrompt = `You are a senior federal capture manager writing ONE section of a proposal for ${identity}.
 Output MARKDOWN only — no preamble, no closing remarks.
