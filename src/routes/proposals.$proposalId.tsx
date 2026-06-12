@@ -676,13 +676,75 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
   const largeDoc = totalChars > 300_000;
-  const [local, setLocal] = useState(proposal);
-  useEffect(() => setLocal(proposal), [proposal.id]);
-  const save = () => onPatch({
-    opportunity_type: local.opportunity_type, estimated_value: local.estimated_value || null,
-    contract_type: local.contract_type, pop_base_months: local.pop_base_months || null,
-    pop_option_months: local.pop_option_months || null, clearance_requirement: local.clearance_requirement, user_notes: local.user_notes,
-  });
+  const [local, setLocal] = useState<any>(proposal);
+  const dirtyRef = useRef(false);
+  const inFlightRef = useRef(0);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingPatchRef = useRef<Record<string, any>>({});
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  // Re-sync local from the server proposal, but never clobber in-progress edits.
+  useEffect(() => {
+    setLocal((prev: any) =>
+      mergeServerProposal(prev, proposal, { dirty: dirtyRef.current, inFlight: inFlightRef.current }),
+    );
+  }, [proposal]);
+
+  // Cleanup the debounce timer on unmount so a pending save still flushes.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        const patch = pendingPatchRef.current;
+        if (Object.keys(patch).length > 0) {
+          // Fire-and-forget flush on unmount.
+          onPatch(patch);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const flushSave = async () => {
+    const patch = pendingPatchRef.current;
+    pendingPatchRef.current = {};
+    if (Object.keys(patch).length === 0) return;
+    inFlightRef.current += 1;
+    setSaveState("saving");
+    try {
+      await onPatch(patch);
+      if (inFlightRef.current === 1 && Object.keys(pendingPatchRef.current).length === 0) {
+        dirtyRef.current = false;
+        setSaveState("saved");
+      }
+    } catch {
+      setSaveState("error");
+    } finally {
+      inFlightRef.current -= 1;
+    }
+  };
+
+  const scheduleSave = (patch: Record<string, any>) => {
+    dirtyRef.current = true;
+    setSaveState("saving");
+    pendingPatchRef.current = { ...pendingPatchRef.current, ...patch };
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      void flushSave();
+    }, 800);
+  };
+
+  const update = (patch: Record<string, any>) => {
+    setLocal((p: any) => ({ ...p, ...patch }));
+    scheduleSave(patch);
+  };
+
+  const saveLabel =
+    saveState === "saving" ? "Saving…" :
+    saveState === "saved" ? "Saved" :
+    saveState === "error" ? "Save failed — retry" :
+    "";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
