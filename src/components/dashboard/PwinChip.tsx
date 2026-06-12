@@ -142,22 +142,24 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
 
   return (
     <>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border tabular-nums hover:opacity-80 ${tone.bg} ${tone.text}`}
-            aria-label={`pWin ${result.pwin}`}
-          >
-            <Sparkles className="w-3 h-3" />
-            {result.pwin}
-          </button>
-        </TooltipTrigger>
-        <TooltipContent className="text-xs">
-          Solo-prime pWin · click for breakdown
-        </TooltipContent>
-      </Tooltip>
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border tabular-nums hover:opacity-80 ${tone.bg} ${tone.text}`}
+              aria-label={`pWin ${result.pwin}`}
+            >
+              <Sparkles className="w-3 h-3" />
+              {result.pwin}
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs">
+            Solo-prime pWin · click for breakdown
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
       {open && (
         <PwinBreakdownDialog
           open={open}
