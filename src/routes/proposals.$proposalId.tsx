@@ -322,7 +322,7 @@ function ProposalPipeline() {
     }
   }
 
-  async function generateSection(sectionId: string, sectionTitle: string) {
+  async function generateSection(sectionId: string, sectionTitle: string, opts?: { template?: { filename: string; structure: string[]; boilerplate: string } | null }) {
     if (!online) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
     if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     if (!companyProfile) { toast.error("Company profile missing"); return; }
