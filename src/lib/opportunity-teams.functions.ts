@@ -116,10 +116,90 @@ export const inviteToOpportunityTeam = createServerFn({ method: "POST" })
       .single();
     if (insErr) throw new Error(insErr.message);
 
+    // Look up the inviting org name and linked opportunity title so the email
+    // can identify the capture room: "{Org} invited you to collaborate on
+    // {opportunity} via VetRamp Wins Compass".
+    const { data: oppTeam } = await supabaseAdmin
+      .from("teams")
+      .select("name, parent_team_id")
+      .eq("id", data.teamId)
+      .maybeSingle();
+    let orgName = oppTeam?.name ?? "A teaming partner";
+    if (oppTeam?.parent_team_id) {
+      const { data: parent } = await supabaseAdmin
+        .from("teams")
+        .select("name")
+        .eq("id", oppTeam.parent_team_id)
+        .maybeSingle();
+      if (parent?.name) orgName = parent.name;
+    }
+    const { data: linkedProp } = await supabaseAdmin
+      .from("proposals")
+      .select("opportunity_title, solicitation_number")
+      .eq("opportunity_team_id", data.teamId)
+      .maybeSingle();
+    const opportunityName =
+      linkedProp?.opportunity_title || linkedProp?.solicitation_number || oppTeam?.name || "an opportunity";
+
+    const inviteSubject = `${orgName} invited you to collaborate on ${opportunityName} via VetRamp Wins Compass`;
+    const inviteBody = `${orgName} has invited you to collaborate on ${opportunityName} via VetRamp Wins Compass. Open the link to accept and join the capture room.`;
+
     const redirectTo = `${data.origin}/accept-invite?token=${token}`;
-    const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, { redirectTo });
+    const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, {
+      redirectTo,
+      data: {
+        app_name: "VetRamp Wins Compass",
+        org_name: orgName,
+        opportunity_name: opportunityName,
+        invite_subject: inviteSubject,
+        invite_body: inviteBody,
+        invite_kind: "opportunity_team",
+      },
+    });
     if (mailErr) return { invite, warning: mailErr.message };
-    return { invite };
+    return { invite, subject: inviteSubject };
+  });
+
+/**
+ * Returns true when the current user is a member of the proposal's
+ * opportunity team but NOT a member of the parent organization team —
+ * i.e. they are viewing this proposal as an external teaming partner.
+ */
+export const isOpportunityTeamPartnerView = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d) => z.object({ proposalId: z.string().uuid() }).parse(d))
+  .handler(async ({ data, context }) => {
+    const { userId } = context;
+    const { data: prop } = await supabaseAdmin
+      .from("proposals")
+      .select("opportunity_team_id, team_id")
+      .eq("id", data.proposalId)
+      .maybeSingle();
+    if (!prop?.opportunity_team_id) return { isPartner: false };
+
+    const { data: oppMember } = await supabaseAdmin
+      .from("team_members")
+      .select("role")
+      .eq("team_id", prop.opportunity_team_id)
+      .eq("user_id", userId)
+      .maybeSingle();
+    if (!oppMember) return { isPartner: false };
+
+    const { data: oppTeam } = await supabaseAdmin
+      .from("teams")
+      .select("parent_team_id")
+      .eq("id", prop.opportunity_team_id)
+      .maybeSingle();
+    const parentId = oppTeam?.parent_team_id ?? prop.team_id;
+    if (!parentId) return { isPartner: true };
+
+    const { data: orgMember } = await supabaseAdmin
+      .from("team_members")
+      .select("role")
+      .eq("team_id", parentId)
+      .eq("user_id", userId)
+      .maybeSingle();
+    return { isPartner: !orgMember };
   });
 
 /**

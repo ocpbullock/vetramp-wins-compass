@@ -143,8 +143,23 @@ function ProposalPipeline() {
   const [step, setStep] = useState("intake");
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
+  const [isPartnerView, setIsPartnerView] = useState(false);
 
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
+
+  useEffect(() => {
+    if (!user || !proposalId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { isOpportunityTeamPartnerView } = await import("@/lib/opportunity-teams.functions");
+        const res = await isOpportunityTeamPartnerView({ data: { proposalId } });
+        if (!cancelled) setIsPartnerView(!!res?.isPartner);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, [user, proposalId]);
+
 
   useEffect(() => {
     if (!user) return;
@@ -737,6 +752,11 @@ function ProposalPipeline() {
           </TabsContent>
         </Tabs>
       </div>
+      {isPartnerView && (
+        <footer className="mt-8 border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
+          Capture room powered by VetRamp — <a href="https://usvetramp.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">usvetramp.com</a>
+        </footer>
+      )}
     </div>
   );
 }
