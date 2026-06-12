@@ -20,6 +20,7 @@ import { AwardDetailModal } from "@/components/dashboard/AwardDetailModal";
 import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelModal";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { DataSourceBadge } from "@/components/dashboard/DataSourceBadge";
+import { CachedItemControls } from "@/components/dashboard/RefreshButton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -384,7 +385,20 @@ function Dashboard() {
           <Progress value={progress} className="h-1" />
           <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
             <span>{progressText}</span>
-            {dataSource && !busy && <DataSourceBadge source={dataSource} />}
+            {dataSource && !busy && (
+              <>
+                <DataSourceBadge source={dataSource} />
+                <CachedItemControls
+                  fetchedAt={dataSource.fetchedAt}
+                  busy={busy}
+                  kind="sam"
+                  onRefresh={() => {
+                    if (!lastInput) return;
+                    void runSearch({ ...lastInput, forceRefresh: true });
+                  }}
+                />
+              </>
+            )}
           </div>
         </div>
       )}
