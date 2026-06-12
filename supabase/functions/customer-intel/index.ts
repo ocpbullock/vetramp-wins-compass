@@ -53,7 +53,6 @@ serve(async (req) => {
     const {
       opportunity,
       companyProfile,
-      extraNotes,
       attachmentsText,
       teamId,
       userId: _ignoredUserId,
