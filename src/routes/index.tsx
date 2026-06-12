@@ -26,6 +26,11 @@ import { CaptureRoomNotSetup } from "@/components/dashboard/CaptureRoomNotSetup"
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   searchSam, searchUsaspending, makeCacheKey, readCache, writeCache,
   type SamOpportunity, type HistoricalAward,
