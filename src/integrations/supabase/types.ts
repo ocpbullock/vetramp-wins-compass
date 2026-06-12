@@ -745,6 +745,7 @@ export type Database = {
           pricing: Json | null
           prime_contractor_id: string | null
           prime_contractor_name: string | null
+          pursuit_type: string
           readiness_score: number | null
           response_deadline: string | null
           sections: Json | null
@@ -795,6 +796,7 @@ export type Database = {
           pricing?: Json | null
           prime_contractor_id?: string | null
           prime_contractor_name?: string | null
+          pursuit_type?: string
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
@@ -845,6 +847,7 @@ export type Database = {
           pricing?: Json | null
           prime_contractor_id?: string | null
           prime_contractor_name?: string | null
+          pursuit_type?: string
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
