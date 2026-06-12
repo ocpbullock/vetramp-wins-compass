@@ -372,7 +372,9 @@ function scorePartnerFit(ctx: PwinContext, active: PwinTeamMember[]): FactorScor
 // Multiplicative bumps applied before renormalizing to sum-to-1.
 // Values reflect what tends to matter most under each teaming model.
 const MODEL_MULTIPLIERS: Record<RelationshipModel, Partial<Record<FactorKey, number>>> = {
-  prime_with_subs: {},
+  prime_with_subs: {
+    partner_fit: 1.5, // established partners matter most when we lead
+  },
   sub_to_prime: {
     prime_relationship: 2.0, // who you sub to dominates
     past_performance:   1.3, // scope fit / proof on similar work matters more
@@ -383,11 +385,13 @@ const MODEL_MULTIPLIERS: Record<RelationshipModel, Partial<Record<FactorKey, num
     set_aside:          1.4, // JVs commonly stack set-aside qualification
     past_performance:   1.2,
     completeness:       1.1,
+    partner_fit:        1.6, // JV viability hinges on partnership maturity
   },
   mentor_protege: {
     set_aside:          1.5, // mentor enables protégé to bid
     past_performance:   1.2,
     prime_relationship: 1.3,
+    partner_fit:        1.4,
   },
   niche_sub: {
     past_performance:   1.6, // niche capability proof dominates
@@ -429,12 +433,14 @@ export function calculatePwin(ctx: PwinContext, members: PwinTeamMember[]): Pwin
     scoreCompleteness(ctx, active, selfShare),
   ];
   const rel = scorePrimeRelationship(ctx, active);
-  if (rel) {
-    // Rebalance: shrink the other weights slightly to fit prime relationship.
+  const partnerFit = scorePartnerFit(ctx, active);
+  const extras = [rel, partnerFit].filter((f): f is FactorScore => !!f);
+  if (extras.length > 0) {
+    const totalExtra = extras.reduce((s, f) => s + f.weight, 0);
     const totalOther = factors.reduce((s, f) => s + f.weight, 0);
-    const scale = (1 - rel.weight) / totalOther;
+    const scale = (1 - totalExtra) / totalOther;
     for (const f of factors) f.weight = +(f.weight * scale).toFixed(4);
-    factors.push(rel);
+    factors.push(...extras);
   }
 
   // Apply per-relationship-model reweighting after baseline weights are set.
