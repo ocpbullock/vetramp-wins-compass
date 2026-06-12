@@ -9,9 +9,9 @@ import { Sparkles, Settings as SettingsIcon } from "lucide-react";
 import { useTeamId } from "@/lib/team";
 import {
   useSoloPwinSelf,
-  hasUsableCapabilities,
   computeSoloPwin,
   pwinChipTone,
+  pwinChipState,
   type OppForPwin,
   type SoloPwinSelf,
 } from "@/lib/pwin-solo";
