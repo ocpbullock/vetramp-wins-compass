@@ -21,6 +21,7 @@ import { CompetitiveIntelModal } from "@/components/dashboard/CompetitiveIntelMo
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { DataSourceBadge } from "@/components/dashboard/DataSourceBadge";
 import { CachedItemControls } from "@/components/dashboard/RefreshButton";
+import { DeadlinesPanel } from "@/components/dashboard/DeadlinesPanel";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -424,6 +425,7 @@ function Dashboard() {
               starredCount={starredCount}
               onSelect={setTab}
             />
+            <DeadlinesPanel />
           </>
         )}
 
