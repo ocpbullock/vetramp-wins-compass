@@ -23,6 +23,20 @@ const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   sub_key_personnel_input: ["personnel"],
   sub_corporate_overview: ["capability"],
   sub_teaming_pitch: ["capability", "win_theme"],
+  // RFI / Sources Sought
+  rfi_cover_response: ["capability"],
+  rfi_company_overview: ["capability"],
+  rfi_relevant_capabilities: ["capability"],
+  rfi_past_performance_summary: ["past_performance"],
+  rfi_acquisition_strategy_comments: ["capability", "win_theme"],
+  rfi_set_aside_recommendation: ["capability"],
+  // Capability statement
+  cs_header: ["capability"],
+  cs_company_overview: ["capability"],
+  cs_core_capabilities: ["capability"],
+  cs_differentiators: ["capability", "win_theme"],
+  cs_past_performance: ["past_performance"],
+  cs_certifications: ["capability"],
 };
 
 async function fetchKnowledgeContext(
