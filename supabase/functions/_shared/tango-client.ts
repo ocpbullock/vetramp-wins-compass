@@ -215,6 +215,10 @@ export function mapContractRow(team_id: string, c: any) {
 }
 
 export function mapEntityRow(team_id: string, e: any) {
+  const bizTypes = pick(e, ["small_business_types", "businessTypes", "business_types", "sba_business_types", "certifications"]) ?? [];
+  const normalizedTypes = Array.isArray(bizTypes)
+    ? bizTypes.map((t: any) => (typeof t === "string" ? t : (t?.description || t?.code || ""))).filter(Boolean)
+    : [];
   return {
     team_id,
     tango_id: String(pick(e, ["id", "tango_id", "uei", "duns"]) ?? crypto.randomUUID()),
@@ -223,10 +227,10 @@ export function mapEntityRow(team_id: string, e: any) {
     legal_name: pick(e, ["legal_name", "legalBusinessName", "legal_business_name", "name"]),
     dba_name: pick(e, ["dba_name", "dbaName"]),
     naics_codes: pick(e, ["naics_codes", "naicsCodes"]) ?? (e.primary_naics ? [e.primary_naics] : []),
-    small_business_types: pick(e, ["small_business_types", "businessTypes", "business_types", "sba_business_types", "certifications"]) ?? [],
+    small_business_types: normalizedTypes,
     city: pick(e, ["city", "address.city", "physical_address.city"]),
-    state: pick(e, ["state", "address.state", "physical_address.state"]),
-    country: pick(e, ["country", "address.country", "physical_address.country"]),
+    state: pick(e, ["state", "address.state", "physical_address.state", "physical_address.state_or_province_code"]),
+    country: pick(e, ["country", "address.country", "physical_address.country", "physical_address.country_code"]),
     raw_data: e,
   };
 }
