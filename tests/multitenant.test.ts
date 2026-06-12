@@ -316,12 +316,16 @@ describe("multi-tenant: proposals from tracked opportunities inherit the org tea
     expect(src).toMatch(/from\(["']tracked_opportunities["']\)[\s\S]{0,200}select\(["']team_id["']\)/);
   });
 
-  it("handlePropose reuses an existing accessible proposal instead of duplicating", () => {
-    // Before insert, the function checks for an existing proposal scoped
-    // by opportunity_source + opportunity_source_id (RLS-scoped to caller).
-    expect(src).toMatch(/\.eq\(["']opportunity_source["'],\s*["']tracked["']\)/);
+  it("handlePropose prompts on duplicate proposals scoped by team + source + source_id", () => {
+    // Before insert, the function checks for an existing proposal scoped by
+    // team_id + opportunity_source + opportunity_source_id (RLS-scoped to
+    // caller) and surfaces a confirmation dialog rather than silently
+    // navigating away or creating a private copy.
+    expect(src).toMatch(/\.eq\(["']opportunity_source["'],\s*source\.kind\)/);
     expect(src).toMatch(/\.eq\(["']opportunity_source_id["'],\s*source\.id\)/);
-    expect(src).toMatch(/navigate\(\{\s*to:\s*["']\/proposals\/\$proposalId["']/);
+    expect(src).toMatch(/setDuplicatePrompt\(/);
+    expect(src).toMatch(/Open existing/);
+    expect(src).toMatch(/Create anyway/);
   });
 
   it("new proposal insert uses the tracked opp's team_id, not the currently-selected team", () => {
