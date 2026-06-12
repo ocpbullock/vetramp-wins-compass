@@ -145,3 +145,156 @@ export function useSetupStatus(): SetupStatus {
     loading: isLoading,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Onboarding wizard state
+// ---------------------------------------------------------------------------
+// The 4-step onboarding screen surfaces a focused subset of the checklist
+// (company profile + certs, NAICS, past performance, contract vehicles) and
+// derives its done-flags from the unified `companies` own-company row rather
+// than the legacy `company_profile` blob. Past performance and contract
+// vehicles still come from their dedicated tables.
+
+export type OnboardingStepKey = "company" | "naics" | "past_performance" | "vehicles";
+
+export type OnboardingStep = {
+  key: OnboardingStepKey;
+  label: string;
+  done: boolean;
+  required: boolean;
+  why: string;
+};
+
+export type OnboardingState = {
+  loading: boolean;
+  ownCompany: Company | null;
+  steps: OnboardingStep[];
+  /** Steps 1 + 2 done — after this the user may skip ahead. */
+  coreDone: boolean;
+  /** All 4 steps done. */
+  allDone: boolean;
+  /** Past performance entry exists; banner hides when true. */
+  hasPastPerformance: boolean;
+};
+
+export function useOnboardingState(): OnboardingState {
+  const teamId = useTeamId();
+  const { data, isLoading } = useQuery({
+    queryKey: ["onboarding-state", teamId],
+    enabled: !!teamId,
+    staleTime: 15_000,
+    queryFn: async () => {
+      const [own, ppRes, cvRes] = await Promise.all([
+        getOwnCompany(teamId!).catch(() => null),
+        supabase.from("past_performance").select("id", { count: "exact", head: true }).eq("team_id", teamId!),
+        supabase.from("contract_vehicles").select("id", { count: "exact", head: true }).eq("team_id", teamId!),
+      ]);
+      return {
+        ownCompany: own,
+        ppCount: ppRes.count ?? 0,
+        cvCount: cvRes.count ?? 0,
+      };
+    },
+  });
+
+  const own = data?.ownCompany ?? null;
+  const hasCompanyName = !!(own?.name && own.name.trim() && own.name !== "Our Company");
+  const hasCerts = (own?.certifications?.length ?? 0) > 0 || (own?.set_asides?.length ?? 0) > 0;
+  const hasNaics = (own?.naics_codes?.length ?? 0) > 0;
+  const ppCount = data?.ppCount ?? 0;
+  const cvCount = data?.cvCount ?? 0;
+
+  const steps: OnboardingStep[] = [
+    {
+      key: "company",
+      label: "Company profile & certifications",
+      done: hasCompanyName && hasCerts,
+      required: true,
+      why: "Drives set-aside eligibility scoring in pWin and partner matching.",
+    },
+    {
+      key: "naics",
+      label: "NAICS codes",
+      done: hasNaics,
+      required: true,
+      why: "Used to match opportunities and score NAICS coverage in pWin.",
+    },
+    {
+      key: "past_performance",
+      label: "Past performance",
+      done: ppCount > 0,
+      required: false,
+      why: "Past performance recency and relevance dominate pWin scoring.",
+    },
+    {
+      key: "vehicles",
+      label: "Contract vehicles",
+      done: cvCount > 0,
+      required: false,
+      why: "Lets pWin credit vehicle access when an opportunity requires one.",
+    },
+  ];
+
+  return {
+    loading: isLoading,
+    ownCompany: own,
+    steps,
+    coreDone: steps[0].done && steps[1].done,
+    allDone: steps.every((s) => s.done),
+    hasPastPerformance: ppCount > 0,
+  };
+}
+
+/**
+ * Gate hook used by the dashboard. Returns whether the onboarding screen
+ * should take over the main content. The user may opt out (via the skip
+ * button) once core steps 1+2 are complete; that choice persists per team.
+ */
+const SKIP_KEY = "vetramp:onboarding-skipped";
+
+export function useOnboardingGate(): {
+  loading: boolean;
+  showOnboarding: boolean;
+  state: OnboardingState;
+  skip: () => void;
+  resume: () => void;
+  skipped: boolean;
+} {
+  const { currentTeam } = useTeam();
+  const state = useOnboardingState();
+  const [skipped, setSkipped] = useState<boolean>(false);
+
+  useEffect(() => {
+    if (!currentTeam) { setSkipped(false); return; }
+    try {
+      const raw = localStorage.getItem(SKIP_KEY);
+      const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+      setSkipped(!!parsed[currentTeam.id]);
+    } catch { setSkipped(false); }
+  }, [currentTeam]);
+
+  function writeSkip(value: boolean) {
+    if (!currentTeam) return;
+    try {
+      const raw = localStorage.getItem(SKIP_KEY);
+      const parsed = raw ? (JSON.parse(raw) as Record<string, boolean>) : {};
+      parsed[currentTeam.id] = value;
+      localStorage.setItem(SKIP_KEY, JSON.stringify(parsed));
+    } catch { /* ignore */ }
+    setSkipped(value);
+  }
+
+  // Onboarding screen shows when team is org-type and core steps are
+  // incomplete OR the user has not yet skipped past optional steps.
+  const isOrgTeam = !currentTeam || currentTeam.team_type === "organization";
+  const wantsOnboarding = isOrgTeam && !state.loading && (!state.coreDone || (!state.allDone && !skipped));
+
+  return {
+    loading: state.loading,
+    showOnboarding: wantsOnboarding,
+    state,
+    skip: () => writeSkip(true),
+    resume: () => writeSkip(false),
+    skipped,
+  };
+}
