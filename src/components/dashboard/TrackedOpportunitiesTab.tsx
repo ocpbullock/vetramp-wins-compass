@@ -12,6 +12,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users, FolderOpen, Sparkles, MoreHorizontal } from "lucide-react";
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
 import { useTeam } from "@/lib/team";
