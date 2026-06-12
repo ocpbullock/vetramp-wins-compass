@@ -79,6 +79,20 @@ export async function getOwnCompany(teamId: string): Promise<Company | null> {
   return (data as unknown as Company) ?? null;
 }
 
+/**
+ * Legacy company_profile.profile_data shape, sourced from the team's
+ * own-company row in `companies`. The trigger on company_profile mirrors
+ * profile_data into companies.external_ref.profile_data so the proposal
+ * flow can keep reading the same blob without dual-writing.
+ */
+export async function getOwnCompanyProfileData(teamId: string | null | undefined): Promise<any | null> {
+  if (!teamId) return null;
+  const own = await getOwnCompany(teamId);
+  if (!own) return null;
+  const ref = own.external_ref as { profile_data?: any } | null | undefined;
+  return ref?.profile_data ?? null;
+}
+
 export async function upsertCompany(draft: CompanyDraft & { id?: string }): Promise<Company> {
   const { id, ...rest } = draft;
   if (id) {
