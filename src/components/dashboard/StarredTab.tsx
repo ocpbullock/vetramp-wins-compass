@@ -26,6 +26,14 @@ function rowToSamOpp(r: StarredRow): SamOpportunity {
     classificationCode: "",
   } as unknown as SamOpportunity;
 }
+
+export function StarredTab({
+  onStartProposal,
+  onCompete,
+}: {
+  onStartProposal: (row: StarredRow) => void;
+  onCompete?: (opp: SamOpportunity) => void;
+}) {
   const { list, toggle, count } = useStarred();
   const [rows, setRows] = useState<StarredRow[]>([]);
   const [loading, setLoading] = useState(false);
