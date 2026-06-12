@@ -115,9 +115,9 @@ ${JSON.stringify(opportunity, null, 2)}
 
 OUR COMPANY PROFILE (for win-theme alignment):
 ${JSON.stringify(companyProfile, null, 2)}
-${subContext}
+${subContext}${userContextBlock}
 ${extraNotes ? `ADDITIONAL CONTEXT FROM USER:\n${extraNotes}\n` : ""}${trimmedAttachments ? `\nREFERENCE DOCUMENTS PROVIDED BY USER (incumbent past performance, agency plans, prior SOWs, org charts, etc.):\n${trimmedAttachments}\n` : ""}
-Research this customer${engagement === "sub" ? " AND the named prime contractor" : ""} and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.`;
+Research this customer${engagement === "sub" ? " AND the named prime contractor" : ""} and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.${userContext?.knownIncumbent ? `\n\nNote: the offeror has confirmed the incumbent as "${userContext.knownIncumbent}". Use this as the predecessor_contract.incumbent value and do not propose a different incumbent.` : ""}`;
 
 
     let data: any;
