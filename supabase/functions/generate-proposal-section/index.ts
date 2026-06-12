@@ -293,7 +293,7 @@ Every "shall" requirement in the SOW must be addressed if this section covers it
 Use markdown tables for structured data. Quote SOW requirements verbatim when referencing them.
 The COMPANY PROFILE below is the sole source of truth for who the offeror is — do not invent identity, certifications, locations, past performance, or recruiting pipelines that are not listed.
 
-${engagementBlock}
+${modeBlock}
 COMPANY PROFILE:
 ${profileBlock}
 
