@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Star, FileSignature, ExternalLink, Trash2, Users } from "lucide-react";
+import { Star, FileSignature, ExternalLink, Trash2, Users, Swords } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -10,12 +10,22 @@ import { useStarred, type StarredRow } from "@/lib/starred";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
 import { PwinChip } from "./PwinChip";
+import type { SamOpportunity } from "@/lib/api";
 
-export function StarredTab({
-  onStartProposal,
-}: {
-  onStartProposal: (row: StarredRow) => void;
-}) {
+function rowToSamOpp(r: StarredRow): SamOpportunity {
+  const sd = r.source_data as SamOpportunity | undefined;
+  return sd ?? {
+    noticeId: r.notice_id,
+    solicitationNumber: r.notice_id,
+    title: r.title ?? "",
+    naicsCode: r.naics_code ?? undefined,
+    responseDeadLine: r.response_deadline ?? undefined,
+    postedDate: r.posted_date ?? undefined,
+    setAside: r.set_aside_description ?? undefined,
+    fullParentPathName: "",
+    classificationCode: "",
+  } as unknown as SamOpportunity;
+}
   const { list, toggle, count } = useStarred();
   const [rows, setRows] = useState<StarredRow[]>([]);
   const [loading, setLoading] = useState(false);
