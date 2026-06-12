@@ -91,6 +91,15 @@ export function VendorDetailDrawer({
           )}
         </SheetHeader>
 
+        {data && canSave && (
+          <div className="mt-3">
+            <Button size="sm" variant="outline" onClick={saveAsCompany} disabled={saving}>
+              {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
+              Save as company
+            </Button>
+          </div>
+        )}
+
         {error && <div className="text-xs text-destructive mt-3">{error}</div>}
         {loading && <div className="space-y-3 mt-4"><Skeleton className="h-20" /><Skeleton className="h-32" /></div>}
 
