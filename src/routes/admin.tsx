@@ -25,6 +25,7 @@ import { KnowledgeBaseSections } from "@/components/settings/KnowledgeBasePanel"
 import { AIUsagePanel } from "@/components/settings/AIUsagePanel";
 import { TangoUsagePanel } from "@/components/settings/TangoUsagePanel";
 import { DataHealthPanel } from "@/components/settings/DataHealthPanel";
+import { DuplicateProposalsPanel } from "@/components/settings/DuplicateProposalsPanel";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
@@ -82,7 +83,7 @@ function AdminPage() {
           {isAdmin && accessToken && <TabsContent value="invites" className="mt-4"><InvitesPanel accessToken={accessToken} /></TabsContent>}
           {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBaseSections /></TabsContent>}
           <TabsContent value="ai-usage" className="mt-4 space-y-4"><TangoUsagePanel /><AIUsagePanel /></TabsContent>
-          <TabsContent value="data-health" className="mt-4"><DataHealthPanel /></TabsContent>
+          <TabsContent value="data-health" className="mt-4 space-y-4"><DataHealthPanel /><DuplicateProposalsPanel /></TabsContent>
         </Tabs>
       </main>
     </div>
