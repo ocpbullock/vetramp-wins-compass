@@ -55,13 +55,8 @@ export function SuggestedPartnersCard({
     queryKey: ["suggest-partners", teamId],
     enabled: !!teamId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teaming_partners")
-        .select("*")
-        .eq("team_id", teamId!)
-        .order("company_name");
-      if (error) throw new Error(error.message);
-      return (data ?? []) as Partner[];
+      const { listPartnerCompanies } = await import("@/lib/companies");
+      return listPartnerCompanies(teamId!);
     },
   });
 
