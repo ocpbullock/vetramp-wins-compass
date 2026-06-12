@@ -774,39 +774,49 @@ export type Database = {
       }
       proposal_teaming: {
         Row: {
+          company_id: string
           created_at: string
           id: string
           naics_contribution: string[]
           notes: string | null
-          partner_id: string
+          partner_id: string | null
           proposal_id: string
           role: string
           updated_at: string
           work_share_pct: number | null
         }
         Insert: {
+          company_id: string
           created_at?: string
           id?: string
           naics_contribution?: string[]
           notes?: string | null
-          partner_id: string
+          partner_id?: string | null
           proposal_id: string
           role?: string
           updated_at?: string
           work_share_pct?: number | null
         }
         Update: {
+          company_id?: string
           created_at?: string
           id?: string
           naics_contribution?: string[]
           notes?: string | null
-          partner_id?: string
+          partner_id?: string | null
           proposal_id?: string
           role?: string
           updated_at?: string
           work_share_pct?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "proposal_teaming_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "proposal_teaming_partner_id_fkey"
             columns: ["partner_id"]
