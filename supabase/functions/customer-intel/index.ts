@@ -62,8 +62,11 @@ serve(async (req) => {
       engagementType,
       primeContractorName,
       targetedScopeAreas,
+      userContext: userContextRaw,
     } = await req.json();
     const engagement = engagementType === "sub" ? "sub" : "prime";
+    const userContext = normalizeUserContext(userContextRaw);
+    const userContextBlock = renderUserContextPrompt(userContext);
 
     // Verify team membership (and/or proposal access) BEFORE touching team cache.
     let verifiedTeamId: string | null;
