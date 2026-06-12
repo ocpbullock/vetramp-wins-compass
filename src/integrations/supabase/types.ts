@@ -192,9 +192,13 @@ export type Database = {
           created_by: string | null
           duns: string | null
           external_ref: Json | null
+          has_nda: boolean
+          has_teaming_agreement: boolean
           id: string
           is_existing_partner: boolean
           is_own_company: boolean
+          marketplace_listing: Json
+          marketplace_visibility: string
           naics_codes: string[]
           name: string
           notes: string | null
@@ -202,6 +206,7 @@ export type Database = {
           poc_email: string | null
           poc_name: string | null
           poc_phone: string | null
+          prior_contract_together: boolean
           relationship_status: string
           relationship_strength: number | null
           set_asides: string[]
@@ -221,9 +226,13 @@ export type Database = {
           created_by?: string | null
           duns?: string | null
           external_ref?: Json | null
+          has_nda?: boolean
+          has_teaming_agreement?: boolean
           id?: string
           is_existing_partner?: boolean
           is_own_company?: boolean
+          marketplace_listing?: Json
+          marketplace_visibility?: string
           naics_codes?: string[]
           name: string
           notes?: string | null
@@ -231,6 +240,7 @@ export type Database = {
           poc_email?: string | null
           poc_name?: string | null
           poc_phone?: string | null
+          prior_contract_together?: boolean
           relationship_status?: string
           relationship_strength?: number | null
           set_asides?: string[]
@@ -250,9 +260,13 @@ export type Database = {
           created_by?: string | null
           duns?: string | null
           external_ref?: Json | null
+          has_nda?: boolean
+          has_teaming_agreement?: boolean
           id?: string
           is_existing_partner?: boolean
           is_own_company?: boolean
+          marketplace_listing?: Json
+          marketplace_visibility?: string
           naics_codes?: string[]
           name?: string
           notes?: string | null
@@ -260,6 +274,7 @@ export type Database = {
           poc_email?: string | null
           poc_name?: string | null
           poc_phone?: string | null
+          prior_contract_together?: boolean
           relationship_status?: string
           relationship_strength?: number | null
           set_asides?: string[]
