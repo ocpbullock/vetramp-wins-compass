@@ -819,14 +819,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           proposalId={proposalId}
           parentTeamId={proposal.team_id ?? null}
           currentOpportunityTeamId={proposal.opportunity_team_id ?? null}
-          onChanged={async () => {
-            const { data: fresh } = await supabase
-              .from("proposals")
-              .select("opportunity_team_id")
-              .eq("id", proposalId)
-              .maybeSingle();
-            setProposal((p: any) => ({ ...p, opportunity_team_id: fresh?.opportunity_team_id ?? null }));
-          }}
+          onChanged={onRefreshProposal}
         />
 
         <TeamingCard
