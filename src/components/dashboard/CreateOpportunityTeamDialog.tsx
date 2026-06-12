@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -8,9 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { toast } from "sonner";
 import { useTeam } from "@/lib/team";
-import { createOpportunityTeam, inviteToOpportunityTeam } from "@/lib/opportunity-teams.functions";
+import {
+  createOpportunityTeam,
+  inviteToOpportunityTeam,
+  listLinkableProposalsForOrg,
+} from "@/lib/opportunity-teams.functions";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 
@@ -28,6 +34,8 @@ type Props = {
   responseDeadline?: string | null;
 };
 
+type Mode = "new" | "existing";
+
 export function CreateOpportunityTeamDialog(props: Props) {
   const { open, onOpenChange, opportunityTitle, source, sourceId } = props;
   const { currentTeam } = useTeam();
@@ -35,8 +43,30 @@ export function CreateOpportunityTeamDialog(props: Props) {
   const navigate = useNavigate();
   const createTeam = useServerFn(createOpportunityTeam);
   const inviteFn = useServerFn(inviteToOpportunityTeam);
+  const listLinkable = useServerFn(listLinkableProposalsForOrg);
+  const [mode, setMode] = useState<Mode>("new");
+  const [selectedProposalId, setSelectedProposalId] = useState<string>("");
+  const [proposalSearch, setProposalSearch] = useState("");
   const [emails, setEmails] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const isOrg = !!currentTeam && currentTeam.team_type === "organization";
+
+  const proposalsQ = useQuery({
+    queryKey: ["linkable-proposals", currentTeam?.id],
+    enabled: open && mode === "existing" && isOrg,
+    queryFn: () => listLinkable({ data: { parentTeamId: currentTeam!.id } }),
+  });
+
+  const filteredProposals = (proposalsQ.data?.proposals ?? []).filter((p) => {
+    const q = proposalSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (p.opportunity_title ?? "").toLowerCase().includes(q) ||
+      (p.solicitation_number ?? "").toLowerCase().includes(q) ||
+      (p.agency ?? "").toLowerCase().includes(q)
+    );
+  });
 
   async function handleCreate() {
     if (!currentTeam || currentTeam.team_type !== "organization") {
@@ -44,33 +74,43 @@ export function CreateOpportunityTeamDialog(props: Props) {
       return;
     }
     if (!user) return;
+    if (mode === "existing" && !selectedProposalId) {
+      toast.error("Pick a proposal to link, or switch to 'Start a new proposal'.");
+      return;
+    }
     setBusy(true);
     try {
-      // Create proposal stub first so we can link it
-      const sol = props.solicitationNumber ?? `opp-${sourceId.slice(0, 8)}`;
-      const { data: prop, error: pErr } = await supabase
-        .from("proposals")
-        .insert({
-          user_id: user.id,
-          team_id: currentTeam.id,
-          solicitation_number: sol,
-          notice_id: props.noticeId ?? null,
-          opportunity_title: opportunityTitle.slice(0, 500),
-          agency: props.agency ?? null,
-          naics_code: props.naicsCode ?? null,
-          response_deadline: props.responseDeadline ?? null,
-          opportunity_source: source,
-          opportunity_source_id: sourceId,
-          status: "intake",
-        })
-        .select("id")
-        .single();
-      if (pErr) throw pErr;
+      let proposalId: string;
+
+      if (mode === "new") {
+        const sol = props.solicitationNumber ?? `opp-${sourceId.slice(0, 8)}`;
+        const { data: prop, error: pErr } = await supabase
+          .from("proposals")
+          .insert({
+            user_id: user.id,
+            team_id: currentTeam.id,
+            solicitation_number: sol,
+            notice_id: props.noticeId ?? null,
+            opportunity_title: opportunityTitle.slice(0, 500),
+            agency: props.agency ?? null,
+            naics_code: props.naicsCode ?? null,
+            response_deadline: props.responseDeadline ?? null,
+            opportunity_source: source,
+            opportunity_source_id: sourceId,
+            status: "intake",
+          })
+          .select("id")
+          .single();
+        if (pErr) throw pErr;
+        proposalId = prop.id;
+      } else {
+        proposalId = selectedProposalId;
+      }
 
       const { team } = await createTeam({
         data: {
           parentTeamId: currentTeam.id,
-          proposalId: prop.id,
+          proposalId,
           opportunityTitle,
         },
       });
@@ -93,7 +133,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
         toast.success("Opportunity team created.");
       }
       onOpenChange(false);
-      navigate({ to: "/proposals/$proposalId", params: { proposalId: prop.id } });
+      navigate({ to: "/proposals/$proposalId", params: { proposalId } });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not create opportunity team.");
     } finally {
@@ -103,7 +143,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Create opportunity team</DialogTitle>
           <DialogDescription>
@@ -115,6 +155,80 @@ export function CreateOpportunityTeamDialog(props: Props) {
             <Label className="text-xs text-muted-foreground">Opportunity</Label>
             <div className="mt-1 text-sm font-medium">{opportunityTitle}</div>
           </div>
+
+          <div>
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Proposal</Label>
+            <RadioGroup
+              value={mode}
+              onValueChange={(v) => setMode(v as Mode)}
+              className="mt-2 grid grid-cols-1 gap-2"
+            >
+              <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
+                <RadioGroupItem value="new" className="mt-0.5" />
+                <div className="text-sm">
+                  <div className="font-medium">Start a new proposal</div>
+                  <div className="text-xs text-muted-foreground">Creates a fresh proposal stub from this opportunity.</div>
+                </div>
+              </Label>
+              <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
+                <RadioGroupItem value="existing" className="mt-0.5" />
+                <div className="text-sm flex-1">
+                  <div className="font-medium">Link an existing proposal</div>
+                  <div className="text-xs text-muted-foreground">Choose one of your organization's proposals that isn't already linked to an opportunity team.</div>
+                </div>
+              </Label>
+            </RadioGroup>
+          </div>
+
+          {mode === "existing" && (
+            <div className="space-y-2">
+              <Input
+                placeholder="Search title, sol #, agency…"
+                value={proposalSearch}
+                onChange={(e) => setProposalSearch(e.target.value)}
+              />
+              <div className="border rounded-md max-h-56 overflow-y-auto divide-y">
+                {!isOrg && (
+                  <div className="p-3 text-xs text-muted-foreground">Switch to an organization team to link existing proposals.</div>
+                )}
+                {isOrg && proposalsQ.isLoading && (
+                  <div className="p-3 text-xs text-muted-foreground">Loading…</div>
+                )}
+                {isOrg && !proposalsQ.isLoading && filteredProposals.length === 0 && (
+                  <div className="p-3 text-xs text-muted-foreground">
+                    {proposalsQ.data?.proposals?.length === 0
+                      ? "No unlinked proposals available in this organization."
+                      : "No proposals match your search."}
+                  </div>
+                )}
+                {filteredProposals.map((p) => {
+                  const active = selectedProposalId === p.id;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => setSelectedProposalId(p.id)}
+                      className={`w-full text-left p-2.5 hover:bg-accent flex items-start gap-2 ${active ? "bg-accent/60" : ""}`}
+                    >
+                      <input type="radio" readOnly checked={active} className="mt-1" />
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium truncate">
+                          {p.opportunity_title || p.solicitation_number || "Untitled proposal"}
+                        </div>
+                        <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
+                          {p.agency && <span>{p.agency}</span>}
+                          {p.solicitation_number && <span className="font-mono">Sol# {p.solicitation_number}</span>}
+                          {p.response_deadline && <span>Due {p.response_deadline.slice(0, 10)}</span>}
+                          {p.status && <span className="capitalize">· {p.status}</span>}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           <div>
             <Label htmlFor="opp-team-emails">Invite partners (optional)</Label>
             <Textarea
@@ -132,8 +246,11 @@ export function CreateOpportunityTeamDialog(props: Props) {
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={busy}>
-            {busy ? "Creating…" : "Create team & open proposal"}
+          <Button
+            onClick={handleCreate}
+            disabled={busy || (mode === "existing" && !selectedProposalId)}
+          >
+            {busy ? "Creating…" : mode === "existing" ? "Link & open proposal" : "Create team & open proposal"}
           </Button>
         </DialogFooter>
       </DialogContent>
