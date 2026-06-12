@@ -168,9 +168,42 @@ function ProposalPipeline() {
   }, [user, proposalId, navigate]);
 
   async function patchProposal(patch: TablesUpdate<"proposals">) {
-    setProposal((p: any) => ({ ...p, ...patch }));
-    const { error } = await supabase.from("proposals").update(patch).eq("id", proposalId);
-    if (error) toast.error(error.message);
+    // Capture the pre-patch values for just the keys we're changing so we
+    // can revert if the server rejects the write (error or RLS no-op),
+    // without clobbering concurrent edits to other fields.
+    const keys = Object.keys(patch) as (keyof typeof patch)[];
+    let prevValues: Partial<Record<string, any>> = {};
+    setProposal((p: any) => {
+      prevValues = {};
+      for (const k of keys) prevValues[k as string] = p?.[k as string];
+      return { ...p, ...patch };
+    });
+    const revert = () => {
+      setProposal((p: any) => {
+        const next: any = { ...p };
+        for (const k of keys) next[k as string] = prevValues[k as string];
+        return next;
+      });
+    };
+    // .select("id") forces PostgREST to return the affected rows. When RLS
+    // filters out the update target, the request succeeds with zero rows —
+    // without this we'd silently appear to save.
+    const { data, error } = await supabase
+      .from("proposals")
+      .update(patch)
+      .eq("id", proposalId)
+      .select("id");
+    if (error) {
+      revert();
+      toast.error(error.message);
+      throw error;
+    }
+    if (!data || data.length === 0) {
+      revert();
+      const msg = "You don't have permission to edit this proposal";
+      toast.error(msg);
+      throw new Error(msg);
+    }
   }
 
   async function uploadFile(file: File, fileType?: string) {
