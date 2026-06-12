@@ -546,7 +546,7 @@ function ProposalPipeline() {
             <TabsTrigger value="intake">1. Intake</TabsTrigger>
             <TabsTrigger value="intel">2. Customer Intel</TabsTrigger>
             <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
-            <TabsTrigger value="solution">4. {proposal.engagement_type === "sub" ? "Capabilities" : "Solution Design"}</TabsTrigger>
+            <TabsTrigger value="solution">4. {proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}</TabsTrigger>
             <TabsTrigger value="generate">5. Generate</TabsTrigger>
           </TabsList>
 
