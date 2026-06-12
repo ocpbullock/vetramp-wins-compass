@@ -1,99 +1,56 @@
-## Opportunity-Scoped Teams
+## Goal
 
-Goal: let users spin up an "opportunity team" tied to a single proposal, invite teaming partners to it, and have those partners see only that proposal + read-only org capability data — never the parent org's other opportunities, proposals, starred/tracked lists, or search.
+Introduce a unified, team-scoped `companies` table that represents **every** company the team tracks — their own company, teaming partners, primes, competitors, and vendor lookups. `PartnersPanel` becomes the universal company-profile manager. The legacy `company_profile` (singleton JSON blob) and `teaming_partners` rows migrate into this new table.
 
----
+## Schema
 
-### 1. Schema (single migration)
+New table `public.companies`:
 
-`teams`
-- add `team_type text not null default 'organization'` — values: `organization` | `opportunity`
-- add `parent_team_id uuid references teams(id)` — opportunity teams point at their org
+- `id uuid pk`, `team_id uuid → teams(id)`, `created_by uuid`, `created_at`, `updated_at`
+- Identity: `name text not null`, `uei text`, `cage_code text`, `duns text`, `website text`
+- Classification: `certifications text[]`, `set_asides text[]`, `naics_codes text[]`, `contract_vehicles text[]`
+- Narrative: `capabilities_narrative text`, `past_performance jsonb default '[]'` (array of `{title, customer, value, period, role, summary}` entries)
+- Contacts: `poc_name`, `poc_email`, `poc_phone`
+- Relationship: `is_own_company boolean default false`, `is_existing_partner boolean default false`, `worked_together_before boolean default false`, `relationship_strength int check between 0 and 100`, `relationship_status text default 'prospective'` (active/prospective/inactive)
+- Source/links: `source text` (manual / sam_gov / vendor_lookup / legacy_profile / legacy_partner), `external_ref jsonb` (UEI lookup payload, sam.gov entity id, etc.)
+- `notes text`
+- Partial unique index: one `is_own_company=true` per team.
 
-`proposals`
-- add `opportunity_team_id uuid references teams(id)` — links a proposal to its dedicated opportunity team
+Standard four-step migration: CREATE TABLE → GRANT (authenticated CRUD via team role, service_role ALL) → ENABLE RLS → POLICIES (read = `is_team_member`, write = `team_role_in(owner/admin/member)`, delete = owner/admin). Trigger for `updated_at`.
 
-Helper SECURITY DEFINER functions (avoid recursive RLS):
-- `team_type(_team_id uuid) returns text`
-- `parent_team_id(_team_id uuid) returns uuid`
-- `user_opportunity_team_ids(_user_id uuid) returns setof uuid` — every opportunity team the user belongs to
-- `user_parent_org_ids_via_opp(_user_id uuid) returns setof uuid` — parent orgs reachable via opportunity-team membership (for read-only capability data)
+### Data migration (same migration file)
 
-### 2. RLS rewrites
+1. Insert one row per existing `company_profile` row with `is_own_company=true`, mapping JSON fields (`companyName`, `uei`, `cage`, `naics`, `certifications`, `contractVehicles`, `capabilities`, `pastPerformance`) into columns. `source='legacy_profile'`.
+2. Insert one row per `teaming_partners` row, copying all overlapping fields, `is_own_company=false`, `is_existing_partner=true`, `source='legacy_partner'`. Track the old id in `external_ref->>'legacy_partner_id'` so existing FKs from `proposal_teaming` / `proposal_outreach_drafts` can be remapped in a follow-up step.
+3. Add nullable `company_id uuid → companies(id)` to `proposal_teaming` and `proposal_outreach_drafts`; backfill from the `external_ref` mapping. Keep the legacy `partner_id` columns for now (no destructive drop in this pass) so nothing breaks mid-rollout.
 
-Opportunity-team members must see ONLY:
-- their proposal (`proposals.opportunity_team_id = their_team`)
-- that proposal's milestones, teaming, attachments (already scoped via proposal_id — no change needed)
-- `teaming_partners` of their opportunity team
-- READ-ONLY `knowledge_base`, `past_performance`, `contract_vehicles` of the parent org
+`company_profile` and `teaming_partners` tables are **kept** for one release as read-only fallbacks; new writes go to `companies`. A follow-up migration will drop them once code paths are confirmed.
 
-Opportunity-team members must NOT see:
-- other `proposals` of the parent org
-- `starred_opportunities`, `tracked_opportunities`, `cached_searches`, `tango_cached_*` of the parent org
-- other opportunity teams
+## Code changes
 
-Update SELECT policies on:
-- `proposals` — allow when `is_team_member(team_id)` AND team is org, OR `is_team_member(opportunity_team_id)`
-- `starred_opportunities`, `tracked_opportunities`, `cached_searches`, `tango_cached_*`, `cached_competitive_intel`, `ai_response_cache` — restrict to org-team membership only (exclude opportunity teams)
-- `knowledge_base`, `past_performance`, `contract_vehicles` — allow read for opportunity team members of the parent org (insert/update/delete unchanged, org-only)
-- `teaming_partners` — already team-scoped; works as-is for opportunity teams (each opp team has its own roster)
+### Data layer
+- `src/lib/companies.ts`: typed CRUD helpers (`listCompanies`, `getOwnCompany`, `upsertCompany`, `deleteCompany`, `companyFromVendorLookup(payload)`, `companyFromSamEntity(entity)`).
+- `src/lib/company-profile.ts` (new shim): existing `getCompanyProfile()` / `saveCompanyProfile()` callers keep working by reading/writing the `is_own_company=true` row of `companies` (with JSON-shape adapter for backward compat with prompts that already consume the legacy shape).
 
-Write policies on `proposals`: allow update when user is member of either `team_id` (org) or `opportunity_team_id`.
+### UI
+- Rename/expand `src/components/settings/PartnersPanel.tsx` → `CompaniesPanel.tsx` (keep a re-export so the settings route doesn't break). Lists all companies in the team with filter chips: `Own`, `Partners`, `Primes`, `Competitors`, `All`. Row actions: edit, delete, "mark as partner", relationship-strength slider.
+- Edit dialog covers every column above, including relationship fields and a `past_performance` array editor (add/remove entries).
+- The "own company" row is pinned at the top with a distinctive badge; settings' existing "Company Profile" form becomes a thin wrapper that opens this same dialog scoped to the own-company row.
+- `VendorDetailDrawer` and the search-entities result view get a **"Save as company"** button → opens the dialog prefilled via `companyFromVendorLookup` / `companyFromSamEntity`, defaulting `source` and `external_ref` accordingly.
 
-### 3. Backend flow — "Create opportunity team"
+### Touchpoints updated to read from `companies`
+- `proposals.$proposalId.tsx`: teaming step reads partners from `companies` where `is_own_company=false`. New `company_id` saved alongside legacy `partner_id` until cutover.
+- `TeamCompositionAnalyzer`, `SuggestedPartnersCard`, `PartnerResearch`, `TeamingCard`, `TeamingOutreachModal`, `PrimeContractorCombobox`, `ProposalModal`, `SolutionDesignStep`, `CompetitiveIntelModal`, `setup-status.ts`: switch their queries to the new helpers. Where they previously consumed the legacy `company_profile` JSON, the shim returns the same shape so prompt strings don't change.
 
-New server fn `createOpportunityTeam.functions.ts`:
-- Input: `{ parentTeamId, proposalId?, opportunityTitle, opportunitySource, opportunitySourceId }`
-- Insert into `teams` with `team_type='opportunity'`, `parent_team_id=parentTeamId`, `name=truncate(title,60)`, slug from id
-- Insert `team_members` row making caller `owner`
-- If `proposalId` provided: update proposal's `opportunity_team_id`. Else create a draft proposal stub with the source fields and link it.
-- Return `{ teamId, proposalId }`
+### Edge functions
+- `_shared/user-context.ts` and any function reading `company_profile` continue working through the shim (server-side admin client reads the `is_own_company=true` row and reshapes it). No edge-function signature changes in this pass.
 
-### 4. UI
+## Out of scope (follow-ups)
+- Dropping `company_profile` / `teaming_partners` and the legacy `partner_id` columns.
+- Reworking edge-function prompts to consume the richer `companies` shape directly.
+- Bulk import / dedupe UI for companies discovered via search.
 
-**Trigger points** for "Create Team":
-- StarredTab row action → "Create Team & Propose"
-- TrackedOpportunitiesTab row action → same
-- Proposal intake step → "Invite teaming partners" button (creates opp team if not yet linked, opens invite modal)
-
-**Header team switcher**
-- Group dropdown into two sections: "Organizations" (team_type=organization) and "Opportunities" (team_type=opportunity, label = team name).
-- When active team is opportunity-type, set a context flag in TeamProvider.
-
-**Nav (Header.tsx)**
-- When `activeTeam.team_type === 'opportunity'`: render only `Proposal | Capture Intel | Team`
-- `Proposal` link → `/proposals/{proposalId}` (the linked proposal)
-- `Capture Intel` → existing settings route, but the UI hides editing controls for KB/past perf/vehicles and shows "Read-only — provided by {parent org name}"
-- `Team` → existing team management page filtered to current opp team
-
-**Routing guards**
-- `/`, `/admin`, search/starred/tracked tabs: if active team is opportunity-type, redirect to the linked proposal.
-
-**Invite flow**
-- `inviteToTeam` server fn already exists; extend payload to include opportunity context. Email/link copy: when team is opportunity-type, subject = "You're invited to collaborate on {opportunity title}", body mentions opp title and proposal link.
-- Accept-invite handler: after accepting, if joined team is opportunity-type, navigate to `/proposals/{proposalId}` instead of `/`.
-
-### 5. Files
-
-Migration:
-- `supabase/migrations/<ts>_opportunity_teams.sql`
-
-Server functions (new):
-- `src/lib/opportunity-teams.functions.ts` — `createOpportunityTeam`, `getOpportunityTeamProposal`
-
-Edits:
-- `src/components/dashboard/Header.tsx` — grouped team switcher + scoped nav
-- `src/components/team/TeamProvider.tsx` (or equivalent) — expose `team_type`, `parent_team_id`
-- `src/components/dashboard/StarredTab.tsx`, `TrackedOpportunitiesTab.tsx` — "Create Team" action
-- `src/routes/proposals.$proposalId.tsx` — "Invite partners" button + opp-team awareness
-- `src/routes/index.tsx`, `src/routes/admin.tsx`, `src/routes/settings.tsx` — guard for opportunity-team context (redirect / read-only)
-- Invite acceptance route (find existing) — redirect to proposal when opp team
-- `src/integrations/supabase/types.ts` — regenerated automatically after migration
-
-### 6. Out of scope (call out, don't build)
-- Backfilling existing proposals with opportunity teams (none exist yet under new model)
-- Cross-opp-team search across a partner's multiple invitations (future)
-
----
-
-I'll run the migration first, wait for approval, then implement the server fn + UI in one pass.
+## Validation
+- Existing intake autosave test still passes.
+- New `tests/companies-migrate.test.ts`: given fake `company_profile` + `teaming_partners` rows, the SQL migration produces the expected `companies` rows (run as a SQL fixture against a scratch schema, or as pure-TS validation of the mapping functions in `src/lib/companies.ts`).
+- Manual: open Settings → Companies, confirm own-company row + each legacy partner appears; edit relationship strength; on a proposal, the teaming step still lists/selects the same partners.

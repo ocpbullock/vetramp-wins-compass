@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { BookmarkPlus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { getVendorProfile } from "@/lib/api";
+import { useTeam } from "@/lib/team";
+import { companyFromVendorLookup, upsertCompany } from "@/lib/companies";
 
 function fmtUsd(n?: number | null) {
   if (!n) return "—";
@@ -23,6 +28,9 @@ export function VendorDetailDrawer({
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const { currentTeam, userRole } = useTeam();
+  const canSave = !!currentTeam && (userRole === "owner" || userRole === "admin" || userRole === "member");
 
   useEffect(() => {
     if (!recipientId) { setData(null); setError(null); return; }
@@ -32,6 +40,20 @@ export function VendorDetailDrawer({
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
   }, [recipientId]);
+
+  const saveAsCompany = async () => {
+    if (!currentTeam || !data) return;
+    setSaving(true);
+    try {
+      const draft = companyFromVendorLookup({ ...data, recipientId, recipientName: vendorName }, currentTeam.id);
+      await upsertCompany(draft);
+      toast.success(`Saved ${draft.name} to companies`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const open = !!recipientId;
   const sharedNaics = new Set(searchedNaics);
@@ -68,6 +90,15 @@ export function VendorDetailDrawer({
             </div>
           )}
         </SheetHeader>
+
+        {data && canSave && (
+          <div className="mt-3">
+            <Button size="sm" variant="outline" onClick={saveAsCompany} disabled={saving}>
+              {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
+              Save as company
+            </Button>
+          </div>
+        )}
 
         {error && <div className="text-xs text-destructive mt-3">{error}</div>}
         {loading && <div className="space-y-3 mt-4"><Skeleton className="h-20" /><Skeleton className="h-32" /></div>}
