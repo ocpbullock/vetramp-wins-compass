@@ -277,18 +277,93 @@ function scoreCompleteness(_ctx: PwinContext, active: PwinTeamMember[], selfShar
   };
 }
 
+// ---------- partner-fit / established-partnership bonus ----------
+
+/**
+ * Established-partner signals translate into an additive bonus on top of the
+ * baseline relationship strength. Each signal contributes a fixed,
+ * user-visible amount so the factor breakdown can show exactly WHY the score
+ * moved (e.g. "Established partner: +10, prior contract: +15").
+ *
+ * Total bonus is capped at 35 and the final score saturates at 100.
+ */
+export type PartnershipBonusLine = { label: string; points: number };
+
+export function computePartnershipBonus(m: PwinTeamMember): {
+  bonus: number;
+  lines: PartnershipBonusLine[];
+} {
+  const lines: PartnershipBonusLine[] = [];
+  if (m.isEstablishedPartner) lines.push({ label: "Established partner", points: 10 });
+  if (m.priorContractTogether) lines.push({ label: "Prior contract together", points: 15 });
+  if (m.hasTeamingAgreement) lines.push({ label: "Teaming agreement on file", points: 10 });
+  if (m.hasNda) lines.push({ label: "NDA on file", points: 5 });
+  const raw = lines.reduce((s, l) => s + l.points, 0);
+  return { bonus: Math.min(35, raw), lines };
+}
+
+function formatBonusBreakdown(lines: PartnershipBonusLine[]): string {
+  return lines.map((l) => `${l.label}: +${l.points}`).join(", ");
+}
+
 function scorePrimeRelationship(ctx: PwinContext, active: PwinTeamMember[]): FactorScore | null {
   if (ctx.engagementType !== "sub") return null;
   const prime = active.find((m) => m.role === "prime");
-  const strength = prime?.primeRelationshipStrength ?? 0;
+  if (!prime) {
+    return {
+      key: "prime_relationship", label: "Prime Relationship Strength", weight: 0.10,
+      score: 0,
+      explanation: "No prime selected on the team.",
+    };
+  }
+  const base = Math.round(prime.primeRelationshipStrength ?? 0);
+  const { bonus, lines } = computePartnershipBonus(prime);
+  const score = Math.min(100, base + bonus);
+  const baseLabel = base > 0
+    ? `Prior teaming history with ${prime.name} (strength ${base})`
+    : `No prior teaming history with ${prime.name} recorded`;
+  const explanation = lines.length > 0
+    ? `${baseLabel}. Established-partner bonuses → ${formatBonusBreakdown(lines)} = +${bonus}.`
+    : `${baseLabel}.`;
   return {
     key: "prime_relationship", label: "Prime Relationship Strength", weight: 0.10,
-    score: Math.round(strength),
-    explanation: prime
-      ? (strength > 0
-          ? `Prior teaming history with ${prime.name} (strength ${Math.round(strength)}).`
-          : `No prior teaming history found with ${prime.name}.`)
-      : "No prime selected on the team.",
+    score, explanation,
+  };
+}
+
+function scorePartnerFit(ctx: PwinContext, active: PwinTeamMember[]): FactorScore | null {
+  if (ctx.engagementType !== "prime") return null;
+  const partners = active.filter((m) => !m.isSelf);
+  if (partners.length === 0) {
+    return {
+      key: "partner_fit", label: "Partner Fit", weight: 0.10, score: 60,
+      explanation: "No teaming partners on this scenario — solo bid.",
+    };
+  }
+  // Per-partner score = baseline relationship strength + established-partner bonuses.
+  type PerPartner = { name: string; base: number; bonus: number; lines: PartnershipBonusLine[]; score: number };
+  const rows: PerPartner[] = partners.map((p) => {
+    const base = Math.round(p.primeRelationshipStrength ?? 0);
+    const { bonus, lines } = computePartnershipBonus(p);
+    return { name: p.name, base, bonus, lines, score: Math.min(100, base + bonus) };
+  });
+  // Weight by partner work share so a 5%-share teammate doesn't dominate.
+  const totalShare = partners.reduce((s, p) => s + Math.max(1, p.workShare || 0), 0);
+  const weighted = rows.reduce((s, r, i) => {
+    const w = Math.max(1, partners[i].workShare || 0) / totalShare;
+    return s + r.score * w;
+  }, 0);
+  const score = Math.round(weighted);
+  const explanation = rows
+    .map((r) => {
+      const bits = [`base ${r.base}`];
+      if (r.lines.length > 0) bits.push(formatBonusBreakdown(r.lines) + ` = +${r.bonus}`);
+      return `${r.name} (${bits.join("; ")}) → ${r.score}`;
+    })
+    .join(" · ");
+  return {
+    key: "partner_fit", label: "Partner Fit", weight: 0.10, score,
+    explanation: explanation || "No partnership signals on the team yet.",
   };
 }
 
