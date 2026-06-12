@@ -487,7 +487,7 @@ function Dashboard() {
             />
           </TabsContent>
           <TabsContent value="starred" className="mt-4">
-            <StarredTab onStartProposal={handleStartFromStarred} />
+            <StarredTab onStartProposal={handleStartFromStarred} onCompete={setCompeteOpp} />
           </TabsContent>
           <TabsContent value="in-progress" className="mt-4">
             <InProgressTab onCountChange={setInProgressCount} />
