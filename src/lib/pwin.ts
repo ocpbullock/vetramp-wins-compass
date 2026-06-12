@@ -405,6 +405,8 @@ const NEXT_ACTION_BY_FACTOR: Record<FactorKey, (model?: RelationshipModel) => st
   completeness: () => "Rebalance work share so allocations sum to ~100% across the team.",
   prime_relationship: () =>
     "Schedule a discovery call with the prime and document prior teaming wins in the file.",
+  partner_fit: () =>
+    "Lock in established partners — get an NDA + teaming agreement signed and capture prior-contract history on the company record.",
 };
 
 export function deriveInsights(result: PwinResult, model?: RelationshipModel): ScenarioInsights {
