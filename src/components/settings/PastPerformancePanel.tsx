@@ -72,6 +72,8 @@ export function PastPerformancePanel() {
     onSuccess: () => {
       toast.success("Past performance removed");
       qc.invalidateQueries({ queryKey: ["past-performance"] });
+      qc.invalidateQueries({ queryKey: ["pwin-self"] });
+      qc.invalidateQueries({ queryKey: ["pwin-solo"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -161,6 +163,8 @@ export function PastPerformancePanel() {
           teamId={currentTeam.id}
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ["past-performance"] });
+            qc.invalidateQueries({ queryKey: ["pwin-self"] });
+            qc.invalidateQueries({ queryKey: ["pwin-solo"] });
             setOpen(false);
           }}
         />

@@ -172,6 +172,8 @@ function CompanyProfilePanel() {
     onSuccess: () => {
       toast.success("Company profile saved.");
       qc.invalidateQueries({ queryKey: ["company-profile"] });
+      qc.invalidateQueries({ queryKey: ["pwin-self"] });
+      qc.invalidateQueries({ queryKey: ["pwin-solo"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });

@@ -17,6 +17,7 @@ import { StarButton } from "@/components/dashboard/StarButton";
 import { starInputFromSam } from "@/lib/starred";
 import { AgencyCombobox } from "./AgencyCombobox";
 import { useLogStore } from "@/lib/log-store";
+import { PwinChip } from "./PwinChip";
 
 type SortKey = "title" | "agency" | "naics" | "type" | "posted" | "deadline" | "incumbent";
 
@@ -198,6 +199,7 @@ export function OpportunitiesTab({
                 <SortHead k="agency" label="Agency" />
                 <SortHead k="naics" label="NAICS" />
                 <SortHead k="type" label="Type" />
+                <th>pWin</th>
                 <SortHead k="incumbent" label="Incumbent" />
                 <SortHead k="posted" label="Posted" />
                 <SortHead k="deadline" label="Deadline" />
@@ -206,7 +208,7 @@ export function OpportunitiesTab({
             </thead>
             <tbody>
               {sorted.length === 0 && (
-                <tr><td colSpan={9} className="text-center text-muted-foreground py-6">No opportunities. Click Search to fetch.</td></tr>
+                <tr><td colSpan={10} className="text-center text-muted-foreground py-6">No opportunities. Click Search to fetch.</td></tr>
               )}
               {sorted.map((o, i) => {
                 const key = (o.solicitationNumber ?? o.noticeId ?? "") + i;
@@ -250,6 +252,16 @@ export function OpportunitiesTab({
                     <td className="font-mono text-xs">{o.naicsCode}</td>
                     <td>
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${badgeClassForType(o.type)}`}>{o.type}</span>
+                    </td>
+                    <td>
+                      <PwinChip
+                        opp={{
+                          id: (o.solicitationNumber ?? o.noticeId ?? "") as string,
+                          naics: o.naicsCode,
+                          agency: shortAgency(o.fullParentPathName),
+                          setAside: o.typeOfSetAside ?? o.setAside ?? null,
+                        }}
+                      />
                     </td>
                     <td className="text-xs">
                       <IncumbentCell m={m} />

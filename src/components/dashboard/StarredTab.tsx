@@ -9,6 +9,7 @@ import { format, parseISO } from "date-fns";
 import { useStarred, type StarredRow } from "@/lib/starred";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
+import { PwinChip } from "./PwinChip";
 
 export function StarredTab({
   onStartProposal,
@@ -80,6 +81,7 @@ export function StarredTab({
                 <TableHead className="w-[180px]">Actions</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>NAICS</TableHead>
+                <TableHead>pWin</TableHead>
                 <TableHead>Deadline</TableHead>
                 <TableHead>Posted</TableHead>
                 <TableHead>Set-Aside</TableHead>
@@ -88,11 +90,11 @@ export function StarredTab({
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">Loading...</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">
+                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
                     {rows.length === 0
                       ? "No starred opportunities yet. Click the star icon on any opportunity to bookmark it."
                       : "No matches for the current search."}
@@ -166,6 +168,16 @@ export function StarredTab({
                       <div className="text-xs text-muted-foreground font-mono truncate">{r.notice_id}</div>
                     </TableCell>
                     <TableCell className="font-mono text-xs">{r.naics_code || "—"}</TableCell>
+                    <TableCell>
+                      <PwinChip
+                        opp={{
+                          id: r.id,
+                          naics: r.naics_code,
+                          agency: (r.source_data as any)?.fullParentPathName ?? null,
+                          setAside: r.set_aside_description ?? null,
+                        }}
+                      />
+                    </TableCell>
                     <TableCell className="text-sm whitespace-nowrap">{fmt(r.response_deadline)}</TableCell>
                     <TableCell className="text-sm whitespace-nowrap">{fmt(r.posted_date)}</TableCell>
                     <TableCell className="text-xs">{r.set_aside_description || "—"}</TableCell>

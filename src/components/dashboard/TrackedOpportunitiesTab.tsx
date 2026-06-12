@@ -31,6 +31,7 @@ import { TrackedAnalyzePanel } from "./TrackedAnalyzePanel";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import type { HistoricalAward, SamOpportunity } from "@/lib/api";
 import { StarButton } from "./StarButton";
+import { PwinChip } from "./PwinChip";
 
 // Build a SamOpportunity-shaped object from a tracked opportunity so the
 // existing Compete/Propose flows (which expect a SamOpportunity) can be
@@ -290,6 +291,7 @@ export function TrackedOpportunitiesTab({
               <TableHead>Title / Agency</TableHead>
               <TableHead>Vehicle</TableHead>
               <TableHead>NAICS</TableHead>
+              <TableHead>pWin</TableHead>
               <TableHead className="text-right">Value</TableHead>
               <TableHead>Deadline</TableHead>
               <TableHead>Status</TableHead>
@@ -297,11 +299,11 @@ export function TrackedOpportunitiesTab({
           </TableHeader>
           <TableBody>
             {loading && (
-              <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">Loading...</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">Loading...</TableCell></TableRow>
             )}
             {!loading && filtered.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">
+                <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
                   {items.length === 0
                     ? "No tracked opportunities yet. Click \"Track Opportunity\" to add one."
                     : "No matches for the current filters."}
@@ -385,6 +387,17 @@ export function TrackedOpportunitiesTab({
                     <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">
                       {NAICS_NAME.get(i.naics_code) ?? ""}
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <PwinChip
+                      opp={{
+                        id: i.id,
+                        naics: i.naics_code,
+                        agency: i.agency,
+                        setAside: null,
+                        vehicle: i.contract_vehicle === "Custom/Other" ? (i.contract_vehicle_other ?? null) : i.contract_vehicle,
+                      }}
+                    />
                   </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtMoney(i.estimated_value)}</TableCell>
                   <TableCell className={`text-sm ${deadlineColor(i.response_deadline)}`}>
