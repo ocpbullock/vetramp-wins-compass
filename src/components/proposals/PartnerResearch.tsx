@@ -32,19 +32,14 @@ export function PartnerResearch({
   const { data: partners = [] } = useQuery({
     queryKey: ["teaming-partners", teamId],
     enabled: !!teamId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teaming_partners").select("*").eq("team_id", teamId!).order("company_name");
-      if (error) throw new Error(error.message);
-      return (data ?? []) as Partner[];
-    },
+    queryFn: async () => listPartnerCompanies(teamId!),
   });
 
   const { data: existingTeaming = [] } = useQuery({
     queryKey: ["proposal-teaming", proposalId],
     queryFn: async () => {
-      const { data } = await supabase.from("proposal_teaming").select("partner_id").eq("proposal_id", proposalId);
-      return (data ?? []).map((r: any) => r.partner_id as string);
+      const { data } = await supabase.from("proposal_teaming").select("company_id").eq("proposal_id", proposalId);
+      return (data ?? []).map((r: any) => r.company_id as string);
     },
   });
 
@@ -61,7 +56,7 @@ export function PartnerResearch({
       ? partner.naics_codes.filter((n) => n === opportunityNaics)
       : [];
     const { error } = await supabase.from("proposal_teaming").insert({
-      proposal_id: proposalId, partner_id: partner.id, role: "sub", work_share_pct: null, naics_contribution: overlap,
+      proposal_id: proposalId, company_id: partner.id, role: "sub", work_share_pct: null, naics_contribution: overlap,
     });
     if (error) { toast.error(error.message); return; }
     toast.success(`Added ${partner.company_name} to this proposal`);
