@@ -34,6 +34,7 @@ type TeamRow = Team & {
   created_at: string;
   member_count: number;
   my_role: TeamRole;
+  linked_proposal?: { id: string; opportunity_title: string | null; solicitation_number: string | null } | null;
 };
 
 const ROLES: TeamRole[] = ["owner", "admin", "member", "viewer"];
