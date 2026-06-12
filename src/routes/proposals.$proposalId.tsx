@@ -1254,6 +1254,14 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
             </div>
           )}
           {!intel.customer_summary && <div className="text-muted-foreground text-xs">No intel yet. Click "Run research".</div>}
+          {intel._user_context_applied?.length > 0 && (
+            <div className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-1">
+              <span>Your facts applied:</span>
+              {intel._user_context_applied.map((k: string) => (
+                <Badge key={k} variant="outline" className="text-[10px]">{USER_CONTEXT_LABELS[k as keyof typeof USER_CONTEXT_LABELS] ?? k}</Badge>
+              ))}
+            </div>
+          )}
           {intel.customer_summary && <p className="text-sm leading-relaxed">{intel.customer_summary}</p>}
           <div className="grid grid-cols-2 gap-3 text-xs">
             {intel.end_user_unit && <div><div className="text-muted-foreground">End-user unit</div><div>{intel.end_user_unit}</div></div>}
