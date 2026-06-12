@@ -20,6 +20,11 @@ export const INTAKE_TRACKED_FIELDS = [
   "user_notes",
   "targeted_scope_areas",
   "prime_contractor_name",
+  "known_incumbent",
+  "incumbent_notes",
+  "customer_notes",
+  "competitive_notes",
+  "capture_notes",
 ] as const;
 
 export type IntakeTrackedField = (typeof INTAKE_TRACKED_FIELDS)[number];
