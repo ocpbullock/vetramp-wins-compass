@@ -105,6 +105,8 @@ export function TrackedOpportunitiesTab({
   const [analyze, setAnalyze] = useState<TrackedOpportunity | null>(null);
   const [teamRow, setTeamRow] = useState<TrackedOpportunity | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [sandboxRow, setSandboxRow] = useState<TrackedOpportunity | null>(null);
+  const { currentTeam } = useTeam();
 
   // Pick up a "highlight this row" hint stashed by InProgressTab so the user
   // sees which tracked opportunity their proposal came from.
