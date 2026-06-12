@@ -712,7 +712,7 @@ function ProposalPipeline() {
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <StepErrorBoundary label="intel">
-              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} />
+              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => setStep("intake")} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
@@ -1251,7 +1251,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="capture-knowledge">
           <CardHeader>
             <CardTitle className="text-base">What we know (offeror-authoritative)</CardTitle>
             <CardDescription className="text-xs">
@@ -1561,11 +1561,11 @@ function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, 
   );
 }
 
-function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBusy, setAiBusy, online }: any) {
+function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBusy, setAiBusy, online, onGoToIntake }: any) {
   const [busy, setBusy] = useState(false);
   const [skipCache, setSkipCache] = useState(false);
   const intel = proposal.customer_intel || {};
-  const [notes, setNotes] = useState<string>(intel.notes || "");
+  const userCtx = userContextFromProposal(proposal);
   const locked = busy || (aiBusy && !busy);
 
   async function research() {
@@ -1586,7 +1586,6 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
             responseDeadLine: proposal.response_deadline, type: proposal.opportunity_type,
           },
           companyProfile,
-          extraNotes: notes || undefined,
           userId: session?.user?.id,
           proposalId,
           teamId: proposal.team_id ?? null,
@@ -1601,7 +1600,7 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
       });
       const j = await r.json();
       if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
-      const merged = { ...intel, ...j.intel, notes };
+      const merged = { ...intel, ...j.intel };
       await onPatch({ customer_intel: merged });
       if (j.cached && j.cached_at) {
         const ms = Date.now() - new Date(j.cached_at).getTime();
@@ -1628,8 +1627,38 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-base">Run AI research</CardTitle><CardDescription className="text-xs">Profiles the buyer, recent contracts, evaluation signals, and win themes.</CardDescription></CardHeader>
           <CardContent className="space-y-2">
-            <Label className="text-xs">Optional context to bias research</Label>
-            <Textarea rows={5} value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="e.g. 'I think the incumbent is XYZ', 'KO is Jane Smith', anything from prior conversations…" />
+            <div className="rounded-md border bg-muted/30 p-2 space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label className="text-xs">Capture knowledge (from Intake)</Label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onGoToIntake?.();
+                    // Defer scroll until the intake tab content has mounted.
+                    setTimeout(() => {
+                      document.getElementById("capture-knowledge")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
+                  }}
+                  className="text-[11px] text-primary hover:underline"
+                >
+                  Edit capture knowledge →
+                </button>
+              </div>
+              {userCtx ? (
+                <ul className="text-[11px] space-y-1">
+                  {(Object.keys(userCtx) as (keyof typeof userCtx)[]).map((k) => (
+                    <li key={k} className="flex gap-1.5">
+                      <span className="font-medium text-muted-foreground shrink-0">{USER_CONTEXT_LABELS[k]}:</span>
+                      <span className="text-foreground/90 line-clamp-2">{userCtx[k]}</span>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-[11px] text-muted-foreground">
+                  No capture knowledge entered yet. These offeror-authoritative facts override AI assumptions.
+                </p>
+              )}
+            </div>
             <Button onClick={research} disabled={locked} size="sm" className="w-full" title={aiBusy && !busy ? "Another AI task is running — please wait." : undefined}>
               {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
               {busy ? "Researching…" : intel.customer_summary ? "Re-run research" : "Run research"}
