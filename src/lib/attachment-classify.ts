@@ -1,13 +1,20 @@
-export type AttachmentType = "sow" | "instructions" | "amendment" | "attachment" | "other" | "customer_intel";
+export type AttachmentType = "sow" | "instructions" | "amendment" | "attachment" | "other" | "customer_intel" | "reference";
 
 export const ATTACHMENT_TYPE_OPTIONS: { value: AttachmentType; label: string }[] = [
   { value: "sow", label: "SOW / PWS" },
   { value: "instructions", label: "Section L / M (Instructions)" },
   { value: "amendment", label: "Amendment / Mod" },
   { value: "attachment", label: "Attachment (QASP / CDRL / DD254)" },
+  { value: "reference", label: "Reference Text" },
   { value: "other", label: "Other" },
   { value: "customer_intel", label: "Customer Intel" },
 ];
+
+export function labelForAttachmentType(value?: string | null): string {
+  if (!value) return "Other";
+  const opt = ATTACHMENT_TYPE_OPTIONS.find((o) => o.value === value);
+  return opt?.label ?? value;
+}
 
 export function classifyFilename(name: string): AttachmentType {
   const n = name.toLowerCase();
