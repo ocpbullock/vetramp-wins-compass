@@ -49,13 +49,17 @@ const PRIME_SECTIONS: { id: string; title: string }[] = [
   { id: "compliance_matrix", title: "Compliance Cross-Reference Matrix" },
 ];
 
+// Sub-mode: we produce content ON BEHALF OF the prime's bid — drop-in inputs
+// for the prime's proposal volumes (technical / management / PP / key personnel),
+// written in the prime's voice where appropriate. The teaming pitch is a
+// secondary, optional one-pager.
 const SUB_SECTIONS: { id: string; title: string }[] = [
-  { id: "cap_cover_letter", title: "Cover Letter to Prime" },
-  { id: "cap_company_overview", title: "Company Overview" },
-  { id: "cap_core_capabilities", title: "Core Capabilities" },
-  { id: "cap_relevant_past_performance", title: "Relevant Past Performance" },
-  { id: "cap_differentiators", title: "Differentiators" },
-  { id: "cap_proposed_scope", title: "Proposed Scope Under Prime" },
+  { id: "sub_technical_input", title: "Technical Volume — Our Inputs" },
+  { id: "sub_management_input", title: "Management Volume — Our Inputs" },
+  { id: "sub_past_performance_input", title: "Past Performance — Our Entries" },
+  { id: "sub_key_personnel_input", title: "Key Personnel — Our Bios" },
+  { id: "sub_corporate_overview", title: "Corporate Overview Blurb (for Prime's appendix)" },
+  { id: "sub_teaming_pitch", title: "Teaming Pitch (1-page, optional)" },
 ];
 
 function sectionsFor(proposal: any) {
