@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { exportProposalDocx } from "@/lib/proposal-export";
 import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
+import { LinkOpportunityTeamCard } from "@/components/proposals/LinkOpportunityTeamCard";
 import { PartnerResearch } from "@/components/proposals/PartnerResearch";
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
