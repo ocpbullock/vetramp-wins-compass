@@ -377,6 +377,7 @@ function ProposalPipeline() {
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
+          template: opts?.template ?? undefined,
         }),
       });
       if (!resp.ok || !resp.body) {
