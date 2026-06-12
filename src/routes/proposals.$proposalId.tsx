@@ -812,6 +812,13 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           </CardContent>
         </Card>
 
+        <LinkOpportunityTeamCard
+          proposalId={proposalId}
+          parentTeamId={proposal.team_id ?? null}
+          currentOpportunityTeamId={proposal.opportunity_team_id ?? null}
+          onChanged={load}
+        />
+
         <TeamingCard
           proposalId={proposalId}
           teamId={proposal.team_id ?? null}
