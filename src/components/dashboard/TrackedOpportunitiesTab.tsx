@@ -449,6 +449,27 @@ export function TrackedOpportunitiesTab({
           responseDeadline={teamRow.response_deadline ?? null}
         />
       )}
+      {sandboxRow && (sandboxRow.team_id || currentTeam?.id) && (
+        <TeamingSandbox
+          open={!!sandboxRow}
+          onOpenChange={(o) => { if (!o) setSandboxRow(null); }}
+          parent={{
+            kind: "tracked",
+            trackedOpportunityId: sandboxRow.id,
+            teamId: (sandboxRow.team_id ?? currentTeam!.id) as string,
+          }}
+          opportunity={{
+            title: sandboxRow.title,
+            naicsCodes: [sandboxRow.naics_code].filter(Boolean) as string[],
+            agency: sandboxRow.agency,
+            setAside: null,
+            requiredVehicles: sandboxRow.contract_vehicle && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(sandboxRow.contract_vehicle)
+              ? [sandboxRow.contract_vehicle]
+              : [],
+            incumbentName: null,
+          }}
+        />
+      )}
     </div>
   );
 }
