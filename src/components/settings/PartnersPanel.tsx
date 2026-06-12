@@ -56,8 +56,16 @@ type Filter = "all" | "own" | "partner" | "other";
 
 export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } = {}) {
   const { currentTeam, userRole } = useTeam();
-  const canEdit = userRole === "owner" || userRole === "admin" || userRole === "member";
-  const canDelete = userRole === "owner" || userRole === "admin";
+  // In opportunity-team context, surface the parent org's companies in
+  // read-only mode (consistent with knowledge base / past performance for
+  // opp-team viewers). The active opp team has no companies of its own.
+  const isOpp = currentTeam?.team_type === "opportunity";
+  const effectiveTeamId = isOpp
+    ? currentTeam?.parent_team_id ?? null
+    : currentTeam?.id ?? null;
+  const readOnly = isOpp;
+  const canEdit = !readOnly && (userRole === "owner" || userRole === "admin" || userRole === "member");
+  const canDelete = !readOnly && (userRole === "owner" || userRole === "admin");
   const qc = useQueryClient();
 
   const [editing, setEditing] = useState<Company | null>(null);
@@ -67,18 +75,39 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
 
   // Open prefilled dialog when an initialDraft is provided from a parent (e.g. vendor lookup).
   useEffect(() => {
-    if (initialDraft) {
+    if (initialDraft && !readOnly) {
       setSeedDraft(initialDraft);
       setEditing(null);
       setOpen(true);
     }
-  }, [initialDraft]);
+  }, [initialDraft, readOnly]);
 
   const { data, isLoading } = useQuery({
-    queryKey: ["companies", currentTeam?.id],
-    enabled: !!currentTeam,
-    queryFn: () => listCompanies(currentTeam!.id),
+    queryKey: ["companies", effectiveTeamId],
+    enabled: !!effectiveTeamId,
+    queryFn: () => listCompanies(effectiveTeamId!),
   });
+
+  // Resolve the parent org's display name so the "Provided by" notice
+  // identifies the source. The opp team has `parent_team_id`; we read the
+  // team name with the active session (opp-team members typically have
+  // visibility into the parent via the team-access RLS helpers).
+  const { data: parentTeam } = useQuery({
+    queryKey: ["parent-team-name", currentTeam?.parent_team_id],
+    enabled: isOpp && !!currentTeam?.parent_team_id,
+    queryFn: async () => {
+      const { useTeam } = await import("@/lib/team"); // keep tree-shake happy
+      void useTeam;
+      const { supabase } = await import("@/integrations/supabase/client");
+      const { data } = await supabase
+        .from("teams")
+        .select("name")
+        .eq("id", currentTeam!.parent_team_id!)
+        .maybeSingle();
+      return data;
+    },
+  });
+  const orgName = parentTeam?.name ?? "the parent organization";
 
   const filtered = useMemo(() => {
     if (!data) return [];
@@ -99,6 +128,13 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
   });
 
   if (!currentTeam) return <Card className="p-6 text-sm text-muted-foreground">Pick a team first.</Card>;
+  if (isOpp && !effectiveTeamId) {
+    return (
+      <Card className="p-6 text-sm text-muted-foreground">
+        This capture room is not linked to an organization yet.
+      </Card>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -113,6 +149,14 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
           </Button>
         )}
       </div>
+
+      {readOnly && (
+        <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground flex items-center gap-2">
+          <Building2 className="w-3.5 h-3.5" />
+          <span>Provided by <span className="font-medium text-foreground">{orgName}</span> — read-only in this capture room.</span>
+        </div>
+      )}
+
 
       <div className="flex gap-1">
         {(["all", "own", "partner", "other"] as Filter[]).map((f) => (
