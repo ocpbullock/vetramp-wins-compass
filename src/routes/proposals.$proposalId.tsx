@@ -422,14 +422,15 @@ function ProposalPipeline() {
     }
   }
 
-  async function generateAll() {
-    const remaining = sectionsFor(proposal).filter((s) => !proposal.sections?.[s.id]?.content);
+  async function generateAll(sections?: { id: string; title: string }[], opts?: { template?: { filename: string; structure: string[]; boilerplate: string } | null }) {
+    const baseList = sections && sections.length > 0 ? sections : sectionsFor(proposal);
+    const remaining = baseList.filter((s) => !proposal.sections?.[s.id]?.content);
     if (remaining.length === 0) { toast.info("All sections already drafted"); return; }
     for (let i = 0; i < remaining.length; i++) {
       const s = remaining[i];
       setGenProgress({ current: i + 1, total: remaining.length, label: s.title });
       try {
-        await generateSection(s.id, s.title);
+        await generateSection(s.id, s.title, opts);
       } catch (e) {
         // continue with next; per-section toast already shown
       }
