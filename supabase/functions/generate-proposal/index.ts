@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas, userContext: userContextRaw } = await req.json();
+    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas, userContext: userContextRaw, template } = await req.json();
     const engagement = engagementType === "sub" ? "sub" : "prime";
     const userContext = normalizeUserContext(userContextRaw);
     const userContextBlock = renderUserContextPrompt(userContext);
@@ -73,7 +73,17 @@ Deno.serve(async (req) => {
     try { verifiedTeamId = await resolveTeamId(ctx, teamId ?? null); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const systemPrompt = engagement === "sub"
+    const templateBlock = (template && typeof template === "object" && (template.filename || template.boilerplate))
+      ? `\nPROPOSAL TEMPLATE (offeror-supplied — MATCH this structure, heading hierarchy, ordering, and tone instead of the default section list):
+Template file: ${template.filename || "(unnamed)"}
+${Array.isArray(template.structure) && template.structure.length
+  ? `OUTLINE TO FOLLOW (use exactly these top-level sections, in this order, with these names):\n${template.structure.map((t: string, i: number) => `${i + 1}. ${t}`).join("\n")}\n`
+  : ""}${template.boilerplate ? `Template body (truncated — mirror its voice, formatting conventions, table styles, and boilerplate phrasing):\n${String(template.boilerplate).slice(0, 25000)}\n` : ""}
+RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, naming) and TONE. Replace the default outline below with the template's outline. Substitute opportunity-specific content into its sections; do not invent extra top-level sections that are not in the template outline.
+`
+      : "";
+
+    const baseSystemPrompt = engagement === "sub"
       ? `You are a senior federal capture manager writing a CAPABILITIES STATEMENT / TEAMING SUBMISSION for ${companyIdentity(companyProfile)}, who is pursuing this opportunity as a SUBCONTRACTOR under the prime named below. Do NOT write a full Section L/M proposal volume. Produce a concise document tailored to convince the prime to bring the offeror onto their team for the targeted scope.
 
 PRIME CONTRACTOR: ${primeContractorName || "(unspecified)"}
@@ -94,6 +104,8 @@ Generate the document in markdown with these sections IN ORDER:
 
 Use markdown tables for structured data. Be specific. If a field is missing from the company profile, insert "[TO BE VERIFIED — update in Capture Intel]" rather than inventing details.`
       : buildSystemPrompt(companyProfile);
+
+    const systemPrompt = templateBlock ? `${baseSystemPrompt}\n${templateBlock}` : baseSystemPrompt;
 
     const userPrompt = `Generate ${engagement === "sub" ? "a CAPABILITIES STATEMENT / TEAMING SUBMISSION" : "a complete proposal"} for the following solicitation:
 

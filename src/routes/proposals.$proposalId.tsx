@@ -28,6 +28,7 @@ import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
 import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
 import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-classify";
 import { composeAttachmentsText } from "@/lib/attachments-text";
+import { extractTemplateStructure, findActiveTemplate, type TemplateSection } from "@/lib/proposal-template";
 import { DataProvenance } from "@/components/dashboard/DataSourceBadge";
 import { OCIScreeningCard, ociStatus, type OciAnswers } from "@/components/proposals/OCIScreeningCard";
 import { StepErrorBoundary } from "@/components/StepErrorBoundary";
@@ -321,7 +322,7 @@ function ProposalPipeline() {
     }
   }
 
-  async function generateSection(sectionId: string, sectionTitle: string) {
+  async function generateSection(sectionId: string, sectionTitle: string, opts?: { template?: { filename: string; structure: string[]; boilerplate: string } | null }) {
     if (!online) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
     if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
     if (!companyProfile) { toast.error("Company profile missing"); return; }
@@ -376,6 +377,7 @@ function ProposalPipeline() {
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
+          template: opts?.template ?? undefined,
         }),
       });
       if (!resp.ok || !resp.body) {
@@ -420,14 +422,15 @@ function ProposalPipeline() {
     }
   }
 
-  async function generateAll() {
-    const remaining = sectionsFor(proposal).filter((s) => !proposal.sections?.[s.id]?.content);
+  async function generateAll(sections?: { id: string; title: string }[], opts?: { template?: { filename: string; structure: string[]; boilerplate: string } | null }) {
+    const baseList = sections && sections.length > 0 ? sections : sectionsFor(proposal);
+    const remaining = baseList.filter((s) => !proposal.sections?.[s.id]?.content);
     if (remaining.length === 0) { toast.info("All sections already drafted"); return; }
     for (let i = 0; i < remaining.length; i++) {
       const s = remaining[i];
       setGenProgress({ current: i + 1, total: remaining.length, label: s.title });
       try {
-        await generateSection(s.id, s.title);
+        await generateSection(s.id, s.title, opts);
       } catch (e) {
         // continue with next; per-section toast already shown
       }
@@ -566,7 +569,7 @@ function ProposalPipeline() {
           </TabsContent>
           <TabsContent value="generate" className="mt-4 space-y-4">
             <StepErrorBoundary label="generate">
-              <GenerateStep proposal={proposal} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
+              <GenerateStep proposal={proposal} attachments={attachments} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
                 const wc = content.split(/\s+/).filter(Boolean).length;
                 const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
                 patchProposal({ sections: next });
@@ -1255,18 +1258,78 @@ function ComingSoon({ title, description, fieldLabel, value, onSave }: { title: 
   );
 }
 
-function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
-  const SECS = sectionsFor(proposal);
-  const [active, setActive] = useState(SECS[0].id);
+function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
+  const defaultSecs = sectionsFor(proposal);
+
+  // Detect an active proposal template attachment (parsed) and derive its outline.
+  const templateAtt = useMemo(() => findActiveTemplate(attachments ?? []), [attachments]);
+  const extracted = useMemo(
+    () => (templateAtt ? extractTemplateStructure(templateAtt.parsed_content) : null),
+    [templateAtt],
+  );
+  const templateOutline: TemplateSection[] = extracted?.sections ?? [];
+  const hasUsableTemplate = !!templateAtt && templateOutline.length > 0;
+
+  // Default ON when a usable template is present, but let the user revert.
+  const [useTemplate, setUseTemplate] = useState<boolean>(hasUsableTemplate);
+  useEffect(() => { setUseTemplate(hasUsableTemplate); }, [hasUsableTemplate, templateAtt?.id]);
+
+  const followingTemplate = useTemplate && hasUsableTemplate;
+  const SECS: { id: string; title: string }[] = followingTemplate
+    ? templateOutline.map((s) => ({ id: s.id, title: s.title }))
+    : defaultSecs;
+
+  const templatePayload = followingTemplate && extracted && templateAtt
+    ? {
+        filename: templateAtt.filename as string,
+        structure: templateOutline.map((s) => s.title),
+        boilerplate: extracted.boilerplate,
+      }
+    : null;
+
+  const [active, setActive] = useState(SECS[0]?.id);
+  useEffect(() => {
+    if (!SECS.find((s) => s.id === active)) setActive(SECS[0]?.id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [followingTemplate, templateAtt?.id]);
+
   const sections = proposal.sections || {};
   const generatedCount = SECS.filter((s) => sections[s.id]?.content).length;
-  const current = sections[active] as Section | undefined;
+  const current = active ? (sections[active] as Section | undefined) : undefined;
   const anySectionBusy = Object.values(sectionGen || {}).some(Boolean);
   const lockButtons = !!aiBusy || anySectionBusy;
   const eta = genProgress ? Math.max(0, (genProgress.total - genProgress.current + 1) * 30) : 0;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+      {templateAtt && (
+        <div className="lg:col-span-4 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs flex items-center gap-2 flex-wrap">
+          <FileText className="w-3.5 h-3.5 text-primary" />
+          {followingTemplate ? (
+            <>
+              <span className="font-medium">Following template: {templateAtt.filename}</span>
+              {templateOutline.length > 0 && (
+                <span className="text-muted-foreground">· {templateOutline.length} section{templateOutline.length === 1 ? "" : "s"} detected</span>
+              )}
+              {!hasUsableTemplate && (
+                <span className="text-amber-600">· no headings detected — using default outline</span>
+              )}
+            </>
+          ) : (
+            <span className="font-medium text-muted-foreground">Template available: {templateAtt.filename} (using default outline)</span>
+          )}
+          <Button
+            size="sm"
+            variant="outline"
+            className="ml-auto h-6 text-[11px] px-2"
+            disabled={!hasUsableTemplate}
+            onClick={() => setUseTemplate((v) => !v)}
+            title={!hasUsableTemplate ? "No headings extracted from the template — cannot follow its structure." : undefined}
+          >
+            {followingTemplate ? "Revert to default structure" : "Follow this template"}
+          </Button>
+        </div>
+      )}
       {genProgress && (
         <div className="lg:col-span-4 rounded-md border border-primary/30 bg-primary/5 px-3 py-2 text-xs flex items-center gap-2">
           <RefreshCw className="w-3 h-3 animate-spin text-primary" />
@@ -1280,10 +1343,11 @@ function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, o
           <CardDescription className="text-xs">
             {generatedCount} of {SECS.length} drafted
             {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Capabilities mode</span>}
+            {followingTemplate && <span className="ml-1 text-primary">· Template-driven</span>}
           </CardDescription>
         </CardHeader>
         <CardContent className="p-2 space-y-1">
-          <Button size="sm" className="w-full mb-2" onClick={onGenerateAll} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
+          <Button size="sm" className="w-full mb-2" onClick={() => onGenerateAll(SECS, { template: templatePayload })} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
           {SECS.map((s) => {
             const has = !!sections[s.id]?.content;
             const busy = sectionGen[s.id];
@@ -1302,17 +1366,17 @@ function GenerateStep({ proposal, sectionGen, aiBusy, genProgress, onGenerate, o
       <Card className="lg:col-span-3">
         <CardHeader className="pb-2 flex-row items-center justify-between">
           <div>
-            <CardTitle className="text-base">{SECS.find((s) => s.id === active)?.title}</CardTitle>
+            <CardTitle className="text-base">{SECS.find((s) => s.id === active)?.title ?? "—"}</CardTitle>
             <CardDescription className="text-xs">{current?.word_count ?? 0} words</CardDescription>
           </div>
-          <Button size="sm" onClick={() => onGenerate(active, SECS.find((s) => s.id === active)!.title)} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
-            <Sparkles className="w-4 h-4 mr-1" />{sectionGen[active] ? "Generating…" : current?.content ? "Regenerate" : "Generate"}
+          <Button size="sm" onClick={() => active && onGenerate(active, SECS.find((s) => s.id === active)!.title, { template: templatePayload })} disabled={lockButtons || !active} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
+            <Sparkles className="w-4 h-4 mr-1" />{active && sectionGen[active] ? "Generating…" : current?.content ? "Regenerate" : "Generate"}
           </Button>
         </CardHeader>
         <CardContent>
           <Textarea
             value={current?.content ?? ""}
-            onChange={(e) => onPatchSection(active, e.target.value)}
+            onChange={(e) => active && onPatchSection(active, e.target.value)}
             placeholder="Click Generate to produce this section. The output will stream in. You can edit inline."
             className="font-mono text-xs min-h-[60vh]"
           />

@@ -159,8 +159,19 @@ Deno.serve(async (req) => {
       engagementType,
       primeContractorName,
       targetedScopeAreas,
+      template,
     } = body;
     const engagement = engagementType === "sub" ? "sub" : "prime";
+
+    const templateBlock = (template && typeof template === "object" && (template.filename || template.boilerplate))
+      ? `\nPROPOSAL TEMPLATE (offeror-supplied — MATCH this structure, heading hierarchy, ordering, and tone):
+Template file: ${template.filename || "(unnamed)"}
+${Array.isArray(template.structure) && template.structure.length
+  ? `Top-level outline from the template:\n${template.structure.map((t: string, i: number) => `${i + 1}. ${t}`).join("\n")}\n`
+  : ""}${template.boilerplate ? `Template body (truncated — mirror its voice, formatting conventions, and boilerplate phrasing):\n${String(template.boilerplate).slice(0, 25000)}\n` : ""}
+RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, naming) and TONE. Substitute opportunity-specific content into its sections; do not invent extra top-level sections that are not in the template outline.
+`
+      : "";
 
     if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
 
@@ -171,8 +182,11 @@ Deno.serve(async (req) => {
     } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
     const userId = ctx.user.id;
 
-    const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
-      `Write the section titled "${sectionTitle}". Be specific to this customer; avoid boilerplate.`;
+    const hasTemplate = !!templateBlock;
+    const sectionInstr = hasTemplate
+      ? `Write the section titled "${sectionTitle}". FOLLOW THE OFFEROR-SUPPLIED PROPOSAL TEMPLATE (see PROPOSAL TEMPLATE block) for structure, sub-heading hierarchy, ordering, and tone. Pull opportunity-specific details from the OPPORTUNITY, COMPLIANCE MATRIX, CUSTOMER INTELLIGENCE, and SOLICITATION ATTACHMENT TEXT to fill in the template. Preserve the template's heading wording when it applies to this section; mirror its formatting conventions (tables, bullets, numbering). Do not invent sub-sections that the template does not include.`
+      : (SECTION_INSTRUCTIONS[sectionId] ||
+        `Write the section titled "${sectionTitle}". Be specific to this customer; avoid boilerplate.`);
 
     const knowledgeContext = await fetchKnowledgeContext(sectionId, ctx.admin, verifiedTeamId);
 
@@ -215,7 +229,7 @@ ${solutionDesign ? `SOLUTION DESIGN inputs:\n${JSON.stringify(solutionDesign, nu
 ${teaming && teaming.length ? `TEAMING ARRANGEMENT (reference these partners by name in management approach, staffing plan, and past performance — cite their certifications, NAICS coverage, and past performance where relevant):\n${JSON.stringify(teaming, null, 2)}\n` : ""}
 ${pastPerformance && pastPerformance.length ? `PAST PERFORMANCE LIBRARY (selected by capture team — use these as the source of truth for the Past Performance section; do NOT invent contracts, values, periods, or POCs not listed here):\n${JSON.stringify(pastPerformance, null, 2)}\n` : ""}
 ${attachmentsText ? `SOLICITATION ATTACHMENT TEXT (truncated):\n${String(attachmentsText).slice(0, 30000)}\n` : ""}
-
+${templateBlock}
 CRITICAL: Before writing, briefly research the end-user unit from context (mission, facility, terminology) and weave at least 3 unit-specific details into the section. If you cannot identify the unit, say so explicitly with [TO BE VERIFIED].`;
 
 
