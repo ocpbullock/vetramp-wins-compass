@@ -62,8 +62,9 @@ Deno.serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas, userContext: userContextRaw, template } = await req.json();
+    const { opportunity, teamId, companyProfile, engagementType, pursuitType, primeContractorName, targetedScopeAreas, userContext: userContextRaw, template } = await req.json();
     const engagement = engagementType === "sub" ? "sub" : "prime";
+    const pursuit = pursuitType === "rfi_sources_sought" || pursuitType === "capability_statement" ? pursuitType : "rfp_rfq";
     const userContext = normalizeUserContext(userContextRaw);
     const userContextBlock = renderUserContextPrompt(userContext);
 
