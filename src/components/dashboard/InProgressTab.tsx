@@ -30,6 +30,7 @@ type Proposal = {
   opportunity_source_id: string | null;
   engagement_type: string | null;
   prime_contractor_name: string | null;
+  pursuit_type: string | null;
 };
 
 
