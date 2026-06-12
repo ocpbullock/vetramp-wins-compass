@@ -755,22 +755,87 @@ function ManageTeamDialog({
           {/* Linked proposals (opportunity teams) */}
           {isOpp && (
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Linked proposals</Label>
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Linked proposal</Label>
               {(proposalsQ.data?.proposals ?? []).length === 0 ? (
-                <p className="text-xs text-muted-foreground">No linked proposals.</p>
+                <p className="text-xs text-muted-foreground">No linked proposals yet.</p>
               ) : (
                 <div className="space-y-1">
                   {(proposalsQ.data?.proposals ?? []).map((p: any) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onClick={() => { onOpenChange(false); navigate({ to: "/proposals/$proposalId", params: { proposalId: p.id } }); }}
-                      className="w-full text-left flex items-center justify-between p-2 border rounded-md hover:bg-accent text-sm"
-                    >
-                      <span className="truncate">{p.opportunity_title ?? p.solicitation_number}</span>
+                    <div key={p.id} className="flex items-center justify-between gap-2 p-2 border rounded-md text-sm">
+                      <button
+                        type="button"
+                        onClick={() => { onOpenChange(false); navigate({ to: "/proposals/$proposalId", params: { proposalId: p.id } }); }}
+                        className="flex-1 text-left truncate hover:underline"
+                      >
+                        <span className="truncate">{p.opportunity_title ?? p.solicitation_number}</span>
+                      </button>
                       <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-                    </button>
+                      {canManage && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={async () => {
+                            try {
+                              await unlinkFn({ data: { proposalId: p.id, opportunityTeamId: team.id } });
+                              toast.success("Unlinked");
+                              qc.invalidateQueries({ queryKey: ["team-proposals", team.id] });
+                              qc.invalidateQueries({ queryKey: ["linkable-proposals", parentTeamId, team.id] });
+                              qc.invalidateQueries({ queryKey: ["all-my-teams"] });
+                              onChanged();
+                            } catch (e) {
+                              toast.error(e instanceof Error ? e.message : "Failed to unlink");
+                            }
+                          }}
+                        >
+                          Unlink
+                        </Button>
+                      )}
+                    </div>
                   ))}
+                </div>
+              )}
+
+              {canManage && (proposalsQ.data?.proposals ?? []).length === 0 && (
+                <div className="flex items-center gap-2 pt-1">
+                  <Select value={linkPick} onValueChange={setLinkPick} disabled={linkableQ.isLoading || (linkableQ.data?.proposals ?? []).length === 0}>
+                    <SelectTrigger className="flex-1">
+                      <SelectValue
+                        placeholder={
+                          linkableQ.isLoading
+                            ? "Loading…"
+                            : (linkableQ.data?.proposals ?? []).length === 0
+                              ? "No unlinked proposals in this organization"
+                              : "Link an existing proposal"
+                        }
+                      />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(linkableQ.data?.proposals ?? []).map((p: any) => (
+                        <SelectItem key={p.id} value={p.id}>
+                          {p.opportunity_title ?? p.solicitation_number ?? "Untitled"}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    size="sm"
+                    disabled={!linkPick}
+                    onClick={async () => {
+                      try {
+                        await linkFn({ data: { proposalId: linkPick, opportunityTeamId: team.id } });
+                        toast.success("Linked");
+                        setLinkPick("");
+                        qc.invalidateQueries({ queryKey: ["team-proposals", team.id] });
+                        qc.invalidateQueries({ queryKey: ["linkable-proposals", parentTeamId, team.id] });
+                        qc.invalidateQueries({ queryKey: ["all-my-teams"] });
+                        onChanged();
+                      } catch (e) {
+                        toast.error(e instanceof Error ? e.message : "Failed to link");
+                      }
+                    }}
+                  >
+                    Link
+                  </Button>
                 </div>
               )}
             </div>
