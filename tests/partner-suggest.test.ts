@@ -188,10 +188,10 @@ describe("Suggested Partners UI — team isolation", () => {
     expect(src).not.toMatch(/from\(["']teaming_partners["']\)/);
   });
 
-  it("company_profile / contract_vehicles queries are team-scoped", () => {
-    const profRe = /\.from\(["']company_profile["']\)([\s\S]{0,300})/;
+  it("self profile is sourced from companies via getOwnCompanyProfileData; vehicles are team-scoped", () => {
+    expect(src).toMatch(/getOwnCompanyProfileData\(\s*teamId!?\s*\)/);
+    expect(src).not.toMatch(/from\(["']company_profile["']\)/);
     const vehRe = /\.from\(["']contract_vehicles["']\)([\s\S]{0,300})/;
-    expect(src.match(profRe)?.[1]).toMatch(/\.eq\(["']team_id["']/);
     expect(src.match(vehRe)?.[1]).toMatch(/\.eq\(["']team_id["']/);
   });
 

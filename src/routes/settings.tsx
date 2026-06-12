@@ -24,11 +24,12 @@ import { ArrowLeft, Plus, Trash2, Save, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { TeamPanel } from "@/components/settings/TeamPanel";
-import { useTeam } from "@/lib/team";
+import { useTeamId } from "@/lib/team";
 import { PartnersPanel } from "@/components/settings/PartnersPanel";
 import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 import { ContractVehiclesPanel } from "@/components/settings/ContractVehiclesPanel";
 import { KnowledgeBasePanel } from "@/components/settings/KnowledgeBasePanel";
+import { getOwnCompanyProfileData, saveOwnCompanyProfile } from "@/lib/companies";
 
 export const Route = createFileRoute("/settings")({ component: SettingsPage });
 
@@ -137,51 +138,45 @@ function ensureShape(p: ProfileData | null | undefined): ProfileData {
 
 function CompanyProfilePanel() {
   const qc = useQueryClient();
+  const teamId = useTeamId();
   const [form, setForm] = useState<ProfileData | null>(null);
-  const [rowId, setRowId] = useState<string | null>(null);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["company-profile"],
+    queryKey: ["company-profile", teamId],
+    enabled: !!teamId,
     staleTime: 30 * 60 * 1000, // Slow-moving reference data
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("company_profile")
-        .select("id, profile_data")
-        .limit(1)
-        .maybeSingle();
-      if (error) throw new Error(error.message);
-      return data;
+      const pd = await getOwnCompanyProfileData(teamId!);
+      return (pd ?? {}) as ProfileData;
     },
   });
 
   useEffect(() => {
-    if (data) {
-      setRowId(data.id);
-      setForm(ensureShape(data.profile_data as ProfileData));
+    if (data !== undefined) {
+      setForm(ensureShape(data as ProfileData));
     }
   }, [data]);
 
   const saveMut = useMutation({
     mutationFn: async () => {
-      if (!rowId || !form) throw new Error("Nothing to save.");
-      const { error } = await supabase
-        .from("company_profile")
-        .update({ profile_data: form as never })
-        .eq("id", rowId);
-      if (error) throw new Error(error.message);
+      if (!teamId) throw new Error("No active team.");
+      if (!form) throw new Error("Nothing to save.");
+      await saveOwnCompanyProfile(teamId, form as Record<string, any>);
     },
     onSuccess: () => {
       toast.success("Company profile saved.");
       qc.invalidateQueries({ queryKey: ["company-profile"] });
       qc.invalidateQueries({ queryKey: ["pwin-self"] });
       qc.invalidateQueries({ queryKey: ["pwin-solo"] });
+      qc.invalidateQueries({ queryKey: ["onboarding-state"] });
+      qc.invalidateQueries({ queryKey: ["setup-status"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
 
   if (isLoading) return <Card className="p-6 text-sm text-muted-foreground">Loading profile…</Card>;
   if (isError) return <Card className="p-6 text-sm text-destructive">Could not load profile: {(error as Error)?.message}</Card>;
-  if (!form) return <Card className="p-6 text-sm text-muted-foreground">No company profile row found.</Card>;
+  if (!form) return <Card className="p-6 text-sm text-muted-foreground">No company profile yet.</Card>;
 
   const update = (patch: Partial<ProfileData>) => setForm((f) => ({ ...(f ?? {}), ...patch }));
   const updateLocation = (patch: Partial<NonNullable<ProfileData["location"]>>) =>

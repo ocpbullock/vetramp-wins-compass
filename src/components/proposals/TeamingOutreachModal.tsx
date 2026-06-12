@@ -103,15 +103,13 @@ export function TeamingOutreachModal({
     proposal.engagement_type === "sub" ? "sub_to_prime" : "prime_with_subs",
   );
 
-  // load company profile
+  // load company profile (from unified companies own-company row)
   const { data: companyProfile } = useQuery({
     queryKey: ["company-profile-outreach", proposal.team_id],
     enabled: !!proposal.team_id && open,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("company_profile").select("profile_data")
-        .eq("team_id", proposal.team_id!).maybeSingle();
-      return (data?.profile_data ?? null) as any;
+      const { getOwnCompanyProfileData } = await import("@/lib/companies");
+      return (await getOwnCompanyProfileData(proposal.team_id)) as any;
     },
   });
 

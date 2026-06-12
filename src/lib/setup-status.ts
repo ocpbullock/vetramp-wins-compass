@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeamId, useTeam } from "@/lib/team";
-import { countPartnerCompanies, getOwnCompany, type Company } from "@/lib/companies";
+import { countPartnerCompanies, getOwnCompany, getOwnCompanyProfileData, type Company } from "@/lib/companies";
 
 
 export type SetupItem = {
@@ -32,14 +32,14 @@ export function useSetupStatus(): SetupStatus {
     queryKey: ["setup-status", teamId],
     queryFn: async () => {
       const [
-        profileRes,
+        profileData,
         kbRes,
         ppRes,
         cvRes,
         membersRes,
         partnerCount,
       ] = await Promise.all([
-        supabase.from("company_profile").select("profile_data").limit(1).maybeSingle(),
+        teamId ? getOwnCompanyProfileData(teamId).catch(() => null) : Promise.resolve(null),
         supabase.from("knowledge_base").select("id", { count: "exact", head: true }),
         supabase.from("past_performance").select("id", { count: "exact", head: true }),
         supabase.from("contract_vehicles").select("id", { count: "exact", head: true }),
@@ -50,7 +50,7 @@ export function useSetupStatus(): SetupStatus {
 
       ]);
 
-      const profile = (profileRes.data?.profile_data ?? {}) as Record<string, unknown>;
+      const profile = (profileData ?? {}) as Record<string, unknown>;
       const profileComplete =
         !!(profile.legal_name && String(profile.legal_name).trim()) &&
         !!(profile.uei && String(profile.uei).trim()) &&

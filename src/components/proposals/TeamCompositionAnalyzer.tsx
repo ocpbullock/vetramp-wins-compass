@@ -23,7 +23,7 @@ import {
   type PwinTeamMember, type PwinContext, type PwinRole, type EngagementType, type PwinResult,
   type RelationshipModel, type ScenarioInsights,
 } from "@/lib/pwin";
-import { listPartnerCompanies, type PartnerView as Partner } from "@/lib/companies";
+import { listPartnerCompanies, getOwnCompanyProfileData, type PartnerView as Partner } from "@/lib/companies";
 
 const ROLES: { value: PwinRole; label: string }[] = [
   { value: "prime", label: "Prime" },
@@ -75,7 +75,7 @@ export function TeamCompositionAnalyzer({
   const teamId = proposal.team_id;
   const proposalId = proposal.id;
 
-  // --- load self profile (company_profile + held contract_vehicles + own past performance)
+  // --- load self profile (companies own row + held contract_vehicles + own past performance)
   const { data: self } = useQuery({
     queryKey: ["pwin-self", teamId],
     enabled: !!teamId && open,
@@ -84,19 +84,19 @@ export function TeamCompositionAnalyzer({
       vehicles: string[];
       pastPerf: Array<{ naics?: string|null; agency?: string|null; end?: string|null; keywords?: string[] }>;
     }> => {
-      const [profRes, vehRes, ppRes] = await Promise.all([
-        supabase.from("company_profile").select("profile_data").eq("team_id", teamId!).maybeSingle(),
+      const [pd, vehRes, ppRes] = await Promise.all([
+        getOwnCompanyProfileData(teamId!),
         supabase.from("contract_vehicles").select("vehicle_name").eq("team_id", teamId!).eq("status", "active"),
         supabase.from("past_performance")
           .select("naics_code, agency, period_of_performance_end, relevance_keywords")
           .eq("team_id", teamId!),
       ]);
-      const pd = (profRes.data?.profile_data ?? {}) as any;
+      const profile = (pd ?? {}) as any;
       return {
         profile: {
-          company_name: pd.company_name || pd.name || "Your company",
-          certifications: pd.certifications || pd.socioeconomic_certifications || [],
-          naics_codes: pd.naics_codes || [],
+          company_name: profile.company_name || profile.legal_name || profile.name || "Your company",
+          certifications: profile.certifications || profile.socioeconomic_certifications || [],
+          naics_codes: profile.naics_codes || [],
         },
         vehicles: (vehRes.data ?? []).map((v: any) => v.vehicle_name),
         pastPerf: (ppRes.data ?? []).map((p: any) => ({

@@ -22,16 +22,12 @@ export function ProposalModal({ opp, onClose }: { opp: SamOpportunity | null; on
     if (!open) return;
     let cancelled = false;
     (async () => {
-      const { data } = await supabase
-        .from("company_profile")
-        .select("profile_data")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      if (!cancelled) setCompanyProfile(data?.profile_data ?? null);
+      const { getOwnCompanyProfileData } = await import("@/lib/companies");
+      const data = await getOwnCompanyProfileData(teamId).catch(() => null);
+      if (!cancelled) setCompanyProfile(data ?? null);
     })();
     return () => { cancelled = true; };
-  }, [open]);
+  }, [open, teamId]);
 
   async function generate() {
     if (!opp) return;

@@ -81,9 +81,9 @@ export async function getOwnCompany(teamId: string): Promise<Company | null> {
 
 /**
  * Legacy company_profile.profile_data shape, sourced from the team's
- * own-company row in `companies`. The trigger on company_profile mirrors
- * profile_data into companies.external_ref.profile_data so the proposal
- * flow can keep reading the same blob without dual-writing.
+ * own-company row in `companies`. The row's `external_ref.profile_data`
+ * is the canonical store for the rich settings form blob (legal_name,
+ * founder bio, location, etc.) that doesn't fit in dedicated columns.
  */
 export async function getOwnCompanyProfileData(teamId: string | null | undefined): Promise<any | null> {
   if (!teamId) return null;
@@ -91,6 +91,37 @@ export async function getOwnCompanyProfileData(teamId: string | null | undefined
   if (!own) return null;
   const ref = own.external_ref as { profile_data?: any } | null | undefined;
   return ref?.profile_data ?? null;
+}
+
+/**
+ * Write the settings Company Profile form (the wide ProfileData blob) into
+ * the team's own-company row. Mapped fields land on real columns
+ * (name/uei/cage_code/naics_codes/certifications) so partner-fit and pWin
+ * read them directly; the full blob is preserved in `external_ref.profile_data`
+ * for the UI to round-trip without losing fields without dedicated columns.
+ */
+export async function saveOwnCompanyProfile(
+  teamId: string,
+  profileData: Record<string, any>,
+): Promise<Company> {
+  const certs = Array.isArray(profileData.certifications)
+    ? profileData.certifications
+        .map((c: any) => (typeof c === "string" ? c : c?.name))
+        .filter((s: any): s is string => typeof s === "string" && s.trim().length > 0)
+    : [];
+  const naics = profileData.primary_naics && String(profileData.primary_naics).trim()
+    ? [String(profileData.primary_naics).trim()]
+    : [];
+  const existing = await getOwnCompany(teamId);
+  const prevRef = (existing?.external_ref as Record<string, any> | null | undefined) ?? {};
+  return upsertOwnCompany(teamId, {
+    name: (profileData.legal_name && String(profileData.legal_name).trim()) || existing?.name || "Our Company",
+    uei: profileData.uei ? String(profileData.uei) : null,
+    cage_code: profileData.cage ? String(profileData.cage) : null,
+    certifications: certs.length ? certs : (existing?.certifications ?? []),
+    naics_codes: naics.length ? naics : (existing?.naics_codes ?? []),
+    external_ref: { ...prevRef, profile_data: profileData },
+  });
 }
 
 export async function upsertCompany(draft: CompanyDraft & { id?: string }): Promise<Company> {
