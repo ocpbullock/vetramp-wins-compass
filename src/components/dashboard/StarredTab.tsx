@@ -126,6 +126,21 @@ export function StarredTab({
                   <TableRow key={r.id}>
                     <TableCell className="w-[180px]">
                       <div className="flex items-center gap-1">
+                        {onCompete && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+                                onClick={() => onCompete(rowToSamOpp(r))}
+                              >
+                                <Swords className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Compete</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
