@@ -956,7 +956,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                 className={`rounded-md border-2 p-4 text-left transition ${proposal.engagement_type === "sub" ? "border-amber-500 bg-amber-500/5" : "border-border hover:bg-muted"}`}
               >
                 <div className="text-sm font-semibold">Pursuing as Sub</div>
-                <div className="text-[11px] text-muted-foreground mt-1">Capabilities statement / teaming submission directed at a prime.</div>
+                <div className="text-[11px] text-muted-foreground mt-1">Produce drop-in inputs for the prime's volumes (technical, management, past performance, key personnel), written in the prime's voice. Includes an optional 1-page teaming pitch.</div>
               </button>
             </div>
             {proposal.engagement_type === "sub" && (
