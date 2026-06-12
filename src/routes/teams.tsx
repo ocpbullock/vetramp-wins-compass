@@ -24,7 +24,7 @@ import {
   ArrowLeft, Building2, Briefcase, Check, Plus, UserPlus, Trash2, Archive, Loader2, ExternalLink, RefreshCw, XCircle, LogOut, Edit2, Users,
 } from "lucide-react";
 import { toast } from "sonner";
-import { inviteToOpportunityTeam } from "@/lib/opportunity-teams.functions";
+import { inviteToOpportunityTeam, linkProposalToOpportunityTeam, unlinkProposalFromOpportunityTeam, listLinkableProposalsForOrg } from "@/lib/opportunity-teams.functions";
 import { listTeamInvites, resendTeamInvite, cancelTeamInvite, listTeamProposals } from "@/lib/teams.functions";
 
 export const Route = createFileRoute("/teams")({ component: TeamsPage });
