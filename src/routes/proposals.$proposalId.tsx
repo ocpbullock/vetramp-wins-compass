@@ -1193,6 +1193,7 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
+          userContext: userContextFromProposal(proposal),
           skipCache,
         }),
       });
