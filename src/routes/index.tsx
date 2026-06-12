@@ -32,6 +32,8 @@ import { toast } from "sonner";
 import { generateDefaultMilestones } from "@/lib/milestones";
 
 import { SetupBanner } from "@/components/settings/SetupChecklist";
+import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
+import { useOnboardingGate } from "@/lib/setup-status";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
