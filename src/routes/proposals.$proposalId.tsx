@@ -886,6 +886,62 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">What we know (offeror-authoritative)</CardTitle>
+            <CardDescription className="text-xs">
+              Anything you enter here overrides AI assumptions in every analysis (competitive intel, customer intel, proposal draft).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Known incumbent</Label>
+              <Input
+                value={local.known_incumbent ?? ""}
+                onChange={(e) => update({ known_incumbent: e.target.value || null })}
+                placeholder="e.g. Acme Federal Solutions"
+              />
+            </div>
+            <div>
+              <Label>Incumbent notes</Label>
+              <Input
+                value={local.incumbent_notes ?? ""}
+                onChange={(e) => update({ incumbent_notes: e.target.value || null })}
+                placeholder="PoP end, performance gossip, key staff"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Customer notes</Label>
+              <Textarea
+                rows={2}
+                value={local.customer_notes ?? ""}
+                onChange={(e) => update({ customer_notes: e.target.value || null })}
+                placeholder="End user, hot buttons, KO/COR names, prior interactions"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Competitive notes</Label>
+              <Textarea
+                rows={2}
+                value={local.competitive_notes ?? ""}
+                onChange={(e) => update({ competitive_notes: e.target.value || null })}
+                placeholder="Likely bidders, teaming rumors, pricing dynamics"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>General capture notes</Label>
+              <Textarea
+                rows={2}
+                value={local.capture_notes ?? ""}
+                onChange={(e) => update({ capture_notes: e.target.value || null })}
+                placeholder="Anything else relevant to this pursuit"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+
+
         <LinkOpportunityTeamCard
           proposalId={proposalId}
           parentTeamId={proposal.team_id ?? null}
