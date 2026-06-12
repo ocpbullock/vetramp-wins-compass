@@ -62,7 +62,41 @@ const SUB_SECTIONS: { id: string; title: string }[] = [
   { id: "sub_teaming_pitch", title: "Teaming Pitch (1-page, optional)" },
 ];
 
+// RFI / Sources Sought response — short, evaluator-facing market research reply.
+// Includes acquisition-strategy comments and a set-aside recommendation that
+// advocates SDVOSB when the offeror is SDVOSB-certified.
+const RFI_SECTIONS: { id: string; title: string }[] = [
+  { id: "rfi_cover_response", title: "Response Letter" },
+  { id: "rfi_company_overview", title: "Company Overview" },
+  { id: "rfi_relevant_capabilities", title: "Relevant Capabilities" },
+  { id: "rfi_past_performance_summary", title: "Past Performance Summaries" },
+  { id: "rfi_acquisition_strategy_comments", title: "Suggested Acquisition Strategy Comments" },
+  { id: "rfi_set_aside_recommendation", title: "Set-Aside Recommendation" },
+];
+
+// Standalone capability statement — short marketing-style document.
+const CAPABILITY_STATEMENT_SECTIONS: { id: string; title: string }[] = [
+  { id: "cs_header", title: "Header & Contact" },
+  { id: "cs_company_overview", title: "Company Overview" },
+  { id: "cs_core_capabilities", title: "Core Capabilities" },
+  { id: "cs_differentiators", title: "Differentiators" },
+  { id: "cs_past_performance", title: "Past Performance Highlights" },
+  { id: "cs_certifications", title: "Certifications & Codes" },
+];
+
+export const PURSUIT_TYPES: { value: string; label: string; short: string; description: string }[] = [
+  { value: "rfp_rfq",            label: "RFP / RFQ response",         short: "RFP/RFQ",   description: "Full Section L/M proposal response to a solicitation." },
+  { value: "rfi_sources_sought", label: "RFI / Sources Sought",       short: "RFI",       description: "Market-research response. Skips compliance matrix and milestones." },
+  { value: "capability_statement", label: "Capability statement",     short: "Cap. Stmt", description: "Standalone marketing-style capability statement, not tied to a solicitation." },
+];
+
+export function pursuitTypeLabel(p?: string | null) {
+  return PURSUIT_TYPES.find((t) => t.value === p)?.short ?? "RFP/RFQ";
+}
+
 function sectionsFor(proposal: any) {
+  if (proposal?.pursuit_type === "rfi_sources_sought") return RFI_SECTIONS;
+  if (proposal?.pursuit_type === "capability_statement") return CAPABILITY_STATEMENT_SECTIONS;
   return proposal?.engagement_type === "sub" ? SUB_SECTIONS : PRIME_SECTIONS;
 }
 
