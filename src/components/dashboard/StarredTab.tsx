@@ -168,6 +168,16 @@ export function StarredTab({
                       <div className="text-xs text-muted-foreground font-mono truncate">{r.notice_id}</div>
                     </TableCell>
                     <TableCell className="font-mono text-xs">{r.naics_code || "—"}</TableCell>
+                    <TableCell>
+                      <PwinChip
+                        opp={{
+                          id: r.id,
+                          naics: r.naics_code,
+                          agency: (r.source_data as any)?.fullParentPathName ?? null,
+                          setAside: r.set_aside_description ?? null,
+                        }}
+                      />
+                    </TableCell>
                     <TableCell className="text-sm whitespace-nowrap">{fmt(r.response_deadline)}</TableCell>
                     <TableCell className="text-sm whitespace-nowrap">{fmt(r.posted_date)}</TableCell>
                     <TableCell className="text-xs">{r.set_aside_description || "—"}</TableCell>
