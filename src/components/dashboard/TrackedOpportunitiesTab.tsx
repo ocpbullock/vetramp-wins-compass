@@ -12,7 +12,9 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users, FolderOpen } from "lucide-react";
+import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users, FolderOpen, Sparkles } from "lucide-react";
+import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
+import { useTeam } from "@/lib/team";
 import { useNavigate } from "@tanstack/react-router";
 import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
 import { supabase } from "@/integrations/supabase/client";
@@ -103,6 +105,8 @@ export function TrackedOpportunitiesTab({
   const [analyze, setAnalyze] = useState<TrackedOpportunity | null>(null);
   const [teamRow, setTeamRow] = useState<TrackedOpportunity | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
+  const [sandboxRow, setSandboxRow] = useState<TrackedOpportunity | null>(null);
+  const { currentTeam } = useTeam();
 
   // Pick up a "highlight this row" hint stashed by InProgressTab so the user
   // sees which tracked opportunity their proposal came from.
@@ -350,6 +354,9 @@ export function TrackedOpportunitiesTab({
                       <Button size="sm" variant="ghost" onClick={() => setTeamRow(i)} title="Create opportunity team">
                         <Users className="w-4 h-4" />
                       </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setSandboxRow(i)} title="Teaming sandbox / pWin">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => { setEditing(i); setDialogOpen(true); }} title="Edit">
                         <Pencil className="w-4 h-4" />
                       </Button>
@@ -440,6 +447,27 @@ export function TrackedOpportunitiesTab({
           agency={teamRow.agency}
           naicsCode={teamRow.naics_code}
           responseDeadline={teamRow.response_deadline ?? null}
+        />
+      )}
+      {sandboxRow && ((sandboxRow as any).team_id || currentTeam?.id) && (
+        <TeamingSandbox
+          open={!!sandboxRow}
+          onOpenChange={(o) => { if (!o) setSandboxRow(null); }}
+          parent={{
+            kind: "tracked",
+            trackedOpportunityId: sandboxRow.id,
+            teamId: ((sandboxRow as any).team_id ?? currentTeam!.id) as string,
+          }}
+          opportunity={{
+            title: sandboxRow.title,
+            naicsCodes: [sandboxRow.naics_code].filter(Boolean) as string[],
+            agency: sandboxRow.agency,
+            setAside: null,
+            requiredVehicles: sandboxRow.contract_vehicle && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(sandboxRow.contract_vehicle)
+              ? [sandboxRow.contract_vehicle]
+              : [],
+            incumbentName: null,
+          }}
         />
       )}
     </div>

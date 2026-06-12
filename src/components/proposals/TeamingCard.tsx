@@ -14,6 +14,7 @@ import { Plus, Trash2, Users, Search, Sparkles, Mail } from "lucide-react";
 import { toast } from "sonner";
 import type { Partner } from "@/components/settings/PartnersPanel";
 import { TeamCompositionAnalyzer } from "./TeamCompositionAnalyzer";
+import { TeamingSandbox } from "./TeamingSandbox";
 import { TeamingOutreachModal, type OutreachPartnerInput } from "./TeamingOutreachModal";
 import { SuggestedPartnersCard } from "./SuggestedPartnersCard";
 import type { PartnerSuggestion } from "@/lib/partner-suggest";
@@ -59,6 +60,7 @@ export function TeamingCard({
   const [search, setSearch] = useState("");
   const [picker, setPicker] = useState(false);
   const [analyzerOpen, setAnalyzerOpen] = useState(false);
+  const [sandboxOpen, setSandboxOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPicker, setOutreachPicker] = useState(false);
@@ -159,6 +161,11 @@ export function TeamingCard({
           {proposal && (
             <Button size="sm" variant="secondary" onClick={() => setAnalyzerOpen(true)} disabled={!teamId}>
               <Sparkles className="w-4 h-4 mr-1" /> Analyze team
+            </Button>
+          )}
+          {proposal && (
+            <Button size="sm" variant="secondary" onClick={() => setSandboxOpen(true)} disabled={!teamId}>
+              <Sparkles className="w-4 h-4 mr-1" /> Sandbox
             </Button>
           )}
           {proposal && (
@@ -309,6 +316,25 @@ export function TeamingCard({
           open={analyzerOpen}
           onOpenChange={setAnalyzerOpen}
           proposal={proposal}
+        />
+      )}
+      {proposal && teamId && (
+        <TeamingSandbox
+          open={sandboxOpen}
+          onOpenChange={setSandboxOpen}
+          parent={{ kind: "proposal", proposalId: proposal.id, teamId }}
+          opportunity={{
+            title: (proposal as any).title ?? "Proposal teaming sandbox",
+            naicsCodes: [(proposal as any).naics_code].filter(Boolean) as string[],
+            agency: (proposal as any).agency ?? null,
+            setAside: (proposal as any).set_aside ?? null,
+            requiredVehicles: (proposal as any).contract_type && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test((proposal as any).contract_type)
+              ? [(proposal as any).contract_type]
+              : [],
+            incumbentName: (proposal as any).customer_intel?.predecessor_contract?.incumbent ?? null,
+            scopeKeywords: ((proposal as any).targeted_scope_areas ?? "")
+              .split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean),
+          }}
         />
       )}
       {proposal && (
