@@ -493,8 +493,10 @@ function ProposalPipeline() {
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to opportunities</Link>
           <div className="flex-1" />
           {proposal.engagement_type === "sub" ? (
-            <Badge className="bg-amber-500 hover:bg-amber-500/90" title={proposal.prime_contractor_name ? `Sub to: ${proposal.prime_contractor_name}` : "Subcontractor pursuit"}>
-              SUB{proposal.prime_contractor_name ? ` · Sub to: ${proposal.prime_contractor_name}` : ""}
+            <Badge className="bg-amber-500 hover:bg-amber-500/90" title={proposal.prime_contractor_name ? `Pursuing as sub — supporting ${proposal.prime_contractor_name}'s bid` : "Pursuing as sub"}>
+              {proposal.prime_contractor_name
+                ? `Pursuing as sub — supporting ${proposal.prime_contractor_name}'s bid`
+                : "Pursuing as sub"}
             </Badge>
           ) : (
             <Badge className="bg-blue-600 hover:bg-blue-600/90">PRIME</Badge>
