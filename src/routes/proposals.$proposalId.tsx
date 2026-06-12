@@ -356,7 +356,8 @@ function ProposalPipeline() {
       let freshRow: any = fresh;
       // Client-side compliance matrix integrity pass
       if (freshRow?.compliance_matrix) {
-        const knownIds = [...PRIME_SECTIONS, ...SUB_SECTIONS].map((s) => s.id);
+        const { data: currentAtts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId);
+        const knownIds = knownSectionIdsFor(freshRow, currentAtts ?? attachments);
         const { fixedCount, fixes, matrix: cleaned } = validateComplianceMatrix(freshRow.compliance_matrix, knownIds);
         if (fixedCount > 0) {
           await supabase.from("proposals").update({ compliance_matrix: cleaned }).eq("id", proposalId);
