@@ -389,18 +389,31 @@ function Dashboard() {
         </div>
       )}
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
-        <SetupBanner />
-        <StatCards
-          activeOpps={stats.activeOpps}
-          historicalCount={stats.historicalCount}
-          historicalTotal={historicalTotal}
-          totalObligated={stats.totalObligated}
-          totalObligatedFiltered={filteredObligated ?? undefined}
-          totalObligatedIsFiltered={filteredObligated != null && filteredObligated !== stats.totalObligated}
-          inProgressCount={inProgressCount}
-          starredCount={starredCount}
-          onSelect={setTab}
-        />
+        {onboarding.showOnboarding ? (
+          <OnboardingFlow
+            onComplete={onboarding.skip}
+            onSkip={onboarding.skip}
+            canSkip={onboarding.state.coreDone}
+          />
+        ) : (
+          <>
+            <SetupBanner />
+            <PastPerformanceAccuracyBanner />
+            <StatCards
+              activeOpps={stats.activeOpps}
+              historicalCount={stats.historicalCount}
+              historicalTotal={historicalTotal}
+              totalObligated={stats.totalObligated}
+              totalObligatedFiltered={filteredObligated ?? undefined}
+              totalObligatedIsFiltered={filteredObligated != null && filteredObligated !== stats.totalObligated}
+              inProgressCount={inProgressCount}
+              starredCount={starredCount}
+              onSelect={setTab}
+            />
+          </>
+        )}
+
+        {!onboarding.showOnboarding && (
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
