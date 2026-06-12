@@ -449,14 +449,14 @@ export function TrackedOpportunitiesTab({
           responseDeadline={teamRow.response_deadline ?? null}
         />
       )}
-      {sandboxRow && (sandboxRow.team_id || currentTeam?.id) && (
+      {sandboxRow && ((sandboxRow as any).team_id || currentTeam?.id) && (
         <TeamingSandbox
           open={!!sandboxRow}
           onOpenChange={(o) => { if (!o) setSandboxRow(null); }}
           parent={{
             kind: "tracked",
             trackedOpportunityId: sandboxRow.id,
-            teamId: (sandboxRow.team_id ?? currentTeam!.id) as string,
+            teamId: ((sandboxRow as any).team_id ?? currentTeam!.id) as string,
           }}
           opportunity={{
             title: sandboxRow.title,
