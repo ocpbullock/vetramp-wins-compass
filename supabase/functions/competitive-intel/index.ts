@@ -400,6 +400,7 @@ Deno.serve(async (req) => {
       },
       scorecard,
       piidMatch,
+      userContextApplied: appliedFacts(userContext),
       cachedAt: cached?.created_at ?? new Date().toISOString(),
       fromCache: !!cached,
     };
