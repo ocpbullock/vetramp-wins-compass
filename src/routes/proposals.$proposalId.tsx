@@ -156,6 +156,33 @@ function ProposalPipeline() {
     setAttachments((a) => a.map((x) => (x.id === att.id ? { ...x, file_type: fileType } : x)));
   }
 
+  async function updateAttachmentNotes(att: any, notes: string) {
+    const { error } = await supabase.from("proposal_attachments").update({ notes }).eq("id", att.id);
+    if (error) { toast.error(error.message); return; }
+    setAttachments((a) => a.map((x) => (x.id === att.id ? { ...x, notes } : x)));
+  }
+
+  async function addPastedReference({ title, text, notes }: { title: string; text: string; notes?: string }) {
+    if (!user) return null;
+    const trimmed = (text || "").trim();
+    if (!trimmed) { toast.error("Paste some text first."); return null; }
+    const filename = (title?.trim() || `Pasted reference ${new Date().toLocaleString()}`).slice(0, 200);
+    const { data: row, error } = await supabase.from("proposal_attachments").insert({
+      proposal_id: proposalId,
+      filename,
+      file_type: "reference",
+      storage_path: null,
+      source: "pasted",
+      size_bytes: trimmed.length,
+      parsed_content: trimmed,
+      notes: notes?.trim() || null,
+    }).select().single();
+    if (error) { toast.error(error.message); return null; }
+    setAttachments((a) => [row, ...a]);
+    toast.success("Reference text saved");
+    return row;
+  }
+
   async function deleteAttachment(att: any) {
     const { data, error } = await supabase.from("proposal_attachments").delete().eq("id", att.id).select("id");
     if (error) { toast.error(error.message); return; }
@@ -165,7 +192,9 @@ function ProposalPipeline() {
     }
     // Only remove the underlying storage object once the row delete succeeded —
     // otherwise a failed RLS delete would leave us with a dangling file removal.
-    await supabase.storage.from("proposal-attachments").remove([att.storage_path]);
+    if (att.storage_path) {
+      await supabase.storage.from("proposal-attachments").remove([att.storage_path]);
+    }
     setAttachments((a) => a.filter((x) => x.id !== att.id));
   }
 
