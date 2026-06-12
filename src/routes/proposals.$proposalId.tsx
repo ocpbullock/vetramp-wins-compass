@@ -752,6 +752,11 @@ function ProposalPipeline() {
           </TabsContent>
         </Tabs>
       </div>
+      {isPartnerView && (
+        <footer className="mt-8 border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
+          Capture room powered by VetRamp — <a href="https://usvetramp.com" target="_blank" rel="noopener noreferrer" className="underline hover:text-foreground">usvetramp.com</a>
+        </footer>
+      )}
     </div>
   );
 }
