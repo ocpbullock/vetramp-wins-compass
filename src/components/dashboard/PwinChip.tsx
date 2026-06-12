@@ -9,9 +9,9 @@ import { Sparkles, Settings as SettingsIcon } from "lucide-react";
 import { useTeamId } from "@/lib/team";
 import {
   useSoloPwinSelf,
-  hasUsableCapabilities,
   computeSoloPwin,
   pwinChipTone,
+  pwinChipState,
   type OppForPwin,
   type SoloPwinSelf,
 } from "@/lib/pwin-solo";
@@ -92,22 +92,40 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
     [opp.id, opp.naics, opp.agency, opp.setAside, opp.vehicle],
   );
 
-  const { data: result } = useQuery({
+  const { data: result, isLoading: resultLoading } = useQuery({
     queryKey: ["pwin-solo", teamId, oppKey],
-    enabled: !!teamId && !!selfQ.data && hasUsableCapabilities(selfQ.data),
+    enabled: !!teamId && !!selfQ.data && !!selfQ.data.ownCompany,
     staleTime: 5 * 60 * 1000,
     queryFn: () => computeSoloPwin(selfQ.data as SoloPwinSelf, opp),
   });
 
-  if (!teamId || selfQ.isLoading) {
+  const state = pwinChipState({
+    teamId,
+    selfLoading: selfQ.isLoading,
+    self: selfQ.data,
+    result,
+    resultLoading,
+  });
+
+  if (state.kind === "loading") {
     return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] border bg-muted text-muted-foreground">
-        …
+      <span
+        className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border bg-muted text-muted-foreground"
+        aria-label="pWin loading"
+      >
+        <Sparkles className="w-3 h-3" />
+        pWin …
       </span>
     );
   }
 
-  if (!hasUsableCapabilities(selfQ.data)) {
+  if (state.kind === "setup") {
+    const tip =
+      state.reason === "no-team"
+        ? "Select a team to compute pWin."
+        : state.reason === "no-own-company"
+        ? "Add your own company in Settings to enable pWin scoring."
+        : "Add your company's NAICS, certifications, and capabilities in Settings to enable pWin scoring.";
     return (
       <TooltipProvider delayDuration={150}>
         <Tooltip>
@@ -116,29 +134,19 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
               type="button"
               onClick={() => navigate({ to: "/settings" })}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border bg-muted text-muted-foreground hover:bg-muted/70"
+              aria-label="pWin: set up profile to score"
             >
               <SettingsIcon className="w-3 h-3" />
-              Set up profile to score
+              pWin · Set up profile
             </button>
           </TooltipTrigger>
-          <TooltipContent className="text-xs max-w-xs">
-            Add your company's NAICS, certifications, and capabilities in Settings to enable pWin scoring.
-          </TooltipContent>
+          <TooltipContent className="text-xs max-w-xs">{tip}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     );
   }
 
-  if (!result) {
-    return (
-      <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] border bg-muted text-muted-foreground">
-        …
-      </span>
-    );
-  }
-
-  const tone = pwinChipTone(result.pwin);
-  const selfName = selfQ.data?.ownCompany?.name || "Your company";
+  const tone = pwinChipTone(state.result.pwin);
 
   return (
     <>
@@ -149,10 +157,10 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
               type="button"
               onClick={() => setOpen(true)}
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border tabular-nums hover:opacity-80 ${tone.bg} ${tone.text}`}
-              aria-label={`pWin ${result.pwin}`}
+              aria-label={`pWin ${state.result.pwin}`}
             >
               <Sparkles className="w-3 h-3" />
-              {result.pwin}
+              pWin {state.result.pwin}
             </button>
           </TooltipTrigger>
           <TooltipContent className="text-xs">
@@ -165,8 +173,8 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
           open={open}
           onOpenChange={setOpen}
           opp={opp}
-          result={result}
-          selfName={selfName}
+          result={state.result}
+          selfName={state.selfName}
         />
       )}
     </>

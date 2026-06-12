@@ -79,6 +79,44 @@ export function hasUsableCapabilities(self: SoloPwinSelf | null | undefined): bo
   return hasCerts || hasNaics || hasNarrative;
 }
 
+/**
+ * Pure resolver for which PwinChip variant to render. Kept outside the
+ * component so it is unit-testable without a DOM. The chip must NEVER
+ * resolve to null — every input maps to one of: "loading", "setup", or
+ * "score". The "setup" state covers both "no team yet" (so the user sees
+ * a meaningful chip while context resolves) and "own-company lookup
+ * returned null / lacks capability data".
+ */
+export type PwinChipState =
+  | { kind: "loading" }
+  | { kind: "setup"; reason: "no-team" | "no-own-company" | "no-capabilities" }
+  | { kind: "score"; result: PwinResult; selfName: string };
+
+export function pwinChipState(args: {
+  teamId: string | null | undefined;
+  selfLoading: boolean;
+  self: SoloPwinSelf | null | undefined;
+  result: PwinResult | null | undefined;
+  resultLoading: boolean;
+}): PwinChipState {
+  if (!args.teamId) {
+    return { kind: "setup", reason: "no-team" };
+  }
+  if (args.selfLoading) return { kind: "loading" };
+  if (!args.self || !args.self.ownCompany) {
+    return { kind: "setup", reason: "no-own-company" };
+  }
+  if (!hasUsableCapabilities(args.self)) {
+    return { kind: "setup", reason: "no-capabilities" };
+  }
+  if (args.resultLoading || !args.result) return { kind: "loading" };
+  return {
+    kind: "score",
+    result: args.result,
+    selfName: args.self.ownCompany.name || "Your company",
+  };
+}
+
 export function useSoloPwinSelf(teamId: string | null | undefined, enabled = true) {
   return useQuery({
     queryKey: ["pwin-self", teamId],
