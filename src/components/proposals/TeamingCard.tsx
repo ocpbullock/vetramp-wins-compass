@@ -60,6 +60,7 @@ export function TeamingCard({
   const [search, setSearch] = useState("");
   const [picker, setPicker] = useState(false);
   const [analyzerOpen, setAnalyzerOpen] = useState(false);
+  const [sandboxOpen, setSandboxOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPicker, setOutreachPicker] = useState(false);
