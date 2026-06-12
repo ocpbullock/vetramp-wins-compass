@@ -129,48 +129,24 @@ function Dashboard() {
     return () => { cancelled = true; };
   }, [user, teamId]);
 
-  async function handlePropose(
+  // Dialog state for duplicate-proposal prompt.
+  const [duplicatePrompt, setDuplicatePrompt] = useState<
+    | null
+    | {
+        existingId: string;
+        existingCount: number;
+        opp: SamOpportunity;
+        source: { kind: "sam" | "tracked" | "starred"; id: string };
+        effectiveTeamId: string | null;
+      }
+  >(null);
+
+  async function createProposalRecord(
     o: SamOpportunity,
-    source: { kind: "sam" | "tracked" | "starred"; id: string } = {
-      kind: "sam",
-      id: o.solicitationNumber || o.noticeId || "unknown",
-    },
+    source: { kind: "sam" | "tracked" | "starred"; id: string },
+    effectiveTeamId: string | null,
   ) {
     if (!user) return;
-    // For tracked opportunities, the workspace is org-team-shared. Look up
-    // the tracked row's team_id so the new proposal lands on the same team
-    // (regardless of which org team is currently selected) and check whether
-    // a proposal already exists so we don't create a duplicate private copy.
-    let effectiveTeamId: string | null = teamId;
-    if (source.kind === "tracked") {
-      const { data: tracked } = await supabase
-        .from("tracked_opportunities")
-        .select("team_id")
-        .eq("id", source.id)
-        .maybeSingle();
-      if (tracked?.team_id) effectiveTeamId = tracked.team_id;
-
-      // Reuse any existing accessible proposal for this tracked opportunity.
-      // RLS scopes the result to proposals the caller can already see, so
-      // partners only match invited workspaces.
-      const { data: existing } = await supabase
-        .from("proposals")
-        .select("id")
-        .eq("opportunity_source", "tracked")
-        .eq("opportunity_source_id", source.id)
-        .order("created_at", { ascending: true })
-        .limit(2);
-      if (existing && existing.length > 0) {
-        if (existing.length > 1) {
-          toast.message("Multiple proposals exist for this tracked opportunity — opening the earliest.", {
-            description: "Review and archive duplicates from the In Progress tab.",
-          });
-        }
-        navigate({ to: "/proposals/$proposalId", params: { proposalId: existing[0].id } });
-        return;
-      }
-    }
-
     const { data, error } = await supabase.from("proposals").insert({
       user_id: user.id,
       team_id: effectiveTeamId,
@@ -191,6 +167,55 @@ function Dashboard() {
       await generateDefaultMilestones(data.id, o.responseDeadLine);
     }
     navigate({ to: "/proposals/$proposalId", params: { proposalId: data.id } });
+  }
+
+  async function handlePropose(
+    o: SamOpportunity,
+    source: { kind: "sam" | "tracked" | "starred"; id: string } = {
+      kind: "sam",
+      id: o.solicitationNumber || o.noticeId || "unknown",
+    },
+  ) {
+    if (!user) return;
+    // For tracked opportunities, the workspace is org-team-shared. Look up
+    // the tracked row's team_id so the new proposal lands on the same team
+    // (regardless of which org team is currently selected).
+    let effectiveTeamId: string | null = teamId;
+    if (source.kind === "tracked") {
+      const { data: tracked } = await supabase
+        .from("tracked_opportunities")
+        .select("team_id")
+        .eq("id", source.id)
+        .maybeSingle();
+      if (tracked?.team_id) effectiveTeamId = tracked.team_id;
+    }
+
+    // Duplicate guard: if a proposal already exists for this team + source +
+    // source_id (RLS-scoped to what the caller can see), prompt instead of
+    // silently creating a private copy. Apply across all entry points so
+    // starred/SAM clicks dedupe the same way tracked clicks do.
+    let dupeQuery = supabase
+      .from("proposals")
+      .select("id")
+      .eq("opportunity_source", source.kind)
+      .eq("opportunity_source_id", source.id)
+      .order("created_at", { ascending: true })
+      .limit(5);
+    if (effectiveTeamId) dupeQuery = dupeQuery.eq("team_id", effectiveTeamId);
+    else dupeQuery = dupeQuery.is("team_id", null);
+    const { data: existing } = await dupeQuery;
+    if (existing && existing.length > 0) {
+      setDuplicatePrompt({
+        existingId: existing[0].id,
+        existingCount: existing.length,
+        opp: o,
+        source,
+        effectiveTeamId,
+      });
+      return;
+    }
+
+    await createProposalRecord(o, source, effectiveTeamId);
   }
 
   async function handleStartFromStarred(row: StarredRow) {
