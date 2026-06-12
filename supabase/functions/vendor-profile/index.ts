@@ -1,9 +1,10 @@
-import { corsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 import { authenticate, authErrorResponse } from "../_shared/auth.ts";
 
 const USA = "https://api.usaspending.gov";
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     try { await authenticate(req); }

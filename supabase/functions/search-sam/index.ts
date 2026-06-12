@@ -1,4 +1,4 @@
-import { corsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 import {
   searchOpportunities,
   mapOpportunityRow,
@@ -20,6 +20,7 @@ function fmtDateForTango(iso: string) {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     let ctx;

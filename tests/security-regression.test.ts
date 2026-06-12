@@ -203,3 +203,67 @@ describe("proposal-attachments storage uses a single proposal-access model", () 
     expect(src).not.toMatch(/\$\{user\.id\}\/\$\{proposalId\}\//);
   });
 });
+
+describe("edge function CORS reflects request origin against an allowlist", () => {
+  const src = read("supabase/functions/_shared/cors.ts");
+
+  it("does not use a wildcard Access-Control-Allow-Origin", () => {
+    expect(src).not.toMatch(/["']Access-Control-Allow-Origin["']\s*:\s*["']\*["']/);
+  });
+
+  it("exposes a buildCorsHeaders(req) function", () => {
+    expect(src).toMatch(/export function buildCorsHeaders\(req:\s*Request\)/);
+  });
+
+  it("reads the ALLOWED_ORIGINS env var", () => {
+    expect(src).toContain("ALLOWED_ORIGINS");
+  });
+
+  it("reflects the request origin only when it exactly matches the allowlist", () => {
+    // Exact-match check (no .endsWith / wildcard / regex), and the header
+    // is only added inside the matched branch.
+    expect(src).toMatch(/allowed\.includes\(origin\)/);
+    expect(src).not.toMatch(/\.endsWith\(/);
+  });
+
+  it("includes the project's published and preview origins plus localhost in the defaults", () => {
+    expect(src).toContain("https://vetramp-wins-compass.lovable.app");
+    expect(src).toContain("http://localhost:5173");
+    expect(src).toContain("http://localhost:3000");
+    expect(src).toMatch(/id-preview--[a-z0-9-]+\.lovable\.app/);
+  });
+
+  it("sets the Vary: Origin header so caches don't leak the wrong allow-origin", () => {
+    expect(src).toMatch(/["']Vary["']\s*:\s*["']Origin["']/);
+  });
+
+  const HANDLER_FILES = [
+    "supabase/functions/vendor-profile/index.ts",
+    "supabase/functions/usaspending-detail/index.ts",
+    "supabase/functions/ingest-knowledge/index.ts",
+    "supabase/functions/search-entities/index.ts",
+    "supabase/functions/usaspending-analytics/index.ts",
+    "supabase/functions/search-usaspending/index.ts",
+    "supabase/functions/generate-teaming-outreach/index.ts",
+    "supabase/functions/search-sam/index.ts",
+    "supabase/functions/sam-attachments/index.ts",
+    "supabase/functions/competitive-intel/index.ts",
+    "supabase/functions/generate-proposal/index.ts",
+    "supabase/functions/generate-proposal-section/index.ts",
+    "supabase/functions/parse-sow/index.ts",
+    "supabase/functions/customer-intel/index.ts",
+  ];
+
+  it.each(HANDLER_FILES)(
+    "%s computes per-request CORS headers via buildCorsHeaders(req)",
+    (file) => {
+      const fileSrc = read(file);
+      expect(fileSrc).toContain("buildCorsHeaders");
+      expect(fileSrc).toMatch(/const\s+corsHeaders\s*=\s*buildCorsHeaders\(req\)/);
+      // The legacy wildcard import must be gone.
+      expect(fileSrc).not.toMatch(
+        /import\s*\{\s*corsHeaders\s*\}\s*from\s*["']\.\.\/_shared\/cors\.ts["']/,
+      );
+    },
+  );
+});

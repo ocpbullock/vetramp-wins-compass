@@ -3,7 +3,7 @@ import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
-import { corsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 import { authenticate, resolveTeamId, authErrorResponse } from "../_shared/auth.ts";
 import { wrapUntrusted } from "../_shared/untrusted.ts";
 
@@ -77,6 +77,7 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
