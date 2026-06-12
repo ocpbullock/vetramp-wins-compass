@@ -455,6 +455,7 @@ function Dashboard() {
             />
           </TabsContent>
         </Tabs>
+        )}
       </main>
 
       
