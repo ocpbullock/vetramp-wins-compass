@@ -85,6 +85,7 @@ serve(async (req) => {
       engagement,
       primeContractorName: primeContractorName ?? "",
       targetedScopeAreas: targetedScopeAreas ?? "",
+      userContext: userContext ?? {},
     });
     if (!skipCache) {
       const cached = await getCachedResponse("customer-intel", cacheKey, verifiedTeamId);
