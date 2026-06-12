@@ -199,6 +199,7 @@ export function OpportunitiesTab({
                 <SortHead k="agency" label="Agency" />
                 <SortHead k="naics" label="NAICS" />
                 <SortHead k="type" label="Type" />
+                <th>pWin</th>
                 <SortHead k="incumbent" label="Incumbent" />
                 <SortHead k="posted" label="Posted" />
                 <SortHead k="deadline" label="Deadline" />
@@ -207,7 +208,7 @@ export function OpportunitiesTab({
             </thead>
             <tbody>
               {sorted.length === 0 && (
-                <tr><td colSpan={9} className="text-center text-muted-foreground py-6">No opportunities. Click Search to fetch.</td></tr>
+                <tr><td colSpan={10} className="text-center text-muted-foreground py-6">No opportunities. Click Search to fetch.</td></tr>
               )}
               {sorted.map((o, i) => {
                 const key = (o.solicitationNumber ?? o.noticeId ?? "") + i;
