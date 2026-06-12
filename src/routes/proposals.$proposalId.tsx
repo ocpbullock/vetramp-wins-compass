@@ -586,15 +586,25 @@ function ProposalPipeline() {
           </CardContent>
         </Card>
 
-        <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
+        {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
+          <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
+        )}
 
         <Tabs value={step} onValueChange={setStep}>
           <TabsList>
             <TabsTrigger value="intake">1. Intake</TabsTrigger>
             <TabsTrigger value="intel">2. Customer Intel</TabsTrigger>
-            <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
-            <TabsTrigger value="solution">4. {proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}</TabsTrigger>
-            <TabsTrigger value="generate">5. Generate</TabsTrigger>
+            {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
+              <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
+            )}
+            <TabsTrigger value="solution">
+              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement"
+                ? "3. Inputs"
+                : `4. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
+            </TabsTrigger>
+            <TabsTrigger value="generate">
+              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "4." : "5."} Generate
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="intake" className="mt-4 space-y-4">
