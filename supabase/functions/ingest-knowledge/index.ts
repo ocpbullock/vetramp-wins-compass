@@ -5,6 +5,7 @@ import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 import { corsHeaders } from "../_shared/cors.ts";
 import { authenticate, resolveTeamId, authErrorResponse } from "../_shared/auth.ts";
+import { wrapUntrusted } from "../_shared/untrusted.ts";
 
 const ALLOWED_CATEGORIES = [
   "past_performance", "personnel", "capability",
@@ -122,6 +123,10 @@ serve(async (req) => {
       return jsonResponse({ error: "Could not extract text from this file. Try a text-based PDF or .txt version." }, 400);
     }
     content = content.slice(0, 200_000);
+    // Pre-wrap the extracted document text as an UNTRUSTED block at storage
+    // time so any downstream LLM prompt assembly is forced to treat the
+    // content as untrusted document data and ignore injected instructions.
+    const storedContent = wrapUntrusted(`knowledge-base:${category}:${title}`, content);
 
     const tagList: string[] = Array.isArray(tags)
       ? tags.filter((t) => typeof t === "string" && t.trim()).map((t: string) => t.trim())
@@ -136,7 +141,7 @@ serve(async (req) => {
         team_id: verifiedTeamId,
         category,
         title,
-        content,
+        content: storedContent,
         source_filename: filename,
         tags: tagList,
       })
@@ -148,7 +153,7 @@ serve(async (req) => {
       id: inserted.id,
       title: inserted.title,
       category: inserted.category,
-      chars: content.length,
+      chars: storedContent.length,
     });
   } catch (e) {
     console.error("ingest-knowledge error:", e);

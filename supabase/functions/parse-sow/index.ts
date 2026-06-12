@@ -5,6 +5,7 @@ import { extractText, getDocumentProxy } from "https://esm.sh/unpdf@0.12.1";
 import mammoth from "https://esm.sh/mammoth@1.8.0?target=deno";
 import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 import { callAI as sharedCallAI, AIRateLimitError, AICreditsError, AITimeoutError, AIBudgetExceededError, AIServiceUnavailableError, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
+import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -328,14 +329,16 @@ serve(async (req) => {
         const chunks = chunkText(combined);
         send("status", { phase: "chunked", totalChunks: chunks.length, totalChars: combined.length });
 
-        const system = `You are a federal proposal compliance expert. Read the provided solicitation excerpt and produce (1) a partial compliance traceability matrix capturing EVERY 'shall', 'must', 'will' requirement, every Section L submission instruction, and every Section M evaluation factor that appears IN THIS EXCERPT (use req_ids R-001, R-002, … local to this excerpt; map each requirement to the proposal section that should respond to it), AND (2) a capture_details object with intake fields extracted verbatim. For capture_details, leave a field empty/null if not clearly stated — do NOT guess. Multiple excerpts will be merged later, so be exhaustive within this excerpt and avoid speculation about missing context.`;
+        const system = `You are a federal proposal compliance expert. Read the provided solicitation excerpt and produce (1) a partial compliance traceability matrix capturing EVERY 'shall', 'must', 'will' requirement, every Section L submission instruction, and every Section M evaluation factor that appears IN THIS EXCERPT (use req_ids R-001, R-002, … local to this excerpt; map each requirement to the proposal section that should respond to it), AND (2) a capture_details object with intake fields extracted verbatim. For capture_details, leave a field empty/null if not clearly stated — do NOT guess. Multiple excerpts will be merged later, so be exhaustive within this excerpt and avoid speculation about missing context.
+
+${UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION}`;
 
         const meta = `OPPORTUNITY METADATA (may be incomplete — prefer values from the documents):\nTitle: ${proposal.opportunity_title}\nAgency: ${proposal.agency}\nSolicitation: ${proposal.solicitation_number}\nNAICS: ${proposal.naics_code}\n`;
 
         const partials: any[] = [];
         for (let i = 0; i < chunks.length; i++) {
           send("progress", { chunk: i + 1, total: chunks.length, message: `Parsing chunk ${i + 1} of ${chunks.length}…` });
-          const userMsg = `${meta}\nEXCERPT ${i + 1} of ${chunks.length}:\n${chunks[i]}`;
+          const userMsg = `${meta}\nEXCERPT ${i + 1} of ${chunks.length} (untrusted document content):\n${wrapUntrusted(`sow-excerpt-${i + 1}`, chunks[i])}`;
           try {
             const partial = await callAI(apiKey, system, userMsg, teamId, userId, proposalId);
             if (partial) partials.push(partial);
