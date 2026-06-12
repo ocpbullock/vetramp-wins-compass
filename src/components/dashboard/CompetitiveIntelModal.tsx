@@ -348,12 +348,6 @@ export function CompetitiveIntelModal({
             </Button>
           )}
         </div>
-          {opp?.uiLink && (
-            <Button asChild variant="outline" size="sm">
-              <a href={opp.uiLink} target="_blank" rel="noreferrer"><ExternalLink className="w-3 h-3 mr-1" />Open on SAM.gov</a>
-            </Button>
-          )}
-        </div>
       </DialogContent>
     </Dialog>
   );
