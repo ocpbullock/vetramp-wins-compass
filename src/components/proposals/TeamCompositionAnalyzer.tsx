@@ -107,14 +107,11 @@ export function TeamCompositionAnalyzer({
     },
   });
 
-  // --- load all teaming partners
+  // --- load all teaming partners (from unified companies table)
   const { data: partnersData } = useQuery({
     queryKey: ["pwin-partners", teamId],
     enabled: !!teamId && open,
-    queryFn: async () => {
-      const { data } = await supabase.from("teaming_partners").select("*").eq("team_id", teamId!);
-      return (data ?? []) as Partner[];
-    },
+    queryFn: async () => listPartnerCompanies(teamId!),
   });
   const partners: Partner[] = partnersData ?? EMPTY_PARTNERS;
 
