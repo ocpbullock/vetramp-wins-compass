@@ -123,7 +123,9 @@ export function TeamCompositionAnalyzer({
       const { data } = await supabase.from("proposal_teaming")
         .select("company_id, role, work_share_pct")
         .eq("proposal_id", proposalId);
-      return (data ?? []) as EntryRow[];
+      return ((data ?? []) as any[]).map((r) => ({
+        partner_id: r.company_id, role: r.role, work_share_pct: r.work_share_pct,
+      })) as EntryRow[];
     },
   });
   const entries: EntryRow[] = entriesData ?? EMPTY_ENTRIES;
