@@ -388,6 +388,17 @@ export function TrackedOpportunitiesTab({
                       {NAICS_NAME.get(i.naics_code) ?? ""}
                     </div>
                   </TableCell>
+                  <TableCell>
+                    <PwinChip
+                      opp={{
+                        id: i.id,
+                        naics: i.naics_code,
+                        agency: i.agency,
+                        setAside: null,
+                        vehicle: i.contract_vehicle === "Custom/Other" ? (i.contract_vehicle_other ?? null) : i.contract_vehicle,
+                      }}
+                    />
+                  </TableCell>
                   <TableCell className="text-right tabular-nums">{fmtMoney(i.estimated_value)}</TableCell>
                   <TableCell className={`text-sm ${deadlineColor(i.response_deadline)}`}>
                     {i.response_deadline ? format(parseISO(i.response_deadline), "MMM d, yyyy") : "—"}
