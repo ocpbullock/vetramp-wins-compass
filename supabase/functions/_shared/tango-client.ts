@@ -112,16 +112,15 @@ export function searchEntities(params: {
   uei?: string;
   name?: string;
   naics_code?: string;
-  naics?: string;
   small_business_type?: string;
-  socioeconomic?: string;
 } & TangoPagedParams) {
-  const { page_size, vendor_name, naics_code, small_business_type, ...rest } = params;
+  const { page_size, vendor_name, naics_code, small_business_type: _ignored, ...rest } = params;
+  // Tango only accepts `naics_code` and `name`/`search` here. Set-aside filtering
+  // is not a supported query param — callers filter results post-fetch.
   return tangoFetch<TangoResponse<any>>("/api/entities/", {
     ...rest,
     name: rest.name ?? vendor_name,
-    naics: rest.naics ?? naics_code,
-    socioeconomic: rest.socioeconomic ?? small_business_type,
+    naics_code: naics_code,
     limit: page_size,
   });
 }
@@ -216,6 +215,10 @@ export function mapContractRow(team_id: string, c: any) {
 }
 
 export function mapEntityRow(team_id: string, e: any) {
+  const bizTypes = pick(e, ["small_business_types", "businessTypes", "business_types", "sba_business_types", "certifications"]) ?? [];
+  const normalizedTypes = Array.isArray(bizTypes)
+    ? bizTypes.map((t: any) => (typeof t === "string" ? t : (t?.description || t?.code || ""))).filter(Boolean)
+    : [];
   return {
     team_id,
     tango_id: String(pick(e, ["id", "tango_id", "uei", "duns"]) ?? crypto.randomUUID()),
@@ -224,10 +227,10 @@ export function mapEntityRow(team_id: string, e: any) {
     legal_name: pick(e, ["legal_name", "legalBusinessName", "legal_business_name", "name"]),
     dba_name: pick(e, ["dba_name", "dbaName"]),
     naics_codes: pick(e, ["naics_codes", "naicsCodes"]) ?? (e.primary_naics ? [e.primary_naics] : []),
-    small_business_types: pick(e, ["small_business_types", "businessTypes", "business_types", "sba_business_types", "certifications"]) ?? [],
+    small_business_types: normalizedTypes,
     city: pick(e, ["city", "address.city", "physical_address.city"]),
-    state: pick(e, ["state", "address.state", "physical_address.state"]),
-    country: pick(e, ["country", "address.country", "physical_address.country"]),
+    state: pick(e, ["state", "address.state", "physical_address.state", "physical_address.state_or_province_code"]),
+    country: pick(e, ["country", "address.country", "physical_address.country", "physical_address.country_code"]),
     raw_data: e,
   };
 }

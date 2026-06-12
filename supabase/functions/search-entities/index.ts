@@ -60,11 +60,31 @@ Deno.serve(async (req) => {
       if (vendor_name) params.vendor_name = vendor_name;
       if (uei) params.uei = uei;
       if (naics_code) params.naics_code = naics_code;
-      if (small_business_type) params.small_business_type = small_business_type;
+      // Note: small_business_type is NOT a supported Tango filter — applied post-fetch.
       const resp = await searchEntities(params as any);
       await logUsage(admin, { team_id, endpoint: "/entities/", params, cached: false, response_status: 200 });
 
-      const rows = (resp.results ?? []).map((e) => mapEntityRow(team_id!, e));
+      let rows = (resp.results ?? []).map((e) => mapEntityRow(team_id!, e));
+
+      // Post-fetch set-aside filter: match against normalized business_types descriptions/codes.
+      if (small_business_type) {
+        const needle = String(small_business_type).toLowerCase();
+        const codeMap: Record<string, string[]> = {
+          sdvosb: ["qf", "service disabled veteran", "sdvosb"],
+          vosb: ["a5", "veteran owned", "vosb"],
+          wosb: ["a2", "woman owned", "wosb", "edwosb"],
+          "8(a)": ["jt", "27", "8(a)", "8a", "small disadvantaged"],
+          hubzone: ["xx", "hubzone"],
+        };
+        const keys = codeMap[needle] ?? [needle];
+        rows = rows.filter((r) =>
+          (r.small_business_types ?? []).some((t: string) => {
+            const s = String(t).toLowerCase();
+            return keys.some((k) => s.includes(k));
+          })
+        );
+      }
+
       if (rows.length) {
         const { error: upErr } = await admin
           .from("tango_cached_entities")
