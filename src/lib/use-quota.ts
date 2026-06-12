@@ -25,8 +25,9 @@ export type TangoQuota = {
   isExhausted: boolean;
 };
 
-export function useTangoQuota(): TangoQuota {
-  const teamId = useTeamId();
+export function useTangoQuota(overrideTeamId?: string | null): TangoQuota {
+  const activeTeamId = useTeamId();
+  const teamId = overrideTeamId === undefined ? activeTeamId : overrideTeamId;
   const { data, isLoading } = useQuery({
     queryKey: ["tango-quota", teamId],
     enabled: !!teamId,
