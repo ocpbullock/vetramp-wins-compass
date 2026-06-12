@@ -207,7 +207,18 @@ export async function findOrInsertPartnerFromSamEntity(
   teamId: string,
   entity: any,
 ): Promise<PartnerView | null> {
-  const draft = companyFromSamEntity(entity, teamId);
+  // Normalize both SAM.gov-shaped and Tango-shaped entities into a draft.
+  const samDraft = companyFromSamEntity(entity, teamId);
+  const tangoName = entity.legal_name || entity.dba_name || null;
+  const tangoUei = entity.uei || null;
+  const draft: CompanyDraft = {
+    ...samDraft,
+    name: samDraft.name === "Unknown entity" && tangoName ? tangoName : samDraft.name,
+    uei: samDraft.uei ?? tangoUei,
+    cage_code: samDraft.cage_code ?? (entity.cage_code ?? null),
+    certifications: samDraft.certifications?.length ? samDraft.certifications : (entity.small_business_types ?? []),
+    naics_codes: samDraft.naics_codes?.length ? samDraft.naics_codes : (entity.naics_codes ?? []),
+  };
   const matchCol = draft.uei ? "uei" : "name";
   const matchVal = draft.uei ?? draft.name;
   const { data: existing, error: lookupErr } = await supabase
@@ -223,7 +234,7 @@ export async function findOrInsertPartnerFromSamEntity(
   const inserted = await upsertCompany({
     ...draft,
     is_existing_partner: true,
-    notes: `Imported from Tango entity search · ${entity.city ?? ""} ${entity.state ?? ""}`.trim(),
+    notes: `Imported from entity search · ${entity.city ?? ""} ${entity.state ?? ""}`.trim(),
   });
   return companyToPartnerView(inserted);
 }
