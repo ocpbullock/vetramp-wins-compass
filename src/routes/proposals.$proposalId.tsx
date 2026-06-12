@@ -1383,23 +1383,8 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
   );
 }
 
-function ComingSoon({ title, description, fieldLabel, value, onSave }: { title: string; description: string; fieldLabel: string; value: string; onSave: (v: string) => void }) {
-  const [v, setV] = useState(value);
-  useEffect(() => setV(value), [value]);
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-base">{title}</CardTitle>
-        <CardDescription>{description}</CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Label>{fieldLabel}</Label>
-        <Textarea rows={10} value={v} onChange={(e) => setV(e.target.value)} placeholder="Capture anything you know about the customer, requirements, or solution. The proposal generator will weave this in." />
-        <Button size="sm" onClick={() => onSave(v)}>Save notes</Button>
-      </CardContent>
-    </Card>
-  );
-}
+
+
 
 function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, onGenerate, onGenerateAll, onPatchSection, onExport }: any) {
   const defaultSecs = sectionsFor(proposal);
