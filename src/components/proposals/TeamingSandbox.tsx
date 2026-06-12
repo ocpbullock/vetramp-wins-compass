@@ -71,6 +71,12 @@ function memberFromCompany(c: Company, opts: { isSelf: boolean; role: PwinRole; 
     })),
     workedWithIncumbent: !!c.worked_together_before,
     primeRelationshipStrength: c.relationship_strength ?? 0,
+    // Established-partnership signals that show up explicitly in the pWin
+    // partner-fit factor breakdown.
+    isEstablishedPartner: !!c.is_existing_partner,
+    priorContractTogether: !!(c as any).prior_contract_together || !!c.worked_together_before,
+    hasNda: !!(c as any).has_nda,
+    hasTeamingAgreement: !!(c as any).has_teaming_agreement,
   };
 }
 
