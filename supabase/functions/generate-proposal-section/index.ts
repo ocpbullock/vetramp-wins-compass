@@ -336,6 +336,7 @@ ${teaming && teaming.length ? `TEAMING ARRANGEMENT (reference these partners by 
 ${pastPerformance && pastPerformance.length ? `PAST PERFORMANCE LIBRARY (selected by capture team — use these as the source of truth for the Past Performance section; do NOT invent contracts, values, periods, or POCs not listed here):\n${JSON.stringify(pastPerformance, null, 2)}\n` : ""}
 ${attachmentsText ? `SOLICITATION ATTACHMENT TEXT (truncated):\n${String(attachmentsText).slice(0, 30000)}\n` : ""}
 ${templateBlock}
+${userContextBlock}
 CRITICAL: Before writing, briefly research the end-user unit from context (mission, facility, terminology) and weave at least 3 unit-specific details into the section. If you cannot identify the unit, say so explicitly with [TO BE VERIFIED].`;
 
 
