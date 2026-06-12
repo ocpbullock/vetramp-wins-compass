@@ -119,6 +119,33 @@ export async function deleteCompany(id: string): Promise<void> {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Upsert the team's own-company record. Looks up the row flagged
+ * is_own_company=true and patches it; if missing, inserts a new one. Steps
+ * 1+2 of onboarding (profile/certs/NAICS) write through this helper.
+ */
+export async function upsertOwnCompany(
+  teamId: string,
+  patch: Partial<Omit<CompanyDraft, "team_id">> & { name?: string },
+): Promise<Company> {
+  const existing = await getOwnCompany(teamId);
+  if (existing) {
+    return upsertCompany({
+      id: existing.id,
+      team_id: teamId,
+      name: patch.name ?? existing.name,
+      ...patch,
+    });
+  }
+  return upsertCompany({
+    team_id: teamId,
+    name: patch.name?.trim() || "Our Company",
+    is_own_company: true,
+    is_existing_partner: false,
+    source: "onboarding",
+    ...patch,
+  });
+}
 // ---------------------------------------------------------------------------
 // Companies-as-partners adapter
 // ---------------------------------------------------------------------------

@@ -32,6 +32,8 @@ import { toast } from "sonner";
 import { generateDefaultMilestones } from "@/lib/milestones";
 
 import { SetupBanner } from "@/components/settings/SetupChecklist";
+import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
+import { useOnboardingGate } from "@/lib/setup-status";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
@@ -44,6 +46,7 @@ function Dashboard() {
   const teamId = useTeamId();
   const { currentTeam } = useTeam();
   const fetchOppProposal = useServerFn(getOpportunityTeamProposal);
+  const onboarding = useOnboardingGate();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
   // Opportunity-team members don't have a dashboard — redirect to their proposal.
@@ -386,18 +389,31 @@ function Dashboard() {
         </div>
       )}
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
-        <SetupBanner />
-        <StatCards
-          activeOpps={stats.activeOpps}
-          historicalCount={stats.historicalCount}
-          historicalTotal={historicalTotal}
-          totalObligated={stats.totalObligated}
-          totalObligatedFiltered={filteredObligated ?? undefined}
-          totalObligatedIsFiltered={filteredObligated != null && filteredObligated !== stats.totalObligated}
-          inProgressCount={inProgressCount}
-          starredCount={starredCount}
-          onSelect={setTab}
-        />
+        {onboarding.showOnboarding ? (
+          <OnboardingFlow
+            onComplete={onboarding.skip}
+            onSkip={onboarding.skip}
+            canSkip={onboarding.state.coreDone}
+          />
+        ) : (
+          <>
+            <SetupBanner />
+            <PastPerformanceAccuracyBanner />
+            <StatCards
+              activeOpps={stats.activeOpps}
+              historicalCount={stats.historicalCount}
+              historicalTotal={historicalTotal}
+              totalObligated={stats.totalObligated}
+              totalObligatedFiltered={filteredObligated ?? undefined}
+              totalObligatedIsFiltered={filteredObligated != null && filteredObligated !== stats.totalObligated}
+              inProgressCount={inProgressCount}
+              starredCount={starredCount}
+              onSelect={setTab}
+            />
+          </>
+        )}
+
+        {!onboarding.showOnboarding && (
 
         <Tabs value={tab} onValueChange={setTab}>
           <TabsList>
@@ -439,6 +455,7 @@ function Dashboard() {
             />
           </TabsContent>
         </Tabs>
+        )}
       </main>
 
       
