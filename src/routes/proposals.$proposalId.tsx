@@ -101,6 +101,25 @@ function sectionsFor(proposal: any) {
   return proposal?.engagement_type === "sub" ? SUB_SECTIONS : PRIME_SECTIONS;
 }
 
+// Build the canonical set of section ids the validators and matrix-cleaner
+// should consider "known" for this proposal. Includes the active pursuit's
+// sections AND the active template outline (when a parsed template is
+// attached), so RFI/capability/template sections aren't flagged as unknown.
+function knownSectionIdsFor(proposal: any, attachments: any[] | undefined): string[] {
+  const ids = new Set<string>(sectionsFor(proposal).map((s) => s.id));
+  // Always include canonical prime/sub ids so historical sections aren't
+  // dropped if the user toggles engagement_type/pursuit_type.
+  for (const s of [...PRIME_SECTIONS, ...SUB_SECTIONS]) ids.add(s.id);
+  try {
+    const tmpl = findActiveTemplate(attachments ?? []);
+    if (tmpl) {
+      const extracted = extractTemplateStructure(tmpl.parsed_content);
+      for (const s of extracted?.sections ?? []) ids.add(s.id);
+    }
+  } catch { /* ignore template parse errors for id set */ }
+  return Array.from(ids);
+}
+
 type Section = { content: string; status: "draft" | "reviewed" | "final"; word_count: number; user_context_applied?: string[] };
 
 function countdown(deadline?: string | null) {
