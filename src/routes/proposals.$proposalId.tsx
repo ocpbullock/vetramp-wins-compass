@@ -1207,7 +1207,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           <CardHeader><CardTitle className="text-base">Capture details (you fill these in)</CardTitle></CardHeader>
           <CardContent className="grid grid-cols-2 gap-3">
             <div>
-              <Label>Opportunity type</Label>
+              <Label>Requirement type</Label>
               <Select value={local.opportunity_type ?? ""} onValueChange={(v) => update({ opportunity_type: v })}>
                 <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
@@ -1215,7 +1215,6 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                   <SelectItem value="recompete">Re-compete</SelectItem>
                   <SelectItem value="task_order">Task Order</SelectItem>
                   <SelectItem value="idiq_order">IDIQ order</SelectItem>
-                  <SelectItem value="sources_sought">Sources Sought response</SelectItem>
                 </SelectContent>
               </Select>
             </div>
