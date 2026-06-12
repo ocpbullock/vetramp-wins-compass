@@ -1728,6 +1728,28 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
       <Card className="lg:col-span-2">
         <CardHeader className="pb-2"><CardTitle className="text-base">Customer profile</CardTitle></CardHeader>
         <CardContent className="space-y-4 text-sm">
+          {incumbentMismatch && (
+            <div className="rounded-md border border-amber-500/60 bg-amber-500/10 p-3 text-xs flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" />
+              <div className="flex-1 space-y-2">
+                <div className="text-amber-800 dark:text-amber-300">
+                  Your declared incumbent (<strong>{declaredIncumbent}</strong>) differs from this intel
+                  {intelIncumbent ? <> (<strong>{intelIncumbent}</strong>)</> : <> (no incumbent reflected)</>}
+                  {fetchedRelative ? <>, which was generated {fetchedRelative} ago</> : null}
+                  {" "}— re-run research to apply your facts.
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => research({ skipCache: true })}
+                  disabled={locked}
+                >
+                  {busy ? <RefreshCw className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
+                  Re-run with my facts
+                </Button>
+              </div>
+            </div>
+          )}
           {intel.customer_summary && (
             <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-2">
               <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
