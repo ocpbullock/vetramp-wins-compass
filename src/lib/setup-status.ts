@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeamId, useTeam } from "@/lib/team";
-import { countPartnerCompanies, getOwnCompany, type Company } from "@/lib/companies";
+import { countPartnerCompanies, getOwnCompany, getOwnCompanyProfileData, type Company } from "@/lib/companies";
 
 
 export type SetupItem = {
