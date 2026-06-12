@@ -182,6 +182,104 @@ export type Database = {
         }
         Relationships: []
       }
+      companies: {
+        Row: {
+          cage_code: string | null
+          capabilities_narrative: string | null
+          certifications: string[]
+          contract_vehicles: string[]
+          created_at: string
+          created_by: string | null
+          duns: string | null
+          external_ref: Json | null
+          id: string
+          is_existing_partner: boolean
+          is_own_company: boolean
+          naics_codes: string[]
+          name: string
+          notes: string | null
+          past_performance: Json
+          poc_email: string | null
+          poc_name: string | null
+          poc_phone: string | null
+          relationship_status: string
+          relationship_strength: number | null
+          set_asides: string[]
+          source: string
+          team_id: string
+          uei: string | null
+          updated_at: string
+          website: string | null
+          worked_together_before: boolean
+        }
+        Insert: {
+          cage_code?: string | null
+          capabilities_narrative?: string | null
+          certifications?: string[]
+          contract_vehicles?: string[]
+          created_at?: string
+          created_by?: string | null
+          duns?: string | null
+          external_ref?: Json | null
+          id?: string
+          is_existing_partner?: boolean
+          is_own_company?: boolean
+          naics_codes?: string[]
+          name: string
+          notes?: string | null
+          past_performance?: Json
+          poc_email?: string | null
+          poc_name?: string | null
+          poc_phone?: string | null
+          relationship_status?: string
+          relationship_strength?: number | null
+          set_asides?: string[]
+          source?: string
+          team_id: string
+          uei?: string | null
+          updated_at?: string
+          website?: string | null
+          worked_together_before?: boolean
+        }
+        Update: {
+          cage_code?: string | null
+          capabilities_narrative?: string | null
+          certifications?: string[]
+          contract_vehicles?: string[]
+          created_at?: string
+          created_by?: string | null
+          duns?: string | null
+          external_ref?: Json | null
+          id?: string
+          is_existing_partner?: boolean
+          is_own_company?: boolean
+          naics_codes?: string[]
+          name?: string
+          notes?: string | null
+          past_performance?: Json
+          poc_email?: string | null
+          poc_name?: string | null
+          poc_phone?: string | null
+          relationship_status?: string
+          relationship_strength?: number | null
+          set_asides?: string[]
+          source?: string
+          team_id?: string
+          uei?: string | null
+          updated_at?: string
+          website?: string | null
+          worked_together_before?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "companies_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_profile: {
         Row: {
           id: string
@@ -1316,7 +1414,9 @@ export type Database = {
           contract_vehicles: string[]
           created_at: string
           created_by: string | null
+          external_ref: Json | null
           id: string
+          is_existing_partner: boolean
           naics_codes: string[]
           notes: string | null
           past_performance_summary: string | null
@@ -1324,9 +1424,12 @@ export type Database = {
           poc_name: string | null
           poc_phone: string | null
           relationship_status: string
+          relationship_strength: number | null
+          source: string
           team_id: string
           uei: string | null
           updated_at: string
+          worked_together_before: boolean
         }
         Insert: {
           cage_code?: string | null
@@ -1336,7 +1439,9 @@ export type Database = {
           contract_vehicles?: string[]
           created_at?: string
           created_by?: string | null
+          external_ref?: Json | null
           id?: string
+          is_existing_partner?: boolean
           naics_codes?: string[]
           notes?: string | null
           past_performance_summary?: string | null
@@ -1344,9 +1449,12 @@ export type Database = {
           poc_name?: string | null
           poc_phone?: string | null
           relationship_status?: string
+          relationship_strength?: number | null
+          source?: string
           team_id: string
           uei?: string | null
           updated_at?: string
+          worked_together_before?: boolean
         }
         Update: {
           cage_code?: string | null
@@ -1356,7 +1464,9 @@ export type Database = {
           contract_vehicles?: string[]
           created_at?: string
           created_by?: string | null
+          external_ref?: Json | null
           id?: string
+          is_existing_partner?: boolean
           naics_codes?: string[]
           notes?: string | null
           past_performance_summary?: string | null
@@ -1364,9 +1474,12 @@ export type Database = {
           poc_name?: string | null
           poc_phone?: string | null
           relationship_status?: string
+          relationship_strength?: number | null
+          source?: string
           team_id?: string
           uei?: string | null
           updated_at?: string
+          worked_together_before?: boolean
         }
         Relationships: [
           {
