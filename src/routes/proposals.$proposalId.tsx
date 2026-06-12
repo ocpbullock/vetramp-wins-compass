@@ -712,7 +712,7 @@ function ProposalPipeline() {
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <StepErrorBoundary label="intel">
-              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} />
+              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => setStep("intake")} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
