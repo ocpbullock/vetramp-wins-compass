@@ -986,14 +986,18 @@ export type Database = {
           engagement_type: string
           factor_scores: Json
           id: string
-          proposal_id: string
+          opportunity_context: Json
+          perspective_company_id: string | null
+          proposal_id: string | null
           pwin_score: number
           recommended_action: string | null
           relationship_model: string
           scenario_name: string
+          scope_label: string | null
           strengths: Json
           targeted_scope_areas: string | null
           team_composition: Json
+          tracked_opportunity_id: string | null
           updated_at: string
           weaknesses: Json
         }
@@ -1003,14 +1007,18 @@ export type Database = {
           engagement_type?: string
           factor_scores?: Json
           id?: string
-          proposal_id: string
+          opportunity_context?: Json
+          perspective_company_id?: string | null
+          proposal_id?: string | null
           pwin_score?: number
           recommended_action?: string | null
           relationship_model?: string
           scenario_name: string
+          scope_label?: string | null
           strengths?: Json
           targeted_scope_areas?: string | null
           team_composition?: Json
+          tracked_opportunity_id?: string | null
           updated_at?: string
           weaknesses?: Json
         }
@@ -1020,23 +1028,41 @@ export type Database = {
           engagement_type?: string
           factor_scores?: Json
           id?: string
-          proposal_id?: string
+          opportunity_context?: Json
+          perspective_company_id?: string | null
+          proposal_id?: string | null
           pwin_score?: number
           recommended_action?: string | null
           relationship_model?: string
           scenario_name?: string
+          scope_label?: string | null
           strengths?: Json
           targeted_scope_areas?: string | null
           team_composition?: Json
+          tracked_opportunity_id?: string | null
           updated_at?: string
           weaknesses?: Json
         }
         Relationships: [
           {
+            foreignKeyName: "pwin_scenarios_perspective_company_id_fkey"
+            columns: ["perspective_company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pwin_scenarios_proposal_id_fkey"
             columns: ["proposal_id"]
             isOneToOne: false
             referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pwin_scenarios_tracked_opportunity_id_fkey"
+            columns: ["tracked_opportunity_id"]
+            isOneToOne: false
+            referencedRelation: "tracked_opportunities"
             referencedColumns: ["id"]
           },
         ]
@@ -1755,6 +1781,10 @@ export type Database = {
       team_type: { Args: { _team_id: string }; Returns: string }
       user_can_see_proposal: {
         Args: { _proposal_id: string; _user_id: string }
+        Returns: boolean
+      }
+      user_can_see_tracked: {
+        Args: { _id: string; _user_id: string }
         Returns: boolean
       }
     }
