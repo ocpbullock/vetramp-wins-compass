@@ -121,7 +121,7 @@ export function TeamCompositionAnalyzer({
     enabled: open,
     queryFn: async () => {
       const { data } = await supabase.from("proposal_teaming")
-        .select("partner_id, role, work_share_pct")
+        .select("company_id, role, work_share_pct")
         .eq("proposal_id", proposalId);
       return (data ?? []) as EntryRow[];
     },
