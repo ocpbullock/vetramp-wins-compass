@@ -12,7 +12,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users, FolderOpen, Sparkles } from "lucide-react";
+import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users, FolderOpen, Sparkles, MoreHorizontal } from "lucide-react";
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
 import { useTeam } from "@/lib/team";
 import { useNavigate } from "@tanstack/react-router";
