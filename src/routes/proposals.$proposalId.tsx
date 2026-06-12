@@ -18,6 +18,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { toast } from "sonner";
 import { exportProposalDocx } from "@/lib/proposal-export";
 import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
+import { LinkOpportunityTeamCard } from "@/components/proposals/LinkOpportunityTeamCard";
 import { PartnerResearch } from "@/components/proposals/PartnerResearch";
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
@@ -510,7 +511,10 @@ function ProposalPipeline() {
 
           <TabsContent value="intake" className="mt-4 space-y-4">
             <StepErrorBoundary label="intake">
-              <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} />
+              <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onRefreshProposal={async () => {
+                const { data: fresh } = await supabase.from("proposals").select("opportunity_team_id").eq("id", proposalId).maybeSingle();
+                if (fresh) setProposal((p: any) => ({ ...p, opportunity_team_id: fresh.opportunity_team_id ?? null }));
+              }} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="intel" className="mt-4">
@@ -667,7 +671,7 @@ function DropZoneUpload({ onUpload }: { onUpload: (f: File, type?: string) => Pr
   );
 }
 
-function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId, fetchResults, fetching, onUpdateAttachmentType }: any) {
+function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId, fetchResults, fetching, onUpdateAttachmentType, onRefreshProposal }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
   const largeDoc = totalChars > 300_000;
@@ -810,6 +814,13 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             <div className="col-span-2"><Button onClick={save} size="sm">Save details</Button></div>
           </CardContent>
         </Card>
+
+        <LinkOpportunityTeamCard
+          proposalId={proposalId}
+          parentTeamId={proposal.team_id ?? null}
+          currentOpportunityTeamId={proposal.opportunity_team_id ?? null}
+          onChanged={onRefreshProposal}
+        />
 
         <TeamingCard
           proposalId={proposalId}
