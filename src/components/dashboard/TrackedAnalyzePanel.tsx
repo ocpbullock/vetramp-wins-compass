@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid,
 } from "recharts";
 import { DataProvenance } from "./DataSourceBadge";
+import { CachedItemControls } from "./RefreshButton";
 import { TeamingTargetsView } from "./TeamingTargetsView";
 
 const fmtMoney = (n: number) =>
@@ -45,6 +46,8 @@ export function TrackedAnalyzePanel({
   const [error, setError] = useState<string | null>(null);
   const [fetchedAt, setFetchedAt] = useState<string | null>(null);
 
+  const [reloadKey, setReloadKey] = useState(0);
+
   useEffect(() => {
     if (!open || !naicsCode) return;
     let cancelled = false;
@@ -56,7 +59,7 @@ export function TrackedAnalyzePanel({
       .catch((e) => { if (!cancelled) setError(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [open, naicsCode]);
+  }, [open, naicsCode, reloadKey]);
 
   // Filter by agency name (case-insensitive substring) since edge fn doesn't filter by agency.
   const agencyAwards = useMemo(() => {
@@ -248,8 +251,14 @@ export function TrackedAnalyzePanel({
                 )}
               </section>
 
-              <div className="border-t border-border pt-3">
+              <div className="border-t border-border pt-3 flex items-center gap-2 flex-wrap">
                 <DataProvenance source="USAspending.gov" fetchedAt={fetchedAt} />
+                <CachedItemControls
+                  fetchedAt={fetchedAt}
+                  busy={loading}
+                  kind="usaspending"
+                  onRefresh={() => setReloadKey((k) => k + 1)}
+                />
               </div>
             </>
           )}
