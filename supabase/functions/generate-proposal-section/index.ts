@@ -200,9 +200,9 @@ RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, 
     const profileBlock = renderCompanyProfileBlock(companyProfile);
 
     const engagementBlock = engagement === "sub"
-      ? `ENGAGEMENT MODE: SUBCONTRACTOR. The offeror is pursuing this opportunity as a SUB under the prime contractor named below — NOT as the prime. Write content appropriate for a capabilities statement / teaming submission directed at the prime, focused on the targeted scope area. Do NOT produce full Section L/M proposal volumes. Reference the prime by name, explain fit for the prime, and emphasize relevant past performance, key personnel, certifications/clearances, and differentiators for the targeted scope.
-PRIME CONTRACTOR: ${primeContractorName || "(unspecified)"}
-TARGETED SCOPE AREAS: ${targetedScopeAreas || "(unspecified)"}
+      ? `ENGAGEMENT MODE: SUBCONTRACTOR (supporting the prime's bid). The offeror is teamed UNDER the prime named below — the prime is leading the proposal. Produce drop-in content the prime can paste into THEIR volumes with minimal editing. Default voice: PRIME'S voice, THIRD PERSON, addressed to the GOVERNMENT EVALUATOR. Refer to the offeror by name as a teammate to the prime (e.g. "[Offeror], teamed with [Prime], will…"). Do NOT pitch the offeror to the prime — assume the offeror is already on the team. The ONE exception is a section explicitly labeled "Teaming Pitch", which is a secondary 1-page artifact addressed to the prime's capture lead and must be prefixed "[SECONDARY ARTIFACT — Teaming Pitch, not for the prime's volume]". Every other section must begin with a one-line insertion hint: "> Insert into: <Prime Volume Name>".
+PRIME CONTRACTOR (lead offeror): ${primeContractorName || "(unspecified)"}
+OFFEROR'S TARGETED SCOPE (our work-share under the prime): ${targetedScopeAreas || "(unspecified)"}
 `
       : `ENGAGEMENT MODE: PRIME. The offeror is pursuing this opportunity as the PRIME contractor. Address Section L instructions and Section M evaluation criteria in full.
 `;
