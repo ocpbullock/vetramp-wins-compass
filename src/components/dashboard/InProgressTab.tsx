@@ -17,6 +17,8 @@ import { toast } from "sonner";
 
 type Proposal = {
   id: string;
+  user_id: string | null;
+  team_id: string | null;
   opportunity_title: string | null;
   agency: string | null;
   solicitation_number: string | null;
@@ -32,7 +34,8 @@ type Proposal = {
 
 
 export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) => void }) {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
+  const { userRole } = useTeam();
   const navigate = useNavigate();
   const [rows, setRows] = useState<Proposal[]>([]);
   const [loading, setLoading] = useState(true);
