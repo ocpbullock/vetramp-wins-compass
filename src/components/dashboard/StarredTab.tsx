@@ -189,13 +189,16 @@ export function StarredTab({
                     </TableCell>
                     <TableCell className="max-w-[360px]">
                       <div className="font-medium truncate flex items-center gap-1.5">
-                        {uiLink ? (
-                          <a href={uiLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                            <span className="truncate">{r.title || r.notice_id}</span>
-                            <ExternalLink className="w-3 h-3 shrink-0" />
+                        <span
+                          className="truncate cursor-pointer text-primary hover:underline"
+                          onClick={() => onCompete?.(rowToSamOpp(r))}
+                        >
+                          {r.title || r.notice_id}
+                        </span>
+                        {uiLink && (
+                          <a href={uiLink} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary shrink-0" title="Open on SAM.gov">
+                            <ExternalLink className="w-3 h-3" />
                           </a>
-                        ) : (
-                          <span className="truncate">{r.title || r.notice_id}</span>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground font-mono truncate">{r.notice_id}</div>
