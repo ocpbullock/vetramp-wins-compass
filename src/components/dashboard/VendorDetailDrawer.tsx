@@ -28,6 +28,9 @@ export function VendorDetailDrawer({
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const { currentTeam, userRole } = useTeam();
+  const canSave = !!currentTeam && (userRole === "owner" || userRole === "admin" || userRole === "member");
 
   useEffect(() => {
     if (!recipientId) { setData(null); setError(null); return; }
@@ -37,6 +40,20 @@ export function VendorDetailDrawer({
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
   }, [recipientId]);
+
+  const saveAsCompany = async () => {
+    if (!currentTeam || !data) return;
+    setSaving(true);
+    try {
+      const draft = companyFromVendorLookup({ ...data, recipientId, recipientName: vendorName }, currentTeam.id);
+      await upsertCompany(draft);
+      toast.success(`Saved ${draft.name} to companies`);
+    } catch (e: any) {
+      toast.error(e.message ?? "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const open = !!recipientId;
   const sharedNaics = new Set(searchedNaics);
