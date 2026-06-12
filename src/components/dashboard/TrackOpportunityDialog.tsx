@@ -109,6 +109,10 @@ export function TrackOpportunityDialog({
       toast.error("Title, Agency, Contract Vehicle, and NAICS are required");
       return;
     }
+    if (isOppTeam) {
+      toast.error("Tracking isn't available in this team context — switch to your organization team");
+      return;
+    }
     setSaving(true);
     const payload = {
       user_id: user.id,
