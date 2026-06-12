@@ -19,6 +19,7 @@ export function labelForAttachmentType(value?: string | null): string {
 
 export function classifyFilename(name: string): AttachmentType {
   const n = name.toLowerCase();
+  if (/(template|outline|sample[\s_-]proposal|proposal[\s_-]template)/.test(n)) return "template";
   if (/(sow|pws|statement[\s_-]of[\s_-]work)/.test(n)) return "sow";
   if (/(section[\s_-]?l|section[\s_-]?m|instructions)/.test(n)) return "instructions";
   if (/(amend|modification|\bmod\b|_mod)/.test(n)) return "amendment";
