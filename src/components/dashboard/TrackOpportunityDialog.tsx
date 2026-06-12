@@ -63,7 +63,9 @@ export function TrackOpportunityDialog({
   onSaved: () => void;
 }) {
   const { user } = useAuth();
-  const teamId = useTeamId();
+  const { currentTeam } = useTeam();
+  const teamId = currentTeam?.id ?? null;
+  const isOppTeam = currentTeam?.team_type === "opportunity";
   const [saving, setSaving] = useState(false);
 
   const [title, setTitle] = useState("");
