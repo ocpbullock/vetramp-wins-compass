@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { authenticate, assertTeamMember, authErrorResponse } from "../_shared/auth.ts";
+import { normalizeUserContext, appliedFacts } from "../_shared/user-context.ts";
 
 const USA = "https://api.usaspending.gov/api/v2/search/spending_by_award/";
 const FIELDS = [
