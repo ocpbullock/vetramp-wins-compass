@@ -83,7 +83,7 @@ function AdminPage() {
           {isAdmin && accessToken && <TabsContent value="invites" className="mt-4"><InvitesPanel accessToken={accessToken} /></TabsContent>}
           {isAdmin && <TabsContent value="knowledge" className="mt-4"><KnowledgeBaseSections /></TabsContent>}
           <TabsContent value="ai-usage" className="mt-4 space-y-4"><TangoUsagePanel /><AIUsagePanel /></TabsContent>
-          <TabsContent value="data-health" className="mt-4"><DataHealthPanel /></TabsContent>
+          <TabsContent value="data-health" className="mt-4 space-y-4"><DataHealthPanel /><DuplicateProposalsPanel /></TabsContent>
         </Tabs>
       </main>
     </div>
