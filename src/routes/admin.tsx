@@ -25,6 +25,7 @@ import { KnowledgeBaseSections } from "@/components/settings/KnowledgeBasePanel"
 import { AIUsagePanel } from "@/components/settings/AIUsagePanel";
 import { TangoUsagePanel } from "@/components/settings/TangoUsagePanel";
 import { DataHealthPanel } from "@/components/settings/DataHealthPanel";
+import { DuplicateProposalsPanel } from "@/components/settings/DuplicateProposalsPanel";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
