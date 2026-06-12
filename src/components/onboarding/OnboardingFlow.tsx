@@ -366,15 +366,16 @@ function PastPerformanceStep({ onSaved }: { onSaved: () => void }) {
     mutationFn: async () => {
       if (!teamId) throw new Error("No active team");
       if (!title.trim()) throw new Error("Project title is required");
+      if (!agency.trim()) throw new Error("Customer / agency is required");
       const { error } = await supabase.from("past_performance").insert({
         team_id: teamId,
         created_by: user?.id ?? null,
-        project_title: title.trim(),
-        agency: agency.trim() || null,
+        contract_title: title.trim(),
+        agency: agency.trim(),
         naics_code: naics.trim() || null,
-        contract_value: value ? Number(value) : null,
+        total_value: value ? Number(value) : null,
         period_of_performance_end: end || null,
-        scope_summary: summary.trim() || null,
+        description: summary.trim() || null,
       } as never);
       if (error) throw new Error(error.message);
     },
