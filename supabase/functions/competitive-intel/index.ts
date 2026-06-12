@@ -261,8 +261,9 @@ Deno.serve(async (req) => {
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
     const authHeader = ctx.authHeader;
 
-    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title, teamId } = await req.json();
+    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title, teamId, userContext: userContextRaw } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
+    const userContext = normalizeUserContext(userContextRaw);
 
     // Verify the caller is a member of the requested team BEFORE any cache R/W.
     try { await assertTeamMember(ctx, teamId); }
