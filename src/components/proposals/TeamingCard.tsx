@@ -113,7 +113,7 @@ export function TeamingCard({
       : [];
     const { error } = await supabase.from("proposal_teaming").insert({
       proposal_id: proposalId,
-      partner_id: partner.id,
+      company_id: partner.id,
       role: overrides?.role ?? "sub",
       work_share_pct: overrides?.workShare ?? null,
       naics_contribution: overlap,
