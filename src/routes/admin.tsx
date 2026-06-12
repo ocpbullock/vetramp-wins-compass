@@ -21,7 +21,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { ArrowLeft, ShieldCheck, UserMinus, UserCheck, Trash2, RotateCcw, X, Mail } from "lucide-react";
-import { KnowledgeBaseSections } from "./knowledge-base";
+import { KnowledgeBaseSections } from "@/components/settings/KnowledgeBasePanel";
 import { AIUsagePanel } from "@/components/settings/AIUsagePanel";
 import { TangoUsagePanel } from "@/components/settings/TangoUsagePanel";
 import { DataHealthPanel } from "@/components/settings/DataHealthPanel";

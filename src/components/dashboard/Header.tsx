@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Calendar as CalendarIcon, Users } from "lucide-react";
+import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Users } from "lucide-react";
 import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 import { QuotaMeter } from "./QuotaMeter";
@@ -28,7 +28,6 @@ type NavItem = {
 const ORG_NAV: NavItem[] = [
   { label: "Search", to: "/", hash: "opportunities", matchHash: "opportunities" },
   { label: "Proposals", to: "/", hash: "in-progress", matchHash: "in-progress" },
-  { label: "Calendar", to: "/calendar", icon: CalendarIcon },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
 ];
 
@@ -77,7 +76,6 @@ export function Header() {
 
   const isActive = (item: NavItem) => {
     if (item.to === "/settings") return location.pathname.startsWith("/settings");
-    if (item.to === "/calendar") return location.pathname.startsWith("/calendar");
     if (!onHome) return false;
     if (item.matchHash) return currentHash === item.matchHash;
     return false;
