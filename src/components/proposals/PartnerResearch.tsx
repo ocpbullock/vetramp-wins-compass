@@ -11,7 +11,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { Search, Plus, UserPlus, Loader2, Users, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { searchEntities } from "@/lib/api";
-import type { Partner } from "@/components/settings/PartnersPanel";
+import { listPartnerCompanies, findOrInsertPartnerFromSamEntity, type PartnerView as Partner } from "@/lib/companies";
 
 const SB_TYPES = [
   { value: "SDVOSB", label: "SDVOSB" },
