@@ -159,8 +159,19 @@ Deno.serve(async (req) => {
       engagementType,
       primeContractorName,
       targetedScopeAreas,
+      template,
     } = body;
     const engagement = engagementType === "sub" ? "sub" : "prime";
+
+    const templateBlock = (template && typeof template === "object" && (template.filename || template.boilerplate))
+      ? `\nPROPOSAL TEMPLATE (offeror-supplied — MATCH this structure, heading hierarchy, ordering, and tone):
+Template file: ${template.filename || "(unnamed)"}
+${Array.isArray(template.structure) && template.structure.length
+  ? `Top-level outline from the template:\n${template.structure.map((t: string, i: number) => `${i + 1}. ${t}`).join("\n")}\n`
+  : ""}${template.boilerplate ? `Template body (truncated — mirror its voice, formatting conventions, and boilerplate phrasing):\n${String(template.boilerplate).slice(0, 25000)}\n` : ""}
+RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, naming) and TONE. Substitute opportunity-specific content into its sections; do not invent extra top-level sections that are not in the template outline.
+`
+      : "";
 
     if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
 
