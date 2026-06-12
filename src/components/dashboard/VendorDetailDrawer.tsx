@@ -2,7 +2,12 @@ import { useEffect, useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { BookmarkPlus, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { getVendorProfile } from "@/lib/api";
+import { useTeam } from "@/lib/team";
+import { companyFromVendorLookup, upsertCompany } from "@/lib/companies";
 
 function fmtUsd(n?: number | null) {
   if (!n) return "—";
