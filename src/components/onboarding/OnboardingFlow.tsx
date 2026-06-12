@@ -396,7 +396,7 @@ function PastPerformanceStep({ onSaved }: { onSaved: () => void }) {
           <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Cybersecurity engineering support" />
         </div>
         <div>
-          <Label className="text-xs">Customer / agency</Label>
+          <Label className="text-xs">Customer / agency *</Label>
           <Input value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="Department of the Air Force" />
         </div>
         <div>
