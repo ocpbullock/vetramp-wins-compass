@@ -996,6 +996,30 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 space-y-4">
         <Card className="border-primary/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Pursuit type</CardTitle>
+            <CardDescription className="text-xs">What kind of response are we producing? RFI / Sources Sought skips the compliance matrix and deadline milestones.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {PURSUIT_TYPES.map((t) => {
+                const active = (proposal.pursuit_type ?? "rfp_rfq") === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => onPatch({ pursuit_type: t.value })}
+                    className={`rounded-md border-2 p-3 text-left transition ${active ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
+                  >
+                    <div className="text-sm font-semibold">{t.label}</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">{t.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-primary/40">
           <CardHeader className="pb-2"><CardTitle className="text-base">Engagement type</CardTitle><CardDescription className="text-xs">This fundamentally changes the pipeline. Choose carefully.</CardDescription></CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-2 gap-2">
