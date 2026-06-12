@@ -1,7 +1,7 @@
 // Downloads SAM.gov solicitation attachments using the resourceLinks
 // array from the opportunity payload (v2 search). Saves them into the
 // proposal-attachments storage bucket.
-import { corsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
 import { authenticate, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 
@@ -36,6 +36,7 @@ function nameFromUrl(url: string): string {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {

@@ -1,4 +1,4 @@
-import { corsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 import { callAI, aiErrorResponse } from "../_shared/ai-client.ts";
 import { authenticate, resolveTeamId, authErrorResponse } from "../_shared/auth.ts";
 import {
@@ -57,6 +57,7 @@ Use markdown tables for all structured data. Use clear section headers. Be speci
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     let ctx;

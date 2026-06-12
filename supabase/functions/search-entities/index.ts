@@ -1,4 +1,4 @@
-import { corsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 import {
   searchEntities,
   mapEntityRow,
@@ -11,6 +11,7 @@ import { authenticate, resolveTeamId, authErrorResponse, jsonError } from "../_s
 const CACHE_TTL_HOURS = 24 * 30; // 30 days
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     let ctx;

@@ -212,6 +212,7 @@ async function callAI(_apiKey: string, system: string, user: string, teamId: str
 }
 
 serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const { authenticate, assertProposalAccess, authErrorResponse } = await import("../_shared/auth.ts");

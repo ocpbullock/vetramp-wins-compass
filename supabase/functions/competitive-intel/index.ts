@@ -1,4 +1,4 @@
-import { corsHeaders } from "../_shared/cors.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { authenticate, assertTeamMember, authErrorResponse } from "../_shared/auth.ts";
 import { normalizeUserContext, appliedFacts } from "../_shared/user-context.ts";
@@ -254,6 +254,7 @@ function buildScorecard(opts: {
 }
 
 Deno.serve(async (req) => {
+  const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
   try {
     let ctx;
