@@ -1589,9 +1589,10 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
   const userCtx = userContextFromProposal(proposal);
   const locked = busy || (aiBusy && !busy);
 
-  async function research() {
+  async function research(opts?: { skipCache?: boolean }) {
     if (online === false) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
     if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
+    const effectiveSkipCache = opts?.skipCache ?? skipCache;
     setBusy(true);
     setAiBusy?.(true);
     try {
@@ -1616,7 +1617,7 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
           primeContractorId: proposal.prime_contractor_id ?? null,
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
           userContext: userContextFromProposal(proposal),
-          skipCache,
+          skipCache: effectiveSkipCache,
         }),
       });
       const j = await r.json();
@@ -1633,6 +1634,35 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
       }
     } catch (e: any) { toast.error(e.message); } finally { setBusy(false); setAiBusy?.(false); }
   }
+
+  // Detect a mismatch between the user-declared incumbent (offeror-authoritative)
+  // and what the AI intel currently shows. Trigger when the declared name is set
+  // and either differs from intel.predecessor_contract.incumbent, or the intel
+  // was generated before the proposal was last updated (proxy for "intel
+  // predates the user's context") and no incumbent is reflected.
+  const declaredIncumbent: string | null = (proposal.known_incumbent ?? "").trim() || null;
+  const intelIncumbent: string | null =
+    (intel.predecessor_contract?.incumbent ?? "").trim() || null;
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const intelFetchedAt: string | null = intel._fetched_at ?? null;
+  const proposalUpdatedAt: string | null = proposal.updated_at ?? null;
+  const intelStale =
+    !!intelFetchedAt && !!proposalUpdatedAt &&
+    new Date(intelFetchedAt).getTime() < new Date(proposalUpdatedAt).getTime();
+  const incumbentMismatch =
+    !!declaredIncumbent &&
+    !!intel.customer_summary &&
+    (
+      (intelIncumbent && norm(declaredIncumbent) !== norm(intelIncumbent)) ||
+      (!intelIncumbent && intelStale)
+    );
+  const fetchedRelative = intelFetchedAt
+    ? (() => {
+        const ms = Math.max(0, Date.now() - new Date(intelFetchedAt).getTime());
+        const mins = Math.max(1, Math.round(ms / 60000));
+        return mins < 60 ? `${mins} min` : mins < 1440 ? `${Math.round(mins / 60)} hr` : `${Math.round(mins / 1440)} d`;
+      })()
+    : null;
 
   const list = (label: string, items?: string[]) => items?.length ? (
     <div><div className="text-xs font-semibold mb-1">{label}</div><ul className="text-xs space-y-1 list-disc list-inside text-muted-foreground">{items.map((x, i) => <li key={i}>{x}</li>)}</ul></div>
