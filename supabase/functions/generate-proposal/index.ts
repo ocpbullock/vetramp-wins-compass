@@ -145,7 +145,23 @@ Generate the document in markdown with these sections IN ORDER. Each section pro
 Use markdown tables for structured data. Be specific. If a field is missing from the company profile, insert "[TO BE VERIFIED — update in Capture Intel]" rather than inventing details.`
       : buildSystemPrompt(companyProfile);
 
-    const systemPrompt = templateBlock ? `${baseSystemPrompt}\n${templateBlock}` : baseSystemPrompt;
+    // Sub-mode addendum: when our company is teamed UNDER a prime, every pursuit
+    // type (RFP, RFI/Sources Sought, Capability Statement) must be reframed so
+    // the PRIME is the submitter and the offeror is positioned as a teammate
+    // contributing content for the prime's submission.
+    const subAddendum = (engagement === "sub" && (pursuit === "rfi_sources_sought" || pursuit === "capability_statement"))
+      ? `
+
+SUB-TO-PRIME REFRAMING (applies to this entire document):
+- The SUBMITTER OF RECORD is the prime contractor "${primeContractorName || "(unspecified)"}", not the offeror. ${companyIdentity(companyProfile)} is contributing teammate content for the prime to incorporate into the prime's submission.
+- Voice: PRIME'S voice, THIRD PERSON. Address the GOVERNMENT EVALUATOR / contracting officer as the prime would. Refer to the offeror by name as "[Offeror], a teammate to ${primeContractorName || "the prime"}".
+- Cover/response letters, set-aside recommendations, and acquisition-strategy comments must be written FROM the prime's perspective (the prime is the responding entity; the offeror is teamed under them).
+- Past performance and capability sections should highlight what the offeror brings to the prime's team and how the offeror's work-share strengthens the prime's overall proposition.
+- Targeted work-share under the prime: ${targetedScopeAreas || "(unspecified)"}.
+- Do NOT produce a standalone offeror-led response; produce drop-in content the prime can paste into THEIR cover letter, capability narrative, and past-performance sections with minimal editing.`
+      : "";
+
+    const systemPrompt = templateBlock ? `${baseSystemPrompt}${subAddendum}\n${templateBlock}` : `${baseSystemPrompt}${subAddendum}`;
 
     const docLabel = pursuit === "rfi_sources_sought"
       ? "an RFI / SOURCES SOUGHT RESPONSE"
