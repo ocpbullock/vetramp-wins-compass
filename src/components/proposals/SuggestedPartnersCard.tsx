@@ -64,14 +64,15 @@ export function SuggestedPartnersCard({
     queryKey: ["suggest-self", teamId],
     enabled: !!teamId,
     queryFn: async () => {
-      const [profRes, vehRes] = await Promise.all([
-        supabase.from("company_profile").select("profile_data").eq("team_id", teamId!).maybeSingle(),
+      const { getOwnCompanyProfileData } = await import("@/lib/companies");
+      const [pd, vehRes] = await Promise.all([
+        getOwnCompanyProfileData(teamId!),
         supabase.from("contract_vehicles").select("vehicle_name").eq("team_id", teamId!).eq("status", "active"),
       ]);
-      const pd = (profRes.data?.profile_data ?? {}) as any;
+      const profile = (pd ?? {}) as any;
       const self: SuggestSelf = {
-        certifications: pd.certifications || pd.socioeconomic_certifications || [],
-        naics_codes: pd.naics_codes || [],
+        certifications: profile.certifications || profile.socioeconomic_certifications || [],
+        naics_codes: profile.naics_codes || [],
         contract_vehicles: (vehRes.data ?? []).map((v: any) => v.vehicle_name),
       };
       return self;
