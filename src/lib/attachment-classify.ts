@@ -1,10 +1,11 @@
-export type AttachmentType = "sow" | "instructions" | "amendment" | "attachment" | "other" | "customer_intel" | "reference";
+export type AttachmentType = "sow" | "instructions" | "amendment" | "attachment" | "other" | "customer_intel" | "reference" | "template";
 
 export const ATTACHMENT_TYPE_OPTIONS: { value: AttachmentType; label: string }[] = [
   { value: "sow", label: "SOW / PWS" },
   { value: "instructions", label: "Section L / M (Instructions)" },
   { value: "amendment", label: "Amendment / Mod" },
   { value: "attachment", label: "Attachment (QASP / CDRL / DD254)" },
+  { value: "template", label: "Proposal Template" },
   { value: "reference", label: "Reference Text" },
   { value: "other", label: "Other" },
   { value: "customer_intel", label: "Customer Intel" },
