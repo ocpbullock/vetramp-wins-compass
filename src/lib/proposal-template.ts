@@ -103,9 +103,9 @@ export function extractTemplateStructure(rawText: string | null | undefined): Ex
  * Returns the first template attachment from a list of proposal attachments,
  * or null. Templates must have parsed_content to be usable.
  */
-export function findActiveTemplate<T extends { file_type?: string | null; parsed_content?: string | null }>(
-  attachments: T[] | null | undefined,
-): T | null {
+export function findActiveTemplate(
+  attachments: any[] | null | undefined,
+): any | null {
   if (!attachments?.length) return null;
-  return attachments.find((a) => a.file_type === "template" && (a.parsed_content || "").trim().length > 0) ?? null;
+  return attachments.find((a) => a?.file_type === "template" && String(a?.parsed_content || "").trim().length > 0) ?? null;
 }
