@@ -483,7 +483,7 @@ function ProposalPipeline() {
               // into the LATEST sections snapshot, not the stale render closure.
               setProposal((p: any) => ({
                 ...p,
-                sections: { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc } },
+                sections: { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc, user_context_applied: userContextApplied } },
               }));
             }
           } catch { buf = line + "\n" + buf; break; }
@@ -495,7 +495,7 @@ function ProposalPipeline() {
       // earlier in this run (e.g. during generateAll's sequential loop).
       let finalSections: Record<string, any> = {};
       setProposal((p: any) => {
-        finalSections = { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc } };
+        finalSections = { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc, user_context_applied: userContextApplied } };
         return { ...p, sections: finalSections };
       });
       const { error: saveErr } = await supabase
