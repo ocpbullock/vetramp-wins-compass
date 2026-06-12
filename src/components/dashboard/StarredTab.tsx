@@ -9,6 +9,7 @@ import { format, parseISO } from "date-fns";
 import { useStarred, type StarredRow } from "@/lib/starred";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
+import { PwinChip } from "./PwinChip";
 
 export function StarredTab({
   onStartProposal,
