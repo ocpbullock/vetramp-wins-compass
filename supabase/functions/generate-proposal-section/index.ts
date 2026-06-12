@@ -16,6 +16,13 @@ const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   executive_summary: ["capability", "win_theme"],
   technical_approach: ["capability", "boilerplate"],
   compliance_matrix: ["boilerplate"],
+  // sub-mode
+  sub_technical_input: ["capability", "boilerplate"],
+  sub_management_input: ["capability", "boilerplate"],
+  sub_past_performance_input: ["past_performance"],
+  sub_key_personnel_input: ["personnel"],
+  sub_corporate_overview: ["capability"],
+  sub_teaming_pitch: ["capability", "win_theme"],
 };
 
 async function fetchKnowledgeContext(
