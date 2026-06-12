@@ -328,8 +328,8 @@ function ProposalPipeline() {
     setSectionGen((s) => ({ ...s, [sectionId]: true }));
     setAiBusy(true);
     try {
-      // gather attachment text (parsed_content) when available
-      const attachmentsText = attachments.map((a) => a.parsed_content).filter(Boolean).join("\n\n---\n\n");
+      // gather attachment text (parsed_content + per-file user notes) when available
+      const attachmentsText = composeAttachmentsText(attachments);
       const teamingEntries = await fetchTeamingForProposal(proposalId);
       const teaming = teamingEntries.map((e) => ({
         company_name: e.partner?.company_name,
