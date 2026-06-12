@@ -31,6 +31,7 @@ import { TrackedAnalyzePanel } from "./TrackedAnalyzePanel";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import type { HistoricalAward, SamOpportunity } from "@/lib/api";
 import { StarButton } from "./StarButton";
+import { PwinChip } from "./PwinChip";
 
 // Build a SamOpportunity-shaped object from a tracked opportunity so the
 // existing Compete/Propose flows (which expect a SamOpportunity) can be
