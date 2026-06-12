@@ -109,7 +109,7 @@ Place of Performance: ${JSON.stringify(opportunity.placeOfPerformance || {})}
 
 Description:
 ${opportunity.description || "(No description provided — infer from title and agency)"}
-
+${userContextBlock}
 ${engagement === "sub" ? `Generate the FULL capabilities/teaming document now following all sections from the system prompt.` : `Generate the FULL proposal now following all sections from the system prompt.`}`;
 
 
