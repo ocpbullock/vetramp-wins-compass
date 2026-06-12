@@ -100,7 +100,7 @@ function sectionsFor(proposal: any) {
   return proposal?.engagement_type === "sub" ? SUB_SECTIONS : PRIME_SECTIONS;
 }
 
-type Section = { content: string; status: "draft" | "reviewed" | "final"; word_count: number };
+type Section = { content: string; status: "draft" | "reviewed" | "final"; word_count: number; user_context_applied?: string[] };
 
 function countdown(deadline?: string | null) {
   if (!deadline) return null;
