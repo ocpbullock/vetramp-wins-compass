@@ -142,6 +142,52 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
 - 3 short paragraphs + a bullet list of 5 differentiators with proof points.
 - Reference the prime by name. Close with a specific work-share ask (scope boundaries, contract vehicle posture, percentage if relevant).
 - Keep to ~1 page.`,
+
+  // ----- RFI / Sources Sought sections (pursuit_type = "rfi_sources_sought") -----
+  // These produce a short market-research response to the government, NOT a
+  // proposal volume. No fee/price. Focus on capabilities, relevant past
+  // performance, and acquisition-strategy guidance.
+  rfi_cover_response: `Write a one-page RESPONSE LETTER to the contracting officer acknowledging the RFI / Sources Sought notice.
+- Reference the notice ID / title verbatim.
+- State the offeror's interest, business size, and applicable socio-economic certifications (SDVOSB, 8(a), HUBZone, etc.) from the COMPANY PROFILE.
+- 2-3 paragraphs. Do not propose a price or solution.`,
+  rfi_company_overview: `Write a COMPANY OVERVIEW for an RFI response.
+- 2 short paragraphs from the COMPANY PROFILE: legal name, UEI/CAGE (only if present), HQ, year founded, NAICS codes the company operates under, and primary business lines.
+- Plain federal market-research voice.`,
+  rfi_relevant_capabilities: `Write RELEVANT CAPABILITIES for the RFI.
+- Bullet list of capabilities mapped to the notice's stated scope.
+- One markdown TABLE: | Capability | How Demonstrated | Customers Served |.
+- Pull capabilities and demonstration evidence only from the COMPANY PROFILE / KNOWLEDGE BASE — do not invent.`,
+  rfi_past_performance_summary: `Write PAST PERFORMANCE SUMMARIES for the RFI.
+- Compact TABLE: | Contract | Customer | Period | Value | Scope Relevance to the RFI |.
+- Use ONLY entries from the PAST PERFORMANCE LIBRARY or company profile past_performance. Never fabricate.
+- Add a 2-3 sentence summary per row tying scope to this RFI.`,
+  rfi_acquisition_strategy_comments: `Write SUGGESTED ACQUISITION STRATEGY COMMENTS — the most important section of a Sources Sought response.
+- Address each typical RFI question explicitly when applicable: contract type recommendation (FFP / T&M / hybrid), period of performance structure (base + options), preferred contract vehicle (GSA MAS, GWAC, agency BPA, open competition), bundling considerations, transition timing, and any draft PWS / SOW feedback.
+- Be concrete and SHORT — 4-7 bullets total. The goal is to influence the acquisition approach.`,
+  rfi_set_aside_recommendation: `Write a SET-ASIDE RECOMMENDATION.
+- Lead with the recommended set-aside category for this acquisition.
+- ADVOCATE FOR SDVOSB SET-ASIDE when the COMPANY PROFILE shows SDVOSB certification AND the NAICS / scope allow it; cite the Rule of Two, VA Vets First (38 USC 8127) when the agency is VA, and SBA SDVOSB program authority. Provide concrete capability evidence the contracting officer needs to justify the set-aside (number of certified SDVOSB firms capable, including the offeror, and their relevant past performance).
+- If the offeror is NOT SDVOSB, recommend the strongest set-aside category the COMPANY PROFILE supports (8(a), WOSB/EDWOSB, HUBZone, total small business). Never invent a certification not present in the profile.
+- Close with a 1-paragraph rationale aligned to FAR 19 set-aside rules.`,
+
+  // ----- Capability statement sections (pursuit_type = "capability_statement") -----
+  cs_header: `Write the HEADER & CONTACT block for a 1-2 page capability statement.
+- Legal name, DBA if any, logo placeholder "[LOGO]", primary contact name/title/email/phone (use "[TO BE NAMED]" when missing), website, HQ address — all strictly from the COMPANY PROFILE.
+- Bold tagline (1 line) summarizing what the company does.`,
+  cs_company_overview: `Write a COMPANY OVERVIEW for the capability statement.
+- 1 short paragraph: who we are, year founded, mission.
+- Include UEI, CAGE, and DUNS ONLY if present in the profile.`,
+  cs_core_capabilities: `Write CORE CAPABILITIES as a 2-column bullet list (markdown — use a table with two columns).
+- Pull from the COMPANY PROFILE capabilities. 6-10 short capability bullets.`,
+  cs_differentiators: `Write DIFFERENTIATORS.
+- 4-5 bullet differentiators with a single-line proof point each. Source strictly from the COMPANY PROFILE.`,
+  cs_past_performance: `Write PAST PERFORMANCE HIGHLIGHTS.
+- TABLE: | Customer | Contract | Period | Value | Scope |. Use ONLY entries from the PAST PERFORMANCE LIBRARY or company profile past_performance.
+- 3-6 rows. No relevance narrative — this is a marketing one-pager.`,
+  cs_certifications: `Write CERTIFICATIONS & CODES.
+- Two short TABLES: business certifications (SDVOSB, 8(a), WOSB, HUBZone, etc.) and NAICS codes — built strictly from the COMPANY PROFILE.
+- Include UEI / CAGE / DUNS only if present.`,
 };
 
 
