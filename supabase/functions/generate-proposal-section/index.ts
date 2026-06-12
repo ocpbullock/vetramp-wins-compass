@@ -235,7 +235,10 @@ Deno.serve(async (req) => {
       primeContractorName,
       targetedScopeAreas,
       template,
+      userContext: userContextRaw,
     } = body;
+    const userContext = normalizeUserContext(userContextRaw);
+    const userContextBlock = renderUserContextPrompt(userContext);
     const engagement = engagementType === "sub" ? "sub" : "prime";
     const pursuit = pursuitType === "rfi_sources_sought" || pursuitType === "capability_statement"
       ? pursuitType
