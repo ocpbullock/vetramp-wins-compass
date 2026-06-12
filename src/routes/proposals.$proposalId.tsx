@@ -27,6 +27,7 @@ import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
 import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
 import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-classify";
+import { composeAttachmentsText } from "@/lib/attachments-text";
 import { DataProvenance } from "@/components/dashboard/DataSourceBadge";
 import { OCIScreeningCard, ociStatus, type OciAnswers } from "@/components/proposals/OCIScreeningCard";
 import { StepErrorBoundary } from "@/components/StepErrorBoundary";
@@ -155,6 +156,33 @@ function ProposalPipeline() {
     setAttachments((a) => a.map((x) => (x.id === att.id ? { ...x, file_type: fileType } : x)));
   }
 
+  async function updateAttachmentNotes(att: any, notes: string) {
+    const { error } = await supabase.from("proposal_attachments").update({ notes }).eq("id", att.id);
+    if (error) { toast.error(error.message); return; }
+    setAttachments((a) => a.map((x) => (x.id === att.id ? { ...x, notes } : x)));
+  }
+
+  async function addPastedReference({ title, text, notes }: { title: string; text: string; notes?: string }) {
+    if (!user) return null;
+    const trimmed = (text || "").trim();
+    if (!trimmed) { toast.error("Paste some text first."); return null; }
+    const filename = (title?.trim() || `Pasted reference ${new Date().toLocaleString()}`).slice(0, 200);
+    const { data: row, error } = await supabase.from("proposal_attachments").insert({
+      proposal_id: proposalId,
+      filename,
+      file_type: "reference",
+      storage_path: null,
+      source: "pasted",
+      size_bytes: trimmed.length,
+      parsed_content: trimmed,
+      notes: notes?.trim() || null,
+    }).select().single();
+    if (error) { toast.error(error.message); return null; }
+    setAttachments((a) => [row, ...a]);
+    toast.success("Reference text saved");
+    return row;
+  }
+
   async function deleteAttachment(att: any) {
     const { data, error } = await supabase.from("proposal_attachments").delete().eq("id", att.id).select("id");
     if (error) { toast.error(error.message); return; }
@@ -164,7 +192,9 @@ function ProposalPipeline() {
     }
     // Only remove the underlying storage object once the row delete succeeded —
     // otherwise a failed RLS delete would leave us with a dangling file removal.
-    await supabase.storage.from("proposal-attachments").remove([att.storage_path]);
+    if (att.storage_path) {
+      await supabase.storage.from("proposal-attachments").remove([att.storage_path]);
+    }
     setAttachments((a) => a.filter((x) => x.id !== att.id));
   }
 
@@ -298,8 +328,8 @@ function ProposalPipeline() {
     setSectionGen((s) => ({ ...s, [sectionId]: true }));
     setAiBusy(true);
     try {
-      // gather attachment text (parsed_content) when available
-      const attachmentsText = attachments.map((a) => a.parsed_content).filter(Boolean).join("\n\n---\n\n");
+      // gather attachment text (parsed_content + per-file user notes) when available
+      const attachmentsText = composeAttachmentsText(attachments);
       const teamingEntries = await fetchTeamingForProposal(proposalId);
       const teaming = teamingEntries.map((e) => ({
         company_name: e.partner?.company_name,
@@ -513,7 +543,7 @@ function ProposalPipeline() {
 
           <TabsContent value="intake" className="mt-4 space-y-4">
             <StepErrorBoundary label="intake">
-              <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onRefreshProposal={async () => {
+              <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onUpdateAttachmentNotes={updateAttachmentNotes} onAddPastedReference={addPastedReference} onRefreshProposal={async () => {
                 const { data: fresh } = await supabase.from("proposals").select("opportunity_team_id").eq("id", proposalId).maybeSingle();
                 if (fresh) setProposal((p: any) => ({ ...p, opportunity_team_id: fresh.opportunity_team_id ?? null }));
               }} />
@@ -673,7 +703,156 @@ function DropZoneUpload({ onUpload }: { onUpload: (f: File, type?: string) => Pr
   );
 }
 
-function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId, fetchResults, fetching, onUpdateAttachmentType, onRefreshProposal }: any) {
+function PasteReferenceText({ onAdd }: { onAdd: (input: { title: string; text: string; notes?: string }) => Promise<any> }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!text.trim()) { toast.error("Paste some text first."); return; }
+    setSaving(true);
+    try {
+      const row = await onAdd({ title, text, notes });
+      if (row) {
+        setTitle(""); setText(""); setNotes(""); setOpen(false);
+      }
+    } finally { setSaving(false); }
+  }
+
+  if (!open) {
+    return (
+      <Button variant="outline" size="sm" className="w-full" onClick={() => setOpen(true)}>
+        <FileText className="w-3.5 h-3.5 mr-1" /> Paste text as reference
+      </Button>
+    );
+  }
+
+  return (
+    <div className="border border-border rounded p-2 space-y-2 bg-muted/30">
+      <div className="text-[11px] font-medium">Add reference text (no file required)</div>
+      <Input
+        placeholder="Short title (e.g. 'Agency RFI Q&A')"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="h-7 text-xs"
+      />
+      <Textarea
+        placeholder="Paste any text the AI should treat as authoritative context — emails, RFI responses, conversation notes, prior solicitation language, etc."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={6}
+        className="text-xs"
+      />
+      <Textarea
+        placeholder="Optional note: how should the AI use this? (e.g. 'Customer confirmed the incumbent contract is being recompeted as-is')"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        rows={2}
+        className="text-xs"
+      />
+      <div className="flex gap-2">
+        <Button size="sm" onClick={save} disabled={saving || !text.trim()}>
+          {saving ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
+          Save reference
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setTitle(""); setText(""); setNotes(""); }}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AttachmentRow({ att, onDelete, onUpdateAttachmentType, onUpdateAttachmentNotes }: {
+  att: any;
+  onDelete: (a: any) => void;
+  onUpdateAttachmentType: (a: any, t: string) => void;
+  onUpdateAttachmentNotes: (a: any, n: string) => void;
+}) {
+  const [notesDraft, setNotesDraft] = useState<string>(att.notes ?? "");
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+  useEffect(() => { if (!editingNotes) setNotesDraft(att.notes ?? ""); }, [att.notes, editingNotes]);
+
+  const chars = att.parsed_content?.length || 0;
+  const empty = att.parsed_content !== null && att.parsed_content !== undefined && chars === 0;
+  const isPasted = att.source === "pasted" || !att.storage_path;
+
+  async function commitNotes() {
+    const next = notesDraft.trim();
+    if ((att.notes ?? "") === next) { setEditingNotes(false); return; }
+    setSavingNotes(true);
+    try {
+      await onUpdateAttachmentNotes(att, next);
+    } finally {
+      setSavingNotes(false);
+      setEditingNotes(false);
+    }
+  }
+
+  return (
+    <div className="border border-border rounded px-2 py-1.5 space-y-1">
+      <div className="flex items-center gap-2 text-xs">
+        <FileText className="w-3 h-3 text-muted-foreground" />
+        <span className="flex-1 truncate" title={att.filename}>
+          {att.filename}
+          {isPasted && <Badge variant="outline" className="ml-1.5 text-[9px] py-0">pasted</Badge>}
+        </span>
+        <Select value={att.file_type ?? "other"} onValueChange={(v) => onUpdateAttachmentType(att, v)}>
+          <SelectTrigger className="h-6 px-1.5 text-[10px] w-[110px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {ATTACHMENT_TYPE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <button onClick={() => onDelete(att)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+      </div>
+      {chars > 0 && (
+        <div className="text-[10px] text-muted-foreground pl-5">{chars.toLocaleString()} chars {isPasted ? "saved" : "extracted"}</div>
+      )}
+      {empty && (
+        <div className="text-[10px] text-destructive pl-5">
+          Could not extract text — try uploading a text-based PDF instead of a scanned image.
+        </div>
+      )}
+      <div className="pl-5">
+        {editingNotes ? (
+          <div className="space-y-1">
+            <Textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              placeholder="Note for the AI: what should it know about this document? (e.g. 'This is the final amendment — supersedes original Section L')"
+              rows={2}
+              className="text-[11px]"
+              autoFocus
+              onBlur={commitNotes}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { setNotesDraft(att.notes ?? ""); setEditingNotes(false); }
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commitNotes(); }
+              }}
+            />
+            <div className="text-[10px] text-muted-foreground">
+              {savingNotes ? "Saving…" : "Click outside or press ⌘/Ctrl+Enter to save"}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingNotes(true)}
+            className="text-[11px] text-left w-full text-muted-foreground hover:text-foreground italic"
+          >
+            {att.notes?.trim() ? <span className="not-italic">📝 {att.notes}</span> : "+ Add note for AI context"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId, fetchResults, fetching, onUpdateAttachmentType, onUpdateAttachmentNotes, onAddPastedReference, onRefreshProposal }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
   const largeDoc = totalChars > 300_000;
@@ -1002,6 +1181,8 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
 
           <DropZoneUpload onUpload={onUpload} />
 
+          <PasteReferenceText onAdd={onAddPastedReference} />
+
           {proposal.engagement_type !== "sub" && (
             <>
               <Button
@@ -1040,35 +1221,15 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           )}
           <div className="space-y-1">
             {sowAttachments.length === 0 && <div className="text-xs text-muted-foreground">No files yet.</div>}
-            {sowAttachments.map((a: any) => {
-              const chars = a.parsed_content?.length || 0;
-              const empty = a.parsed_content !== null && a.parsed_content !== undefined && chars === 0;
-              return (
-                <div key={a.id} className="border border-border rounded px-2 py-1.5 space-y-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    <FileText className="w-3 h-3 text-muted-foreground" />
-                    <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
-                    <Select value={a.file_type ?? "other"} onValueChange={(v) => onUpdateAttachmentType(a, v)}>
-                      <SelectTrigger className="h-6 px-1.5 text-[10px] w-[110px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {ATTACHMENT_TYPE_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <button onClick={() => onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
-                  </div>
-                  {chars > 0 && (
-                    <div className="text-[10px] text-muted-foreground pl-5">{chars.toLocaleString()} chars extracted</div>
-                  )}
-                  {empty && (
-                    <div className="text-[10px] text-destructive pl-5">
-                      Could not extract text — try uploading a text-based PDF instead of a scanned image.
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {sowAttachments.map((a: any) => (
+              <AttachmentRow
+                key={a.id}
+                att={a}
+                onDelete={onDelete}
+                onUpdateAttachmentType={onUpdateAttachmentType}
+                onUpdateAttachmentNotes={onUpdateAttachmentNotes}
+              />
+            ))}
           </div>
         </CardContent>
       </Card>
