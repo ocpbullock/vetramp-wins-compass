@@ -221,6 +221,14 @@ export function TrackedAnalyzePanel({
                 )}
               </section>
 
+              <TeamingTargetsView
+                awards={awards}
+                agency={agency}
+                naicsCodes={naicsCode ? [naicsCode] : []}
+                teamId={teamId ?? null}
+                onAddToSandbox={onAddToSandbox}
+              />
+
               <section>
                 <h3 className="text-sm font-semibold mb-2">Award trend</h3>
                 {stats.trend.length === 0 ? (
