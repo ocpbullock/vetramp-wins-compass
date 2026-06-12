@@ -162,6 +162,7 @@ export async function getCompetitiveIntel(input: {
   postedDate?: string;
   responseDeadLine?: string;
   teamId: string;
+  userContext?: import("./user-context").UserContext | null;
 }) {
   logCall(`competitive-intel ${input.naicsCode}`);
   const { data, error } = await supabase.functions.invoke("competitive-intel", { body: input });
