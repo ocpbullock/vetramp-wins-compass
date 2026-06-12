@@ -278,15 +278,26 @@ RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, 
 `
       : "";
 
+    // In sub mode, sections that describe the PRIME's own company (the
+    // prime's self-introduction to the evaluator) must NOT mention the
+    // offeror at all — the prime presents itself; the offeror only appears
+    // separately in a Team & Subcontractors appendix (sub_corporate_overview).
+    const isPrimeSelfIntroSection = /(^|_)(company_overview|corporate_overview)$/i.test(sectionId)
+      || /^(rfi_company_overview|cs_company_overview)$/i.test(sectionId)
+      || /company overview|corporate overview/i.test(sectionTitle || "");
+    const subPrimeSelfIntroOverride = (engagement === "sub" && isPrimeSelfIntroSection && sectionId !== "sub_corporate_overview")
+      ? `\nPRIME COMPANY OVERVIEW OVERRIDE: This section is the PRIME contractor's self-introduction to the evaluator. The offeror (${companyIdentity(companyProfile)}) is invisible in this section — the offeror is acting as the prime's proposal-writing teammate, not a featured party. Write strictly about "${primeContractorName || "the prime"}" as their own company. Do NOT mention the offeror, the sub, teaming arrangements, partners, or work-share here. Where prime-specific facts are unknown (UEI/CAGE, year founded, HQ, financials, NAICS, certifications), insert "[PRIME TO PROVIDE]" rather than inventing details or substituting offeror facts. The offeror's own corporate blurb belongs in a separate Team & Subcontractors appendix, not here.`
+      : "";
+
     const engagementBlock = engagement === "sub"
-      ? `ENGAGEMENT MODE: SUBCONTRACTOR (supporting the prime's bid). The offeror is teamed UNDER the prime named below — the prime is leading the submission. Produce drop-in content the prime can paste into THEIR document with minimal editing. Default voice: PRIME'S voice, THIRD PERSON, addressed to the GOVERNMENT EVALUATOR / contracting officer. Refer to the offeror by name as a teammate to the prime (e.g. "[Offeror], teamed with [Prime], will…"). Do NOT pitch the offeror to the prime — assume the offeror is already on the team. The ONE exception is a section explicitly labeled "Teaming Pitch", which is a secondary 1-page artifact addressed to the prime's capture lead and must be prefixed "[SECONDARY ARTIFACT — Teaming Pitch, not for the prime's volume]". Every other section must begin with a one-line insertion hint: "> Insert into: <Prime Volume Name>".
+      ? `ENGAGEMENT MODE: SUBCONTRACTOR (supporting the prime's bid). The offeror is teamed UNDER the prime named below — the prime is leading the submission. Produce drop-in content the prime can paste into THEIR document with minimal editing. Default voice: PRIME'S voice, THIRD PERSON, addressed to the GOVERNMENT EVALUATOR / contracting officer. Refer to the offeror by name as a teammate to the prime (e.g. "[Offeror], teamed with [Prime], will…") ONLY in sections where teammates are appropriate (technical, management, past performance, key personnel, team appendix). Do NOT pitch the offeror to the prime — assume the offeror is already on the team. The ONE exception is a section explicitly labeled "Teaming Pitch", which is a secondary 1-page artifact addressed to the prime's capture lead and must be prefixed "[SECONDARY ARTIFACT — Teaming Pitch, not for the prime's volume]". Every other section must begin with a one-line insertion hint: "> Insert into: <Prime Volume Name>".
 PRIME CONTRACTOR (submitter of record): ${primeContractorName || "(unspecified)"}
 OFFEROR'S TARGETED SCOPE (our work-share under the prime): ${targetedScopeAreas || "(unspecified)"}
 ${pursuit === "rfi_sources_sought"
   ? `RFI / SOURCES SOUGHT + SUB MODE: The prime is the responding entity to the contracting officer. Cover letters, set-aside recommendations, and acquisition-strategy comments are written FROM the prime's perspective. Capability and past-performance sections highlight what the offeror brings to the prime's team.`
   : pursuit === "capability_statement"
   ? `CAPABILITY STATEMENT + SUB MODE: Frame as a teammate capability snippet the prime can attach to THEIR capability package — third person, evaluator-facing, positioned as "${companyIdentity(companyProfile)}, a teammate to ${primeContractorName || "the prime"}".`
-  : ""}
+  : ""}${subPrimeSelfIntroOverride}
 `
       : `ENGAGEMENT MODE: PRIME. The offeror is pursuing this opportunity as the PRIME contractor. Address Section L instructions and Section M evaluation criteria in full.
 `;
