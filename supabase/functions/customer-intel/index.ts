@@ -147,6 +147,7 @@ Research this customer${engagement === "sub" ? " AND the named prime contractor"
     if (!intel) throw new Error("No intel returned");
     intel._data_source = "ai";
     intel._fetched_at = new Date().toISOString();
+    intel._user_context_applied = appliedFacts(userContext);
     try {
       await setCachedResponse({
         functionName: "customer-intel",
