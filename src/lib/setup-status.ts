@@ -61,7 +61,7 @@ export function useSetupStatus(): SetupStatus {
         ppCount: ppRes.count ?? 0,
         cvCount: cvRes.count ?? 0,
         memberCount: membersRes.count ?? 0,
-        partnerCount: partnersRes.count ?? 0,
+        partnerCount: partnerCount ?? 0,
       };
     },
     enabled: true,
