@@ -185,15 +185,32 @@ export function TrackedOpportunitiesTab({
     return Array.from(set).sort();
   }, [awards, items]);
 
+  const isOppTeam = currentTeam?.team_type === "opportunity";
+
   const updateStatus = async (id: string, status: string) => {
-    const prev = items;
+    if (isOppTeam) {
+      toast.error("Tracking isn't available in this team context — switch to your organization team");
+      return;
+    }
+    const { data, error } = await supabase
+      .from("tracked_opportunities")
+      .update({ status })
+      .eq("id", id)
+      .select("id");
+    if (error) { toast.error(error.message); return; }
+    if (!data || data.length === 0) {
+      toast.error("You don't have permission to update this tracked opportunity — ask a team owner/admin");
+      return;
+    }
     setItems((cur) => cur.map((i) => (i.id === id ? { ...i, status } : i)));
-    const { error } = await supabase.from("tracked_opportunities").update({ status }).eq("id", id);
-    if (error) { setItems(prev); toast.error(error.message); }
   };
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
+    if (isOppTeam) {
+      toast.error("Tracking isn't available in this team context — switch to your organization team");
+      return;
+    }
     const { data, error } = await supabase.from("tracked_opportunities").delete().eq("id", confirmDelete.id).select("id");
     if (error) { toast.error(error.message); return; }
     if (!data || data.length === 0) {

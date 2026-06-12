@@ -11,7 +11,7 @@ import { ChevronDown, CheckCircle2, AlertTriangle } from "lucide-react";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useTeamId } from "@/lib/team";
+import { useTeam } from "@/lib/team";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
@@ -63,7 +63,9 @@ export function TrackOpportunityDialog({
   onSaved: () => void;
 }) {
   const { user } = useAuth();
-  const teamId = useTeamId();
+  const { currentTeam } = useTeam();
+  const teamId = currentTeam?.id ?? null;
+  const isOppTeam = currentTeam?.team_type === "opportunity";
   const [saving, setSaving] = useState(false);
 
   const [title, setTitle] = useState("");
@@ -105,6 +107,10 @@ export function TrackOpportunityDialog({
     if (!user) return;
     if (!title.trim() || !agency.trim() || !vehicle || !naicsCode) {
       toast.error("Title, Agency, Contract Vehicle, and NAICS are required");
+      return;
+    }
+    if (isOppTeam) {
+      toast.error("Tracking isn't available in this team context — switch to your organization team");
       return;
     }
     setSaving(true);
