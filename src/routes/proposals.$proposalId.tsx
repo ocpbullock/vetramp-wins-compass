@@ -1586,7 +1586,6 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
             responseDeadLine: proposal.response_deadline, type: proposal.opportunity_type,
           },
           companyProfile,
-          extraNotes: notes || undefined,
           userId: session?.user?.id,
           proposalId,
           teamId: proposal.team_id ?? null,
