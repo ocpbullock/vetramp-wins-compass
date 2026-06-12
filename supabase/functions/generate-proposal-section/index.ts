@@ -229,7 +229,7 @@ ${solutionDesign ? `SOLUTION DESIGN inputs:\n${JSON.stringify(solutionDesign, nu
 ${teaming && teaming.length ? `TEAMING ARRANGEMENT (reference these partners by name in management approach, staffing plan, and past performance — cite their certifications, NAICS coverage, and past performance where relevant):\n${JSON.stringify(teaming, null, 2)}\n` : ""}
 ${pastPerformance && pastPerformance.length ? `PAST PERFORMANCE LIBRARY (selected by capture team — use these as the source of truth for the Past Performance section; do NOT invent contracts, values, periods, or POCs not listed here):\n${JSON.stringify(pastPerformance, null, 2)}\n` : ""}
 ${attachmentsText ? `SOLICITATION ATTACHMENT TEXT (truncated):\n${String(attachmentsText).slice(0, 30000)}\n` : ""}
-
+${templateBlock}
 CRITICAL: Before writing, briefly research the end-user unit from context (mission, facility, terminology) and weave at least 3 unit-specific details into the section. If you cannot identify the unit, say so explicitly with [TO BE VERIFIED].`;
 
 
