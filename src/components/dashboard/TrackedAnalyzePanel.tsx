@@ -11,6 +11,7 @@ import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid,
 } from "recharts";
 import { DataProvenance } from "./DataSourceBadge";
+import { TeamingTargetsView } from "./TeamingTargetsView";
 
 const fmtMoney = (n: number) =>
   n >= 1_000_000_000 ? `$${(n / 1e9).toFixed(2)}B`
@@ -26,6 +27,8 @@ export function TrackedAnalyzePanel({
   title,
   solicitationNumber,
   onRunSearch,
+  teamId,
+  onAddToSandbox,
 }: {
   open: boolean;
   onClose: () => void;
@@ -34,6 +37,8 @@ export function TrackedAnalyzePanel({
   title: string | null;
   solicitationNumber?: string | null;
   onRunSearch?: (naics: string) => void;
+  teamId?: string | null;
+  onAddToSandbox?: (companyId: string) => void;
 }) {
   const [loading, setLoading] = useState(false);
   const [awards, setAwards] = useState<HistoricalAward[]>([]);
@@ -215,6 +220,14 @@ export function TrackedAnalyzePanel({
                   </div>
                 )}
               </section>
+
+              <TeamingTargetsView
+                awards={awards}
+                agency={agency}
+                naicsCodes={naicsCode ? [naicsCode] : []}
+                teamId={teamId ?? null}
+                onAddToSandbox={onAddToSandbox}
+              />
 
               <section>
                 <h3 className="text-sm font-semibold mb-2">Award trend</h3>

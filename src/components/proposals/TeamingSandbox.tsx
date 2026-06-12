@@ -75,12 +75,14 @@ function memberFromCompany(c: Company, opts: { isSelf: boolean; role: PwinRole; 
 }
 
 export function TeamingSandbox({
-  open, onOpenChange, parent, opportunity,
+  open, onOpenChange, parent, opportunity, addCompanyIdOnOpen,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
   parent: SandboxParent;
   opportunity: SandboxOpportunityContext;
+  /** If set, this company id is added to the sandbox team when companies finish loading. */
+  addCompanyIdOnOpen?: string | null;
 }) {
   const qc = useQueryClient();
   const teamId = parent.teamId;
@@ -110,8 +112,14 @@ export function TeamingSandbox({
     if (!companies || companies.length === 0 || members.length > 0) return;
     const initial = ownCompany ?? companies[0];
     setPerspectiveId(initial.id);
-    setMembers([memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 })]);
-  }, [open, companies, ownCompany, members.length]);
+    const seed = [memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 })];
+    // If caller asked us to preload a teaming-target company, add it as a sub.
+    if (addCompanyIdOnOpen && addCompanyIdOnOpen !== initial.id) {
+      const extra = companies.find((c) => c.id === addCompanyIdOnOpen);
+      if (extra) seed.push(memberFromCompany(extra, { isSelf: false, role: "sub", share: 20 }));
+    }
+    setMembers(seed);
+  }, [open, companies, ownCompany, members.length, addCompanyIdOnOpen]);
 
   // Reset when dialog closes
   useEffect(() => {
