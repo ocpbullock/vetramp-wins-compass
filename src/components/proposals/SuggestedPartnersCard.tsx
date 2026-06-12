@@ -15,7 +15,7 @@ import {
   type SuggestSelf,
   type Confidence,
 } from "@/lib/partner-suggest";
-import type { Partner } from "@/components/settings/PartnersPanel";
+import type { PartnerView as Partner } from "@/lib/companies";
 import type { OutreachPartnerInput } from "./TeamingOutreachModal";
 
 type ProposalLite = {
