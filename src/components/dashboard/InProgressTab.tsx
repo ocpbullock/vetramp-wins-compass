@@ -86,10 +86,20 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
   useEffect(() => { load(); /* eslint-disable-next-line */ }, [user]);
 
   async function remove(id: string) {
-    const { error } = await supabase.from("proposals").delete().eq("id", id);
+    const { data, error } = await supabase.from("proposals").delete().eq("id", id).select("id");
     if (error) return toast.error(error.message);
+    if (!data || data.length === 0) {
+      return toast.error("You don't have permission to delete this proposal — ask a team owner/admin");
+    }
     toast.success("Deleted");
     load();
+  }
+
+  function canDeleteProposal(p: Proposal): boolean {
+    if (isAdmin) return true;
+    if (user && p.user_id === user.id) return true;
+    if (userRole === "owner" || userRole === "admin") return true;
+    return false;
   }
 
   function viewOpportunity(p: Proposal) {
