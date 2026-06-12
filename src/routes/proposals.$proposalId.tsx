@@ -1600,7 +1600,7 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
       });
       const j = await r.json();
       if (!r.ok) { toast.error(j.error || `HTTP ${r.status}`); return; }
-      const merged = { ...intel, ...j.intel, notes };
+      const merged = { ...intel, ...j.intel };
       await onPatch({ customer_intel: merged });
       if (j.cached && j.cached_at) {
         const ms = Date.now() - new Date(j.cached_at).getTime();
