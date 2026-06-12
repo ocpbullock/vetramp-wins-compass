@@ -703,6 +703,155 @@ function DropZoneUpload({ onUpload }: { onUpload: (f: File, type?: string) => Pr
   );
 }
 
+function PasteReferenceText({ onAdd }: { onAdd: (input: { title: string; text: string; notes?: string }) => Promise<any> }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [text, setText] = useState("");
+  const [notes, setNotes] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!text.trim()) { toast.error("Paste some text first."); return; }
+    setSaving(true);
+    try {
+      const row = await onAdd({ title, text, notes });
+      if (row) {
+        setTitle(""); setText(""); setNotes(""); setOpen(false);
+      }
+    } finally { setSaving(false); }
+  }
+
+  if (!open) {
+    return (
+      <Button variant="outline" size="sm" className="w-full" onClick={() => setOpen(true)}>
+        <FileText className="w-3.5 h-3.5 mr-1" /> Paste text as reference
+      </Button>
+    );
+  }
+
+  return (
+    <div className="border border-border rounded p-2 space-y-2 bg-muted/30">
+      <div className="text-[11px] font-medium">Add reference text (no file required)</div>
+      <Input
+        placeholder="Short title (e.g. 'Agency RFI Q&A')"
+        value={title}
+        onChange={(e) => setTitle(e.target.value)}
+        className="h-7 text-xs"
+      />
+      <Textarea
+        placeholder="Paste any text the AI should treat as authoritative context — emails, RFI responses, conversation notes, prior solicitation language, etc."
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        rows={6}
+        className="text-xs"
+      />
+      <Textarea
+        placeholder="Optional note: how should the AI use this? (e.g. 'Customer confirmed the incumbent contract is being recompeted as-is')"
+        value={notes}
+        onChange={(e) => setNotes(e.target.value)}
+        rows={2}
+        className="text-xs"
+      />
+      <div className="flex gap-2">
+        <Button size="sm" onClick={save} disabled={saving || !text.trim()}>
+          {saving ? <RefreshCw className="w-3 h-3 mr-1 animate-spin" /> : <CheckCircle2 className="w-3 h-3 mr-1" />}
+          Save reference
+        </Button>
+        <Button size="sm" variant="ghost" onClick={() => { setOpen(false); setTitle(""); setText(""); setNotes(""); }}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function AttachmentRow({ att, onDelete, onUpdateAttachmentType, onUpdateAttachmentNotes }: {
+  att: any;
+  onDelete: (a: any) => void;
+  onUpdateAttachmentType: (a: any, t: string) => void;
+  onUpdateAttachmentNotes: (a: any, n: string) => void;
+}) {
+  const [notesDraft, setNotesDraft] = useState<string>(att.notes ?? "");
+  const [editingNotes, setEditingNotes] = useState(false);
+  const [savingNotes, setSavingNotes] = useState(false);
+  useEffect(() => { if (!editingNotes) setNotesDraft(att.notes ?? ""); }, [att.notes, editingNotes]);
+
+  const chars = att.parsed_content?.length || 0;
+  const empty = att.parsed_content !== null && att.parsed_content !== undefined && chars === 0;
+  const isPasted = att.source === "pasted" || !att.storage_path;
+
+  async function commitNotes() {
+    const next = notesDraft.trim();
+    if ((att.notes ?? "") === next) { setEditingNotes(false); return; }
+    setSavingNotes(true);
+    try {
+      await onUpdateAttachmentNotes(att, next);
+    } finally {
+      setSavingNotes(false);
+      setEditingNotes(false);
+    }
+  }
+
+  return (
+    <div className="border border-border rounded px-2 py-1.5 space-y-1">
+      <div className="flex items-center gap-2 text-xs">
+        <FileText className="w-3 h-3 text-muted-foreground" />
+        <span className="flex-1 truncate" title={att.filename}>
+          {att.filename}
+          {isPasted && <Badge variant="outline" className="ml-1.5 text-[9px] py-0">pasted</Badge>}
+        </span>
+        <Select value={att.file_type ?? "other"} onValueChange={(v) => onUpdateAttachmentType(att, v)}>
+          <SelectTrigger className="h-6 px-1.5 text-[10px] w-[110px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {ATTACHMENT_TYPE_OPTIONS.map((o) => (
+              <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <button onClick={() => onDelete(att)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+      </div>
+      {chars > 0 && (
+        <div className="text-[10px] text-muted-foreground pl-5">{chars.toLocaleString()} chars {isPasted ? "saved" : "extracted"}</div>
+      )}
+      {empty && (
+        <div className="text-[10px] text-destructive pl-5">
+          Could not extract text — try uploading a text-based PDF instead of a scanned image.
+        </div>
+      )}
+      <div className="pl-5">
+        {editingNotes ? (
+          <div className="space-y-1">
+            <Textarea
+              value={notesDraft}
+              onChange={(e) => setNotesDraft(e.target.value)}
+              placeholder="Note for the AI: what should it know about this document? (e.g. 'This is the final amendment — supersedes original Section L')"
+              rows={2}
+              className="text-[11px]"
+              autoFocus
+              onBlur={commitNotes}
+              onKeyDown={(e) => {
+                if (e.key === "Escape") { setNotesDraft(att.notes ?? ""); setEditingNotes(false); }
+                if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { e.preventDefault(); commitNotes(); }
+              }}
+            />
+            <div className="text-[10px] text-muted-foreground">
+              {savingNotes ? "Saving…" : "Click outside or press ⌘/Ctrl+Enter to save"}
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingNotes(true)}
+            className="text-[11px] text-left w-full text-muted-foreground hover:text-foreground italic"
+          >
+            {att.notes?.trim() ? <span className="not-italic">📝 {att.notes}</span> : "+ Add note for AI context"}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAutoFetch, onParse, parsing, parseProgress, proposalId, fetchResults, fetching, onUpdateAttachmentType, onUpdateAttachmentNotes, onAddPastedReference, onRefreshProposal }: any) {
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
