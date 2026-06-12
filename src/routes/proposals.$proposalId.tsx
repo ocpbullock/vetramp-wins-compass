@@ -49,13 +49,17 @@ const PRIME_SECTIONS: { id: string; title: string }[] = [
   { id: "compliance_matrix", title: "Compliance Cross-Reference Matrix" },
 ];
 
+// Sub-mode: we produce content ON BEHALF OF the prime's bid — drop-in inputs
+// for the prime's proposal volumes (technical / management / PP / key personnel),
+// written in the prime's voice where appropriate. The teaming pitch is a
+// secondary, optional one-pager.
 const SUB_SECTIONS: { id: string; title: string }[] = [
-  { id: "cap_cover_letter", title: "Cover Letter to Prime" },
-  { id: "cap_company_overview", title: "Company Overview" },
-  { id: "cap_core_capabilities", title: "Core Capabilities" },
-  { id: "cap_relevant_past_performance", title: "Relevant Past Performance" },
-  { id: "cap_differentiators", title: "Differentiators" },
-  { id: "cap_proposed_scope", title: "Proposed Scope Under Prime" },
+  { id: "sub_technical_input", title: "Technical Volume — Our Inputs" },
+  { id: "sub_management_input", title: "Management Volume — Our Inputs" },
+  { id: "sub_past_performance_input", title: "Past Performance — Our Entries" },
+  { id: "sub_key_personnel_input", title: "Key Personnel — Our Bios" },
+  { id: "sub_corporate_overview", title: "Corporate Overview Blurb (for Prime's appendix)" },
+  { id: "sub_teaming_pitch", title: "Teaming Pitch (1-page, optional)" },
 ];
 
 function sectionsFor(proposal: any) {
@@ -489,8 +493,10 @@ function ProposalPipeline() {
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to opportunities</Link>
           <div className="flex-1" />
           {proposal.engagement_type === "sub" ? (
-            <Badge className="bg-amber-500 hover:bg-amber-500/90" title={proposal.prime_contractor_name ? `Sub to: ${proposal.prime_contractor_name}` : "Subcontractor pursuit"}>
-              SUB{proposal.prime_contractor_name ? ` · Sub to: ${proposal.prime_contractor_name}` : ""}
+            <Badge className="bg-amber-500 hover:bg-amber-500/90" title={proposal.prime_contractor_name ? `Pursuing as sub — supporting ${proposal.prime_contractor_name}'s bid` : "Pursuing as sub"}>
+              {proposal.prime_contractor_name
+                ? `Pursuing as sub — supporting ${proposal.prime_contractor_name}'s bid`
+                : "Pursuing as sub"}
             </Badge>
           ) : (
             <Badge className="bg-blue-600 hover:bg-blue-600/90">PRIME</Badge>
@@ -540,7 +546,7 @@ function ProposalPipeline() {
             <TabsTrigger value="intake">1. Intake</TabsTrigger>
             <TabsTrigger value="intel">2. Customer Intel</TabsTrigger>
             <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
-            <TabsTrigger value="solution">4. {proposal.engagement_type === "sub" ? "Capabilities" : "Solution Design"}</TabsTrigger>
+            <TabsTrigger value="solution">4. {proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}</TabsTrigger>
             <TabsTrigger value="generate">5. Generate</TabsTrigger>
           </TabsList>
 
@@ -950,7 +956,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                 className={`rounded-md border-2 p-4 text-left transition ${proposal.engagement_type === "sub" ? "border-amber-500 bg-amber-500/5" : "border-border hover:bg-muted"}`}
               >
                 <div className="text-sm font-semibold">Pursuing as Sub</div>
-                <div className="text-[11px] text-muted-foreground mt-1">Capabilities statement / teaming submission directed at a prime.</div>
+                <div className="text-[11px] text-muted-foreground mt-1">Produce drop-in inputs for the prime's volumes (technical, management, past performance, key personnel), written in the prime's voice. Includes an optional 1-page teaming pitch.</div>
               </button>
             </div>
             {proposal.engagement_type === "sub" && (
@@ -1342,7 +1348,7 @@ function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, 
           <CardTitle className="text-sm">Generation queue</CardTitle>
           <CardDescription className="text-xs">
             {generatedCount} of {SECS.length} drafted
-            {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Capabilities mode</span>}
+            {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Sub-to-prime inputs{proposal.prime_contractor_name ? ` for ${proposal.prime_contractor_name}` : ""}</span>}
             {followingTemplate && <span className="ml-1 text-primary">· Template-driven</span>}
           </CardDescription>
         </CardHeader>

@@ -84,30 +84,35 @@ RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, 
       : "";
 
     const baseSystemPrompt = engagement === "sub"
-      ? `You are a senior federal capture manager writing a CAPABILITIES STATEMENT / TEAMING SUBMISSION for ${companyIdentity(companyProfile)}, who is pursuing this opportunity as a SUBCONTRACTOR under the prime named below. Do NOT write a full Section L/M proposal volume. Produce a concise document tailored to convince the prime to bring the offeror onto their team for the targeted scope.
+      ? `You are a senior federal capture manager producing SUBCONTRACTOR INPUTS for ${companyIdentity(companyProfile)}, who is teamed under the prime named below. The prime is leading the proposal. Your job is NOT to write a teaming pitch addressed to the prime, and NOT to write a standalone Section L/M volume. Instead, produce drop-in content that the prime can paste into THEIR proposal volumes with minimal editing.
 
-PRIME CONTRACTOR: ${primeContractorName || "(unspecified)"}
-TARGETED SCOPE AREAS: ${targetedScopeAreas || "(unspecified)"}
+VOICE & FRAMING RULES (critical):
+- Write in the PRIME'S voice for content destined for the prime's volumes (technical, management, past performance, key personnel). Refer to the offeror in the third person ("${companyIdentity(companyProfile)}, a teammate to ${primeContractorName || "the prime"}, will…") so the prime can lift the text directly.
+- Position the offeror as a TEAM MEMBER on the prime's team, not as a competing prime. Do not address the prime as the audience.
+- The audience for this content is the GOVERNMENT EVALUATOR reading the prime's proposal — write to evaluation criteria, not to BD/capture readers.
+- The ONE exception is the optional "Teaming Pitch" section at the very end, which IS addressed to the prime's capture lead and serves as a secondary recruiting artifact (1 page max). Clearly mark it "[SECONDARY ARTIFACT — Teaming Pitch, not for the prime's volume]".
 
-COMPANY PROFILE (sole source of truth — do not invent identity, certifications, locations, past performance):
+PRIME CONTRACTOR (lead offeror): ${primeContractorName || "(unspecified)"}
+TARGETED SCOPE AREAS (our work-share under the prime): ${targetedScopeAreas || "(unspecified)"}
+
+COMPANY PROFILE — the offeror (sole source of truth — do not invent identity, certifications, locations, past performance):
 ${renderCompanyProfileBlock(companyProfile)}
 
-Generate the document in markdown with these sections IN ORDER:
-1. COVER LETTER to the prime's capture/BD lead — reference the solicitation by name and number; state explicitly pursuing as a sub.
-2. COMPANY OVERVIEW — narrowed to the targeted scope areas.
-3. RELEVANT PAST PERFORMANCE — TABLE using only entries from the company profile past_performance; one-sentence relevance note per row.
-4. KEY PERSONNEL — TABLE | Name | Role | Years | Clearance | Relevance |; use [TO BE NAMED] when unknown.
-5. CERTIFICATIONS & CLEARANCES — TABLE strictly from the profile; tie each to the prime's small-business subcontracting needs.
-6. WHY WE FIT THIS PRIME ON THIS OPPORTUNITY — 2-3 paragraphs naming the prime; tie our differentiators to what the prime needs from subs.
-7. DIFFERENTIATORS FOR THE TARGETED SCOPE — 5 bullets, each with a proof point.
-8. PROPOSED TEAMING ROLE — work-share request, scope boundaries, contract vehicle posture.
+Generate the document in markdown with these sections IN ORDER. Each section produces text intended for insertion into the corresponding prime volume — prefix every section with a one-line note: "> Insert into: <Prime Volume Name>".
+
+1. TECHNICAL VOLUME — OUR INPUTS — Subcontractor technical contribution for the targeted scope areas. Mirror SOW numbering when applicable. Written in the prime's voice. Include SLO/approach tables where relevant. Make clear how our contribution slots into the prime's overall solution.
+2. MANAGEMENT VOLUME — OUR INPUTS — Subcontractor management contribution: governance interface with the prime PM, our internal QA, escalation path INTO the prime's PMO, subcontract-management posture. Written in the prime's voice.
+3. PAST PERFORMANCE — OUR ENTRIES — TABLE of relevant past performance (from the COMPANY PROFILE) formatted for the prime's PP volume: | Contract | Customer | Period | Value | Scope Relevance to This Effort | Role (prime/sub) | CPARS |. Add a 1-paragraph relevance write-up per entry, written in the third person so the prime can drop it into their PP narrative.
+4. KEY PERSONNEL — OUR BIOS — Bios for any key personnel the offeror is contributing, formatted for the prime's KP section. Use "[TO BE NAMED]" when unknown.
+5. CORPORATE OVERVIEW BLURB — 1-2 paragraph corporate overview suitable for the prime's "Team & Subcontractors" appendix or org-chart annotations. Third person, evaluator-facing.
+6. TEAMING PITCH (SECONDARY ARTIFACT, OPTIONAL, 1 PAGE MAX) — Prefix with "[SECONDARY ARTIFACT — Teaming Pitch, not for the prime's volume]". Addressed to the prime's capture/BD lead. Make the case for the offeror's role on the team; reference differentiators, certifications, and past performance; close with a clear work-share ask.
 
 Use markdown tables for structured data. Be specific. If a field is missing from the company profile, insert "[TO BE VERIFIED — update in Capture Intel]" rather than inventing details.`
       : buildSystemPrompt(companyProfile);
 
     const systemPrompt = templateBlock ? `${baseSystemPrompt}\n${templateBlock}` : baseSystemPrompt;
 
-    const userPrompt = `Generate ${engagement === "sub" ? "a CAPABILITIES STATEMENT / TEAMING SUBMISSION" : "a complete proposal"} for the following solicitation:
+    const userPrompt = `Generate ${engagement === "sub" ? "SUBCONTRACTOR INPUTS for the prime's proposal volumes (plus an optional 1-page teaming pitch at the end)" : "a complete proposal"} for the following solicitation:
 
 Title: ${opportunity.title || "N/A"}
 Solicitation #: ${opportunity.solicitationNumber || "N/A"}
@@ -122,7 +127,7 @@ Place of Performance: ${JSON.stringify(opportunity.placeOfPerformance || {})}
 Description:
 ${opportunity.description || "(No description provided — infer from title and agency)"}
 ${userContextBlock}
-${engagement === "sub" ? `Generate the FULL capabilities/teaming document now following all sections from the system prompt.` : `Generate the FULL proposal now following all sections from the system prompt.`}`;
+${engagement === "sub" ? `Generate the FULL set of sub-to-prime volume inputs now following all sections from the system prompt. Remember: sections 1-5 are written in the prime's voice for insertion into the prime's volumes; section 6 is the only piece addressed to the prime.` : `Generate the FULL proposal now following all sections from the system prompt.`}`;
 
 
     let res: Response;

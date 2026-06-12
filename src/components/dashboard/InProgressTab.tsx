@@ -139,8 +139,10 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 {p.engagement_type === "sub" ? (
-                  <Badge className="bg-amber-500 hover:bg-amber-500/90" title={p.prime_contractor_name ? `Sub to: ${p.prime_contractor_name}` : "Subcontractor pursuit"}>
-                    SUB{p.prime_contractor_name ? ` · ${p.prime_contractor_name}` : ""}
+                  <Badge className="bg-amber-500 hover:bg-amber-500/90" title={p.prime_contractor_name ? `Pursuing as sub — supporting ${p.prime_contractor_name}'s bid` : "Pursuing as sub"}>
+                    {p.prime_contractor_name
+                      ? `Sub — supporting ${p.prime_contractor_name}`
+                      : "Pursuing as sub"}
                   </Badge>
                 ) : (
                   <Badge className="bg-blue-600 hover:bg-blue-600/90">PRIME</Badge>
