@@ -253,6 +253,16 @@ export function OpportunitiesTab({
                     <td>
                       <span className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${badgeClassForType(o.type)}`}>{o.type}</span>
                     </td>
+                    <td>
+                      <PwinChip
+                        opp={{
+                          id: (o.solicitationNumber ?? o.noticeId ?? "") as string,
+                          naics: o.naicsCode,
+                          agency: shortAgency(o.fullParentPathName),
+                          setAside: o.typeOfSetAside ?? o.setAside ?? null,
+                        }}
+                      />
+                    </td>
                     <td className="text-xs">
                       <IncumbentCell m={m} />
                     </td>
