@@ -112,16 +112,15 @@ export function searchEntities(params: {
   uei?: string;
   name?: string;
   naics_code?: string;
-  naics?: string;
   small_business_type?: string;
-  socioeconomic?: string;
 } & TangoPagedParams) {
-  const { page_size, vendor_name, naics_code, small_business_type, ...rest } = params;
+  const { page_size, vendor_name, naics_code, small_business_type: _ignored, ...rest } = params;
+  // Tango only accepts `naics_code` and `name`/`search` here. Set-aside filtering
+  // is not a supported query param — callers filter results post-fetch.
   return tangoFetch<TangoResponse<any>>("/api/entities/", {
     ...rest,
     name: rest.name ?? vendor_name,
-    naics: rest.naics ?? naics_code,
-    socioeconomic: rest.socioeconomic ?? small_business_type,
+    naics_code: naics_code,
     limit: page_size,
   });
 }
