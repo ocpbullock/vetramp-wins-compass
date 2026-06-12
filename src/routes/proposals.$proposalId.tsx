@@ -1507,6 +1507,14 @@ function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, 
           <div>
             <CardTitle className="text-base">{SECS.find((s) => s.id === active)?.title ?? "—"}</CardTitle>
             <CardDescription className="text-xs">{current?.word_count ?? 0} words</CardDescription>
+            {Array.isArray(current?.user_context_applied) && current!.user_context_applied.length > 0 && (
+              <div className="mt-1 text-[11px] text-muted-foreground flex flex-wrap items-center gap-1">
+                <span>Your facts applied:</span>
+                {current!.user_context_applied.map((k: string) => (
+                  <Badge key={k} variant="outline" className="text-[10px]">{USER_CONTEXT_LABELS[k as keyof typeof USER_CONTEXT_LABELS] ?? k}</Badge>
+                ))}
+              </div>
+            )}
           </div>
           <Button size="sm" onClick={() => active && onGenerate(active, SECS.find((s) => s.id === active)!.title, { template: templatePayload })} disabled={lockButtons || !active} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
             <Sparkles className="w-4 h-4 mr-1" />{active && sectionGen[active] ? "Generating…" : current?.content ? "Regenerate" : "Generate"}
