@@ -12,7 +12,11 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users, FolderOpen, Sparkles } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Plus, Pencil, Trash2, Crosshair, BarChart3, ExternalLink, Swords, FileSignature, Users, FolderOpen, Sparkles, MoreHorizontal } from "lucide-react";
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
 import { useTeam } from "@/lib/team";
 import { useNavigate } from "@tanstack/react-router";
@@ -339,50 +343,98 @@ export function TrackedOpportunitiesTab({
                 >
                   <TableCell className="w-[220px]">
                     <div className="flex items-center gap-1">
-                      <StarButton
-                        input={{
-                          noticeId: `tracked:${i.id}`,
-                          title: i.title,
-                          naicsCode: i.naics_code,
-                          responseDeadline: i.response_deadline ?? null,
-                          setAsideDescription: null,
-                          sourceData: i,
-                        }}
-                      />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span>
+                            <StarButton
+                              input={{
+                                noticeId: `tracked:${i.id}`,
+                                title: i.title,
+                                naicsCode: i.naics_code,
+                                responseDeadline: i.response_deadline ?? null,
+                                setAsideDescription: null,
+                                sourceData: i,
+                              }}
+                            />
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>Star</TooltipContent>
+                      </Tooltip>
                       {onCompete && (
-                        <Button size="sm" variant="ghost" onClick={() => onCompete(trackedToSamOpp(i))} title="Competitive intel">
-                          <Swords className="w-4 h-4 text-primary" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="ghost" onClick={() => onCompete(trackedToSamOpp(i))}>
+                              <Swords className="w-4 h-4 text-primary" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Competitive intel</TooltipContent>
+                        </Tooltip>
                       )}
                       {proposalByTracked[i.id] ? (
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: proposalByTracked[i.id] } })}
-                          title="Open existing team proposal workspace"
-                        >
-                          <FolderOpen className="w-4 h-4 text-primary" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => navigate({ to: "/proposals/$proposalId", params: { proposalId: proposalByTracked[i.id] } })}
+                            >
+                              <FolderOpen className="w-4 h-4 text-primary" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Open existing team proposal workspace</TooltipContent>
+                        </Tooltip>
                       ) : onPropose && (
-                        <Button size="sm" variant="ghost" onClick={() => onPropose(trackedToSamOpp(i), i.id)} title="Start proposal">
-                          <FileSignature className="w-4 h-4 text-money" />
-                        </Button>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button size="sm" variant="ghost" onClick={() => onPropose(trackedToSamOpp(i), i.id)}>
+                              <FileSignature className="w-4 h-4 text-money" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Start proposal</TooltipContent>
+                        </Tooltip>
                       )}
-                      <Button size="sm" variant="ghost" onClick={() => setAnalyze(i)} title="Analyze with USAspending">
-                        <BarChart3 className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setTeamRow(i)} title="Create opportunity team">
-                        <Users className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setSandboxRow(i)} title="Teaming sandbox / pWin">
-                        <Sparkles className="w-4 h-4 text-primary" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => { setEditing(i); setDialogOpen(true); }} title="Edit">
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(i)} title="Delete">
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" variant="ghost" onClick={() => { setEditing(i); setDialogOpen(true); }}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Edit</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(i)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Delete</TooltipContent>
+                      </Tooltip>
+                      <DropdownMenu>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <DropdownMenuTrigger asChild>
+                              <Button size="sm" variant="ghost">
+                                <MoreHorizontal className="w-4 h-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                          </TooltipTrigger>
+                          <TooltipContent>More actions</TooltipContent>
+                        </Tooltip>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => setAnalyze(i)}>
+                            <BarChart3 className="w-4 h-4 mr-2" />
+                            Analyze with USAspending
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setTeamRow(i)}>
+                            <Users className="w-4 h-4 mr-2" />
+                            Create opportunity team
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => setSandboxRow(i)}>
+                            <Sparkles className="w-4 h-4 mr-2" />
+                            Teaming Sandbox
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </TableCell>
                   <TableCell className="max-w-[340px]">
