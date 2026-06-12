@@ -8,7 +8,7 @@ import {
   missingProfileResponse,
   renderCompanyProfileBlock,
 } from "../_shared/company-profile.ts";
-import { normalizeUserContext, renderUserContextPrompt } from "../_shared/user-context.ts";
+import { appliedFacts, normalizeUserContext, renderUserContextPrompt } from "../_shared/user-context.ts";
 
 const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   past_performance: ["past_performance"],
@@ -369,7 +369,15 @@ Output the markdown for this section now. Do NOT include other sections.`;
       return aiErrorResponse(e, corsHeaders);
     }
 
-    return new Response(res.body, { headers: { ...corsHeaders, "Content-Type": "text/event-stream" } });
+    const applied = appliedFacts(userContext);
+    return new Response(res.body, {
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Access-Control-Expose-Headers": "x-user-context-applied",
+        "x-user-context-applied": applied.join(","),
+      },
+    });
   } catch (e: any) {
     return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }

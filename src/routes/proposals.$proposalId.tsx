@@ -100,7 +100,7 @@ function sectionsFor(proposal: any) {
   return proposal?.engagement_type === "sub" ? SUB_SECTIONS : PRIME_SECTIONS;
 }
 
-type Section = { content: string; status: "draft" | "reviewed" | "final"; word_count: number };
+type Section = { content: string; status: "draft" | "reviewed" | "final"; word_count: number; user_context_applied?: string[] };
 
 function countdown(deadline?: string | null) {
   if (!deadline) return null;
@@ -457,6 +457,8 @@ function ProposalPipeline() {
         const j = await resp.json().catch(() => ({ error: "Failed" }));
         toast.error(friendlyError({ status: resp.status, message: j.error, code: j.code })); return;
       }
+      const appliedHeader = resp.headers.get("x-user-context-applied") ?? "";
+      const userContextApplied = appliedHeader.split(",").map((s) => s.trim()).filter(Boolean);
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "", acc = "", done = false;
@@ -481,7 +483,7 @@ function ProposalPipeline() {
               // into the LATEST sections snapshot, not the stale render closure.
               setProposal((p: any) => ({
                 ...p,
-                sections: { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc } },
+                sections: { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc, user_context_applied: userContextApplied } },
               }));
             }
           } catch { buf = line + "\n" + buf; break; }
@@ -493,7 +495,7 @@ function ProposalPipeline() {
       // earlier in this run (e.g. during generateAll's sequential loop).
       let finalSections: Record<string, any> = {};
       setProposal((p: any) => {
-        finalSections = { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc } };
+        finalSections = { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc, user_context_applied: userContextApplied } };
         return { ...p, sections: finalSections };
       });
       const { error: saveErr } = await supabase
@@ -1505,6 +1507,14 @@ function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, 
           <div>
             <CardTitle className="text-base">{SECS.find((s) => s.id === active)?.title ?? "—"}</CardTitle>
             <CardDescription className="text-xs">{current?.word_count ?? 0} words</CardDescription>
+            {Array.isArray(current?.user_context_applied) && current!.user_context_applied.length > 0 && (
+              <div className="mt-1 text-[11px] text-muted-foreground flex flex-wrap items-center gap-1">
+                <span>Your facts applied:</span>
+                {current!.user_context_applied.map((k: string) => (
+                  <Badge key={k} variant="outline" className="text-[10px]">{USER_CONTEXT_LABELS[k as keyof typeof USER_CONTEXT_LABELS] ?? k}</Badge>
+                ))}
+              </div>
+            )}
           </div>
           <Button size="sm" onClick={() => active && onGenerate(active, SECS.find((s) => s.id === active)!.title, { template: templatePayload })} disabled={lockButtons || !active} title={lockButtons ? "Another AI task is running — please wait." : undefined}>
             <Sparkles className="w-4 h-4 mr-1" />{active && sectionGen[active] ? "Generating…" : current?.content ? "Regenerate" : "Generate"}
