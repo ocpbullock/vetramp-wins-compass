@@ -164,6 +164,11 @@ export function TeamingCard({
             </Button>
           )}
           {proposal && (
+            <Button size="sm" variant="secondary" onClick={() => setSandboxOpen(true)} disabled={!teamId}>
+              <Sparkles className="w-4 h-4 mr-1" /> Sandbox
+            </Button>
+          )}
+          {proposal && (
             <Popover open={outreachPicker} onOpenChange={setOutreachPicker}>
               <PopoverTrigger asChild>
                 <Button size="sm" variant="secondary" disabled={!teamId}>
