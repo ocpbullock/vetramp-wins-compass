@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { useTeamId } from "@/lib/team";
+import { useTeam } from "@/lib/team";
 import { toast } from "sonner";
 import type { SamOpportunity } from "@/lib/api";
 
