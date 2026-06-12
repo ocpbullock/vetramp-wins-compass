@@ -42,7 +42,16 @@ export type PwinTeamMember = {
   }>;
   isIncumbent?: boolean;
   workedWithIncumbent?: boolean;
-  primeRelationshipStrength?: number; // 0..100, sub-mode only
+  /** 0..100 baseline relationship strength (subjective). Used by both
+   *  prime_relationship (sub mode) and partner_fit (prime mode). */
+  primeRelationshipStrength?: number;
+  // ----- Established-partnership signals. Each contributes an explicit
+  // bonus to the partner-fit / prime-relationship factor and is shown in
+  // the factor breakdown so users can see WHY the score moved.
+  isEstablishedPartner?: boolean;       // is_existing_partner on the company
+  priorContractTogether?: boolean;      // worked_together_before / prior_contract_together
+  hasNda?: boolean;                     // mutual NDA signed
+  hasTeamingAgreement?: boolean;        // TA on file
 };
 
 export type PwinContext = {
@@ -63,7 +72,8 @@ export type FactorKey =
   | "vehicle_access"
   | "incumbent"
   | "completeness"
-  | "prime_relationship";
+  | "prime_relationship"
+  | "partner_fit";
 
 export type FactorScore = {
   key: FactorKey;
@@ -267,18 +277,94 @@ function scoreCompleteness(_ctx: PwinContext, active: PwinTeamMember[], selfShar
   };
 }
 
+// ---------- partner-fit / established-partnership bonus ----------
+
+/**
+ * Established-partner signals translate into an additive bonus on top of the
+ * baseline relationship strength. Each signal contributes a fixed,
+ * user-visible amount so the factor breakdown can show exactly WHY the score
+ * moved (e.g. "Established partner: +10, prior contract: +15").
+ *
+ * Total bonus is capped at 35 and the final score saturates at 100.
+ */
+export type PartnershipBonusLine = { label: string; points: number };
+
+export function computePartnershipBonus(m: PwinTeamMember): {
+  bonus: number;
+  lines: PartnershipBonusLine[];
+} {
+  const lines: PartnershipBonusLine[] = [];
+  if (m.isEstablishedPartner) lines.push({ label: "Established partner", points: 10 });
+  if (m.priorContractTogether) lines.push({ label: "Prior contract together", points: 15 });
+  if (m.hasTeamingAgreement) lines.push({ label: "Teaming agreement on file", points: 10 });
+  if (m.hasNda) lines.push({ label: "NDA on file", points: 5 });
+  const raw = lines.reduce((s, l) => s + l.points, 0);
+  return { bonus: Math.min(35, raw), lines };
+}
+
+function formatBonusBreakdown(lines: PartnershipBonusLine[]): string {
+  return lines.map((l) => `${l.label}: +${l.points}`).join(", ");
+}
+
 function scorePrimeRelationship(ctx: PwinContext, active: PwinTeamMember[]): FactorScore | null {
   if (ctx.engagementType !== "sub") return null;
-  const prime = active.find((m) => m.role === "prime");
-  const strength = prime?.primeRelationshipStrength ?? 0;
+  const prime = active.find((m) => m.role === "prime" && !m.isSelf)
+    ?? active.find((m) => m.role === "prime");
+  if (!prime) {
+    return {
+      key: "prime_relationship", label: "Prime Relationship Strength", weight: 0.10,
+      score: 0,
+      explanation: "No prime selected on the team.",
+    };
+  }
+  const base = Math.round(prime.primeRelationshipStrength ?? 0);
+  const { bonus, lines } = computePartnershipBonus(prime);
+  const score = Math.min(100, base + bonus);
+  const baseLabel = base > 0
+    ? `Prior teaming history with ${prime.name} (strength ${base})`
+    : `No prior teaming history with ${prime.name} recorded`;
+  const explanation = lines.length > 0
+    ? `${baseLabel}. Established-partner bonuses → ${formatBonusBreakdown(lines)} = +${bonus}.`
+    : `${baseLabel}.`;
   return {
     key: "prime_relationship", label: "Prime Relationship Strength", weight: 0.10,
-    score: Math.round(strength),
-    explanation: prime
-      ? (strength > 0
-          ? `Prior teaming history with ${prime.name} (strength ${Math.round(strength)}).`
-          : `No prior teaming history found with ${prime.name}.`)
-      : "No prime selected on the team.",
+    score, explanation,
+  };
+}
+
+function scorePartnerFit(ctx: PwinContext, active: PwinTeamMember[]): FactorScore | null {
+  if (ctx.engagementType !== "prime") return null;
+  const partners = active.filter((m) => !m.isSelf);
+  if (partners.length === 0) {
+    return {
+      key: "partner_fit", label: "Partner Fit", weight: 0.10, score: 60,
+      explanation: "No teaming partners on this scenario — solo bid.",
+    };
+  }
+  // Per-partner score = baseline relationship strength + established-partner bonuses.
+  type PerPartner = { name: string; base: number; bonus: number; lines: PartnershipBonusLine[]; score: number };
+  const rows: PerPartner[] = partners.map((p) => {
+    const base = Math.round(p.primeRelationshipStrength ?? 0);
+    const { bonus, lines } = computePartnershipBonus(p);
+    return { name: p.name, base, bonus, lines, score: Math.min(100, base + bonus) };
+  });
+  // Weight by partner work share so a 5%-share teammate doesn't dominate.
+  const totalShare = partners.reduce((s, p) => s + Math.max(1, p.workShare || 0), 0);
+  const weighted = rows.reduce((s, r, i) => {
+    const w = Math.max(1, partners[i].workShare || 0) / totalShare;
+    return s + r.score * w;
+  }, 0);
+  const score = Math.round(weighted);
+  const explanation = rows
+    .map((r) => {
+      const bits = [`base ${r.base}`];
+      if (r.lines.length > 0) bits.push(formatBonusBreakdown(r.lines) + ` = +${r.bonus}`);
+      return `${r.name} (${bits.join("; ")}) → ${r.score}`;
+    })
+    .join(" · ");
+  return {
+    key: "partner_fit", label: "Partner Fit", weight: 0.10, score,
+    explanation: explanation || "No partnership signals on the team yet.",
   };
 }
 
@@ -287,7 +373,9 @@ function scorePrimeRelationship(ctx: PwinContext, active: PwinTeamMember[]): Fac
 // Multiplicative bumps applied before renormalizing to sum-to-1.
 // Values reflect what tends to matter most under each teaming model.
 const MODEL_MULTIPLIERS: Record<RelationshipModel, Partial<Record<FactorKey, number>>> = {
-  prime_with_subs: {},
+  prime_with_subs: {
+    partner_fit: 1.5, // established partners matter most when we lead
+  },
   sub_to_prime: {
     prime_relationship: 2.0, // who you sub to dominates
     past_performance:   1.3, // scope fit / proof on similar work matters more
@@ -298,11 +386,13 @@ const MODEL_MULTIPLIERS: Record<RelationshipModel, Partial<Record<FactorKey, num
     set_aside:          1.4, // JVs commonly stack set-aside qualification
     past_performance:   1.2,
     completeness:       1.1,
+    partner_fit:        1.6, // JV viability hinges on partnership maturity
   },
   mentor_protege: {
     set_aside:          1.5, // mentor enables protégé to bid
     past_performance:   1.2,
     prime_relationship: 1.3,
+    partner_fit:        1.4,
   },
   niche_sub: {
     past_performance:   1.6, // niche capability proof dominates
@@ -344,12 +434,14 @@ export function calculatePwin(ctx: PwinContext, members: PwinTeamMember[]): Pwin
     scoreCompleteness(ctx, active, selfShare),
   ];
   const rel = scorePrimeRelationship(ctx, active);
-  if (rel) {
-    // Rebalance: shrink the other weights slightly to fit prime relationship.
+  const partnerFit = scorePartnerFit(ctx, active);
+  const extras = [rel, partnerFit].filter((f): f is FactorScore => !!f);
+  if (extras.length > 0) {
+    const totalExtra = extras.reduce((s, f) => s + f.weight, 0);
     const totalOther = factors.reduce((s, f) => s + f.weight, 0);
-    const scale = (1 - rel.weight) / totalOther;
+    const scale = (1 - totalExtra) / totalOther;
     for (const f of factors) f.weight = +(f.weight * scale).toFixed(4);
-    factors.push(rel);
+    factors.push(...extras);
   }
 
   // Apply per-relationship-model reweighting after baseline weights are set.
@@ -395,6 +487,8 @@ const NEXT_ACTION_BY_FACTOR: Record<FactorKey, (model?: RelationshipModel) => st
   completeness: () => "Rebalance work share so allocations sum to ~100% across the team.",
   prime_relationship: () =>
     "Schedule a discovery call with the prime and document prior teaming wins in the file.",
+  partner_fit: () =>
+    "Lock in established partners — get an NDA + teaming agreement signed and capture prior-contract history on the company record.",
 };
 
 export function deriveInsights(result: PwinResult, model?: RelationshipModel): ScenarioInsights {

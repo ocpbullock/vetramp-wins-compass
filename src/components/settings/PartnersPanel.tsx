@@ -285,6 +285,9 @@ function CompanyDialog({
         worked_together_before: form.worked_together_before,
         relationship_strength: form.relationship_strength,
         relationship_status: form.relationship_status,
+        has_nda: form.has_nda,
+        has_teaming_agreement: form.has_teaming_agreement,
+        prior_contract_together: form.prior_contract_together,
         source: form.source,
         external_ref: form.external_ref ?? null,
         notes: form.notes.trim() || null,
@@ -384,6 +387,33 @@ function CompanyDialog({
                   onCheckedChange={(v) => update({ worked_together_before: v })}
                 />
               </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="prior-contract">Prior contract together</Label>
+                <Switch
+                  id="prior-contract"
+                  checked={form.prior_contract_together}
+                  onCheckedChange={(v) => update({ prior_contract_together: v })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="has-nda">NDA on file</Label>
+                <Switch
+                  id="has-nda"
+                  checked={form.has_nda}
+                  onCheckedChange={(v) => update({ has_nda: v })}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="has-ta">Teaming agreement on file</Label>
+                <Switch
+                  id="has-ta"
+                  checked={form.has_teaming_agreement}
+                  onCheckedChange={(v) => update({ has_teaming_agreement: v })}
+                />
+              </div>
+              <p className="text-[11px] text-muted-foreground">
+                These partnership signals feed an explicit bonus in the pWin Partner Fit factor.
+              </p>
               <div>
                 <div className="flex justify-between text-xs mb-1">
                   <Label>Relationship strength</Label>
@@ -445,6 +475,9 @@ function initialForm(c: Company | null, seed: CompanyDraft | null) {
     worked_together_before: !!(c?.worked_together_before ?? seed?.worked_together_before),
     relationship_strength: (c?.relationship_strength ?? seed?.relationship_strength ?? 0) as number,
     relationship_status: (c?.relationship_status ?? seed?.relationship_status ?? "prospective") as Company["relationship_status"],
+    has_nda: !!((c as any)?.has_nda ?? (seed as any)?.has_nda),
+    has_teaming_agreement: !!((c as any)?.has_teaming_agreement ?? (seed as any)?.has_teaming_agreement),
+    prior_contract_together: !!((c as any)?.prior_contract_together ?? (seed as any)?.prior_contract_together),
     source: (c?.source ?? seed?.source ?? "manual") as string,
     external_ref: c?.external_ref ?? seed?.external_ref ?? null,
     notes: (c?.notes ?? seed?.notes ?? "") as string,
