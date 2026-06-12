@@ -419,6 +419,17 @@ function ManageTeamDialog({
   const resendFn = useServerFn(resendTeamInvite);
   const cancelFn = useServerFn(cancelTeamInvite);
   const listProposalsFn = useServerFn(listTeamProposals);
+  const linkFn = useServerFn(linkProposalToOpportunityTeam);
+  const unlinkFn = useServerFn(unlinkProposalFromOpportunityTeam);
+  const listLinkableFn = useServerFn(listLinkableProposalsForOrg);
+  const [linkPick, setLinkPick] = useState<string>("");
+  const parentTeamId = team.team_type === "opportunity" ? team.parent_team_id : null;
+
+  const linkableQ = useQuery({
+    queryKey: ["linkable-proposals", parentTeamId, team.id],
+    enabled: open && isOpp && canManage && !!parentTeamId,
+    queryFn: () => listLinkableFn({ data: { parentTeamId: parentTeamId! } }),
+  });
 
   const membersQ = useQuery({
     queryKey: ["team-members-full", team.id],
