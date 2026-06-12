@@ -569,7 +569,7 @@ function ProposalPipeline() {
           </TabsContent>
           <TabsContent value="generate" className="mt-4 space-y-4">
             <StepErrorBoundary label="generate">
-              <GenerateStep proposal={proposal} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
+              <GenerateStep proposal={proposal} attachments={attachments} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
                 const wc = content.split(/\s+/).filter(Boolean).length;
                 const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
                 patchProposal({ sections: next });
