@@ -130,9 +130,8 @@ function ProposalPipeline() {
     if (!user) return;
     (async () => {
       setLoading(true);
-      const [{ data: p, error: pe }, { data: cp }, { data: atts }] = await Promise.all([
+      const [{ data: p, error: pe }, { data: atts }] = await Promise.all([
         supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle(),
-        supabase.from("company_profile").select("profile_data").order("updated_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false }),
       ]);
       if (pe || !p) { toast.error("Proposal not found"); navigate({ to: "/" }); return; }
@@ -161,8 +160,12 @@ function ProposalPipeline() {
       }
       setDataIssues(finalCheck.issues);
 
+      // Source company profile from the unified `companies` table (own-company row
+      // mirrors the legacy company_profile.profile_data via DB trigger).
+      const profileData = await getOwnCompanyProfileData(proposalRow.team_id).catch(() => null);
+
       setProposal(proposalRow);
-      setCompanyProfile(cp?.profile_data ?? null);
+      setCompanyProfile(profileData);
       setAttachments(atts ?? []);
       setLoading(false);
     })();
