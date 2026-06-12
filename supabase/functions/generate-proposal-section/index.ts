@@ -100,35 +100,41 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
 - One markdown TABLE: | Req # | SOW Reference | Requirement (verbatim quote) | Proposal Section | Page # |.
 - If complianceMatrix is provided, render those rows. Otherwise, derive a best-effort matrix from the SOW text or attachments.`,
 
-  // ----- Capabilities statement sections (engagement_type = "sub") -----
-  cap_cover_letter: `Write a one-page COVER LETTER addressed to the PRIME contractor's capture/business-development lead.
-- Reference the opportunity by title and solicitation number.
-- State explicitly that the offeror is pursuing this as a SUBCONTRACTOR under the prime.
-- Connect the offeror's experience (from COMPANY PROFILE) to the prime's needs on this opportunity.
-- 3 short paragraphs. No generic boilerplate.`,
-  cap_company_overview: `Write a CAPABILITIES OVERVIEW (1 page).
-- Who we are (legal name, certifications, UEI/CAGE only if present in profile).
-- Core services and competencies, narrowed to the TARGETED SCOPE AREAS.
-- Geographic reach and clearance posture.`,
-  cap_relevant_past_performance: `Write RELEVANT PAST PERFORMANCE for the targeted scope area.
-- One markdown TABLE: | Contract | Agency | Value | Period | Scope Relevance |.
-- Use ONLY entries from the PAST PERFORMANCE LIBRARY / company profile past_performance.
-- For each row include a one-sentence relevance note tied to the targeted scope.`,
-  cap_key_personnel: `Write KEY PERSONNEL.
-- TABLE: | Name | Role | Years Experience | Clearance | Relevance to Scope |.
-- If a name is unknown use "[TO BE NAMED]" — never invent identities.`,
-  cap_certifications_clearances: `Write CERTIFICATIONS & CLEARANCES.
-- Business certifications TABLE built strictly from the COMPANY PROFILE.
-- Map each cert to the prime's likely small-business subcontracting plan needs.
-- Personnel clearance posture aligned with the targeted scope.`,
-  cap_fit_for_prime: `Write WHY WE FIT THIS PRIME ON THIS OPPORTUNITY.
-- 2-3 paragraphs.
-- Reference the prime by name (from PRIME CONTRACTOR in the engagement block).
-- Tie offeror differentiators to the prime's known win themes / sub needs (use CUSTOMER INTELLIGENCE when present).
-- Close with a clear ask (subcontract scope, work-share, role).`,
-  cap_differentiators: `Write DIFFERENTIATORS FOR THE TARGETED SCOPE.
-- 5 bullet differentiators, each tied to a specific proof point from the COMPANY PROFILE or past performance.
-- No generic claims.`,
+  // ----- Sub-to-prime inputs (engagement_type = "sub") -----
+  // These sections produce drop-in content for the PRIME's proposal volumes,
+  // written in the prime's voice / third person and addressed to the
+  // government evaluator. The one exception is sub_teaming_pitch, which is a
+  // secondary 1-page artifact addressed to the prime's capture lead.
+  sub_technical_input: `Write the TECHNICAL VOLUME — OUR INPUTS section.
+- Prefix with: "> Insert into: Prime's Technical Volume"
+- Written in the prime's voice and third person ("[Offeror], a teammate to [Prime], will…") so the prime can paste it in with minimal editing. Address the GOVERNMENT EVALUATOR, not the prime.
+- Cover only the TARGETED SCOPE AREAS — the portion of work the offeror performs under the prime. Mirror SOW numbering where applicable.
+- Include relevant tables (approach, SLOs, transition) only for the offeror's portion. Make clear how the offeror's work integrates into the prime's overall solution.
+- Do NOT pitch the offeror; assume the offeror is already on the team.`,
+  sub_management_input: `Write the MANAGEMENT VOLUME — OUR INPUTS section.
+- Prefix with: "> Insert into: Prime's Management Volume"
+- Written in the prime's voice, third person, evaluator-facing.
+- Cover: governance interface between the offeror and the prime's PMO; the offeror's internal QA on its work-share; escalation paths INTO the prime's PMO; subcontract-management posture; risk management for the offeror's scope.
+- Org-chart annotations: position the offeror as a subcontractor on the prime's team. Do not write a standalone management plan.`,
+  sub_past_performance_input: `Write PAST PERFORMANCE — OUR ENTRIES for insertion into the prime's PP volume.
+- Prefix with: "> Insert into: Prime's Past Performance Volume"
+- One markdown TABLE: | Contract | Customer | Period | Value | Scope Relevance to This Effort | Role (prime/sub) | CPARS |. Use ONLY entries from the PAST PERFORMANCE LIBRARY or company profile past_performance.
+- For each entry, add a 1-paragraph relevance write-up in the third person, mapping the entry to the offeror's targeted scope on the current effort. The prime should be able to drop these paragraphs directly into their PP narrative.
+- Never fabricate contracts, values, periods, POCs, or CPARS ratings.`,
+  sub_key_personnel_input: `Write KEY PERSONNEL — OUR BIOS for insertion into the prime's KP section.
+- Prefix with: "> Insert into: Prime's Key Personnel Section"
+- TABLE | Name | Role | Years | Clearance | Relevance to Scope |, followed by 1-paragraph bios in the third person, evaluator-facing.
+- Use "[TO BE NAMED]" when unknown — never invent identities. Clearance/cert details strictly from the COMPANY PROFILE.`,
+  sub_corporate_overview: `Write a CORPORATE OVERVIEW BLURB for the prime's "Team & Subcontractors" appendix or org-chart annotations.
+- Prefix with: "> Insert into: Prime's Team Appendix"
+- 1-2 short paragraphs, third person, evaluator-facing.
+- Cover: legal name, certifications (UEI/CAGE only if in profile), core competencies narrowed to the targeted scope, geographic reach, and a one-line tie-in to why the offeror is on this team.`,
+  sub_teaming_pitch: `Write a 1-page TEAMING PITCH addressed to the prime's capture / BD lead. This is a SECONDARY ARTIFACT — not for the prime's volume.
+- Prefix with: "[SECONDARY ARTIFACT — Teaming Pitch, not for the prime's volume]"
+- Audience: the prime's capture lead, not the government evaluator.
+- 3 short paragraphs + a bullet list of 5 differentiators with proof points.
+- Reference the prime by name. Close with a specific work-share ask (scope boundaries, contract vehicle posture, percentage if relevant).
+- Keep to ~1 page.`,
 };
 
 
