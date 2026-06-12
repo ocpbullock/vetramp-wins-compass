@@ -31,6 +31,19 @@ export type Company = {
   worked_together_before: boolean;
   relationship_strength: number | null;
   relationship_status: "active" | "prospective" | "inactive";
+  /** Mutual NDA signed. Feeds partner-fit bonus in pWin. */
+  has_nda: boolean;
+  /** Teaming agreement (TA) on file. Feeds partner-fit bonus in pWin. */
+  has_teaming_agreement: boolean;
+  /** Jointly performed on a prior contract. Feeds partner-fit bonus in pWin. */
+  prior_contract_together: boolean;
+  /**
+   * Forward-looking field for a future cross-org teaming marketplace.
+   * Always 'private' today; other values are reserved.
+   */
+  marketplace_visibility: "private" | "team" | "org" | "public";
+  /** Reserved JSON envelope for marketplace metadata; unused until marketplace ships. */
+  marketplace_listing: Record<string, unknown>;
   source: string;
   external_ref: any;
   notes: string | null;
