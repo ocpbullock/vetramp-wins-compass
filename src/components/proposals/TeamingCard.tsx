@@ -12,7 +12,8 @@ import {
 } from "@/components/ui/popover";
 import { Plus, Trash2, Users, Search, Sparkles, Mail } from "lucide-react";
 import { toast } from "sonner";
-import type { Partner } from "@/components/settings/PartnersPanel";
+import type { PartnerView as Partner } from "@/lib/companies";
+import { listPartnerCompanies, companyToPartnerView, type Company } from "@/lib/companies";
 import { TeamCompositionAnalyzer } from "./TeamCompositionAnalyzer";
 import { TeamingSandbox } from "./TeamingSandbox";
 import { TeamingOutreachModal, type OutreachPartnerInput } from "./TeamingOutreachModal";
