@@ -457,6 +457,8 @@ function ProposalPipeline() {
         const j = await resp.json().catch(() => ({ error: "Failed" }));
         toast.error(friendlyError({ status: resp.status, message: j.error, code: j.code })); return;
       }
+      const appliedHeader = resp.headers.get("x-user-context-applied") ?? "";
+      const userContextApplied = appliedHeader.split(",").map((s) => s.trim()).filter(Boolean);
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buf = "", acc = "", done = false;
