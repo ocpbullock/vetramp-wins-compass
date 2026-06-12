@@ -1561,11 +1561,11 @@ function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, 
   );
 }
 
-function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBusy, setAiBusy, online }: any) {
+function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBusy, setAiBusy, online, onGoToIntake }: any) {
   const [busy, setBusy] = useState(false);
   const [skipCache, setSkipCache] = useState(false);
   const intel = proposal.customer_intel || {};
-  const [notes, setNotes] = useState<string>(intel.notes || "");
+  const userCtx = userContextFromProposal(proposal);
   const locked = busy || (aiBusy && !busy);
 
   async function research() {
