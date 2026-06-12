@@ -101,6 +101,25 @@ function sectionsFor(proposal: any) {
   return proposal?.engagement_type === "sub" ? SUB_SECTIONS : PRIME_SECTIONS;
 }
 
+// Build the canonical set of section ids the validators and matrix-cleaner
+// should consider "known" for this proposal. Includes the active pursuit's
+// sections AND the active template outline (when a parsed template is
+// attached), so RFI/capability/template sections aren't flagged as unknown.
+function knownSectionIdsFor(proposal: any, attachments: any[] | undefined): string[] {
+  const ids = new Set<string>(sectionsFor(proposal).map((s) => s.id));
+  // Always include canonical prime/sub ids so historical sections aren't
+  // dropped if the user toggles engagement_type/pursuit_type.
+  for (const s of [...PRIME_SECTIONS, ...SUB_SECTIONS]) ids.add(s.id);
+  try {
+    const tmpl = findActiveTemplate(attachments ?? []);
+    if (tmpl) {
+      const extracted = extractTemplateStructure(tmpl.parsed_content);
+      for (const s of extracted?.sections ?? []) ids.add(s.id);
+    }
+  } catch { /* ignore template parse errors for id set */ }
+  return Array.from(ids);
+}
+
 type Section = { content: string; status: "draft" | "reviewed" | "final"; word_count: number; user_context_applied?: string[] };
 
 function countdown(deadline?: string | null) {
@@ -138,7 +157,7 @@ function ProposalPipeline() {
 
       // Run integrity checks; auto-assign team_id if missing
       let proposalRow: any = p;
-      const knownSectionIds = [...PRIME_SECTIONS, ...SUB_SECTIONS].map((s) => s.id);
+      const knownSectionIds = knownSectionIdsFor(proposalRow, atts ?? []);
       const initial = validateProposal(proposalRow, knownSectionIds);
       if (initial.needsTeamAssignment) {
         const { data: tm } = await supabase
@@ -337,7 +356,8 @@ function ProposalPipeline() {
       let freshRow: any = fresh;
       // Client-side compliance matrix integrity pass
       if (freshRow?.compliance_matrix) {
-        const knownIds = [...PRIME_SECTIONS, ...SUB_SECTIONS].map((s) => s.id);
+        const { data: currentAtts } = await supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId);
+        const knownIds = knownSectionIdsFor(freshRow, currentAtts ?? attachments);
         const { fixedCount, fixes, matrix: cleaned } = validateComplianceMatrix(freshRow.compliance_matrix, knownIds);
         if (fixedCount > 0) {
           await supabase.from("proposals").update({ compliance_matrix: cleaned }).eq("id", proposalId);
@@ -547,25 +567,44 @@ function ProposalPipeline() {
 
   const readiness = useMemo(() => {
     if (!proposal) return 0;
+    const isLightweight =
+      proposal.pursuit_type === "rfi_sources_sought" ||
+      proposal.pursuit_type === "capability_statement";
     let score = 0;
-    if (proposal.pop_base_months) score += 10;
-    if (proposal.opportunity_type) score += 5;
-    if (proposal.estimated_value) score += 5;
-    if (proposal.contract_type) score += 5;
-    if (proposal.clearance_requirement) score += 5;
-    if (attachments.length) score += 10;
-    if (proposal.customer_intel_verified) score += 15;
-    if (proposal.compliance_matrix) score += 15;
-    // Verification percentage of compliance requirements (up to 10 pts)
-    const reqs = proposal.compliance_matrix?.requirements || [];
-    if (reqs.length) {
-      const verified = reqs.filter((r: any) => r.verified).length;
-      score += Math.round((verified / reqs.length) * 10);
+    if (isLightweight) {
+      // Pursuit-aware weights (no compliance matrix / verification).
+      // Remaining factors reweighted to total 100.
+      if (proposal.pop_base_months) score += 12;
+      if (proposal.opportunity_type) score += 6;
+      if (proposal.estimated_value) score += 6;
+      if (proposal.contract_type) score += 6;
+      if (proposal.clearance_requirement) score += 6;
+      if (attachments.length) score += 12;
+      if (proposal.customer_intel_verified) score += 18;
+      if (proposal.staffing_plan) score += 12;
+      const secs = sectionsFor(proposal);
+      const generated = secs.filter((s) => proposal.sections?.[s.id]?.content).length;
+      score += Math.round((generated / Math.max(1, secs.length)) * 22);
+    } else {
+      if (proposal.pop_base_months) score += 10;
+      if (proposal.opportunity_type) score += 5;
+      if (proposal.estimated_value) score += 5;
+      if (proposal.contract_type) score += 5;
+      if (proposal.clearance_requirement) score += 5;
+      if (attachments.length) score += 10;
+      if (proposal.customer_intel_verified) score += 15;
+      if (proposal.compliance_matrix) score += 15;
+      // Verification percentage of compliance requirements (up to 10 pts)
+      const reqs = proposal.compliance_matrix?.requirements || [];
+      if (reqs.length) {
+        const verified = reqs.filter((r: any) => r.verified).length;
+        score += Math.round((verified / reqs.length) * 10);
+      }
+      if (proposal.staffing_plan) score += 10;
+      const secs = sectionsFor(proposal);
+      const generated = secs.filter((s) => proposal.sections?.[s.id]?.content).length;
+      score += Math.round((generated / Math.max(1, secs.length)) * 20);
     }
-    if (proposal.staffing_plan) score += 10;
-    const secs = sectionsFor(proposal);
-    const generated = secs.filter((s) => proposal.sections?.[s.id]?.content).length;
-    score += Math.round((generated / secs.length) * 20);
     if (ociStatus(proposal.oci_screening) === "incomplete") score -= 5;
     return Math.max(0, Math.min(100, score));
   }, [proposal, attachments]);
