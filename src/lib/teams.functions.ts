@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { generateInviteToken } from "@/lib/invite-tokens";
 
 async function assertTeamAdmin(teamId: string, userId: string) {
   const { data: m } = await supabaseAdmin
@@ -44,17 +45,21 @@ export const resendTeamInvite = createServerFn({ method: "POST" })
     if (iErr) throw new Error(iErr.message);
     if (!inv || !inv.team_id) throw new Error("Invite not found.");
     await assertTeamAdmin(inv.team_id, context.userId);
+    const { token, tokenHash } = generateInviteToken();
     const { data: updated, error: uErr } = await supabaseAdmin
       .from("user_invites")
       .update({
         status: "pending",
+        token_hash: tokenHash,
+        accepted_at: null,
+        accepted_by: null,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       })
       .eq("id", data.id)
-      .select()
+      .select("id,email")
       .single();
     if (uErr) throw new Error(uErr.message);
-    const redirectTo = `${data.origin}/accept-invite?token=${updated.token}`;
+    const redirectTo = `${data.origin}/accept-invite?token=${token}`;
     const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(updated.email, { redirectTo });
     if (mailErr) return { ok: true, warning: mailErr.message };
     return { ok: true };
