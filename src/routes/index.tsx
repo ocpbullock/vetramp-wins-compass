@@ -550,7 +550,7 @@ function Dashboard() {
         searchedNaics={searchedNaics}
         onClose={() => setVendor(null)}
       />
-      <AlertDialog open={!!duplicatePrompt} onOpenChange={(v) => { if (!v) setDuplicatePrompt(null); }}>
+      <AlertDialog open={!!duplicatePrompt} onOpenChange={(v: boolean) => { if (!v) setDuplicatePrompt(null); }}>
 
         <AlertDialogContent>
           <AlertDialogHeader>
