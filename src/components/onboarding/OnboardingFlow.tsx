@@ -127,6 +127,8 @@ export function OnboardingFlow({
         onBack={() => setStep(Math.max(0, step - 1))}
         onAdvance={() => setStep(Math.min(state.steps.length - 1, step + 1))}
         onFinish={onComplete}
+        onSkip={onSkip}
+        canSkip={canSkip}
         canSkipCurrent={!current.required}
       />
     </Card>
@@ -134,7 +136,7 @@ export function OnboardingFlow({
 }
 
 function StepBody({
-  step, index, total, onBack, onAdvance, onFinish, canSkipCurrent,
+  step, index, total, onBack, onAdvance, onFinish, onSkip, canSkip, canSkipCurrent,
 }: {
   step: OnboardingStep;
   index: number;
@@ -142,6 +144,8 @@ function StepBody({
   onBack: () => void;
   onAdvance: () => void;
   onFinish: () => void;
+  onSkip: () => void;
+  canSkip: boolean;
   canSkipCurrent: boolean;
 }) {
   return (
