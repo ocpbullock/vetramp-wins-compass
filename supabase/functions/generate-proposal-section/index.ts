@@ -182,8 +182,11 @@ RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, 
     } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
     const userId = ctx.user.id;
 
-    const sectionInstr = SECTION_INSTRUCTIONS[sectionId] ||
-      `Write the section titled "${sectionTitle}". Be specific to this customer; avoid boilerplate.`;
+    const hasTemplate = !!templateBlock;
+    const sectionInstr = hasTemplate
+      ? `Write the section titled "${sectionTitle}". FOLLOW THE OFFEROR-SUPPLIED PROPOSAL TEMPLATE (see PROPOSAL TEMPLATE block) for structure, sub-heading hierarchy, ordering, and tone. Pull opportunity-specific details from the OPPORTUNITY, COMPLIANCE MATRIX, CUSTOMER INTELLIGENCE, and SOLICITATION ATTACHMENT TEXT to fill in the template. Preserve the template's heading wording when it applies to this section; mirror its formatting conventions (tables, bullets, numbering). Do not invent sub-sections that the template does not include.`
+      : (SECTION_INSTRUCTIONS[sectionId] ||
+        `Write the section titled "${sectionTitle}". Be specific to this customer; avoid boilerplate.`);
 
     const knowledgeContext = await fetchKnowledgeContext(sectionId, ctx.admin, verifiedTeamId);
 
