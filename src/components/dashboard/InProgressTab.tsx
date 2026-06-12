@@ -148,6 +148,25 @@ export function InProgressTab({ onCountChange }: { onCountChange?: (n: number) =
                 ) : (
                   <Badge className="bg-blue-600 hover:bg-blue-600/90">PRIME</Badge>
                 )}
+                <Badge
+                  variant="outline"
+                  className={
+                    p.pursuit_type === "rfi_sources_sought"
+                      ? "border-purple-500/60 text-purple-700 dark:text-purple-400"
+                      : p.pursuit_type === "capability_statement"
+                      ? "border-emerald-500/60 text-emerald-700 dark:text-emerald-400"
+                      : "border-blue-500/60 text-blue-700 dark:text-blue-400"
+                  }
+                  title={
+                    p.pursuit_type === "rfi_sources_sought" ? "RFI / Sources Sought response"
+                      : p.pursuit_type === "capability_statement" ? "Capability statement"
+                      : "RFP / RFQ response"
+                  }
+                >
+                  {p.pursuit_type === "rfi_sources_sought" ? "RFI"
+                    : p.pursuit_type === "capability_statement" ? "Cap. Stmt"
+                    : "RFP/RFQ"}
+                </Badge>
                 <Badge variant="secondary" className="capitalize">{p.status || "intake"}</Badge>
                 {overdueByProposal[p.id] > 0 && (
                   <Badge className="bg-destructive">{overdueByProposal[p.id]} overdue</Badge>
