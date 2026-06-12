@@ -164,6 +164,11 @@ function StepBody({
           <ArrowLeft className="w-3.5 h-3.5 mr-1" /> Back
         </Button>
         <div className="flex items-center gap-2">
+          {canSkip && index >= 1 && (
+            <Button variant="outline" size="sm" onClick={onSkip}>
+              Skip for now
+            </Button>
+          )}
           {canSkipCurrent && (
             <Button variant="outline" size="sm" onClick={onAdvance}>
               Import later
@@ -504,7 +509,7 @@ export function PastPerformanceAccuracyBanner() {
     <div className="flex items-start gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-2.5">
       <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
       <div className="flex-1 text-xs">
-        <span className="font-semibold text-amber-700 dark:text-amber-400">pWin accuracy is limited until past performance is added.</span>{" "}
+        <span className="font-semibold text-amber-700 dark:text-amber-400">pWin scoring will be inaccurate until you add past performance — scores will show as "Set up profile" until then.</span>{" "}
         <span className="text-amber-700/80 dark:text-amber-400/80">
           NAICS-relevant past performance is the strongest pWin factor — even one entry meaningfully improves scoring.
         </span>
