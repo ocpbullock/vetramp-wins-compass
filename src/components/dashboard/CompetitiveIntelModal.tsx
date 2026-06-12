@@ -12,6 +12,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useTeamId } from "@/lib/team";
 import { BidScorecard } from "./BidScorecard";
 import { DataProvenance } from "./DataSourceBadge";
+import { CachedItemControls } from "./RefreshButton";
 
 const KNOWN_VEHICLES = [
   "OASIS+", "STARS III", "Alliant 2", "SEWP V", "SEWP VI", "CIO-SP3", "CIO-SP4",
@@ -109,24 +110,31 @@ export function CompetitiveIntelModal({
     }).length;
   }, [opp, awards]);
 
-  useEffect(() => {
-    if (!opp) { setData(null); setError(null); return; }
-    if (!teamId) { setData(null); setError("Select a team to load competitive intel."); return; }
-    setLoading(true); setError(null); setData(null);
-    getCompetitiveIntel({
-      solicitationNumber: opp.solicitationNumber,
-      title: opp.title,
-      agency: opp.fullParentPathName ?? "",
-      naicsCode: opp.naicsCode ?? "",
-      setAside: opp.typeOfSetAside || undefined,
-      postedDate: opp.postedDate,
-      responseDeadLine: opp.responseDeadLine,
-      teamId,
-    })
-      .then(setData)
-      .catch((e) => setError(e.message ?? "Failed to load"))
-      .finally(() => setLoading(false));
-  }, [opp, teamId]);
+  const loadIntel = useMemo(
+    () => (opts?: { force?: boolean }) => {
+      if (!opp) { setData(null); setError(null); return; }
+      if (!teamId) { setData(null); setError("Select a team to load competitive intel."); return; }
+      setLoading(true); setError(null);
+      if (!opts?.force) setData(null);
+      getCompetitiveIntel({
+        solicitationNumber: opp.solicitationNumber,
+        title: opp.title,
+        agency: opp.fullParentPathName ?? "",
+        naicsCode: opp.naicsCode ?? "",
+        setAside: opp.typeOfSetAside || undefined,
+        postedDate: opp.postedDate,
+        responseDeadLine: opp.responseDeadLine,
+        teamId,
+        ...(opts?.force ? { forceRefresh: true } : {}),
+      } as any)
+        .then(setData)
+        .catch((e) => setError(e.message ?? "Failed to load"))
+        .finally(() => setLoading(false));
+    },
+    [opp, teamId],
+  );
+
+  useEffect(() => { loadIntel(); }, [loadIntel]);
 
   const days = daysUntil(opp?.responseDeadLine);
   const deadlineColor = days == null ? "" : days <= 3 ? "text-red-500" : days <= 14 ? "text-amber-500" : "text-muted-foreground";
@@ -325,8 +333,21 @@ export function CompetitiveIntelModal({
         </section>
 
         <div className="flex justify-between items-center text-[11px] text-muted-foreground gap-3 flex-wrap">
-          <DataProvenance source="USAspending.gov" fetchedAt={data?.cachedAt} note={data?.fromCache ? "Cached result — use Force refresh for live data" : undefined} />
-          <span>{data ? (data.fromCache ? `Cached ${new Date(data.cachedAt).toLocaleString()}` : "Fresh data") : ""}</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <DataProvenance source="USAspending.gov" fetchedAt={data?.cachedAt} note={data?.fromCache ? "Cached result — use refresh for live data" : undefined} />
+            <CachedItemControls
+              fetchedAt={data?.cachedAt}
+              busy={loading}
+              kind="usaspending"
+              onRefresh={() => loadIntel({ force: true })}
+            />
+          </div>
+          {opp?.uiLink && (
+            <Button asChild variant="outline" size="sm">
+              <a href={opp.uiLink} target="_blank" rel="noreferrer"><ExternalLink className="w-3 h-3 mr-1" />Open on SAM.gov</a>
+            </Button>
+          )}
+        </div>
           {opp?.uiLink && (
             <Button asChild variant="outline" size="sm">
               <a href={opp.uiLink} target="_blank" rel="noreferrer"><ExternalLink className="w-3 h-3 mr-1" />Open on SAM.gov</a>
