@@ -62,8 +62,9 @@ Deno.serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas, userContext: userContextRaw, template } = await req.json();
+    const { opportunity, teamId, companyProfile, engagementType, pursuitType, primeContractorName, targetedScopeAreas, userContext: userContextRaw, template } = await req.json();
     const engagement = engagementType === "sub" ? "sub" : "prime";
+    const pursuit = pursuitType === "rfi_sources_sought" || pursuitType === "capability_statement" ? pursuitType : "rfp_rfq";
     const userContext = normalizeUserContext(userContextRaw);
     const userContextBlock = renderUserContextPrompt(userContext);
 
@@ -83,7 +84,41 @@ RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, 
 `
       : "";
 
-    const baseSystemPrompt = engagement === "sub"
+    const rfiSystemPrompt = `You are a senior federal capture manager writing an RFI / SOURCES SOUGHT RESPONSE for ${companyIdentity(companyProfile)}. This is a market-research reply to the contracting officer — NOT a proposal. Do NOT propose a price, do NOT include Section L/M volumes, and do NOT sign anything binding. Tone: concise, factual, third person.
+
+COMPANY PROFILE (sole source of truth):
+${renderCompanyProfileBlock(companyProfile)}
+
+Generate the document in markdown with these sections IN ORDER:
+1. RESPONSE LETTER — Acknowledge the notice by ID/title. State interest, business size, and applicable socio-economic certifications from the profile. 2-3 paragraphs.
+2. COMPANY OVERVIEW — Legal name, UEI/CAGE (only if present), HQ, year founded, NAICS, primary business lines.
+3. RELEVANT CAPABILITIES — Bullets + TABLE | Capability | How Demonstrated | Customers Served |. Pull from profile only.
+4. PAST PERFORMANCE SUMMARIES — TABLE | Contract | Customer | Period | Value | Scope Relevance | with a 2-3 sentence summary per row. Use only profile past_performance.
+5. SUGGESTED ACQUISITION STRATEGY COMMENTS — 4-7 concrete bullets: contract type, PoP structure, vehicle preference, bundling, transition, draft PWS/SOW feedback.
+6. SET-ASIDE RECOMMENDATION — Recommend the appropriate set-aside category. ADVOCATE FOR SDVOSB when the profile shows SDVOSB certification AND NAICS allows it — cite the Rule of Two, 38 USC 8127 (VA Vets First) when the agency is VA, and SBA SDVOSB authority. Provide capability evidence the CO needs to justify the set-aside. If not SDVOSB, recommend the strongest set-aside the profile supports. Never invent certifications.
+
+Use markdown tables for structured data. Insert "[TO BE VERIFIED — update in Capture Intel]" rather than inventing details.`;
+
+    const capabilityStatementPrompt = `You are producing a 1-2 page standalone CAPABILITY STATEMENT for ${companyIdentity(companyProfile)} — a marketing-style document, NOT a solicitation response. Pull every fact strictly from the COMPANY PROFILE.
+
+COMPANY PROFILE:
+${renderCompanyProfileBlock(companyProfile)}
+
+Generate the document in markdown with these sections IN ORDER:
+1. HEADER & CONTACT — Legal name, [LOGO] placeholder, primary contact (use [TO BE NAMED] when missing), website, HQ, bold tagline.
+2. COMPANY OVERVIEW — 1 short paragraph + UEI/CAGE/DUNS if present.
+3. CORE CAPABILITIES — 6-10 short bullets formatted as a 2-column markdown table.
+4. DIFFERENTIATORS — 4-5 bullets with a one-line proof point each.
+5. PAST PERFORMANCE HIGHLIGHTS — TABLE of 3-6 entries from profile past_performance only.
+6. CERTIFICATIONS & CODES — Two short TABLES: business certifications and NAICS codes from the profile.
+
+Tone: crisp, scannable. No SOW response, no compliance matrix, no fee.`;
+
+    const baseSystemPrompt = pursuit === "rfi_sources_sought"
+      ? rfiSystemPrompt
+      : pursuit === "capability_statement"
+      ? capabilityStatementPrompt
+      : engagement === "sub"
       ? `You are a senior federal capture manager producing SUBCONTRACTOR INPUTS for ${companyIdentity(companyProfile)}, who is teamed under the prime named below. The prime is leading the proposal. Your job is NOT to write a teaming pitch addressed to the prime, and NOT to write a standalone Section L/M volume. Instead, produce drop-in content that the prime can paste into THEIR proposal volumes with minimal editing.
 
 VOICE & FRAMING RULES (critical):
@@ -112,7 +147,23 @@ Use markdown tables for structured data. Be specific. If a field is missing from
 
     const systemPrompt = templateBlock ? `${baseSystemPrompt}\n${templateBlock}` : baseSystemPrompt;
 
-    const userPrompt = `Generate ${engagement === "sub" ? "SUBCONTRACTOR INPUTS for the prime's proposal volumes (plus an optional 1-page teaming pitch at the end)" : "a complete proposal"} for the following solicitation:
+    const docLabel = pursuit === "rfi_sources_sought"
+      ? "an RFI / SOURCES SOUGHT RESPONSE"
+      : pursuit === "capability_statement"
+      ? "a CAPABILITY STATEMENT"
+      : engagement === "sub"
+      ? "SUBCONTRACTOR INPUTS for the prime's proposal volumes (plus an optional 1-page teaming pitch at the end)"
+      : "a complete proposal";
+
+    const closingInstruction = pursuit === "rfi_sources_sought"
+      ? `Generate the FULL RFI / Sources Sought response now following all sections from the system prompt. The Set-Aside Recommendation section must advocate for SDVOSB when the offeror is SDVOSB-certified.`
+      : pursuit === "capability_statement"
+      ? `Generate the FULL capability statement now following all sections from the system prompt. Keep to 1-2 pages.`
+      : engagement === "sub"
+      ? `Generate the FULL set of sub-to-prime volume inputs now following all sections from the system prompt. Remember: sections 1-5 are written in the prime's voice for insertion into the prime's volumes; section 6 is the only piece addressed to the prime.`
+      : `Generate the FULL proposal now following all sections from the system prompt.`;
+
+    const userPrompt = `Generate ${docLabel} for the following ${pursuit === "capability_statement" ? "company" : "solicitation"}:
 
 Title: ${opportunity.title || "N/A"}
 Solicitation #: ${opportunity.solicitationNumber || "N/A"}
@@ -127,7 +178,7 @@ Place of Performance: ${JSON.stringify(opportunity.placeOfPerformance || {})}
 Description:
 ${opportunity.description || "(No description provided — infer from title and agency)"}
 ${userContextBlock}
-${engagement === "sub" ? `Generate the FULL set of sub-to-prime volume inputs now following all sections from the system prompt. Remember: sections 1-5 are written in the prime's voice for insertion into the prime's volumes; section 6 is the only piece addressed to the prime.` : `Generate the FULL proposal now following all sections from the system prompt.`}`;
+${closingInstruction}`;
 
 
     let res: Response;

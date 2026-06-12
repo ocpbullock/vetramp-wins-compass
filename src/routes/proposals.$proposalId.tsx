@@ -62,7 +62,41 @@ const SUB_SECTIONS: { id: string; title: string }[] = [
   { id: "sub_teaming_pitch", title: "Teaming Pitch (1-page, optional)" },
 ];
 
+// RFI / Sources Sought response — short, evaluator-facing market research reply.
+// Includes acquisition-strategy comments and a set-aside recommendation that
+// advocates SDVOSB when the offeror is SDVOSB-certified.
+const RFI_SECTIONS: { id: string; title: string }[] = [
+  { id: "rfi_cover_response", title: "Response Letter" },
+  { id: "rfi_company_overview", title: "Company Overview" },
+  { id: "rfi_relevant_capabilities", title: "Relevant Capabilities" },
+  { id: "rfi_past_performance_summary", title: "Past Performance Summaries" },
+  { id: "rfi_acquisition_strategy_comments", title: "Suggested Acquisition Strategy Comments" },
+  { id: "rfi_set_aside_recommendation", title: "Set-Aside Recommendation" },
+];
+
+// Standalone capability statement — short marketing-style document.
+const CAPABILITY_STATEMENT_SECTIONS: { id: string; title: string }[] = [
+  { id: "cs_header", title: "Header & Contact" },
+  { id: "cs_company_overview", title: "Company Overview" },
+  { id: "cs_core_capabilities", title: "Core Capabilities" },
+  { id: "cs_differentiators", title: "Differentiators" },
+  { id: "cs_past_performance", title: "Past Performance Highlights" },
+  { id: "cs_certifications", title: "Certifications & Codes" },
+];
+
+export const PURSUIT_TYPES: { value: string; label: string; short: string; description: string }[] = [
+  { value: "rfp_rfq",            label: "RFP / RFQ response",         short: "RFP/RFQ",   description: "Full Section L/M proposal response to a solicitation." },
+  { value: "rfi_sources_sought", label: "RFI / Sources Sought",       short: "RFI",       description: "Market-research response. Skips compliance matrix and milestones." },
+  { value: "capability_statement", label: "Capability statement",     short: "Cap. Stmt", description: "Standalone marketing-style capability statement, not tied to a solicitation." },
+];
+
+export function pursuitTypeLabel(p?: string | null) {
+  return PURSUIT_TYPES.find((t) => t.value === p)?.short ?? "RFP/RFQ";
+}
+
 function sectionsFor(proposal: any) {
+  if (proposal?.pursuit_type === "rfi_sources_sought") return RFI_SECTIONS;
+  if (proposal?.pursuit_type === "capability_statement") return CAPABILITY_STATEMENT_SECTIONS;
   return proposal?.engagement_type === "sub" ? SUB_SECTIONS : PRIME_SECTIONS;
 }
 
@@ -378,6 +412,7 @@ function ProposalPipeline() {
           pastPerformance: pastPerformance.length ? pastPerformance : undefined,
           attachmentsText: attachmentsText || undefined,
           engagementType: proposal.engagement_type ?? "prime",
+          pursuitType: proposal.pursuit_type ?? "rfp_rfq",
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
@@ -501,6 +536,19 @@ function ProposalPipeline() {
           ) : (
             <Badge className="bg-blue-600 hover:bg-blue-600/90">PRIME</Badge>
           )}
+          <Badge
+            variant="outline"
+            className={
+              proposal.pursuit_type === "rfi_sources_sought"
+                ? "border-purple-500/60 text-purple-700 dark:text-purple-400"
+                : proposal.pursuit_type === "capability_statement"
+                ? "border-emerald-500/60 text-emerald-700 dark:text-emerald-400"
+                : "border-blue-500/60 text-blue-700 dark:text-blue-400"
+            }
+            title={PURSUIT_TYPES.find((t) => t.value === (proposal.pursuit_type ?? "rfp_rfq"))?.description}
+          >
+            {pursuitTypeLabel(proposal.pursuit_type)}
+          </Badge>
           <Badge variant="outline">{proposal.status}</Badge>
           {dataIssues.length > 0 && (
             <TooltipProvider delayDuration={200}>
@@ -539,15 +587,25 @@ function ProposalPipeline() {
           </CardContent>
         </Card>
 
-        <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
+        {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
+          <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
+        )}
 
         <Tabs value={step} onValueChange={setStep}>
           <TabsList>
             <TabsTrigger value="intake">1. Intake</TabsTrigger>
             <TabsTrigger value="intel">2. Customer Intel</TabsTrigger>
-            <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
-            <TabsTrigger value="solution">4. {proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}</TabsTrigger>
-            <TabsTrigger value="generate">5. Generate</TabsTrigger>
+            {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
+              <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
+            )}
+            <TabsTrigger value="solution">
+              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement"
+                ? "3. Inputs"
+                : `4. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
+            </TabsTrigger>
+            <TabsTrigger value="generate">
+              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "4." : "5."} Generate
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="intake" className="mt-4 space-y-4">
@@ -938,6 +996,30 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 space-y-4">
+        <Card className="border-primary/40">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Pursuit type</CardTitle>
+            <CardDescription className="text-xs">What kind of response are we producing? RFI / Sources Sought skips the compliance matrix and deadline milestones.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {PURSUIT_TYPES.map((t) => {
+                const active = (proposal.pursuit_type ?? "rfp_rfq") === t.value;
+                return (
+                  <button
+                    key={t.value}
+                    type="button"
+                    onClick={() => onPatch({ pursuit_type: t.value })}
+                    className={`rounded-md border-2 p-3 text-left transition ${active ? "border-primary bg-primary/5" : "border-border hover:bg-muted"}`}
+                  >
+                    <div className="text-sm font-semibold">{t.label}</div>
+                    <div className="text-[11px] text-muted-foreground mt-1">{t.description}</div>
+                  </button>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
         <Card className="border-primary/40">
           <CardHeader className="pb-2"><CardTitle className="text-base">Engagement type</CardTitle><CardDescription className="text-xs">This fundamentally changes the pipeline. Choose carefully.</CardDescription></CardHeader>
           <CardContent className="space-y-3">
@@ -1422,6 +1504,7 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
           proposalId,
           teamId: proposal.team_id ?? null,
           engagementType: proposal.engagement_type ?? "prime",
+          pursuitType: proposal.pursuit_type ?? "rfp_rfq",
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,

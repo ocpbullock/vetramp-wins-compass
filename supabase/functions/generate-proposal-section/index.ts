@@ -23,6 +23,20 @@ const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   sub_key_personnel_input: ["personnel"],
   sub_corporate_overview: ["capability"],
   sub_teaming_pitch: ["capability", "win_theme"],
+  // RFI / Sources Sought
+  rfi_cover_response: ["capability"],
+  rfi_company_overview: ["capability"],
+  rfi_relevant_capabilities: ["capability"],
+  rfi_past_performance_summary: ["past_performance"],
+  rfi_acquisition_strategy_comments: ["capability", "win_theme"],
+  rfi_set_aside_recommendation: ["capability"],
+  // Capability statement
+  cs_header: ["capability"],
+  cs_company_overview: ["capability"],
+  cs_core_capabilities: ["capability"],
+  cs_differentiators: ["capability", "win_theme"],
+  cs_past_performance: ["past_performance"],
+  cs_certifications: ["capability"],
 };
 
 async function fetchKnowledgeContext(
@@ -142,6 +156,52 @@ const SECTION_INSTRUCTIONS: Record<string, string> = {
 - 3 short paragraphs + a bullet list of 5 differentiators with proof points.
 - Reference the prime by name. Close with a specific work-share ask (scope boundaries, contract vehicle posture, percentage if relevant).
 - Keep to ~1 page.`,
+
+  // ----- RFI / Sources Sought sections (pursuit_type = "rfi_sources_sought") -----
+  // These produce a short market-research response to the government, NOT a
+  // proposal volume. No fee/price. Focus on capabilities, relevant past
+  // performance, and acquisition-strategy guidance.
+  rfi_cover_response: `Write a one-page RESPONSE LETTER to the contracting officer acknowledging the RFI / Sources Sought notice.
+- Reference the notice ID / title verbatim.
+- State the offeror's interest, business size, and applicable socio-economic certifications (SDVOSB, 8(a), HUBZone, etc.) from the COMPANY PROFILE.
+- 2-3 paragraphs. Do not propose a price or solution.`,
+  rfi_company_overview: `Write a COMPANY OVERVIEW for an RFI response.
+- 2 short paragraphs from the COMPANY PROFILE: legal name, UEI/CAGE (only if present), HQ, year founded, NAICS codes the company operates under, and primary business lines.
+- Plain federal market-research voice.`,
+  rfi_relevant_capabilities: `Write RELEVANT CAPABILITIES for the RFI.
+- Bullet list of capabilities mapped to the notice's stated scope.
+- One markdown TABLE: | Capability | How Demonstrated | Customers Served |.
+- Pull capabilities and demonstration evidence only from the COMPANY PROFILE / KNOWLEDGE BASE — do not invent.`,
+  rfi_past_performance_summary: `Write PAST PERFORMANCE SUMMARIES for the RFI.
+- Compact TABLE: | Contract | Customer | Period | Value | Scope Relevance to the RFI |.
+- Use ONLY entries from the PAST PERFORMANCE LIBRARY or company profile past_performance. Never fabricate.
+- Add a 2-3 sentence summary per row tying scope to this RFI.`,
+  rfi_acquisition_strategy_comments: `Write SUGGESTED ACQUISITION STRATEGY COMMENTS — the most important section of a Sources Sought response.
+- Address each typical RFI question explicitly when applicable: contract type recommendation (FFP / T&M / hybrid), period of performance structure (base + options), preferred contract vehicle (GSA MAS, GWAC, agency BPA, open competition), bundling considerations, transition timing, and any draft PWS / SOW feedback.
+- Be concrete and SHORT — 4-7 bullets total. The goal is to influence the acquisition approach.`,
+  rfi_set_aside_recommendation: `Write a SET-ASIDE RECOMMENDATION.
+- Lead with the recommended set-aside category for this acquisition.
+- ADVOCATE FOR SDVOSB SET-ASIDE when the COMPANY PROFILE shows SDVOSB certification AND the NAICS / scope allow it; cite the Rule of Two, VA Vets First (38 USC 8127) when the agency is VA, and SBA SDVOSB program authority. Provide concrete capability evidence the contracting officer needs to justify the set-aside (number of certified SDVOSB firms capable, including the offeror, and their relevant past performance).
+- If the offeror is NOT SDVOSB, recommend the strongest set-aside category the COMPANY PROFILE supports (8(a), WOSB/EDWOSB, HUBZone, total small business). Never invent a certification not present in the profile.
+- Close with a 1-paragraph rationale aligned to FAR 19 set-aside rules.`,
+
+  // ----- Capability statement sections (pursuit_type = "capability_statement") -----
+  cs_header: `Write the HEADER & CONTACT block for a 1-2 page capability statement.
+- Legal name, DBA if any, logo placeholder "[LOGO]", primary contact name/title/email/phone (use "[TO BE NAMED]" when missing), website, HQ address — all strictly from the COMPANY PROFILE.
+- Bold tagline (1 line) summarizing what the company does.`,
+  cs_company_overview: `Write a COMPANY OVERVIEW for the capability statement.
+- 1 short paragraph: who we are, year founded, mission.
+- Include UEI, CAGE, and DUNS ONLY if present in the profile.`,
+  cs_core_capabilities: `Write CORE CAPABILITIES as a 2-column bullet list (markdown — use a table with two columns).
+- Pull from the COMPANY PROFILE capabilities. 6-10 short capability bullets.`,
+  cs_differentiators: `Write DIFFERENTIATORS.
+- 4-5 bullet differentiators with a single-line proof point each. Source strictly from the COMPANY PROFILE.`,
+  cs_past_performance: `Write PAST PERFORMANCE HIGHLIGHTS.
+- TABLE: | Customer | Contract | Period | Value | Scope |. Use ONLY entries from the PAST PERFORMANCE LIBRARY or company profile past_performance.
+- 3-6 rows. No relevance narrative — this is a marketing one-pager.`,
+  cs_certifications: `Write CERTIFICATIONS & CODES.
+- Two short TABLES: business certifications (SDVOSB, 8(a), WOSB, HUBZone, etc.) and NAICS codes — built strictly from the COMPANY PROFILE.
+- Include UEI / CAGE / DUNS only if present.`,
 };
 
 
@@ -170,11 +230,15 @@ Deno.serve(async (req) => {
       userId: _ignoredUserId,
       proposalId,
       engagementType,
+      pursuitType,
       primeContractorName,
       targetedScopeAreas,
       template,
     } = body;
     const engagement = engagementType === "sub" ? "sub" : "prime";
+    const pursuit = pursuitType === "rfi_sources_sought" || pursuitType === "capability_statement"
+      ? pursuitType
+      : "rfp_rfq";
 
     const templateBlock = (template && typeof template === "object" && (template.filename || template.boilerplate))
       ? `\nPROPOSAL TEMPLATE (offeror-supplied — MATCH this structure, heading hierarchy, ordering, and tone):
@@ -206,6 +270,14 @@ RULE: Treat this template as authoritative for STRUCTURE (heading order, depth, 
     const identity = companyIdentity(companyProfile);
     const profileBlock = renderCompanyProfileBlock(companyProfile);
 
+    const pursuitBlock = pursuit === "rfi_sources_sought"
+      ? `PURSUIT TYPE: RFI / SOURCES SOUGHT response. This is a market-research reply to the contracting officer — NOT a proposal. Do NOT propose a price, do NOT sign anything binding, and do NOT produce Section L/M volumes. Voice: concise, factual, third person. Focus on capabilities, relevant past performance, and acquisition-strategy guidance that influences how the agency competes the work. The SET-ASIDE RECOMMENDATION section must advocate for SDVOSB when the offeror is SDVOSB-certified and the NAICS allows it (cite Rule of Two, 38 USC 8127 for VA, and SBA SDVOSB authority).
+`
+      : pursuit === "capability_statement"
+      ? `PURSUIT TYPE: CAPABILITY STATEMENT. This is a 1-2 page standalone marketing document, NOT tied to any solicitation. Tone: crisp, scannable, evaluator-friendly. No SOW response, no Section L/M, no compliance matrix. Pull every fact strictly from the COMPANY PROFILE.
+`
+      : "";
+
     const engagementBlock = engagement === "sub"
       ? `ENGAGEMENT MODE: SUBCONTRACTOR (supporting the prime's bid). The offeror is teamed UNDER the prime named below — the prime is leading the proposal. Produce drop-in content the prime can paste into THEIR volumes with minimal editing. Default voice: PRIME'S voice, THIRD PERSON, addressed to the GOVERNMENT EVALUATOR. Refer to the offeror by name as a teammate to the prime (e.g. "[Offeror], teamed with [Prime], will…"). Do NOT pitch the offeror to the prime — assume the offeror is already on the team. The ONE exception is a section explicitly labeled "Teaming Pitch", which is a secondary 1-page artifact addressed to the prime's capture lead and must be prefixed "[SECONDARY ARTIFACT — Teaming Pitch, not for the prime's volume]". Every other section must begin with a one-line insertion hint: "> Insert into: <Prime Volume Name>".
 PRIME CONTRACTOR (lead offeror): ${primeContractorName || "(unspecified)"}
@@ -213,6 +285,7 @@ OFFEROR'S TARGETED SCOPE (our work-share under the prime): ${targetedScopeAreas 
 `
       : `ENGAGEMENT MODE: PRIME. The offeror is pursuing this opportunity as the PRIME contractor. Address Section L instructions and Section M evaluation criteria in full.
 `;
+    const modeBlock = pursuitBlock + engagementBlock;
 
     const systemPrompt = `You are a senior federal capture manager writing ONE section of a proposal for ${identity}.
 Output MARKDOWN only — no preamble, no closing remarks.
@@ -220,7 +293,7 @@ Every "shall" requirement in the SOW must be addressed if this section covers it
 Use markdown tables for structured data. Quote SOW requirements verbatim when referencing them.
 The COMPANY PROFILE below is the sole source of truth for who the offeror is — do not invent identity, certifications, locations, past performance, or recruiting pipelines that are not listed.
 
-${engagementBlock}
+${modeBlock}
 COMPANY PROFILE:
 ${profileBlock}
 
