@@ -779,8 +779,9 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                     valueId={proposal.prime_contractor_id}
                     valueName={proposal.prime_contractor_name}
                     onChange={(next) => {
-                      setLocal({ ...local, prime_contractor_name: next.prime_contractor_name });
-                      onPatch(next);
+                      setLocal((p: any) => ({ ...p, prime_contractor_name: next.prime_contractor_name }));
+                      // Combobox writes both id + name; persist immediately (not debounced).
+                      void onPatch(next);
                     }}
                   />
                   <div className="text-[11px] text-muted-foreground mt-1">Pull from your teaming partner roster, or type a new prime to use as free text.</div>
@@ -790,8 +791,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                   <Textarea
                     rows={3}
                     value={local.targeted_scope_areas ?? ""}
-                    onChange={(e) => setLocal({ ...local, targeted_scope_areas: e.target.value })}
-                    onBlur={() => onPatch({ targeted_scope_areas: local.targeted_scope_areas || null })}
+                    onChange={(e) => update({ targeted_scope_areas: e.target.value || null })}
                     placeholder="Describe the portion of work you're targeting under the prime."
                   />
                 </div>
