@@ -439,9 +439,14 @@ export function TrackedOpportunitiesTab({
                   </TableCell>
                   <TableCell className="max-w-[340px]">
                     <div className="font-medium truncate flex items-center gap-1.5">
-                      {i.title}
+                      <span
+                        className="truncate cursor-pointer text-primary hover:underline"
+                        onClick={() => onCompete?.(trackedToSamOpp(i))}
+                      >
+                        {i.title}
+                      </span>
                       {i.source_url && (
-                        <a href={i.source_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary">
+                        <a href={i.source_url} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary shrink-0" title="Open source URL">
                           <ExternalLink className="w-3 h-3" />
                         </a>
                       )}

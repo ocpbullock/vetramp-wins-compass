@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Star, FileSignature, ExternalLink, Trash2, Users } from "lucide-react";
+import { Star, FileSignature, ExternalLink, Trash2, Users, Swords } from "lucide-react";
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
@@ -10,11 +10,29 @@ import { useStarred, type StarredRow } from "@/lib/starred";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { CreateOpportunityTeamDialog } from "./CreateOpportunityTeamDialog";
 import { PwinChip } from "./PwinChip";
+import type { SamOpportunity } from "@/lib/api";
+
+function rowToSamOpp(r: StarredRow): SamOpportunity {
+  const sd = r.source_data as SamOpportunity | undefined;
+  return sd ?? {
+    noticeId: r.notice_id,
+    solicitationNumber: r.notice_id,
+    title: r.title ?? "",
+    naicsCode: r.naics_code ?? undefined,
+    responseDeadLine: r.response_deadline ?? undefined,
+    postedDate: r.posted_date ?? undefined,
+    setAside: r.set_aside_description ?? undefined,
+    fullParentPathName: "",
+    classificationCode: "",
+  } as unknown as SamOpportunity;
+}
 
 export function StarredTab({
   onStartProposal,
+  onCompete,
 }: {
   onStartProposal: (row: StarredRow) => void;
+  onCompete?: (opp: SamOpportunity) => void;
 }) {
   const { list, toggle, count } = useStarred();
   const [rows, setRows] = useState<StarredRow[]>([]);
@@ -108,6 +126,21 @@ export function StarredTab({
                   <TableRow key={r.id}>
                     <TableCell className="w-[180px]">
                       <div className="flex items-center gap-1">
+                        {onCompete && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="icon"
+                                variant="outline"
+                                className="h-7 w-7 border-amber-500/50 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
+                                onClick={() => onCompete(rowToSamOpp(r))}
+                              >
+                                <Swords className="w-3.5 h-3.5" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>Compete</TooltipContent>
+                          </Tooltip>
+                        )}
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button
@@ -156,13 +189,16 @@ export function StarredTab({
                     </TableCell>
                     <TableCell className="max-w-[360px]">
                       <div className="font-medium truncate flex items-center gap-1.5">
-                        {uiLink ? (
-                          <a href={uiLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
-                            <span className="truncate">{r.title || r.notice_id}</span>
-                            <ExternalLink className="w-3 h-3 shrink-0" />
+                        <span
+                          className="truncate cursor-pointer text-primary hover:underline"
+                          onClick={() => onCompete?.(rowToSamOpp(r))}
+                        >
+                          {r.title || r.notice_id}
+                        </span>
+                        {uiLink && (
+                          <a href={uiLink} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary shrink-0" title="Open on SAM.gov">
+                            <ExternalLink className="w-3 h-3" />
                           </a>
-                        ) : (
-                          <span className="truncate">{r.title || r.notice_id}</span>
                         )}
                       </div>
                       <div className="text-xs text-muted-foreground font-mono truncate">{r.notice_id}</div>

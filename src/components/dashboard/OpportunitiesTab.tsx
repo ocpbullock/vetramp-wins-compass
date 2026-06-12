@@ -241,12 +241,19 @@ export function OpportunitiesTab({
                       </div>
                     </td>
                     <td className="max-w-[320px]">
-                      {o.uiLink ? (
-                        <a href={o.uiLink} target="_blank" rel="noreferrer" className="text-primary hover:underline inline-flex items-start gap-1 line-clamp-2">
-                          <span className="line-clamp-2">{o.title}</span>
-                          <ExternalLink className="w-3 h-3 mt-0.5 shrink-0" />
-                        </a>
-                      ) : <span className="line-clamp-2">{o.title}</span>}
+                      <div className="inline-flex items-start gap-1 line-clamp-2">
+                        <span
+                          className="line-clamp-2 cursor-pointer text-primary hover:underline"
+                          onClick={() => onCompete(o)}
+                        >
+                          {o.title}
+                        </span>
+                        {o.uiLink && (
+                          <a href={o.uiLink} target="_blank" rel="noreferrer" className="text-muted-foreground hover:text-primary shrink-0 mt-0.5" title="Open on SAM.gov">
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        )}
+                      </div>
                     </td>
                     <td className="text-xs">{shortAgency(o.fullParentPathName)}</td>
                     <td className="font-mono text-xs">{o.naicsCode}</td>
