@@ -109,21 +109,23 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
 
   if (!hasUsableCapabilities(selfQ.data)) {
     return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => navigate({ to: "/settings" })}
-            className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border bg-muted text-muted-foreground hover:bg-muted/70"
-          >
-            <SettingsIcon className="w-3 h-3" />
-            Set up profile to score
-          </button>
-        </TooltipTrigger>
-        <TooltipContent className="text-xs max-w-xs">
-          Add your company's NAICS, certifications, and capabilities in Settings to enable pWin scoring.
-        </TooltipContent>
-      </Tooltip>
+      <TooltipProvider delayDuration={150}>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <button
+              type="button"
+              onClick={() => navigate({ to: "/settings" })}
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border bg-muted text-muted-foreground hover:bg-muted/70"
+            >
+              <SettingsIcon className="w-3 h-3" />
+              Set up profile to score
+            </button>
+          </TooltipTrigger>
+          <TooltipContent className="text-xs max-w-xs">
+            Add your company's NAICS, certifications, and capabilities in Settings to enable pWin scoring.
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
