@@ -318,6 +318,25 @@ export function TeamingCard({
           proposal={proposal}
         />
       )}
+      {proposal && teamId && (
+        <TeamingSandbox
+          open={sandboxOpen}
+          onOpenChange={setSandboxOpen}
+          parent={{ kind: "proposal", proposalId: proposal.id, teamId }}
+          opportunity={{
+            title: (proposal as any).title ?? "Proposal teaming sandbox",
+            naicsCodes: [(proposal as any).naics_code].filter(Boolean) as string[],
+            agency: (proposal as any).agency ?? null,
+            setAside: (proposal as any).set_aside ?? null,
+            requiredVehicles: (proposal as any).contract_type && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test((proposal as any).contract_type)
+              ? [(proposal as any).contract_type]
+              : [],
+            incumbentName: (proposal as any).customer_intel?.predecessor_contract?.incumbent ?? null,
+            scopeKeywords: ((proposal as any).targeted_scope_areas ?? "")
+              .split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean),
+          }}
+        />
+      )}
       {proposal && (
         <TeamingOutreachModal
           open={outreachOpen}
