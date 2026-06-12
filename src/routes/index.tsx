@@ -544,7 +544,9 @@ function Dashboard() {
         vendorName={vendor?.name ?? null}
         searchedNaics={searchedNaics}
         onClose={() => setVendor(null)}
+      />
       <AlertDialog open={!!duplicatePrompt} onOpenChange={(v) => { if (!v) setDuplicatePrompt(null); }}>
+
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>A proposal for this opportunity already exists</AlertDialogTitle>
