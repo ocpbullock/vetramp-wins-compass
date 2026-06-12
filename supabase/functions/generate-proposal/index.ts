@@ -147,7 +147,23 @@ Use markdown tables for structured data. Be specific. If a field is missing from
 
     const systemPrompt = templateBlock ? `${baseSystemPrompt}\n${templateBlock}` : baseSystemPrompt;
 
-    const userPrompt = `Generate ${engagement === "sub" ? "SUBCONTRACTOR INPUTS for the prime's proposal volumes (plus an optional 1-page teaming pitch at the end)" : "a complete proposal"} for the following solicitation:
+    const docLabel = pursuit === "rfi_sources_sought"
+      ? "an RFI / SOURCES SOUGHT RESPONSE"
+      : pursuit === "capability_statement"
+      ? "a CAPABILITY STATEMENT"
+      : engagement === "sub"
+      ? "SUBCONTRACTOR INPUTS for the prime's proposal volumes (plus an optional 1-page teaming pitch at the end)"
+      : "a complete proposal";
+
+    const closingInstruction = pursuit === "rfi_sources_sought"
+      ? `Generate the FULL RFI / Sources Sought response now following all sections from the system prompt. The Set-Aside Recommendation section must advocate for SDVOSB when the offeror is SDVOSB-certified.`
+      : pursuit === "capability_statement"
+      ? `Generate the FULL capability statement now following all sections from the system prompt. Keep to 1-2 pages.`
+      : engagement === "sub"
+      ? `Generate the FULL set of sub-to-prime volume inputs now following all sections from the system prompt. Remember: sections 1-5 are written in the prime's voice for insertion into the prime's volumes; section 6 is the only piece addressed to the prime.`
+      : `Generate the FULL proposal now following all sections from the system prompt.`;
+
+    const userPrompt = `Generate ${docLabel} for the following ${pursuit === "capability_statement" ? "company" : "solicitation"}:
 
 Title: ${opportunity.title || "N/A"}
 Solicitation #: ${opportunity.solicitationNumber || "N/A"}
@@ -162,7 +178,7 @@ Place of Performance: ${JSON.stringify(opportunity.placeOfPerformance || {})}
 Description:
 ${opportunity.description || "(No description provided — infer from title and agency)"}
 ${userContextBlock}
-${engagement === "sub" ? `Generate the FULL set of sub-to-prime volume inputs now following all sections from the system prompt. Remember: sections 1-5 are written in the prime's voice for insertion into the prime's volumes; section 6 is the only piece addressed to the prime.` : `Generate the FULL proposal now following all sections from the system prompt.`}`;
+${closingInstruction}`;
 
 
     let res: Response;
