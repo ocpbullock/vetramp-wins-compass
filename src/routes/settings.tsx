@@ -24,7 +24,7 @@ import { ArrowLeft, Plus, Trash2, Save, Loader2 } from "lucide-react";
 import { format } from "date-fns";
 import { toast } from "sonner";
 import { TeamPanel } from "@/components/settings/TeamPanel";
-import { useTeam, useTeamId } from "@/lib/team";
+import { useTeamId } from "@/lib/team";
 import { PartnersPanel } from "@/components/settings/PartnersPanel";
 import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 import { ContractVehiclesPanel } from "@/components/settings/ContractVehiclesPanel";
