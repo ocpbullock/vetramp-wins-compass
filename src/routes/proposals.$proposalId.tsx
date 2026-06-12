@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { mergeServerProposal } from "@/lib/intake-merge";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
@@ -675,13 +676,75 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
   const sowAttachments = attachments.filter((a: any) => a.file_type !== "customer_intel");
   const totalChars = sowAttachments.reduce((s: number, a: any) => s + (a.parsed_content?.length || 0), 0);
   const largeDoc = totalChars > 300_000;
-  const [local, setLocal] = useState(proposal);
-  useEffect(() => setLocal(proposal), [proposal.id]);
-  const save = () => onPatch({
-    opportunity_type: local.opportunity_type, estimated_value: local.estimated_value || null,
-    contract_type: local.contract_type, pop_base_months: local.pop_base_months || null,
-    pop_option_months: local.pop_option_months || null, clearance_requirement: local.clearance_requirement, user_notes: local.user_notes,
-  });
+  const [local, setLocal] = useState<any>(proposal);
+  const dirtyRef = useRef(false);
+  const inFlightRef = useRef(0);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendingPatchRef = useRef<Record<string, any>>({});
+  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved" | "error">("idle");
+
+  // Re-sync local from the server proposal, but never clobber in-progress edits.
+  useEffect(() => {
+    setLocal((prev: any) =>
+      mergeServerProposal(prev, proposal, { dirty: dirtyRef.current, inFlight: inFlightRef.current }),
+    );
+  }, [proposal]);
+
+  // Cleanup the debounce timer on unmount so a pending save still flushes.
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current);
+        const patch = pendingPatchRef.current;
+        if (Object.keys(patch).length > 0) {
+          // Fire-and-forget flush on unmount.
+          onPatch(patch);
+        }
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const flushSave = async () => {
+    const patch = pendingPatchRef.current;
+    pendingPatchRef.current = {};
+    if (Object.keys(patch).length === 0) return;
+    inFlightRef.current += 1;
+    setSaveState("saving");
+    try {
+      await onPatch(patch);
+      if (inFlightRef.current === 1 && Object.keys(pendingPatchRef.current).length === 0) {
+        dirtyRef.current = false;
+        setSaveState("saved");
+      }
+    } catch {
+      setSaveState("error");
+    } finally {
+      inFlightRef.current -= 1;
+    }
+  };
+
+  const scheduleSave = (patch: Record<string, any>) => {
+    dirtyRef.current = true;
+    setSaveState("saving");
+    pendingPatchRef.current = { ...pendingPatchRef.current, ...patch };
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveTimerRef.current = null;
+      void flushSave();
+    }, 800);
+  };
+
+  const update = (patch: Record<string, any>) => {
+    setLocal((p: any) => ({ ...p, ...patch }));
+    scheduleSave(patch);
+  };
+
+  const saveLabel =
+    saveState === "saving" ? "Saving…" :
+    saveState === "saved" ? "Saved" :
+    saveState === "error" ? "Save failed — retry" :
+    "";
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -716,8 +779,9 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                     valueId={proposal.prime_contractor_id}
                     valueName={proposal.prime_contractor_name}
                     onChange={(next) => {
-                      setLocal({ ...local, prime_contractor_name: next.prime_contractor_name });
-                      onPatch(next);
+                      setLocal((p: any) => ({ ...p, prime_contractor_name: next.prime_contractor_name }));
+                      // Combobox writes both id + name; persist immediately (not debounced).
+                      void onPatch(next);
                     }}
                   />
                   <div className="text-[11px] text-muted-foreground mt-1">Pull from your teaming partner roster, or type a new prime to use as free text.</div>
@@ -727,8 +791,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
                   <Textarea
                     rows={3}
                     value={local.targeted_scope_areas ?? ""}
-                    onChange={(e) => setLocal({ ...local, targeted_scope_areas: e.target.value })}
-                    onBlur={() => onPatch({ targeted_scope_areas: local.targeted_scope_areas || null })}
+                    onChange={(e) => update({ targeted_scope_areas: e.target.value || null })}
                     placeholder="Describe the portion of work you're targeting under the prime."
                   />
                 </div>
@@ -759,7 +822,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           <CardContent className="grid grid-cols-2 gap-3">
             <div>
               <Label>Opportunity type</Label>
-              <Select value={local.opportunity_type ?? ""} onValueChange={(v) => setLocal({ ...local, opportunity_type: v })}>
+              <Select value={local.opportunity_type ?? ""} onValueChange={(v) => update({ opportunity_type: v })}>
                 <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">New requirement</SelectItem>
@@ -772,7 +835,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             </div>
             <div>
               <Label>Contract type</Label>
-              <Select value={local.contract_type ?? ""} onValueChange={(v) => setLocal({ ...local, contract_type: v })}>
+              <Select value={local.contract_type ?? ""} onValueChange={(v) => update({ contract_type: v })}>
                 <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ffp">FFP</SelectItem>
@@ -784,11 +847,11 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             </div>
             <div>
               <Label>Estimated value (USD)</Label>
-              <Input type="number" value={local.estimated_value ?? ""} onChange={(e) => setLocal({ ...local, estimated_value: Number(e.target.value) || null })} />
+              <Input type="number" value={local.estimated_value ?? ""} onChange={(e) => update({ estimated_value: Number(e.target.value) || null })} />
             </div>
             <div>
               <Label>Clearance</Label>
-              <Select value={local.clearance_requirement ?? ""} onValueChange={(v) => setLocal({ ...local, clearance_requirement: v })}>
+              <Select value={local.clearance_requirement ?? ""} onValueChange={(v) => update({ clearance_requirement: v })}>
                 <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
@@ -801,17 +864,25 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             </div>
             <div>
               <Label>PoP base (months)</Label>
-              <Input type="number" value={local.pop_base_months ?? ""} onChange={(e) => setLocal({ ...local, pop_base_months: Number(e.target.value) || null })} />
+              <Input type="number" value={local.pop_base_months ?? ""} onChange={(e) => update({ pop_base_months: Number(e.target.value) || null })} />
             </div>
             <div>
               <Label>Option months (total)</Label>
-              <Input type="number" value={local.pop_option_months ?? ""} onChange={(e) => setLocal({ ...local, pop_option_months: Number(e.target.value) || null })} />
+              <Input type="number" value={local.pop_option_months ?? ""} onChange={(e) => update({ pop_option_months: Number(e.target.value) || null })} />
             </div>
             <div className="col-span-2">
               <Label>Internal notes</Label>
-              <Textarea rows={3} value={local.user_notes ?? ""} onChange={(e) => setLocal({ ...local, user_notes: e.target.value })} />
+              <Textarea rows={3} value={local.user_notes ?? ""} onChange={(e) => update({ user_notes: e.target.value })} />
             </div>
-            <div className="col-span-2"><Button onClick={save} size="sm">Save details</Button></div>
+            <div className="col-span-2 flex items-center justify-end gap-2 text-xs text-muted-foreground" aria-live="polite" data-testid="intake-save-status">
+              {saveLabel && (
+                <span className={saveState === "error" ? "text-destructive" : ""}>
+                  {saveState === "saving" && <RefreshCw className="w-3 h-3 mr-1 inline animate-spin" />}
+                  {saveState === "saved" && <CheckCircle2 className="w-3 h-3 mr-1 inline text-emerald-600" />}
+                  {saveLabel}
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
 
