@@ -130,11 +130,15 @@ export type CompeteVendor = {
 export type CompetitiveIntel = {
   incumbent: {
     top: null | {
-      vendor: string; recipientId: string | null; piid: string;
+      vendor: string; recipientId: string | null; piid: string | null;
       value: number; popStart: string | null; popEnd: string | null;
       naics: string | null; description: string | null; generatedInternalId: string | null;
+      source?: "user" | "derived";
+      label?: string;
+      notes?: string | null;
     };
     alternates: any[];
+    source?: "user" | "derived" | "none";
   };
   agencyHistory: {
     agencyName: string; totalContracts: number; totalValue: number; avgValue: number;
@@ -149,6 +153,7 @@ export type CompetitiveIntel = {
     incumbentRisk: string; contractSize: string; competitionLevel: string;
     timeline: string; overall: string;
   };
+  userContextApplied?: string[];
   cachedAt: string;
   fromCache: boolean;
 };
@@ -162,6 +167,7 @@ export async function getCompetitiveIntel(input: {
   postedDate?: string;
   responseDeadLine?: string;
   teamId: string;
+  userContext?: import("./user-context").UserContext | null;
 }) {
   logCall(`competitive-intel ${input.naicsCode}`);
   const { data, error } = await supabase.functions.invoke("competitive-intel", { body: input });

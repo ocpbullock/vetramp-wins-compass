@@ -710,16 +710,21 @@ export type Database = {
       proposals: {
         Row: {
           agency: string | null
+          capture_notes: string | null
           clearance_requirement: string | null
+          competitive_notes: string | null
           compliance_gaps: number | null
           compliance_matrix: Json | null
           contract_type: string | null
           created_at: string
           customer_intel: Json | null
           customer_intel_verified: boolean | null
+          customer_notes: string | null
           engagement_type: string
           estimated_value: number | null
           id: string
+          incumbent_notes: string | null
+          known_incumbent: string | null
           management_approach: Json | null
           naics_code: string | null
           notice_id: string | null
@@ -755,16 +760,21 @@ export type Database = {
         }
         Insert: {
           agency?: string | null
+          capture_notes?: string | null
           clearance_requirement?: string | null
+          competitive_notes?: string | null
           compliance_gaps?: number | null
           compliance_matrix?: Json | null
           contract_type?: string | null
           created_at?: string
           customer_intel?: Json | null
           customer_intel_verified?: boolean | null
+          customer_notes?: string | null
           engagement_type?: string
           estimated_value?: number | null
           id?: string
+          incumbent_notes?: string | null
+          known_incumbent?: string | null
           management_approach?: Json | null
           naics_code?: string | null
           notice_id?: string | null
@@ -800,16 +810,21 @@ export type Database = {
         }
         Update: {
           agency?: string | null
+          capture_notes?: string | null
           clearance_requirement?: string | null
+          competitive_notes?: string | null
           compliance_gaps?: number | null
           compliance_matrix?: Json | null
           contract_type?: string | null
           created_at?: string
           customer_intel?: Json | null
           customer_intel_verified?: boolean | null
+          customer_notes?: string | null
           engagement_type?: string
           estimated_value?: number | null
           id?: string
+          incumbent_notes?: string | null
+          known_incumbent?: string | null
           management_approach?: Json | null
           naics_code?: string | null
           notice_id?: string | null

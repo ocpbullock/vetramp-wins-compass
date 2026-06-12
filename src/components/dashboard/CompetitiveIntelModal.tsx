@@ -198,13 +198,24 @@ export function CompetitiveIntelModal({
           })() : loading ? <Skeleton className="h-24" /> : !data ? null : data.incumbent.top ? (
             <div className="p-4 rounded-lg border border-amber-500/30 bg-amber-500/5">
               <div className="flex items-center gap-2 mb-1 flex-wrap">
-                <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">CANDIDATE</Badge>
-                <Badge variant="outline" className="text-[10px]">USASPENDING HEURISTIC</Badge>
-                <span className="text-[11px] text-muted-foreground">Not in your cached historical set — lower confidence</span>
+                {data.incumbent.top.source === "user" ? (
+                  <>
+                    <Badge className="bg-blue-500/15 text-blue-600 dark:text-blue-400 hover:bg-blue-500/15">PROVIDED BY YOU</Badge>
+                    <Badge variant="outline" className="text-[10px]">OFFEROR-AUTHORITATIVE</Badge>
+                  </>
+                ) : (
+                  <>
+                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15">CANDIDATE</Badge>
+                    <Badge variant="outline" className="text-[10px]">DERIVED FROM SPENDING DATA</Badge>
+                    <span className="text-[11px] text-muted-foreground">Not in your cached historical set — lower confidence</span>
+                  </>
+                )}
               </div>
-              <div className="text-[11px] text-muted-foreground mb-2">
-                This match is based on spending patterns, not contract-level data. The actual incumbent may differ.
-              </div>
+              {data.incumbent.top.source !== "user" && (
+                <div className="text-[11px] text-muted-foreground mb-2">
+                  This match is based on spending patterns, not contract-level data. The actual incumbent may differ.
+                </div>
+              )}
               <button
                 className="text-base font-semibold hover:underline text-left"
                 onClick={() => data.incumbent.top?.recipientId && onVendor(data.incumbent.top.recipientId, data.incumbent.top.vendor)}

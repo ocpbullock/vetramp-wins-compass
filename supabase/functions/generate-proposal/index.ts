@@ -7,6 +7,7 @@ import {
   missingProfileResponse,
   renderCompanyProfileBlock,
 } from "../_shared/company-profile.ts";
+import { normalizeUserContext, renderUserContextPrompt } from "../_shared/user-context.ts";
 
 function buildSystemPrompt(companyProfile: Record<string, any>): string {
   const identity = companyIdentity(companyProfile);
@@ -61,8 +62,10 @@ Deno.serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas } = await req.json();
+    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas, userContext: userContextRaw } = await req.json();
     const engagement = engagementType === "sub" ? "sub" : "prime";
+    const userContext = normalizeUserContext(userContextRaw);
+    const userContextBlock = renderUserContextPrompt(userContext);
 
     if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
 
@@ -106,7 +109,7 @@ Place of Performance: ${JSON.stringify(opportunity.placeOfPerformance || {})}
 
 Description:
 ${opportunity.description || "(No description provided — infer from title and agency)"}
-
+${userContextBlock}
 ${engagement === "sub" ? `Generate the FULL capabilities/teaming document now following all sections from the system prompt.` : `Generate the FULL proposal now following all sections from the system prompt.`}`;
 
 

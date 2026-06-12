@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mergeServerProposal } from "@/lib/intake-merge";
+import { userContextFromProposal, USER_CONTEXT_LABELS } from "@/lib/user-context";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
@@ -886,6 +887,62 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           </CardContent>
         </Card>
 
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">What we know (offeror-authoritative)</CardTitle>
+            <CardDescription className="text-xs">
+              Anything you enter here overrides AI assumptions in every analysis (competitive intel, customer intel, proposal draft).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-3">
+            <div>
+              <Label>Known incumbent</Label>
+              <Input
+                value={local.known_incumbent ?? ""}
+                onChange={(e) => update({ known_incumbent: e.target.value || null })}
+                placeholder="e.g. Acme Federal Solutions"
+              />
+            </div>
+            <div>
+              <Label>Incumbent notes</Label>
+              <Input
+                value={local.incumbent_notes ?? ""}
+                onChange={(e) => update({ incumbent_notes: e.target.value || null })}
+                placeholder="PoP end, performance gossip, key staff"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Customer notes</Label>
+              <Textarea
+                rows={2}
+                value={local.customer_notes ?? ""}
+                onChange={(e) => update({ customer_notes: e.target.value || null })}
+                placeholder="End user, hot buttons, KO/COR names, prior interactions"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>Competitive notes</Label>
+              <Textarea
+                rows={2}
+                value={local.competitive_notes ?? ""}
+                onChange={(e) => update({ competitive_notes: e.target.value || null })}
+                placeholder="Likely bidders, teaming rumors, pricing dynamics"
+              />
+            </div>
+            <div className="col-span-2">
+              <Label>General capture notes</Label>
+              <Textarea
+                rows={2}
+                value={local.capture_notes ?? ""}
+                onChange={(e) => update({ capture_notes: e.target.value || null })}
+                placeholder="Anything else relevant to this pursuit"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+
+
         <LinkOpportunityTeamCard
           proposalId={proposalId}
           parentTeamId={proposal.team_id ?? null}
@@ -1137,6 +1194,7 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
+          userContext: userContextFromProposal(proposal),
           skipCache,
         }),
       });
@@ -1196,6 +1254,14 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
             </div>
           )}
           {!intel.customer_summary && <div className="text-muted-foreground text-xs">No intel yet. Click "Run research".</div>}
+          {intel._user_context_applied?.length > 0 && (
+            <div className="text-[11px] text-muted-foreground flex flex-wrap items-center gap-1">
+              <span>Your facts applied:</span>
+              {intel._user_context_applied.map((k: string) => (
+                <Badge key={k} variant="outline" className="text-[10px]">{USER_CONTEXT_LABELS[k as keyof typeof USER_CONTEXT_LABELS] ?? k}</Badge>
+              ))}
+            </div>
+          )}
           {intel.customer_summary && <p className="text-sm leading-relaxed">{intel.customer_summary}</p>}
           <div className="grid grid-cols-2 gap-3 text-xs">
             {intel.end_user_unit && <div><div className="text-muted-foreground">End-user unit</div><div>{intel.end_user_unit}</div></div>}

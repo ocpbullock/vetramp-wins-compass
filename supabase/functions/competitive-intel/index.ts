@@ -1,6 +1,7 @@
 import { corsHeaders } from "../_shared/cors.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 import { authenticate, assertTeamMember, authErrorResponse } from "../_shared/auth.ts";
+import { normalizeUserContext, appliedFacts } from "../_shared/user-context.ts";
 
 const USA = "https://api.usaspending.gov/api/v2/search/spending_by_award/";
 const FIELDS = [
@@ -260,8 +261,9 @@ Deno.serve(async (req) => {
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
     const authHeader = ctx.authHeader;
 
-    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title, teamId } = await req.json();
+    const { solicitationNumber, agency, naicsCode, setAside, postedDate, responseDeadLine, title, teamId, userContext: userContextRaw } = await req.json();
     if (!naicsCode) throw new Error("naicsCode required");
+    const userContext = normalizeUserContext(userContextRaw);
 
     // Verify the caller is a member of the requested team BEFORE any cache R/W.
     try { await assertTeamMember(ctx, teamId); }
@@ -311,7 +313,61 @@ Deno.serve(async (req) => {
     }
     const piidMatch = piidRows.length > 0;
 
-    const incumbent = pickIncumbent(agencyRows, solicitationNumber, postedDate, title);
+    const derivedIncumbent = pickIncumbent(agencyRows, solicitationNumber, postedDate, title);
+    // The user-entered "known incumbent" is AUTHORITATIVE. The derived pick
+    // becomes the fallback / cross-check that we still surface under alternates.
+    let incumbent: {
+      top: any;
+      alternates: any[];
+      source: "user" | "derived" | "none";
+    };
+    if (userContext?.knownIncumbent) {
+      // Try to find a matching row in agencyRows for richer metadata.
+      const needle = userContext.knownIncumbent.toLowerCase();
+      const match = agencyRows.find((r) => String(r["Recipient Name"] || "").toLowerCase().includes(needle));
+      const top = match
+        ? {
+            vendor: match["Recipient Name"],
+            recipientId: match.recipient_id ?? null,
+            piid: match["Award ID"] ?? null,
+            value: Number(match["Award Amount"]) || 0,
+            popStart: match["Start Date"] ?? null,
+            popEnd: match["End Date"] ?? null,
+            naics: match.NAICS ?? null,
+            description: match.Description ?? null,
+            generatedInternalId: match.generated_internal_id ?? null,
+            source: "user" as const,
+            label: "Provided by you",
+            notes: userContext.incumbentNotes ?? null,
+          }
+        : {
+            vendor: userContext.knownIncumbent,
+            recipientId: null,
+            piid: null,
+            value: 0,
+            popStart: null,
+            popEnd: null,
+            naics: null,
+            description: userContext.incumbentNotes ?? null,
+            generatedInternalId: null,
+            source: "user" as const,
+            label: "Provided by you",
+            notes: userContext.incumbentNotes ?? null,
+          };
+      // Keep the spending-derived pick visible as an alternate cross-check.
+      const derivedAlts = [];
+      if (derivedIncumbent.top) {
+        derivedAlts.push({ ...derivedIncumbent.top, source: "derived" as const, label: "Derived from spending data" });
+      }
+      for (const a of derivedIncumbent.alternates) derivedAlts.push({ ...a, source: "derived" as const, label: "Derived from spending data" });
+      incumbent = { top, alternates: derivedAlts, source: "user" };
+    } else if (derivedIncumbent.top) {
+      const top = { ...derivedIncumbent.top, source: "derived" as const, label: "Derived from spending data" };
+      const alternates = derivedIncumbent.alternates.map((a: any) => ({ ...a, source: "derived" as const, label: "Derived from spending data" }));
+      incumbent = { top, alternates, source: "derived" };
+    } else {
+      incumbent = { top: null, alternates: [], source: "none" };
+    }
     const agencyVendors = aggregateByVendor(agencyRows);
     const marketVendors = aggregateByVendor(marketRows);
     const agencyTotal = agencyVendors.reduce((s, v) => s + v.totalValue, 0);
@@ -344,6 +400,7 @@ Deno.serve(async (req) => {
       },
       scorecard,
       piidMatch,
+      userContextApplied: appliedFacts(userContext),
       cachedAt: cached?.created_at ?? new Date().toISOString(),
       fromCache: !!cached,
     };

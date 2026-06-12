@@ -2,6 +2,7 @@ import "https://deno.land/x/xhr@0.1.0/mod.ts";
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, setCachedResponse } from "../_shared/ai-client.ts";
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
+import { normalizeUserContext, appliedFacts, renderUserContextPrompt } from "../_shared/user-context.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -61,8 +62,11 @@ serve(async (req) => {
       engagementType,
       primeContractorName,
       targetedScopeAreas,
+      userContext: userContextRaw,
     } = await req.json();
     const engagement = engagementType === "sub" ? "sub" : "prime";
+    const userContext = normalizeUserContext(userContextRaw);
+    const userContextBlock = renderUserContextPrompt(userContext);
 
     // Verify team membership (and/or proposal access) BEFORE touching team cache.
     let verifiedTeamId: string | null;
@@ -81,6 +85,7 @@ serve(async (req) => {
       engagement,
       primeContractorName: primeContractorName ?? "",
       targetedScopeAreas: targetedScopeAreas ?? "",
+      userContext: userContext ?? {},
     });
     if (!skipCache) {
       const cached = await getCachedResponse("customer-intel", cacheKey, verifiedTeamId);
@@ -110,9 +115,9 @@ ${JSON.stringify(opportunity, null, 2)}
 
 OUR COMPANY PROFILE (for win-theme alignment):
 ${JSON.stringify(companyProfile, null, 2)}
-${subContext}
+${subContext}${userContextBlock}
 ${extraNotes ? `ADDITIONAL CONTEXT FROM USER:\n${extraNotes}\n` : ""}${trimmedAttachments ? `\nREFERENCE DOCUMENTS PROVIDED BY USER (incumbent past performance, agency plans, prior SOWs, org charts, etc.):\n${trimmedAttachments}\n` : ""}
-Research this customer${engagement === "sub" ? " AND the named prime contractor" : ""} and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.`;
+Research this customer${engagement === "sub" ? " AND the named prime contractor" : ""} and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.${userContext?.knownIncumbent ? `\n\nNote: the offeror has confirmed the incumbent as "${userContext.knownIncumbent}". Use this as the predecessor_contract.incumbent value and do not propose a different incumbent.` : ""}`;
 
 
     let data: any;
@@ -142,6 +147,7 @@ Research this customer${engagement === "sub" ? " AND the named prime contractor"
     if (!intel) throw new Error("No intel returned");
     intel._data_source = "ai";
     intel._fetched_at = new Date().toISOString();
+    intel._user_context_applied = appliedFacts(userContext);
     try {
       await setCachedResponse({
         functionName: "customer-intel",
