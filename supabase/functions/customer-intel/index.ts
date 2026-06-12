@@ -79,7 +79,6 @@ serve(async (req) => {
     const cacheKey = await hashCacheKey({
       opportunity,
       profile: companyProfile,
-      extraNotes: extraNotes ?? "",
       attachmentsHash: typeof attachmentsText === "string" && attachmentsText.length > 0 ? await hashCacheKey(attachmentsText) : "",
       engagement,
       primeContractorName: primeContractorName ?? "",
