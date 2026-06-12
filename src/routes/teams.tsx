@@ -76,12 +76,32 @@ function TeamsPage() {
           counts[m.team_id] = (counts[m.team_id] ?? 0) + 1;
         }
       }
+      // Fetch linked proposals for opportunity teams (each opp team links 0..1
+      // proposals via proposals.opportunity_team_id).
+      const oppTeamIds = rows.filter((r) => r.team.team_type === "opportunity").map((r) => r.team.id);
+      const linkedByTeam: Record<string, { id: string; opportunity_title: string | null; solicitation_number: string | null }> = {};
+      if (oppTeamIds.length) {
+        const { data: props } = await supabase
+          .from("proposals")
+          .select("id, opportunity_title, solicitation_number, opportunity_team_id")
+          .in("opportunity_team_id", oppTeamIds);
+        for (const p of props ?? []) {
+          if (p.opportunity_team_id) {
+            linkedByTeam[p.opportunity_team_id] = {
+              id: p.id,
+              opportunity_title: p.opportunity_title,
+              solicitation_number: p.solicitation_number,
+            };
+          }
+        }
+      }
       return rows.map((r) => ({
         ...r.team,
         status: (r.team.status ?? "active") as "active" | "archived",
         created_at: r.team.created_at,
         member_count: counts[r.team.id] ?? 0,
         my_role: r.role,
+        linked_proposal: linkedByTeam[r.team.id] ?? null,
       } as TeamRow));
     },
   });
