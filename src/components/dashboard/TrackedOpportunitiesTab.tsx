@@ -354,6 +354,9 @@ export function TrackedOpportunitiesTab({
                       <Button size="sm" variant="ghost" onClick={() => setTeamRow(i)} title="Create opportunity team">
                         <Users className="w-4 h-4" />
                       </Button>
+                      <Button size="sm" variant="ghost" onClick={() => setSandboxRow(i)} title="Teaming sandbox / pWin">
+                        <Sparkles className="w-4 h-4 text-primary" />
+                      </Button>
                       <Button size="sm" variant="ghost" onClick={() => { setEditing(i); setDialogOpen(true); }} title="Edit">
                         <Pencil className="w-4 h-4" />
                       </Button>
