@@ -1032,6 +1032,8 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
 
           <DropZoneUpload onUpload={onUpload} />
 
+          <PasteReferenceText onAdd={onAddPastedReference} />
+
           {proposal.engagement_type !== "sub" && (
             <>
               <Button
@@ -1070,35 +1072,15 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           )}
           <div className="space-y-1">
             {sowAttachments.length === 0 && <div className="text-xs text-muted-foreground">No files yet.</div>}
-            {sowAttachments.map((a: any) => {
-              const chars = a.parsed_content?.length || 0;
-              const empty = a.parsed_content !== null && a.parsed_content !== undefined && chars === 0;
-              return (
-                <div key={a.id} className="border border-border rounded px-2 py-1.5 space-y-1">
-                  <div className="flex items-center gap-2 text-xs">
-                    <FileText className="w-3 h-3 text-muted-foreground" />
-                    <span className="flex-1 truncate" title={a.filename}>{a.filename}</span>
-                    <Select value={a.file_type ?? "other"} onValueChange={(v) => onUpdateAttachmentType(a, v)}>
-                      <SelectTrigger className="h-6 px-1.5 text-[10px] w-[110px]"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {ATTACHMENT_TYPE_OPTIONS.map((o) => (
-                          <SelectItem key={o.value} value={o.value} className="text-xs">{o.label}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <button onClick={() => onDelete(a)} className="text-muted-foreground hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
-                  </div>
-                  {chars > 0 && (
-                    <div className="text-[10px] text-muted-foreground pl-5">{chars.toLocaleString()} chars extracted</div>
-                  )}
-                  {empty && (
-                    <div className="text-[10px] text-destructive pl-5">
-                      Could not extract text — try uploading a text-based PDF instead of a scanned image.
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {sowAttachments.map((a: any) => (
+              <AttachmentRow
+                key={a.id}
+                att={a}
+                onDelete={onDelete}
+                onUpdateAttachmentType={onUpdateAttachmentType}
+                onUpdateAttachmentNotes={onUpdateAttachmentNotes}
+              />
+            ))}
           </div>
         </CardContent>
       </Card>
