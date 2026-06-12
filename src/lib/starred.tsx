@@ -43,11 +43,14 @@ const StarredContext = createContext<Ctx | null>(null);
 
 export function StarredProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
-  const teamId = useTeamId();
+  const { currentTeam } = useTeam();
+  const teamId = currentTeam?.id ?? null;
+  const isOppTeam = currentTeam?.team_type === "opportunity";
   const [starredIds, setStarredIds] = useState<Set<string>>(new Set());
   const [count, setCount] = useState(0);
   const [loading, setLoading] = useState(false);
   const reqRef = useRef(0);
+  const inFlight = useRef<Set<string>>(new Set());
 
   const reload = useCallback(async () => {
     if (!user || !teamId) {
@@ -102,47 +105,59 @@ export function StarredProvider({ children }: { children: React.ReactNode }) {
         toast.error("No team selected");
         return;
       }
+      if (isOppTeam) {
+        toast.error("Starring isn't available in this team context — switch to your organization team");
+        return;
+      }
+      if (inFlight.current.has(input.noticeId)) return;
+      inFlight.current.add(input.noticeId);
       const wasStarred = starredIds.has(input.noticeId);
-      // Optimistic
-      const next = new Set(starredIds);
-      if (wasStarred) next.delete(input.noticeId);
-      else next.add(input.noticeId);
-      setStarredIds(next);
-      setCount(next.size);
-
-      if (wasStarred) {
-        const { data: deleted, error } = await supabase
-          .from("starred_opportunities")
-          .delete()
-          .eq("team_id", teamId)
-          .eq("notice_id", input.noticeId)
-          .select("id");
-        if (error || !deleted || deleted.length === 0) {
-          // Roll back
-          setStarredIds(starredIds);
-          setCount(starredIds.size);
-          toast.error(error?.message ?? "You don't have permission to unstar this opportunity — ask a team owner/admin");
+      try {
+        if (wasStarred) {
+          const { data: deleted, error } = await supabase
+            .from("starred_opportunities")
+            .delete()
+            .eq("team_id", teamId)
+            .eq("notice_id", input.noticeId)
+            .select("id");
+          if (error || !deleted || deleted.length === 0) {
+            toast.error(error?.message ?? "You don't have permission to unstar this opportunity — ask a team owner/admin");
+            return;
+          }
+          setStarredIds((cur) => {
+            const next = new Set(cur);
+            next.delete(input.noticeId);
+            setCount(next.size);
+            return next;
+          });
+        } else {
+          const { error } = await supabase.from("starred_opportunities").insert({
+            team_id: teamId,
+            user_id: user.id,
+            notice_id: input.noticeId,
+            title: input.title ?? null,
+            naics_code: input.naicsCode ?? null,
+            response_deadline: input.responseDeadline ?? null,
+            posted_date: input.postedDate ?? null,
+            set_aside_description: input.setAsideDescription ?? null,
+            source_data: (input.sourceData ?? null) as any,
+          });
+          if (error) {
+            toast.error(error.message);
+            return;
+          }
+          setStarredIds((cur) => {
+            const next = new Set(cur);
+            next.add(input.noticeId);
+            setCount(next.size);
+            return next;
+          });
         }
-      } else {
-        const { error } = await supabase.from("starred_opportunities").insert({
-          team_id: teamId,
-          user_id: user.id,
-          notice_id: input.noticeId,
-          title: input.title ?? null,
-          naics_code: input.naicsCode ?? null,
-          response_deadline: input.responseDeadline ?? null,
-          posted_date: input.postedDate ?? null,
-          set_aside_description: input.setAsideDescription ?? null,
-          source_data: (input.sourceData ?? null) as any,
-        });
-        if (error) {
-          setStarredIds(starredIds);
-          setCount(starredIds.size);
-          toast.error(error.message);
-        }
+      } finally {
+        inFlight.current.delete(input.noticeId);
       }
     },
-    [user, teamId, starredIds],
+    [user, teamId, isOppTeam, starredIds],
   );
 
   const value = useMemo<Ctx>(
