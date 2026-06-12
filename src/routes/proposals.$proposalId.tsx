@@ -1348,7 +1348,7 @@ function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, 
           <CardTitle className="text-sm">Generation queue</CardTitle>
           <CardDescription className="text-xs">
             {generatedCount} of {SECS.length} drafted
-            {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Capabilities mode</span>}
+            {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Sub-to-prime inputs{proposal.prime_contractor_name ? ` for ${proposal.prime_contractor_name}` : ""}</span>}
             {followingTemplate && <span className="ml-1 text-primary">· Template-driven</span>}
           </CardDescription>
         </CardHeader>
