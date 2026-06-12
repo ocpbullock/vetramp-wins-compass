@@ -28,6 +28,7 @@ import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
 import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
 import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-classify";
 import { composeAttachmentsText } from "@/lib/attachments-text";
+import { extractTemplateStructure, findActiveTemplate, type TemplateSection } from "@/lib/proposal-template";
 import { DataProvenance } from "@/components/dashboard/DataSourceBadge";
 import { OCIScreeningCard, ociStatus, type OciAnswers } from "@/components/proposals/OCIScreeningCard";
 import { StepErrorBoundary } from "@/components/StepErrorBoundary";
