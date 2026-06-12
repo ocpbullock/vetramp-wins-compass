@@ -230,11 +230,15 @@ Deno.serve(async (req) => {
       userId: _ignoredUserId,
       proposalId,
       engagementType,
+      pursuitType,
       primeContractorName,
       targetedScopeAreas,
       template,
     } = body;
     const engagement = engagementType === "sub" ? "sub" : "prime";
+    const pursuit = pursuitType === "rfi_sources_sought" || pursuitType === "capability_statement"
+      ? pursuitType
+      : "rfp_rfq";
 
     const templateBlock = (template && typeof template === "object" && (template.filename || template.boilerplate))
       ? `\nPROPOSAL TEMPLATE (offeror-supplied — MATCH this structure, heading hierarchy, ordering, and tone):
