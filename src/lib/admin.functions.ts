@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { generateInviteToken, hashInviteToken } from "@/lib/invite-tokens";
 
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
@@ -115,14 +116,15 @@ export const inviteUser = createServerFn({ method: "POST" })
       .eq("status", "pending")
       .ilike("email", email);
 
+    const { token, tokenHash } = generateInviteToken();
     const { data: invite, error: insErr } = await supabaseAdmin
       .from("user_invites")
-      .insert({ email, role: data.role, invited_by: context.userId })
-      .select()
+      .insert({ email, role: data.role, invited_by: context.userId, token_hash: tokenHash })
+      .select("id,email,role,status,expires_at,created_at,invited_by")
       .single();
     if (insErr) throw new Error(insErr.message);
 
-    const redirectTo = `${data.origin}/accept-invite?token=${invite.token}`;
+    const redirectTo = `${data.origin}/accept-invite?token=${token}`;
     const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, { redirectTo });
     if (mailErr) {
       // Some users may already exist — still return invite row so admin can resend manually
@@ -148,17 +150,22 @@ export const resendInvite = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid(), origin: z.string().url() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
+    // Issue a NEW token on resend — invalidates the previous one immediately.
+    const { token, tokenHash } = generateInviteToken();
     const { data: invite, error } = await supabaseAdmin
       .from("user_invites")
       .update({
         status: "pending",
+        token_hash: tokenHash,
+        accepted_at: null,
+        accepted_by: null,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       })
       .eq("id", data.id)
-      .select()
+      .select("id,email")
       .single();
     if (error) throw new Error(error.message);
-    const redirectTo = `${data.origin}/accept-invite?token=${invite.token}`;
+    const redirectTo = `${data.origin}/accept-invite?token=${token}`;
     const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(invite.email, { redirectTo });
     if (mailErr) return { ok: true, warning: mailErr.message };
     return { ok: true };
@@ -185,16 +192,28 @@ function maskEmail(email: string): string {
   return `${maskedLocal}@${maskedDomain}${tld}`;
 }
 
+// Stable error codes the UI maps to friendly "expired / already used" copy
+// (with a "request a new invite" hint).
+export const INVITE_ERRORS = {
+  NOT_FOUND: "invite_not_found",
+  EXPIRED: "invite_expired",
+  USED: "invite_already_used",
+  CANCELLED: "invite_cancelled",
+  EMAIL_MISMATCH: "invite_email_mismatch",
+} as const;
+
 // Requires auth — magic-link invite flow signs the user in before this runs.
 // Returns a masked email so a leaked token cannot be used to harvest addresses.
 export const getInviteByToken = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ token: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
+    // Lookup by HASH — raw token never hits the DB.
+    const tokenHash = hashInviteToken(data.token);
     const { data: invite, error } = await supabaseAdmin
       .from("user_invites")
       .select("id,email,role,status,expires_at")
-      .eq("token", data.token)
+      .eq("token_hash", tokenHash)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!invite) return { invite: null as null };
