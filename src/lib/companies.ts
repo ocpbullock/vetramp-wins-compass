@@ -52,7 +52,7 @@ export async function listCompanies(teamId: string): Promise<Company[]> {
     .order("is_own_company", { ascending: false })
     .order("name");
   if (error) throw new Error(error.message);
-  return (data ?? []) as Company[];
+  return (data ?? []) as unknown as Company[];
 }
 
 export async function getOwnCompany(teamId: string): Promise<Company | null> {
@@ -63,7 +63,7 @@ export async function getOwnCompany(teamId: string): Promise<Company | null> {
     .eq("is_own_company", true)
     .maybeSingle();
   if (error) throw new Error(error.message);
-  return (data as Company) ?? null;
+  return (data as unknown as Company) ?? null;
 }
 
 export async function upsertCompany(draft: CompanyDraft & { id?: string }): Promise<Company> {
@@ -76,7 +76,7 @@ export async function upsertCompany(draft: CompanyDraft & { id?: string }): Prom
       .select("*")
       .single();
     if (error) throw new Error(error.message);
-    return data as Company;
+    return data as unknown as Company;
   }
   const { data, error } = await supabase
     .from("companies" as any)
@@ -84,7 +84,7 @@ export async function upsertCompany(draft: CompanyDraft & { id?: string }): Prom
     .select("*")
     .single();
   if (error) throw new Error(error.message);
-  return data as Company;
+  return data as unknown as Company;
 }
 
 export async function deleteCompany(id: string): Promise<void> {
