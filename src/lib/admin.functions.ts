@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { generateInviteToken, hashInviteToken } from "@/lib/invite-tokens";
 
 async function assertAdmin(userId: string) {
   const { data, error } = await supabaseAdmin
@@ -115,14 +116,15 @@ export const inviteUser = createServerFn({ method: "POST" })
       .eq("status", "pending")
       .ilike("email", email);
 
+    const { token, tokenHash } = generateInviteToken();
     const { data: invite, error: insErr } = await supabaseAdmin
       .from("user_invites")
-      .insert({ email, role: data.role, invited_by: context.userId })
-      .select()
+      .insert({ email, role: data.role, invited_by: context.userId, token_hash: tokenHash })
+      .select("id,email,role,status,expires_at,created_at,invited_by")
       .single();
     if (insErr) throw new Error(insErr.message);
 
-    const redirectTo = `${data.origin}/accept-invite?token=${invite.token}`;
+    const redirectTo = `${data.origin}/accept-invite?token=${token}`;
     const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, { redirectTo });
     if (mailErr) {
       // Some users may already exist — still return invite row so admin can resend manually
@@ -148,17 +150,22 @@ export const resendInvite = createServerFn({ method: "POST" })
   .inputValidator((d) => z.object({ id: z.string().uuid(), origin: z.string().url() }).parse(d))
   .handler(async ({ data, context }) => {
     await assertAdmin(context.userId);
+    // Issue a NEW token on resend — invalidates the previous one immediately.
+    const { token, tokenHash } = generateInviteToken();
     const { data: invite, error } = await supabaseAdmin
       .from("user_invites")
       .update({
         status: "pending",
+        token_hash: tokenHash,
+        accepted_at: null,
+        accepted_by: null,
         expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
       })
       .eq("id", data.id)
-      .select()
+      .select("id,email")
       .single();
     if (error) throw new Error(error.message);
-    const redirectTo = `${data.origin}/accept-invite?token=${invite.token}`;
+    const redirectTo = `${data.origin}/accept-invite?token=${token}`;
     const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(invite.email, { redirectTo });
     if (mailErr) return { ok: true, warning: mailErr.message };
     return { ok: true };
@@ -185,16 +192,28 @@ function maskEmail(email: string): string {
   return `${maskedLocal}@${maskedDomain}${tld}`;
 }
 
+// Stable error codes the UI maps to friendly "expired / already used" copy
+// (with a "request a new invite" hint).
+export const INVITE_ERRORS = {
+  NOT_FOUND: "invite_not_found",
+  EXPIRED: "invite_expired",
+  USED: "invite_already_used",
+  CANCELLED: "invite_cancelled",
+  EMAIL_MISMATCH: "invite_email_mismatch",
+} as const;
+
 // Requires auth — magic-link invite flow signs the user in before this runs.
 // Returns a masked email so a leaked token cannot be used to harvest addresses.
 export const getInviteByToken = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ token: z.string().uuid() }).parse(d))
   .handler(async ({ data }) => {
+    // Lookup by HASH — raw token never hits the DB.
+    const tokenHash = hashInviteToken(data.token);
     const { data: invite, error } = await supabaseAdmin
       .from("user_invites")
       .select("id,email,role,status,expires_at")
-      .eq("token", data.token)
+      .eq("token_hash", tokenHash)
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!invite) return { invite: null as null };
@@ -212,28 +231,46 @@ export const acceptInvite = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d) => z.object({ token: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
+    // Lookup by HASH — the raw token only travels in the email link / URL.
+    const tokenHash = hashInviteToken(data.token);
     const { data: invite, error: invErr } = await supabaseAdmin
       .from("user_invites")
       .select("id,email,role,status,expires_at,invited_by,team_id")
-      .eq("token", data.token)
+      .eq("token_hash", tokenHash)
       .maybeSingle();
     if (invErr) throw new Error(invErr.message);
-    if (!invite) throw new Error("Invitation not found.");
+    if (!invite) {
+      const e = new Error("Invitation not found. Ask your admin to send a new invite.");
+      (e as any).code = INVITE_ERRORS.NOT_FOUND;
+      throw e;
+    }
     if (invite.status === "accepted") return { ok: true, alreadyAccepted: true };
-    if (invite.status !== "pending") throw new Error("This invitation is no longer valid.");
-    if (new Date(invite.expires_at) < new Date()) throw new Error("This invitation has expired.");
+    if (invite.status === "cancelled") {
+      const e = new Error("This invitation was cancelled. Ask your admin to send a new invite.");
+      (e as any).code = INVITE_ERRORS.CANCELLED;
+      throw e;
+    }
+    if (invite.status !== "pending") {
+      const e = new Error("This invitation is no longer valid. Ask your admin to send a new invite.");
+      (e as any).code = INVITE_ERRORS.USED;
+      throw e;
+    }
+    if (new Date(invite.expires_at) < new Date()) {
+      const e = new Error("This invitation has expired. Ask your admin to send a new invite.");
+      (e as any).code = INVITE_ERRORS.EXPIRED;
+      throw e;
+    }
 
     // Verify the current user's email matches the invite
     const { data: authUser, error: uErr } = await supabaseAdmin.auth.admin.getUserById(context.userId);
     if (uErr) throw new Error(uErr.message);
     const userEmail = authUser?.user?.email?.toLowerCase() ?? "";
     if (userEmail !== invite.email.toLowerCase()) {
-      throw new Error("Signed-in account does not match the invited email address.");
+      const e = new Error("Signed-in account does not match the invited email address.");
+      (e as any).code = INVITE_ERRORS.EMAIL_MISMATCH;
+      throw e;
     }
 
-    // Resolve target team: prefer the invite's explicit team_id (opportunity-team
-    // or team-scoped invite). Otherwise fall back to the inviter's most recent
-    // owner/admin team (legacy admin invite flow).
     let teamId: string | null = invite.team_id ?? null;
     if (!teamId && invite.invited_by) {
       const { data: inviterTeams, error: tErr } = await supabaseAdmin
@@ -253,12 +290,28 @@ export const acceptInvite = createServerFn({ method: "POST" })
       .insert({ team_id: teamId, user_id: context.userId, role: "member" });
     if (mErr && !/duplicate|unique/i.test(mErr.message)) throw new Error(mErr.message);
 
-    // Mark invite accepted
-    const { error: aErr } = await supabaseAdmin
+    // Atomically flip pending -> accepted. The status='pending' filter is the
+    // single-use guard: a second concurrent acceptance with the same token
+    // sees zero updated rows and is rejected as already-used.
+    const nowIso = new Date().toISOString();
+    const { data: claimed, error: aErr } = await supabaseAdmin
       .from("user_invites")
-      .update({ status: "accepted", updated_at: new Date().toISOString() })
-      .eq("id", invite.id);
+      .update({
+        status: "accepted",
+        accepted_at: nowIso,
+        accepted_by: context.userId,
+        updated_at: nowIso,
+      })
+      .eq("id", invite.id)
+      .eq("status", "pending")
+      .select("id")
+      .maybeSingle();
     if (aErr) throw new Error(aErr.message);
+    if (!claimed) {
+      const e = new Error("This invitation has already been used. Ask your admin to send a new invite.");
+      (e as any).code = INVITE_ERRORS.USED;
+      throw e;
+    }
 
     // If this is an opportunity team, return the linked proposal so the UI can redirect.
     const { data: team } = await supabaseAdmin

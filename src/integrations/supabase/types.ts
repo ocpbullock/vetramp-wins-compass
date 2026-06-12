@@ -1677,6 +1677,8 @@ export type Database = {
       }
       user_invites: {
         Row: {
+          accepted_at: string | null
+          accepted_by: string | null
           created_at: string
           email: string
           expires_at: string
@@ -1685,10 +1687,12 @@ export type Database = {
           role: Database["public"]["Enums"]["app_role"]
           status: string
           team_id: string | null
-          token: string
+          token_hash: string
           updated_at: string
         }
         Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
           created_at?: string
           email: string
           expires_at?: string
@@ -1697,10 +1701,12 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
           team_id?: string | null
-          token?: string
+          token_hash: string
           updated_at?: string
         }
         Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
           created_at?: string
           email?: string
           expires_at?: string
@@ -1709,7 +1715,7 @@ export type Database = {
           role?: Database["public"]["Enums"]["app_role"]
           status?: string
           team_id?: string | null
-          token?: string
+          token_hash?: string
           updated_at?: string
         }
         Relationships: [

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { generateInviteToken } from "@/lib/invite-tokens";
 
 function slugify(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 40) || "opp";
@@ -101,6 +102,7 @@ export const inviteToOpportunityTeam = createServerFn({ method: "POST" })
       .eq("team_id", data.teamId)
       .ilike("email", email);
 
+    const { token, tokenHash } = generateInviteToken();
     const { data: invite, error: insErr } = await supabaseAdmin
       .from("user_invites")
       .insert({
@@ -108,12 +110,13 @@ export const inviteToOpportunityTeam = createServerFn({ method: "POST" })
         role: "member",
         invited_by: userId,
         team_id: data.teamId,
+        token_hash: tokenHash,
       })
-      .select()
+      .select("id,email,role,status,expires_at,team_id")
       .single();
     if (insErr) throw new Error(insErr.message);
 
-    const redirectTo = `${data.origin}/accept-invite?token=${invite.token}`;
+    const redirectTo = `${data.origin}/accept-invite?token=${token}`;
     const { error: mailErr } = await supabaseAdmin.auth.admin.inviteUserByEmail(email, { redirectTo });
     if (mailErr) return { invite, warning: mailErr.message };
     return { invite };
