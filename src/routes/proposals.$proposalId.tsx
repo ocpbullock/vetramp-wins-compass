@@ -1710,7 +1710,7 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
                 </p>
               )}
             </div>
-            <Button onClick={research} disabled={locked} size="sm" className="w-full" title={aiBusy && !busy ? "Another AI task is running — please wait." : undefined}>
+            <Button onClick={() => research()} disabled={locked} size="sm" className="w-full" title={aiBusy && !busy ? "Another AI task is running — please wait." : undefined}>
               {busy ? <RefreshCw className="w-4 h-4 mr-1 animate-spin" /> : <Search className="w-4 h-4 mr-1" />}
               {busy ? "Researching…" : intel.customer_summary ? "Re-run research" : "Run research"}
             </Button>
