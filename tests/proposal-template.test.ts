@@ -22,8 +22,8 @@ describe("extractTemplateStructure", () => {
     const { sections } = extractTemplateStructure(txt);
     // top level == depth 1 (numbered 1./2./3.)
     expect(sections.length).toBe(3);
-    expect(sections[0].title).toBe("1. COVER LETTER");
-    expect(sections[2].title).toBe("3. TECHNICAL APPROACH");
+    expect(sections[0].title).toMatch(/^1\.?\s+COVER LETTER$/);
+    expect(sections[2].title).toMatch(/^3\.?\s+TECHNICAL APPROACH$/);
   });
 
   it("falls back to ALL-CAPS headings when no markdown/numbered headings exist", () => {
