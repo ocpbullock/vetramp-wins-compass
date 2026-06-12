@@ -97,9 +97,6 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
     queryKey: ["parent-team-name", currentTeam?.parent_team_id],
     enabled: isOpp && !!currentTeam?.parent_team_id,
     queryFn: async () => {
-      const { useTeam } = await import("@/lib/team"); // keep tree-shake happy
-      void useTeam;
-      const { supabase } = await import("@/integrations/supabase/client");
       const { data } = await supabase
         .from("teams")
         .select("name")
