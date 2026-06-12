@@ -245,6 +245,18 @@ function TeamCard({
               </Badge>
             )}
           </div>
+          {isOpp && (
+            <div className="text-xs mt-1 truncate">
+              {team.linked_proposal ? (
+                <span className="text-foreground/80">
+                  <span className="text-muted-foreground">Linked proposal: </span>
+                  <span className="font-medium">{team.linked_proposal.opportunity_title || team.linked_proposal.solicitation_number || "Untitled proposal"}</span>
+                </span>
+              ) : (
+                <span className="text-muted-foreground italic">No proposal linked yet</span>
+              )}
+            </div>
+          )}
           <div className="text-xs text-muted-foreground mt-1 flex items-center gap-3 flex-wrap">
             <span className="flex items-center gap-1"><Users className="w-3 h-3" />{team.member_count} member{team.member_count === 1 ? "" : "s"}</span>
             <span>Created {team.created_at ? new Date(team.created_at).toLocaleDateString() : "—"}</span>
