@@ -75,14 +75,7 @@ export function TeamingCard({
   const { data: partners = [] } = useQuery({
     queryKey: ["teaming-partners", teamId],
     enabled: !!teamId,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("teaming_partners").select("*")
-        .eq("team_id", teamId!)
-        .order("company_name");
-      if (error) throw new Error(error.message);
-      return (data ?? []) as Partner[];
-    },
+    queryFn: async () => listPartnerCompanies(teamId!),
   });
 
   const { data: entries = [], refetch } = useQuery({
@@ -90,11 +83,15 @@ export function TeamingCard({
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposal_teaming")
-        .select("*, partner:partner_id ( * )")
+        .select("*, company:company_id ( * )")
         .eq("proposal_id", proposalId)
         .order("created_at");
       if (error) throw new Error(error.message);
-      return (data ?? []) as TeamingEntry[];
+      return (data ?? []).map((row: any) => ({
+        ...row,
+        partner_id: row.company_id ?? row.partner_id,
+        partner: row.company ? companyToPartnerView(row.company as Company) : undefined,
+      })) as TeamingEntry[];
     },
   });
 
