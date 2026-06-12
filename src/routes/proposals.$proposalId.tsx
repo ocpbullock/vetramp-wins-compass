@@ -822,7 +822,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           <CardContent className="grid grid-cols-2 gap-3">
             <div>
               <Label>Opportunity type</Label>
-              <Select value={local.opportunity_type ?? ""} onValueChange={(v) => setLocal({ ...local, opportunity_type: v })}>
+              <Select value={local.opportunity_type ?? ""} onValueChange={(v) => update({ opportunity_type: v })}>
                 <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="new">New requirement</SelectItem>
@@ -835,7 +835,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             </div>
             <div>
               <Label>Contract type</Label>
-              <Select value={local.contract_type ?? ""} onValueChange={(v) => setLocal({ ...local, contract_type: v })}>
+              <Select value={local.contract_type ?? ""} onValueChange={(v) => update({ contract_type: v })}>
                 <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="ffp">FFP</SelectItem>
@@ -847,11 +847,11 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             </div>
             <div>
               <Label>Estimated value (USD)</Label>
-              <Input type="number" value={local.estimated_value ?? ""} onChange={(e) => setLocal({ ...local, estimated_value: Number(e.target.value) || null })} />
+              <Input type="number" value={local.estimated_value ?? ""} onChange={(e) => update({ estimated_value: Number(e.target.value) || null })} />
             </div>
             <div>
               <Label>Clearance</Label>
-              <Select value={local.clearance_requirement ?? ""} onValueChange={(v) => setLocal({ ...local, clearance_requirement: v })}>
+              <Select value={local.clearance_requirement ?? ""} onValueChange={(v) => update({ clearance_requirement: v })}>
                 <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">None</SelectItem>
@@ -864,17 +864,25 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             </div>
             <div>
               <Label>PoP base (months)</Label>
-              <Input type="number" value={local.pop_base_months ?? ""} onChange={(e) => setLocal({ ...local, pop_base_months: Number(e.target.value) || null })} />
+              <Input type="number" value={local.pop_base_months ?? ""} onChange={(e) => update({ pop_base_months: Number(e.target.value) || null })} />
             </div>
             <div>
               <Label>Option months (total)</Label>
-              <Input type="number" value={local.pop_option_months ?? ""} onChange={(e) => setLocal({ ...local, pop_option_months: Number(e.target.value) || null })} />
+              <Input type="number" value={local.pop_option_months ?? ""} onChange={(e) => update({ pop_option_months: Number(e.target.value) || null })} />
             </div>
             <div className="col-span-2">
               <Label>Internal notes</Label>
-              <Textarea rows={3} value={local.user_notes ?? ""} onChange={(e) => setLocal({ ...local, user_notes: e.target.value })} />
+              <Textarea rows={3} value={local.user_notes ?? ""} onChange={(e) => update({ user_notes: e.target.value })} />
             </div>
-            <div className="col-span-2"><Button onClick={save} size="sm">Save details</Button></div>
+            <div className="col-span-2 flex items-center justify-end gap-2 text-xs text-muted-foreground" aria-live="polite" data-testid="intake-save-status">
+              {saveLabel && (
+                <span className={saveState === "error" ? "text-destructive" : ""}>
+                  {saveState === "saving" && <RefreshCw className="w-3 h-3 mr-1 inline animate-spin" />}
+                  {saveState === "saved" && <CheckCircle2 className="w-3 h-3 mr-1 inline text-emerald-600" />}
+                  {saveLabel}
+                </span>
+              )}
+            </div>
           </CardContent>
         </Card>
 
