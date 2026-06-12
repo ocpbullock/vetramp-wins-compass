@@ -23,7 +23,7 @@ import {
   type PwinTeamMember, type PwinContext, type PwinRole, type EngagementType, type PwinResult,
   type RelationshipModel, type ScenarioInsights,
 } from "@/lib/pwin";
-import { listPartnerCompanies, type PartnerView as Partner } from "@/lib/companies";
+import { listPartnerCompanies, getOwnCompanyProfileData, type PartnerView as Partner } from "@/lib/companies";
 
 const ROLES: { value: PwinRole; label: string }[] = [
   { value: "prime", label: "Prime" },
