@@ -4,6 +4,7 @@ import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, se
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 import { hasCompanyProfile, missingProfileResponse, renderCompanyProfileBlock, companyIdentity } from "../_shared/company-profile.ts";
+import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 
 const SCHEMA = {
   type: "object",
@@ -72,7 +73,7 @@ serve(async (req) => {
       }
     }
 
-    const system = "You are a business development professional specializing in federal government contracting teaming arrangements. Write professional, compelling outreach messages that clearly articulate mutual benefit and complementary capabilities. Be specific, never generic. Reference concrete facts from the company profiles, certifications, NAICS codes, and opportunity details provided. Never fabricate past performance or relationships.";
+    const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + "You are a business development professional specializing in federal government contracting teaming arrangements. Write professional, compelling outreach messages that clearly articulate mutual benefit and complementary capabilities. Be specific, never generic. Reference concrete facts from the company profiles, certifications, NAICS codes, and opportunity details provided. Never fabricate past performance or relationships.";
 
     const direction = engagement === "sub"
       ? `We (the sender) are pursuing this opportunity as a SUBCONTRACTOR and reaching out to the target company as a potential PRIME we could team UNDER. Frame the value we bring as a sub: relevant past performance, certifications, scope we can self-perform.`
@@ -97,8 +98,8 @@ TARGET PARTNER (recipient):
 - NAICS: ${(partner.naics_codes ?? []).join(", ") || "(unknown)"}
 - Location: ${partner.location || [partner.city, partner.state].filter(Boolean).join(", ") || "(unknown)"}
 - UEI: ${partner.uei ?? "(unknown)"}
-- Capabilities: ${partner.capabilities_summary ?? "(none on file)"}
-- Past performance: ${partner.past_performance_summary ?? "(none on file)"}
+- Capabilities: ${partner.capabilities_summary ? wrapUntrusted("partner:capabilities", partner.capabilities_summary) : "(none on file)"}
+- Past performance: ${partner.past_performance_summary ? wrapUntrusted("partner:past-performance", partner.past_performance_summary) : "(none on file)"}
 - POC: ${partner.poc_name ?? "(unknown)"}${partner.poc_email ? ` <${partner.poc_email}>` : ""}
 
 TEAMING PROPOSAL:
