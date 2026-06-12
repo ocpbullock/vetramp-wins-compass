@@ -81,6 +81,7 @@ export function StarredTab({
                 <TableHead className="w-[180px]">Actions</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>NAICS</TableHead>
+                <TableHead>pWin</TableHead>
                 <TableHead>Deadline</TableHead>
                 <TableHead>Posted</TableHead>
                 <TableHead>Set-Aside</TableHead>
@@ -89,11 +90,11 @@ export function StarredTab({
             </TableHeader>
             <TableBody>
               {loading && (
-                <TableRow><TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-6">Loading...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-6">Loading...</TableCell></TableRow>
               )}
               {!loading && filtered.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-sm text-muted-foreground py-10">
+                  <TableCell colSpan={8} className="text-center text-sm text-muted-foreground py-10">
                     {rows.length === 0
                       ? "No starred opportunities yet. Click the star icon on any opportunity to bookmark it."
                       : "No matches for the current search."}
