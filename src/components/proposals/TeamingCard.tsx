@@ -374,8 +374,12 @@ function TotalShare({ entries }: { entries: TeamingEntry[] }) {
 export async function fetchTeamingForProposal(proposalId: string): Promise<TeamingEntry[]> {
   const { data, error } = await supabase
     .from("proposal_teaming")
-    .select("*, partner:partner_id ( * )")
+    .select("*, company:company_id ( * )")
     .eq("proposal_id", proposalId);
   if (error) return [];
-  return (data ?? []) as TeamingEntry[];
+  return (data ?? []).map((row: any) => ({
+    ...row,
+    partner_id: row.company_id ?? row.partner_id,
+    partner: row.company ? companyToPartnerView(row.company as Company) : undefined,
+  })) as TeamingEntry[];
 }
