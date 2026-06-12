@@ -1,7 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mergeServerProposal } from "@/lib/intake-merge";
-import { userContextFromProposal, appliedUserFacts, USER_CONTEXT_LABELS } from "@/lib/user-context";
+import { userContextFromProposal, USER_CONTEXT_LABELS } from "@/lib/user-context";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
