@@ -46,6 +46,7 @@ function Dashboard() {
   const teamId = useTeamId();
   const { currentTeam } = useTeam();
   const fetchOppProposal = useServerFn(getOpportunityTeamProposal);
+  const onboarding = useOnboardingGate();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
   // Opportunity-team members don't have a dashboard — redirect to their proposal.
