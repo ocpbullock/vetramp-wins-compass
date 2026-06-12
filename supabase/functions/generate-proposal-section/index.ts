@@ -8,6 +8,7 @@ import {
   missingProfileResponse,
   renderCompanyProfileBlock,
 } from "../_shared/company-profile.ts";
+import { normalizeUserContext, renderUserContextPrompt } from "../_shared/user-context.ts";
 
 const SECTION_KB_CATEGORIES: Record<string, string[]> = {
   past_performance: ["past_performance"],
@@ -234,7 +235,10 @@ Deno.serve(async (req) => {
       primeContractorName,
       targetedScopeAreas,
       template,
+      userContext: userContextRaw,
     } = body;
+    const userContext = normalizeUserContext(userContextRaw);
+    const userContextBlock = renderUserContextPrompt(userContext);
     const engagement = engagementType === "sub" ? "sub" : "prime";
     const pursuit = pursuitType === "rfi_sources_sought" || pursuitType === "capability_statement"
       ? pursuitType
@@ -332,6 +336,7 @@ ${teaming && teaming.length ? `TEAMING ARRANGEMENT (reference these partners by 
 ${pastPerformance && pastPerformance.length ? `PAST PERFORMANCE LIBRARY (selected by capture team — use these as the source of truth for the Past Performance section; do NOT invent contracts, values, periods, or POCs not listed here):\n${JSON.stringify(pastPerformance, null, 2)}\n` : ""}
 ${attachmentsText ? `SOLICITATION ATTACHMENT TEXT (truncated):\n${String(attachmentsText).slice(0, 30000)}\n` : ""}
 ${templateBlock}
+${userContextBlock}
 CRITICAL: Before writing, briefly research the end-user unit from context (mission, facility, terminology) and weave at least 3 unit-specific details into the section. If you cannot identify the unit, say so explicitly with [TO BE VERIFIED].`;
 
 
