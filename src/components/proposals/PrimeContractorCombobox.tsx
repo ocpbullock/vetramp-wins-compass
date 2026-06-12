@@ -25,12 +25,15 @@ export function PrimeContractorCombobox({ teamId, valueId, valueName, onChange }
     let cancel = false;
     (async () => {
       const { data } = await supabase
-        .from("teaming_partners")
-        .select("id, company_name, uei, cage_code")
+        .from("companies")
+        .select("id, name, uei, cage_code")
         .eq("team_id", teamId)
-        .order("company_name", { ascending: true })
+        .eq("is_own_company", false)
+        .order("name", { ascending: true })
         .limit(200);
-      if (!cancel) setPartners((data as Partner[]) ?? []);
+      if (!cancel) setPartners(((data as any[]) ?? []).map((r) => ({
+        id: r.id, company_name: r.name, uei: r.uei, cage_code: r.cage_code,
+      })));
     })();
     return () => { cancel = true; };
   }, [teamId]);
