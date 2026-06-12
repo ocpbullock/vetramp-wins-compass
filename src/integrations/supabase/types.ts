@@ -454,33 +454,36 @@ export type Database = {
           file_type: string | null
           filename: string
           id: string
+          notes: string | null
           parsed_content: string | null
           proposal_id: string
           size_bytes: number | null
           source: string | null
-          storage_path: string
+          storage_path: string | null
           uploaded_at: string
         }
         Insert: {
           file_type?: string | null
           filename: string
           id?: string
+          notes?: string | null
           parsed_content?: string | null
           proposal_id: string
           size_bytes?: number | null
           source?: string | null
-          storage_path: string
+          storage_path?: string | null
           uploaded_at?: string
         }
         Update: {
           file_type?: string | null
           filename?: string
           id?: string
+          notes?: string | null
           parsed_content?: string | null
           proposal_id?: string
           size_bytes?: number | null
           source?: string | null
-          storage_path?: string
+          storage_path?: string | null
           uploaded_at?: string
         }
         Relationships: [
