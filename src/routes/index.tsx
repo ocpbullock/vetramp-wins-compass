@@ -22,6 +22,7 @@ import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { DataSourceBadge } from "@/components/dashboard/DataSourceBadge";
 import { CachedItemControls } from "@/components/dashboard/RefreshButton";
 import { DeadlinesPanel } from "@/components/dashboard/DeadlinesPanel";
+import { CaptureRoomNotSetup } from "@/components/dashboard/CaptureRoomNotSetup";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -51,18 +52,31 @@ function Dashboard() {
   const onboarding = useOnboardingGate();
   useEffect(() => { if (!loading && !user) navigate({ to: "/auth" }); }, [user, loading, navigate]);
 
-  // Opportunity-team members don't have a dashboard — redirect to their proposal.
+  // Opportunity-team members don't have a dashboard. If a proposal is linked,
+  // redirect into it; otherwise we render a "Capture room not set up" screen
+  // (below) instead of the org dashboard — org-only features (starring,
+  // tracking, companies, quota) would 401/empty out in this context.
+  const [oppLookup, setOppLookup] = useState<
+    { status: "idle" | "loading" } | { status: "no-proposal" } | { status: "linked" }
+  >({ status: "idle" });
   useEffect(() => {
-    if (!currentTeam || currentTeam.team_type !== "opportunity") return;
+    if (!currentTeam || currentTeam.team_type !== "opportunity") {
+      setOppLookup({ status: "idle" });
+      return;
+    }
     let cancelled = false;
+    setOppLookup({ status: "loading" });
     fetchOppProposal({ data: { teamId: currentTeam.id } })
       .then((res) => {
         if (cancelled) return;
         if (res.proposal?.id) {
+          setOppLookup({ status: "linked" });
           navigate({ to: "/proposals/$proposalId", params: { proposalId: res.proposal.id }, replace: true });
+        } else {
+          setOppLookup({ status: "no-proposal" });
         }
       })
-      .catch(() => { /* stay on dashboard */ });
+      .catch(() => { if (!cancelled) setOppLookup({ status: "no-proposal" }); });
     return () => { cancelled = true; };
   }, [currentTeam, fetchOppProposal, navigate]);
 
@@ -370,6 +384,23 @@ function Dashboard() {
               </div>
             ))}
           </div>
+        </main>
+      </div>
+    );
+  }
+
+  // Opportunity-team context: never render the org dashboard. Either we're
+  // about to redirect into the linked proposal, or there is no link and we
+  // show the capture-room-not-set-up screen.
+  if (currentTeam?.team_type === "opportunity") {
+    if (oppLookup.status === "no-proposal") {
+      return <CaptureRoomNotSetup team={currentTeam} />;
+    }
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="max-w-[1400px] mx-auto px-6 py-10">
+          <Skeleton className="h-32 w-full" />
         </main>
       </div>
     );
