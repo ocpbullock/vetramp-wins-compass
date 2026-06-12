@@ -163,6 +163,8 @@ export function PastPerformancePanel() {
           teamId={currentTeam.id}
           onSaved={() => {
             qc.invalidateQueries({ queryKey: ["past-performance"] });
+            qc.invalidateQueries({ queryKey: ["pwin-self"] });
+            qc.invalidateQueries({ queryKey: ["pwin-solo"] });
             setOpen(false);
           }}
         />
