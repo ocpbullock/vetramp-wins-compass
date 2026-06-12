@@ -7,6 +7,7 @@ import {
   missingProfileResponse,
   renderCompanyProfileBlock,
 } from "../_shared/company-profile.ts";
+import { normalizeUserContext, renderUserContextPrompt } from "../_shared/user-context.ts";
 
 function buildSystemPrompt(companyProfile: Record<string, any>): string {
   const identity = companyIdentity(companyProfile);
