@@ -389,6 +389,23 @@ function Dashboard() {
     );
   }
 
+  // Opportunity-team context: never render the org dashboard. Either we're
+  // about to redirect into the linked proposal, or there is no link and we
+  // show the capture-room-not-set-up screen.
+  if (currentTeam?.team_type === "opportunity") {
+    if (oppLookup.status === "no-proposal") {
+      return <CaptureRoomNotSetup team={currentTeam} />;
+    }
+    return (
+      <div className="min-h-screen bg-background">
+        <Header />
+        <main className="max-w-[1400px] mx-auto px-6 py-10">
+          <Skeleton className="h-32 w-full" />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background">
       <Header />
