@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeamId } from "@/lib/team";
+import { countPartnerCompanies } from "@/lib/companies";
+
 
 export type SetupItem = {
   key: string;
