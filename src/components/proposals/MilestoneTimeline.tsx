@@ -119,6 +119,7 @@ export function MilestoneTimeline({
   }
 
   const memberById = new Map(teamMembers.map((m) => [m.user_id, m]));
+  const responseDays = responseDeadline ? daysUntil(responseDeadline) : null;
 
   return (
     <Card>
@@ -135,6 +136,23 @@ export function MilestoneTimeline({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {responseDeadline && (
+          <div className="flex items-center gap-2 rounded-md border border-border bg-muted/40 px-3 py-2">
+            <span className="text-xs font-medium">Response deadline:</span>
+            <span className="text-xs">{format(new Date(responseDeadline), "MMM d, yyyy h:mm a")}</span>
+            <span className={`text-[10px] font-medium ml-auto ${
+              responseDays === null ? "" :
+              responseDays < 0 ? "text-destructive" :
+              responseDays <= 3 ? "text-amber-600" :
+              "text-muted-foreground"
+            }`}>
+              {responseDays === null ? "" :
+               responseDays < 0 ? `${Math.abs(responseDays)}d overdue` :
+               responseDays === 0 ? "today" :
+               `${responseDays}d remaining`}
+            </span>
+          </div>
+        )}
         {showAdd && (
           <div className="flex flex-wrap gap-2 items-center border border-dashed border-border rounded-md p-2">
             <Input placeholder="Milestone title" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} className="h-8 text-xs flex-1 min-w-[200px]" />
