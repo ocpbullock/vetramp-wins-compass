@@ -1251,7 +1251,7 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           </CardContent>
         </Card>
 
-        <Card>
+        <Card id="capture-knowledge">
           <CardHeader>
             <CardTitle className="text-base">What we know (offeror-authoritative)</CardTitle>
             <CardDescription className="text-xs">
