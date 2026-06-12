@@ -14,6 +14,7 @@ import { Plus, Trash2, Users, Search, Sparkles, Mail } from "lucide-react";
 import { toast } from "sonner";
 import type { Partner } from "@/components/settings/PartnersPanel";
 import { TeamCompositionAnalyzer } from "./TeamCompositionAnalyzer";
+import { TeamingSandbox } from "./TeamingSandbox";
 import { TeamingOutreachModal, type OutreachPartnerInput } from "./TeamingOutreachModal";
 import { SuggestedPartnersCard } from "./SuggestedPartnersCard";
 import type { PartnerSuggestion } from "@/lib/partner-suggest";
