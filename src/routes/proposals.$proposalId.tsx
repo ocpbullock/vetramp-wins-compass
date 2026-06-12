@@ -567,25 +567,44 @@ function ProposalPipeline() {
 
   const readiness = useMemo(() => {
     if (!proposal) return 0;
+    const isLightweight =
+      proposal.pursuit_type === "rfi_sources_sought" ||
+      proposal.pursuit_type === "capability_statement";
     let score = 0;
-    if (proposal.pop_base_months) score += 10;
-    if (proposal.opportunity_type) score += 5;
-    if (proposal.estimated_value) score += 5;
-    if (proposal.contract_type) score += 5;
-    if (proposal.clearance_requirement) score += 5;
-    if (attachments.length) score += 10;
-    if (proposal.customer_intel_verified) score += 15;
-    if (proposal.compliance_matrix) score += 15;
-    // Verification percentage of compliance requirements (up to 10 pts)
-    const reqs = proposal.compliance_matrix?.requirements || [];
-    if (reqs.length) {
-      const verified = reqs.filter((r: any) => r.verified).length;
-      score += Math.round((verified / reqs.length) * 10);
+    if (isLightweight) {
+      // Pursuit-aware weights (no compliance matrix / verification).
+      // Remaining factors reweighted to total 100.
+      if (proposal.pop_base_months) score += 12;
+      if (proposal.opportunity_type) score += 6;
+      if (proposal.estimated_value) score += 6;
+      if (proposal.contract_type) score += 6;
+      if (proposal.clearance_requirement) score += 6;
+      if (attachments.length) score += 12;
+      if (proposal.customer_intel_verified) score += 18;
+      if (proposal.staffing_plan) score += 12;
+      const secs = sectionsFor(proposal);
+      const generated = secs.filter((s) => proposal.sections?.[s.id]?.content).length;
+      score += Math.round((generated / Math.max(1, secs.length)) * 22);
+    } else {
+      if (proposal.pop_base_months) score += 10;
+      if (proposal.opportunity_type) score += 5;
+      if (proposal.estimated_value) score += 5;
+      if (proposal.contract_type) score += 5;
+      if (proposal.clearance_requirement) score += 5;
+      if (attachments.length) score += 10;
+      if (proposal.customer_intel_verified) score += 15;
+      if (proposal.compliance_matrix) score += 15;
+      // Verification percentage of compliance requirements (up to 10 pts)
+      const reqs = proposal.compliance_matrix?.requirements || [];
+      if (reqs.length) {
+        const verified = reqs.filter((r: any) => r.verified).length;
+        score += Math.round((verified / reqs.length) * 10);
+      }
+      if (proposal.staffing_plan) score += 10;
+      const secs = sectionsFor(proposal);
+      const generated = secs.filter((s) => proposal.sections?.[s.id]?.content).length;
+      score += Math.round((generated / Math.max(1, secs.length)) * 20);
     }
-    if (proposal.staffing_plan) score += 10;
-    const secs = sectionsFor(proposal);
-    const generated = secs.filter((s) => proposal.sections?.[s.id]?.content).length;
-    score += Math.round((generated / secs.length) * 20);
     if (ociStatus(proposal.oci_screening) === "incomplete") score -= 5;
     return Math.max(0, Math.min(100, score));
   }, [proposal, attachments]);
