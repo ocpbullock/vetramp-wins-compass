@@ -19,7 +19,7 @@ function AcceptInvitePage() {
   const navigate = useNavigate();
   const fetchInvite = useServerFn(getInviteByToken);
   const acceptInviteFn = useServerFn(acceptInvite);
-  const [state, setState] = useState<"loading" | "ready" | "invalid" | "expired" | "accepted" | "no-session">("loading");
+  const [state, setState] = useState<"loading" | "ready" | "invalid" | "expired" | "used" | "accepted" | "no-session">("loading");
   const [invite, setInvite] = useState<{ email: string; role: string } | null>(null);
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
@@ -34,7 +34,7 @@ function AcceptInvitePage() {
       try {
         const res = await fetchInvite({ data: { token } });
         if (!res.invite) { setState("invalid"); return; }
-        if (res.invite.status === "accepted") { setState("accepted"); return; }
+        if (res.invite.status === "accepted") { setState("used"); return; }
         if (res.invite.status === "cancelled") { setState("invalid"); return; }
         if (res.invite.expired) { setState("expired"); return; }
         setInvite({ email: res.invite.email, role: res.invite.role });
@@ -46,19 +46,27 @@ function AcceptInvitePage() {
   }, [token, fetchInvite]);
 
   async function finalizeAcceptance() {
-    const res = await acceptInviteFn({ data: { token } });
-    if (res.alreadyAccepted) {
-      toast.info("Invitation already accepted.");
-    } else {
-      toast.success("Welcome to the team!");
-    }
-    if (res.teamId) {
-      try { localStorage.setItem("vetramp.currentTeamId", res.teamId); } catch { /* ignore */ }
-    }
-    if (res.proposalId) {
-      navigate({ to: "/proposals/$proposalId", params: { proposalId: res.proposalId } });
-    } else {
-      navigate({ to: "/" });
+    try {
+      const res = await acceptInviteFn({ data: { token } });
+      if (res.alreadyAccepted) {
+        toast.info("Invitation already accepted.");
+      } else {
+        toast.success("Welcome to the team!");
+      }
+      if (res.teamId) {
+        try { localStorage.setItem("vetramp.currentTeamId", res.teamId); } catch { /* ignore */ }
+      }
+      if (res.proposalId) {
+        navigate({ to: "/proposals/$proposalId", params: { proposalId: res.proposalId } });
+      } else {
+        navigate({ to: "/" });
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Could not accept invitation.";
+      if (/already been used|already used/i.test(msg)) { setState("used"); return; }
+      if (/expired/i.test(msg)) { setState("expired"); return; }
+      if (/not found|cancelled|no longer valid/i.test(msg)) { setState("invalid"); return; }
+      toast.error(msg);
     }
   }
 
@@ -95,19 +103,22 @@ function AcceptInvitePage() {
         )}
         {state === "invalid" && (
           <div className="space-y-3">
-            <p className="text-sm">This invitation link is invalid or has been cancelled.</p>
+            <p className="text-sm font-medium">This invitation link is invalid or has been cancelled.</p>
+            <p className="text-sm text-muted-foreground">Ask your administrator to send a new invite, then open the link from that email.</p>
             <Button variant="outline" onClick={() => navigate({ to: "/auth" })}>Go to sign in</Button>
           </div>
         )}
         {state === "expired" && (
           <div className="space-y-3">
-            <p className="text-sm">This invitation has expired. Ask an administrator to resend it.</p>
+            <p className="text-sm font-medium">This invitation has expired.</p>
+            <p className="text-sm text-muted-foreground">Invites are valid for 7 days. Ask your administrator to <span className="font-medium">request a new invite</span> and use the latest link.</p>
             <Button variant="outline" onClick={() => navigate({ to: "/auth" })}>Go to sign in</Button>
           </div>
         )}
-        {state === "accepted" && (
+        {state === "used" && (
           <div className="space-y-3">
-            <p className="text-sm">This invitation has already been used. Please sign in.</p>
+            <p className="text-sm font-medium">This invitation has already been used.</p>
+            <p className="text-sm text-muted-foreground">Invitation links are single-use. If you didn't accept it, ask your administrator to <span className="font-medium">request a new invite</span>.</p>
             <Button onClick={() => navigate({ to: "/auth" })}>Go to sign in</Button>
           </div>
         )}
