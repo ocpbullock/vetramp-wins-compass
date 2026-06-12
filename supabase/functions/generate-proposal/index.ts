@@ -62,8 +62,10 @@ Deno.serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas } = await req.json();
+    const { opportunity, teamId, companyProfile, engagementType, primeContractorName, targetedScopeAreas, userContext: userContextRaw } = await req.json();
     const engagement = engagementType === "sub" ? "sub" : "prime";
+    const userContext = normalizeUserContext(userContextRaw);
+    const userContextBlock = renderUserContextPrompt(userContext);
 
     if (!hasCompanyProfile(companyProfile)) return missingProfileResponse(corsHeaders);
 
