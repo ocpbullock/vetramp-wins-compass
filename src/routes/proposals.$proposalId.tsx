@@ -412,6 +412,7 @@ function ProposalPipeline() {
           pastPerformance: pastPerformance.length ? pastPerformance : undefined,
           attachmentsText: attachmentsText || undefined,
           engagementType: proposal.engagement_type ?? "prime",
+          pursuitType: proposal.pursuit_type ?? "rfp_rfq",
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
