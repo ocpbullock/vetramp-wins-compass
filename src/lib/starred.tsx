@@ -111,16 +111,17 @@ export function StarredProvider({ children }: { children: React.ReactNode }) {
       setCount(next.size);
 
       if (wasStarred) {
-        const { error } = await supabase
+        const { data: deleted, error } = await supabase
           .from("starred_opportunities")
           .delete()
           .eq("team_id", teamId)
-          .eq("notice_id", input.noticeId);
-        if (error) {
+          .eq("notice_id", input.noticeId)
+          .select("id");
+        if (error || !deleted || deleted.length === 0) {
           // Roll back
           setStarredIds(starredIds);
           setCount(starredIds.size);
-          toast.error(error.message);
+          toast.error(error?.message ?? "You don't have permission to unstar this opportunity — ask a team owner/admin");
         }
       } else {
         const { error } = await supabase.from("starred_opportunities").insert({

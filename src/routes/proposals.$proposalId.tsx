@@ -153,8 +153,15 @@ function ProposalPipeline() {
   }
 
   async function deleteAttachment(att: any) {
+    const { data, error } = await supabase.from("proposal_attachments").delete().eq("id", att.id).select("id");
+    if (error) { toast.error(error.message); return; }
+    if (!data || data.length === 0) {
+      toast.error("You don't have permission to delete this attachment — ask a team owner/admin");
+      return;
+    }
+    // Only remove the underlying storage object once the row delete succeeded —
+    // otherwise a failed RLS delete would leave us with a dangling file removal.
     await supabase.storage.from("proposal-attachments").remove([att.storage_path]);
-    await supabase.from("proposal_attachments").delete().eq("id", att.id);
     setAttachments((a) => a.filter((x) => x.id !== att.id));
   }
 

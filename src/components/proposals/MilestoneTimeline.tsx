@@ -90,9 +90,18 @@ export function MilestoneTimeline({
   }
 
   async function removeMilestone(id: string) {
+    const prev = milestones;
     setMilestones((ms) => ms.filter((m) => m.id !== id));
-    const { error } = await supabase.from("proposal_milestones").delete().eq("id", id);
-    if (error) toast.error(error.message);
+    const { data, error } = await supabase.from("proposal_milestones").delete().eq("id", id).select("id");
+    if (error) {
+      setMilestones(prev);
+      toast.error(error.message);
+      return;
+    }
+    if (!data || data.length === 0) {
+      setMilestones(prev);
+      toast.error("You don't have permission to delete this milestone — ask a team owner/admin");
+    }
   }
 
   async function addMilestone() {

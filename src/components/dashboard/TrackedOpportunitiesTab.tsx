@@ -188,8 +188,12 @@ export function TrackedOpportunitiesTab({
 
   const handleDelete = async () => {
     if (!confirmDelete) return;
-    const { error } = await supabase.from("tracked_opportunities").delete().eq("id", confirmDelete.id);
+    const { data, error } = await supabase.from("tracked_opportunities").delete().eq("id", confirmDelete.id).select("id");
     if (error) { toast.error(error.message); return; }
+    if (!data || data.length === 0) {
+      toast.error("You don't have permission to delete this tracked opportunity — ask a team owner/admin");
+      return;
+    }
     toast.success("Removed");
     setConfirmDelete(null);
     load();
