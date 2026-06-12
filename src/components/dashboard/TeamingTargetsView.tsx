@@ -131,28 +131,28 @@ export function TeamingTargetsView({
         <span className="inline-flex items-center gap-1"><HandshakeIcon className="w-3 h-3 text-emerald-500" />Small businesses — strong candidates as <strong>teaming partners</strong> when you prime.</span>
       </div>
 
-      <div className="border rounded-md divide-y">
+      <div className="border rounded-md divide-y max-h-80 overflow-y-auto">
         {targets.map((t) => {
           const key = keyFor(t);
           const months = monthsSince(t.latestAwardDate);
           const saved = !!savedIds[key];
           const isSaving = savingKey === key;
           return (
-            <div key={key} className="px-3 py-2.5 flex items-start gap-3 text-sm">
+            <div key={key} className="px-3 py-2 flex items-center gap-3 text-sm">
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-1.5 flex-wrap">
                   <span className="font-medium truncate">{t.name}</span>
                   {t.classification === "prime" ? (
-                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15 text-[10px]">
-                      <Crown className="w-3 h-3 mr-1" />Potential prime
+                    <Badge className="bg-amber-500/15 text-amber-600 dark:text-amber-400 hover:bg-amber-500/15 text-[10px] px-1.5 py-0 h-5">
+                      <Crown className="w-3 h-3 mr-0.5" />Prime
                     </Badge>
                   ) : (
-                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 text-[10px]">
-                      <HandshakeIcon className="w-3 h-3 mr-1" />Potential partner
+                    <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/15 text-[10px] px-1.5 py-0 h-5">
+                      <HandshakeIcon className="w-3 h-3 mr-0.5" />Partner
                     </Badge>
                   )}
                   {t.isSmallBusiness && (
-                    <Badge variant="outline" className="text-[10px]">
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
                       {t.latestSetAside?.slice(0, 24) ?? "Small business"}
                     </Badge>
                   )}
@@ -167,40 +167,40 @@ export function TeamingTargetsView({
                     </a>
                   )}
                 </div>
-                <div className="text-[11px] text-muted-foreground mt-0.5 flex gap-3 flex-wrap">
+                <div className="text-[11px] text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
                   <span><span className="font-mono">{t.awardCount}</span> award{t.awardCount !== 1 ? "s" : ""}</span>
                   <span className="font-medium text-foreground tabular-nums">{fmtMoney(t.totalValue)}</span>
                   {t.latestAwardDate && (
                     <span>
                       latest <span className="font-mono">{t.latestAwardDate.slice(0, 10)}</span>
-                      {months !== null && <> · {months} mo ago</>}
+                      {months !== null && <> · {months}mo</>}
                     </span>
                   )}
                 </div>
               </div>
-              <div className="flex flex-col gap-1.5 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <Button
                   size="sm"
                   variant={saved ? "outline" : "secondary"}
-                  className="h-7 text-xs"
+                  className="h-7 text-xs px-2"
                   disabled={!teamId || isSaving}
                   onClick={() => saveAsCompany(t)}
                   title="Save this vendor to your company library"
                 >
                   <Save className="w-3 h-3 mr-1" />
-                  {saved ? "Saved" : isSaving ? "Saving…" : "Save as company"}
+                  {saved ? "Saved" : isSaving ? "Saving…" : "Save"}
                 </Button>
                 {onAddToSandbox && (
                   <Button
                     size="sm"
                     variant="ghost"
-                    className="h-7 text-xs"
+                    className="h-7 text-xs px-2"
                     disabled={!teamId || isSaving}
                     onClick={() => addToSandbox(t)}
                     title="Save and add to a teaming sandbox scenario"
                   >
                     <Sparkles className="w-3 h-3 mr-1" />
-                    Add to sandbox
+                    Sandbox
                   </Button>
                 )}
               </div>
