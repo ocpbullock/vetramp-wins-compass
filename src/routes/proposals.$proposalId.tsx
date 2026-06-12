@@ -444,15 +444,30 @@ function ProposalPipeline() {
             if (c) {
               acc += c;
               const wc = acc.split(/\s+/).filter(Boolean).length;
-              const next = { ...(proposal.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc } };
-              setProposal((p: any) => ({ ...p, sections: next }));
+              // Functional update so concurrent / sequential generations merge
+              // into the LATEST sections snapshot, not the stale render closure.
+              setProposal((p: any) => ({
+                ...p,
+                sections: { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc } },
+              }));
             }
           } catch { buf = line + "\n" + buf; break; }
         }
       }
       const wc = acc.split(/\s+/).filter(Boolean).length;
-      const finalSections = { ...(proposal.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc } };
-      await patchProposal({ sections: finalSections });
+      // Compute the final merged sections from the latest state inside the
+      // functional updater so the DB patch persists every section generated
+      // earlier in this run (e.g. during generateAll's sequential loop).
+      let finalSections: Record<string, any> = {};
+      setProposal((p: any) => {
+        finalSections = { ...(p?.sections || {}), [sectionId]: { content: acc, status: "draft", word_count: wc } };
+        return { ...p, sections: finalSections };
+      });
+      const { error: saveErr } = await supabase
+        .from("proposals")
+        .update({ sections: finalSections })
+        .eq("id", proposalId);
+      if (saveErr) toast.error(saveErr.message);
       toast.success(`Generated ${sectionTitle}`);
     } catch (e: any) {
       toast.error(friendlyFromError(e));
