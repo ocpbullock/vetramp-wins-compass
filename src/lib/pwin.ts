@@ -308,7 +308,8 @@ function formatBonusBreakdown(lines: PartnershipBonusLine[]): string {
 
 function scorePrimeRelationship(ctx: PwinContext, active: PwinTeamMember[]): FactorScore | null {
   if (ctx.engagementType !== "sub") return null;
-  const prime = active.find((m) => m.role === "prime");
+  const prime = active.find((m) => m.role === "prime" && !m.isSelf)
+    ?? active.find((m) => m.role === "prime");
   if (!prime) {
     return {
       key: "prime_relationship", label: "Prime Relationship Strength", weight: 0.10,
