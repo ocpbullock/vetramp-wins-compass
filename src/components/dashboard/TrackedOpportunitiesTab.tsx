@@ -106,6 +106,7 @@ export function TrackedOpportunitiesTab({
   const [teamRow, setTeamRow] = useState<TrackedOpportunity | null>(null);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [sandboxRow, setSandboxRow] = useState<TrackedOpportunity | null>(null);
+  const [sandboxSeedCompanyId, setSandboxSeedCompanyId] = useState<string | null>(null);
   const { currentTeam } = useTeam();
 
   // Pick up a "highlight this row" hint stashed by InProgressTab so the user
@@ -420,6 +421,12 @@ export function TrackedOpportunitiesTab({
         naicsCode={analyze?.naics_code ?? null}
         agency={analyze?.agency ?? null}
         title={analyze?.title ?? null}
+        teamId={(analyze as any)?.team_id ?? currentTeam?.id ?? null}
+        onAddToSandbox={(companyId) => {
+          if (!analyze) return;
+          setSandboxSeedCompanyId(companyId);
+          setSandboxRow(analyze);
+        }}
       />
 
       <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
@@ -452,7 +459,8 @@ export function TrackedOpportunitiesTab({
       {sandboxRow && ((sandboxRow as any).team_id || currentTeam?.id) && (
         <TeamingSandbox
           open={!!sandboxRow}
-          onOpenChange={(o) => { if (!o) setSandboxRow(null); }}
+          onOpenChange={(o) => { if (!o) { setSandboxRow(null); setSandboxSeedCompanyId(null); } }}
+          addCompanyIdOnOpen={sandboxSeedCompanyId}
           parent={{
             kind: "tracked",
             trackedOpportunityId: sandboxRow.id,
