@@ -544,7 +544,43 @@ function Dashboard() {
         vendorName={vendor?.name ?? null}
         searchedNaics={searchedNaics}
         onClose={() => setVendor(null)}
-      />
+      <AlertDialog open={!!duplicatePrompt} onOpenChange={(v) => { if (!v) setDuplicatePrompt(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>A proposal for this opportunity already exists</AlertDialogTitle>
+            <AlertDialogDescription>
+              {duplicatePrompt?.existingCount && duplicatePrompt.existingCount > 1
+                ? `${duplicatePrompt.existingCount} proposals already exist for this opportunity on this team. Open the earliest, or create another anyway?`
+                : "Open it instead, or create another anyway?"}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <Button
+              variant="outline"
+              onClick={async () => {
+                const p = duplicatePrompt;
+                if (!p) return;
+                setDuplicatePrompt(null);
+                await createProposalRecord(p.opp, p.source, p.effectiveTeamId);
+              }}
+            >
+              Create anyway
+            </Button>
+            <AlertDialogAction
+              onClick={() => {
+                const p = duplicatePrompt;
+                if (!p) return;
+                setDuplicatePrompt(null);
+                navigate({ to: "/proposals/$proposalId", params: { proposalId: p.existingId } });
+              }}
+            >
+              Open existing
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
+
