@@ -1868,3 +1868,36 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
   );
 }
 
+
+function OpenInCaptureWorkspaceButton({ proposalId }: { proposalId: string }) {
+  const { setSelectedOpportunityId } = useOpportunityContext();
+  const navigate = useNavigate();
+  return (
+    <Button
+      size="sm"
+      onClick={() => {
+        setSelectedOpportunityId(proposalId);
+        navigate({ to: "/" });
+      }}
+    >
+      <Workflow className="w-4 h-4 mr-1.5" />
+      Open in Capture Workspace
+    </Button>
+  );
+}
+
+function OpenInCaptureWorkspaceCard({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+  return (
+    <Card className="border-primary/40 bg-primary/5">
+      <CardContent className="py-3 flex items-center justify-between gap-4 flex-wrap">
+        <div className="text-sm">
+          <div className="font-medium">Run capture for this opportunity</div>
+          <div className="text-xs text-muted-foreground">
+            Selects “{proposal.opportunity_title || "this opportunity"}” as your active context and opens the Capture Workspace for partner suggestions and live PWIN.
+          </div>
+        </div>
+        <OpenInCaptureWorkspaceButton proposalId={proposalId} />
+      </CardContent>
+    </Card>
+  );
+}
