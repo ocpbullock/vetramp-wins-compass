@@ -1,7 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Plus, ChevronDown, Building2, Star, Users, Swords, Target } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  Plus, ChevronDown, Building2, Star, Users, Swords, Target,
+  Lightbulb, ArrowRight, Mail, UserPlus,
+} from "lucide-react";
+import { toast } from "sonner";
 
 import { Header } from "@/components/dashboard/Header";
 import { Button } from "@/components/ui/button";
@@ -15,6 +19,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
+import { supabase } from "@/integrations/supabase/client";
 import { useTeamId } from "@/lib/team";
 import { useOpportunityContext, type TargetProfile } from "@/lib/opportunity-context";
 import { useOnboardingGate } from "@/lib/setup-status";
@@ -24,10 +29,16 @@ import { NAICS_GROUPS } from "@/lib/contracts";
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
 import { PartnerResearch } from "@/components/proposals/PartnerResearch";
+import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
+import {
+  TeamingOutreachModal,
+  type OutreachPartnerInput,
+} from "@/components/proposals/TeamingOutreachModal";
 import {
   TeamingSandbox,
   type SandboxOpportunityContext,
 } from "@/components/proposals/TeamingSandbox";
+import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
 import { CONTRACT_VEHICLES } from "@/components/dashboard/TrackOpportunityDialog";
 
 export const Route = createFileRoute("/")({ component: CaptureWorkspace });
@@ -45,15 +56,96 @@ const SET_ASIDE_OPTIONS = [
 
 const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
 
+// Columns needed by SuggestedPartnersCard's ProposalLite + outreach modal.
+const PROPOSAL_COLUMNS =
+  "id, team_id, agency, naics_code, set_aside, contract_type, engagement_type, prime_contractor_name, targeted_scope_areas, customer_intel, opportunity_data, solicitation_number, opportunity_title, response_deadline";
+
+type ProposalSummary = {
+  id: string;
+  opportunity_title: string | null;
+  agency: string | null;
+  status: string | null;
+  updated_at: string;
+};
+
+type FullProposal = {
+  id: string;
+  team_id: string | null;
+  agency: string | null;
+  naics_code: string | null;
+  set_aside: string | null;
+  contract_type: string | null;
+  engagement_type: "prime" | "sub";
+  prime_contractor_name: string | null;
+  targeted_scope_areas: string | null;
+  customer_intel: any;
+  opportunity_data: any;
+  solicitation_number: string | null;
+  opportunity_title: string | null;
+  response_deadline: string | null;
+};
+
 // ---------------------------------------------------------------------------
 // Capture Workspace — the app's new front door.
 // ---------------------------------------------------------------------------
 function CaptureWorkspace() {
   const teamId = useTeamId();
   const onboarding = useOnboardingGate();
-  const { selected, targetProfile, setTargetProfile } = useOpportunityContext();
+  const qc = useQueryClient();
+  const { selected, setSelectedOpportunityId, targetProfile, setTargetProfile } =
+    useOpportunityContext();
 
   const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
+
+  // Selectable proposals — RLS limits this to ones the user can see.
+  const { data: proposalOptions = [] } = useQuery({
+    queryKey: ["capture-workspace-proposals", teamId],
+    queryFn: async (): Promise<ProposalSummary[]> => {
+      let q = supabase
+        .from("proposals")
+        .select("id, opportunity_title, agency, status, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(100);
+      if (teamId) q = q.eq("team_id", teamId);
+      const { data, error } = await q;
+      if (error) throw new Error(error.message);
+      return (data ?? []) as ProposalSummary[];
+    },
+  });
+
+  // Full proposal row for the selected opportunity (drives SuggestedPartnersCard
+  // + outreach modal + opp team dialog pre-fill).
+  const { data: selectedProposal } = useQuery({
+    queryKey: ["capture-workspace-proposal", selected?.id],
+    enabled: !!selected?.id,
+    queryFn: async (): Promise<FullProposal | null> => {
+      const { data, error } = await supabase
+        .from("proposals")
+        .select(PROPOSAL_COLUMNS)
+        .eq("id", selected!.id)
+        .maybeSingle();
+      if (error) throw new Error(error.message);
+      return (data as unknown as FullProposal) ?? null;
+    },
+  });
+
+  // Already-teamed company ids for the selected proposal — feeds the
+  // SuggestedPartnersCard so it can hide partners already on the team.
+  const { data: existingPartnerIds = [] } = useQuery({
+    queryKey: ["capture-workspace-teaming", selected?.id],
+    enabled: !!selected?.id,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("proposal_teaming")
+        .select("company_id")
+        .eq("proposal_id", selected!.id);
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((r: any) => r.company_id as string);
+    },
+  });
 
   // Effective opportunity context for downstream panels. Falls back to the
   // editable target profile when no opportunity is selected so the global
@@ -63,27 +155,48 @@ function CaptureWorkspace() {
     return targetProfile.naics;
   }, [selected, targetProfile.naics]);
 
-  const sandboxOpportunity: SandboxOpportunityContext = useMemo(
-    () => ({
-      title: selected?.title ?? "Global exploration",
-      naicsCodes: effectiveNaics,
-      agency: selected?.agency ?? targetProfile.agency,
-      setAside: selected?.setAside ?? targetProfile.setAside,
-      requiredVehicles: selected?.requiredVehicles?.length
-        ? selected.requiredVehicles
-        : targetProfile.requiredVehicles,
-      incumbentName: selected?.incumbentName ?? null,
-      scopeKeywords: selected?.scopeKeywords?.length
-        ? selected.scopeKeywords
-        : targetProfile.scopeKeywords,
-    }),
-    [selected, targetProfile, effectiveNaics],
-  );
+  // When a real opportunity is selected, scope sandbox PWIN to it directly
+  // (NOT the target profile). Otherwise fall back to the target profile so
+  // global exploration still works.
+  const sandboxOpportunity: SandboxOpportunityContext = useMemo(() => {
+    if (selected) {
+      return {
+        title: selected.title ?? "Selected opportunity",
+        naicsCodes: selected.naicsCode ? [selected.naicsCode] : [],
+        agency: selected.agency,
+        setAside: selected.setAside,
+        requiredVehicles: selected.requiredVehicles ?? [],
+        incumbentName: selected.incumbentName,
+        scopeKeywords: selected.scopeKeywords ?? [],
+      };
+    }
+    return {
+      title: "Global exploration",
+      naicsCodes: targetProfile.naics,
+      agency: targetProfile.agency,
+      setAside: targetProfile.setAside,
+      requiredVehicles: targetProfile.requiredVehicles,
+      incumbentName: null,
+      scopeKeywords: targetProfile.scopeKeywords,
+    };
+  }, [selected, targetProfile]);
+
+  // Add a suggested partner to the selected proposal's teaming roster.
+  const addSuggestedPartner = async (s: { partnerId: string; partnerName: string }) => {
+    if (!selected?.id) return;
+    const { error } = await supabase
+      .from("proposal_teaming")
+      .insert({ proposal_id: selected.id, company_id: s.partnerId, role: "sub", work_share_pct: null });
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Added ${s.partnerName} to the proposal team`);
+    qc.invalidateQueries({ queryKey: ["capture-workspace-teaming", selected.id] });
+    qc.invalidateQueries({ queryKey: ["proposal-teaming", selected.id] });
+  };
 
   // PartnerResearch is proposal-scoped today; in global mode we pass an empty
   // id so the roster + SAM.gov search work, while proposal-side actions stay
   // inert until the user actually creates a proposal.
-  const partnerResearchProposalId = "";
+  const partnerResearchProposalId = selected?.id ?? "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -100,17 +213,26 @@ function CaptureWorkspace() {
             <SetupBanner />
             <PastPerformanceAccuracyBanner />
 
-            <OpportunityContextBar />
+            <OpportunityContextBar
+              proposals={proposalOptions}
+              onBuildTeam={() => setOppTeamDialogOpen(true)}
+              onDraftOutreach={() => {
+                setOutreachPartner(null);
+                setOutreachOpen(true);
+              }}
+            />
 
             {!selected && (
-              <TargetProfileForm
-                value={targetProfile}
-                onChange={setTargetProfile}
-              />
+              <TargetProfileForm value={targetProfile} onChange={setTargetProfile} />
             )}
 
-            <Tabs defaultValue="partners" className="w-full">
+            <Tabs defaultValue={selected ? "suggested" : "partners"} className="w-full">
               <TabsList>
+                {selected && (
+                  <TabsTrigger value="suggested">
+                    <Lightbulb className="w-4 h-4 mr-1.5" /> Suggested Partners
+                  </TabsTrigger>
+                )}
                 <TabsTrigger value="partners">
                   <Users className="w-4 h-4 mr-1.5" /> Partner Search
                 </TabsTrigger>
@@ -121,6 +243,24 @@ function CaptureWorkspace() {
                   <Swords className="w-4 h-4 mr-1.5" /> Teaming Sandbox
                 </TabsTrigger>
               </TabsList>
+
+              {selected && (
+                <TabsContent value="suggested" className="mt-4">
+                  {selectedProposal ? (
+                    <SuggestedPartnersCard
+                      proposal={selectedProposal}
+                      existingPartnerIds={existingPartnerIds}
+                      onAdd={(s) => addSuggestedPartner({ partnerId: s.partnerId, partnerName: s.partnerName })}
+                      onOutreach={(p) => {
+                        setOutreachPartner(p);
+                        setOutreachOpen(true);
+                      }}
+                    />
+                  ) : (
+                    <Card className="p-6 text-sm text-muted-foreground">Loading opportunity…</Card>
+                  )}
+                </TabsContent>
+              )}
 
               <TabsContent value="partners" className="mt-4">
                 {teamId ? (
@@ -148,7 +288,9 @@ function CaptureWorkspace() {
                     </CardTitle>
                     <CardDescription>
                       Drop your company and partners into a scenario and watch pWin update live.
-                      {!selected && " Using your target profile as the opportunity context."}
+                      {selected
+                        ? " Scoped to the selected opportunity."
+                        : " Using your target profile as the opportunity context."}
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
@@ -159,17 +301,10 @@ function CaptureWorkspace() {
                           ? sandboxOpportunity.naicsCodes.join(", ")
                           : "—"}
                       </Badge>
-                      <Badge variant="outline">
-                        Set-aside: {sandboxOpportunity.setAside ?? "—"}
-                      </Badge>
-                      <Badge variant="outline">
-                        Agency: {sandboxOpportunity.agency ?? "—"}
-                      </Badge>
+                      <Badge variant="outline">Set-aside: {sandboxOpportunity.setAside ?? "—"}</Badge>
+                      <Badge variant="outline">Agency: {sandboxOpportunity.agency ?? "—"}</Badge>
                     </div>
-                    <Button
-                      onClick={() => setSandboxOpen(true)}
-                      disabled={!teamId}
-                    >
+                    <Button onClick={() => setSandboxOpen(true)} disabled={!teamId}>
                       <Swords className="w-4 h-4 mr-1.5" /> Open Teaming Sandbox
                     </Button>
                     {!teamId && (
@@ -193,15 +328,78 @@ function CaptureWorkspace() {
           </>
         )}
       </main>
+
+      {/* Build Opportunity Team dialog — pre-filled with the selected opportunity. */}
+      {selected && (
+        <CreateOpportunityTeamDialog
+          open={oppTeamDialogOpen}
+          onOpenChange={setOppTeamDialogOpen}
+          opportunityTitle={selected.title ?? "Selected opportunity"}
+          // The selected opportunity is an existing proposal in our system; we
+          // tag the source as "sam" to satisfy the dialog's enum. Users
+          // typically pick "Link an existing proposal" mode in the dialog.
+          source="sam"
+          sourceId={selected.id}
+          solicitationNumber={selectedProposal?.solicitation_number ?? undefined}
+          agency={selected.agency}
+          naicsCode={selected.naicsCode}
+          responseDeadline={selectedProposal?.response_deadline ?? null}
+        />
+      )}
+
+      {/* Draft teaming outreach modal — partner may be null until one is picked. */}
+      {selected && selectedProposal && (
+        <TeamingOutreachModal
+          open={outreachOpen}
+          onOpenChange={setOutreachOpen}
+          proposal={{
+            id: selectedProposal.id,
+            team_id: selectedProposal.team_id,
+            engagement_type: selectedProposal.engagement_type,
+            opportunity_data: selectedProposal.opportunity_data,
+          }}
+          partner={outreachPartner}
+          defaultScopeAreas={selectedProposal.targeted_scope_areas ?? undefined}
+        />
+      )}
     </div>
   );
 }
 
 // ---------------------------------------------------------------------------
-// Opportunity context bar
+// Opportunity context bar — selector + actions when an opp is selected.
 // ---------------------------------------------------------------------------
-function OpportunityContextBar() {
+function OpportunityContextBar({
+  proposals,
+  onBuildTeam,
+  onDraftOutreach,
+}: {
+  proposals: ProposalSummary[];
+  onBuildTeam: () => void;
+  onDraftOutreach: () => void;
+}) {
   const { selected, setSelectedOpportunityId } = useOpportunityContext();
+  const NONE = "__none";
+
+  const selector = (
+    <Select
+      value={selected?.id ?? NONE}
+      onValueChange={(v) => setSelectedOpportunityId(v === NONE ? null : v)}
+    >
+      <SelectTrigger className="h-8 text-xs min-w-[260px]">
+        <SelectValue placeholder="Select opportunity" />
+      </SelectTrigger>
+      <SelectContent>
+        <SelectItem value={NONE}>Global mode — no opportunity</SelectItem>
+        {proposals.map((p) => (
+          <SelectItem key={p.id} value={p.id}>
+            {p.opportunity_title || "Untitled proposal"}
+            {p.agency ? ` · ${p.agency}` : ""}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
 
   if (!selected) {
     return (
@@ -212,12 +410,15 @@ function OpportunityContextBar() {
             <span className="font-medium">Exploring globally</span>
             <span className="text-muted-foreground">— no opportunity selected</span>
           </div>
-          <Button asChild size="sm">
-            {/* /opportunities doesn't exist yet — header nav routes it to /discover for now. */}
-            <Link to="/discover">
-              <Plus className="w-4 h-4 mr-1.5" /> Add opportunity
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {selector}
+            <Button asChild size="sm">
+              {/* /opportunities doesn't exist yet — header nav routes it to /discover for now. */}
+              <Link to="/discover">
+                <Plus className="w-4 h-4 mr-1.5" /> Add opportunity
+              </Link>
+            </Button>
+          </div>
         </CardContent>
       </Card>
     );
@@ -225,30 +426,49 @@ function OpportunityContextBar() {
 
   return (
     <Card>
-      <CardContent className="p-4 flex items-start justify-between gap-3 flex-wrap">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 text-sm">
-            <Target className="w-4 h-4 text-primary" />
-            <span className="font-medium">{selected.title ?? "Selected opportunity"}</span>
+      <CardContent className="p-4 space-y-3">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 text-sm">
+              <Target className="w-4 h-4 text-primary" />
+              <span className="font-medium truncate">{selected.title ?? "Selected opportunity"}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5 text-[11px]">
+              {selected.agency && <Badge variant="outline">{selected.agency}</Badge>}
+              {selected.naicsCode && (
+                <Badge variant="secondary" className="font-mono">NAICS {selected.naicsCode}</Badge>
+              )}
+              {selected.setAside && <Badge variant="outline">{selected.setAside}</Badge>}
+              {selected.incumbentName && (
+                <Badge variant="outline">Incumbent: {selected.incumbentName}</Badge>
+              )}
+            </div>
           </div>
-          <div className="flex flex-wrap gap-1.5 text-[11px]">
-            {selected.agency && <Badge variant="outline">{selected.agency}</Badge>}
-            {selected.naicsCode && (
-              <Badge variant="secondary" className="font-mono">NAICS {selected.naicsCode}</Badge>
-            )}
-            {selected.setAside && <Badge variant="outline">{selected.setAside}</Badge>}
-            {selected.incumbentName && (
-              <Badge variant="outline">Incumbent: {selected.incumbentName}</Badge>
-            )}
+          <div className="flex items-center gap-2 flex-wrap">
+            {selector}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedOpportunityId(null)}
+            >
+              Clear
+            </Button>
           </div>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setSelectedOpportunityId(null)}
-        >
-          Clear
-        </Button>
+
+        <div className="flex items-center gap-2 flex-wrap">
+          <Button size="sm" onClick={onBuildTeam}>
+            <UserPlus className="w-4 h-4 mr-1.5" /> Build Opportunity Team
+          </Button>
+          <Button size="sm" variant="outline" onClick={onDraftOutreach}>
+            <Mail className="w-4 h-4 mr-1.5" /> Draft teaming outreach
+          </Button>
+          <Button asChild size="sm" variant="ghost">
+            <Link to="/proposals/$proposalId" params={{ proposalId: selected.id }}>
+              Go to proposal <ArrowRight className="w-4 h-4 ml-1" />
+            </Link>
+          </Button>
+        </div>
       </CardContent>
     </Card>
   );
