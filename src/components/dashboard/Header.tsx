@@ -82,6 +82,7 @@ export function Header() {
     if (item.to === "/") return onHome;
     // Multiple placeholders temporarily share /discover; only "Discover"
     // shows as active so the bar doesn't light up three items at once.
+    if (item.to === "/opportunities") return location.pathname === "/opportunities";
     if (item.to === "/discover") return location.pathname === "/discover" && item.label === "Discover";
     return location.pathname === item.to;
   };
