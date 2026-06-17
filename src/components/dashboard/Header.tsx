@@ -25,14 +25,17 @@ type NavItem = {
   icon?: React.ComponentType<{ className?: string }>;
 };
 
-// Top-level nav. Routes that don't exist yet temporarily point to /discover
-// so nothing 404s while the rest of the re-architecture lands.
+// Primary nav items, in priority order. "Capture Workspace" is home/primary;
+// "Discover" is a secondary tool surfaced via the Tools menu below.
 const ORG_NAV: NavItem[] = [
   { label: "Capture Workspace", to: "/", icon: LayoutDashboard },
   { label: "Opportunities", to: "/opportunities", icon: Target },
   { label: "Partners", to: "/partners", icon: Handshake },
-  { label: "Discover", to: "/discover", icon: Search },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
+];
+
+const TOOLS_NAV: NavItem[] = [
+  { label: "Discover", to: "/discover", icon: Search },
 ];
 
 export function Header() {
@@ -80,13 +83,12 @@ export function Header() {
   const isActive = (item: NavItem) => {
     if (item.to === "/settings") return location.pathname.startsWith("/settings");
     if (item.to === "/") return onHome;
-    // Multiple placeholders temporarily share /discover; only "Discover"
-    // shows as active so the bar doesn't light up three items at once.
     if (item.to === "/opportunities") return location.pathname === "/opportunities";
     if (item.to === "/partners") return location.pathname === "/partners";
-    if (item.to === "/discover") return location.pathname === "/discover" && item.label === "Discover";
+    if (item.to === "/discover") return location.pathname === "/discover";
     return location.pathname === item.to;
   };
+  const toolsActive = TOOLS_NAV.some((t) => location.pathname === t.to);
 
   const orgTeams = availableTeams.filter((t) => t.team_type === "organization");
   const oppTeams = availableTeams.filter((t) => t.team_type === "opportunity");
@@ -142,6 +144,38 @@ export function Header() {
               </Link>
             );
           })}
+          {!isOpp && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={[
+                    "relative px-3 py-2 text-xs font-medium rounded-md transition-colors flex items-center gap-1",
+                    toolsActive
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  ].join(" ")}
+                >
+                  Tools <ChevronDown className="w-3 h-3 opacity-60" />
+                  {toolsActive && (
+                    <span className="absolute -bottom-3 left-3 right-3 h-[2px] bg-primary rounded-full" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {TOOLS_NAV.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.label} asChild>
+                      <Link to={item.to}>
+                        {Icon && <Icon className="w-4 h-4 mr-2 opacity-70" />}
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </nav>
 
         <div className="flex-1" />
@@ -268,6 +302,20 @@ export function Header() {
                 >
                   {Icon && <Icon className="w-4 h-4" />}
                   {item.label}
+                </Link>
+              );
+            })}
+            {!isOpp && TOOLS_NAV.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  onClick={() => setMobileOpen(false)}
+                  className="px-3 py-2 rounded-md text-xs font-medium flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-accent"
+                >
+                  {Icon && <Icon className="w-4 h-4" />}
+                  Tools · {item.label}
                 </Link>
               );
             })}

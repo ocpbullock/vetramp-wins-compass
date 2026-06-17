@@ -1,4 +1,7 @@
 import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useOpportunityContext } from "@/lib/opportunity-context";
+import { ChevronRight, Workflow } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { mergeServerProposal } from "@/lib/intake-merge";
 import { userContextFromProposal, USER_CONTEXT_LABELS } from "@/lib/user-context";
@@ -20,9 +23,7 @@ import { ArrowLeft, Upload, Download, Sparkles, RefreshCw, FileText, CheckCircle
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { exportProposalDocx } from "@/lib/proposal-export";
-import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
-import { LinkOpportunityTeamCard } from "@/components/proposals/LinkOpportunityTeamCard";
-import { PartnerResearch } from "@/components/proposals/PartnerResearch";
+import { fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
@@ -140,7 +141,8 @@ function ProposalPipeline() {
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState("intake");
+  const [step, setStep] = useState("intel");
+  const [intakeOpen, setIntakeOpen] = useState(false);
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
   const [isPartnerView, setIsPartnerView] = useState(false);
@@ -701,39 +703,56 @@ function ProposalPipeline() {
           <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
         )}
 
+        <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
+
+        <Collapsible open={intakeOpen} onOpenChange={setIntakeOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <button className="w-full text-left flex items-center justify-between px-6 py-4 hover:bg-accent/50 rounded-t-lg">
+                <div>
+                  <div className="text-sm font-semibold">Opportunity details</div>
+                  <div className="text-xs text-muted-foreground">Intake fields, attachments, parsing — expand to edit.</div>
+                </div>
+                <ChevronRight className={`w-4 h-4 transition-transform ${intakeOpen ? "rotate-90" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-6 pb-6 pt-2 space-y-4">
+                <StepErrorBoundary label="intake">
+                  <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onUpdateAttachmentNotes={updateAttachmentNotes} onAddPastedReference={addPastedReference} onRefreshProposal={async () => {
+                    const { data: fresh } = await supabase.from("proposals").select("opportunity_team_id").eq("id", proposalId).maybeSingle();
+                    if (fresh) setProposal((p: any) => ({ ...p, opportunity_team_id: fresh.opportunity_team_id ?? null }));
+                  }} />
+                </StepErrorBoundary>
+              </div>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
         <Tabs value={step} onValueChange={setStep}>
           <TabsList>
-            <TabsTrigger value="intake">1. Intake</TabsTrigger>
-            <TabsTrigger value="intel">2. Customer Intel</TabsTrigger>
+            <TabsTrigger value="intel">1. Customer Intel</TabsTrigger>
             {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
-              <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
+              <TabsTrigger value="compliance">2. Compliance</TabsTrigger>
             )}
             <TabsTrigger value="solution">
               {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement"
-                ? "3. Inputs"
-                : `4. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
+                ? "2. Inputs"
+                : `3. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
             </TabsTrigger>
             <TabsTrigger value="generate">
-              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "4." : "5."} Generate
+              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "3." : "4."} Generate
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="intake" className="mt-4 space-y-4">
-            <StepErrorBoundary label="intake">
-              <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onUpdateAttachmentNotes={updateAttachmentNotes} onAddPastedReference={addPastedReference} onRefreshProposal={async () => {
-                const { data: fresh } = await supabase.from("proposals").select("opportunity_team_id").eq("id", proposalId).maybeSingle();
-                if (fresh) setProposal((p: any) => ({ ...p, opportunity_team_id: fresh.opportunity_team_id ?? null }));
-              }} />
-            </StepErrorBoundary>
-          </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <StepErrorBoundary label="intel">
-              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => setStep("intake")} />
+              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => setIntakeOpen(true)} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
             <StepErrorBoundary label="compliance">
-              <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
+              <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setIntakeOpen(true)} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
@@ -1327,25 +1346,21 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
 
 
 
-        <LinkOpportunityTeamCard
-          proposalId={proposalId}
-          parentTeamId={proposal.team_id ?? null}
-          currentOpportunityTeamId={proposal.opportunity_team_id ?? null}
-          onChanged={onRefreshProposal}
-        />
+        <Card className="border-primary/40 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Workflow className="w-4 h-4 text-primary" />
+              Teaming & partner research moved
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Build the team, see suggested partners, and run live PWIN in the Capture Workspace.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <OpenInCaptureWorkspaceButton proposalId={proposalId} />
+          </CardContent>
+        </Card>
 
-        <TeamingCard
-          proposalId={proposalId}
-          teamId={proposal.team_id ?? null}
-          opportunityNaics={proposal.naics_code}
-          proposal={proposal}
-        />
-
-        <PartnerResearch
-          proposalId={proposalId}
-          teamId={proposal.team_id ?? null}
-          opportunityNaics={proposal.naics_code}
-        />
 
         <RelevantPastPerformanceCard
           teamId={proposal.team_id ?? null}
@@ -1853,3 +1868,36 @@ function CustomerIntelStep({ proposal, proposalId, companyProfile, onPatch, aiBu
   );
 }
 
+
+function OpenInCaptureWorkspaceButton({ proposalId }: { proposalId: string }) {
+  const { setSelectedOpportunityId } = useOpportunityContext();
+  const navigate = useNavigate();
+  return (
+    <Button
+      size="sm"
+      onClick={() => {
+        setSelectedOpportunityId(proposalId);
+        navigate({ to: "/" });
+      }}
+    >
+      <Workflow className="w-4 h-4 mr-1.5" />
+      Open in Capture Workspace
+    </Button>
+  );
+}
+
+function OpenInCaptureWorkspaceCard({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+  return (
+    <Card className="border-primary/40 bg-primary/5">
+      <CardContent className="py-3 flex items-center justify-between gap-4 flex-wrap">
+        <div className="text-sm">
+          <div className="font-medium">Run capture for this opportunity</div>
+          <div className="text-xs text-muted-foreground">
+            Selects “{proposal.opportunity_title || "this opportunity"}” as your active context and opens the Capture Workspace for partner suggestions and live PWIN.
+          </div>
+        </div>
+        <OpenInCaptureWorkspaceButton proposalId={proposalId} />
+      </CardContent>
+    </Card>
+  );
+}
