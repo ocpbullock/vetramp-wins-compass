@@ -80,14 +80,8 @@ export async function enrichProposalFromSam(proposalId: string): Promise<EnrichR
       updates.set_aside = setAside;
       updatedFields.push("set_aside");
     }
-    if (!proposal.source_url && hit.uiLink) {
-      updates.source_url = hit.uiLink;
-      updatedFields.push("source_url");
-    }
-    if (!proposal.description && hit.description) {
-      updates.description = hit.description;
-      updatedFields.push("description");
-    }
+    // proposals table has no source_url/description columns; skip.
+
   } else {
     matched = true;
   }
