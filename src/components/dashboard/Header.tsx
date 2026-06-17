@@ -25,9 +25,13 @@ type NavItem = {
   icon?: React.ComponentType<{ className?: string }>;
 };
 
+// Top-level nav. Routes that don't exist yet temporarily point to /discover
+// so nothing 404s while the rest of the re-architecture lands.
 const ORG_NAV: NavItem[] = [
-  { label: "Search", to: "/", hash: "opportunities", matchHash: "opportunities" },
-  { label: "Proposals", to: "/", hash: "in-progress", matchHash: "in-progress" },
+  { label: "Capture Workspace", to: "/", icon: LayoutDashboard },
+  { label: "Opportunities", to: "/discover", icon: Target },
+  { label: "Partners", to: "/discover", icon: Handshake },
+  { label: "Discover", to: "/discover", icon: Search },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
 ];
 
