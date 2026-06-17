@@ -315,6 +315,12 @@ function OpportunitiesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <PwinChip opp={row.oppForPwin} />
+                        {row.enrichable && (
+                          <EnrichButton
+                            proposalId={row.enrichable.proposalId}
+                            onDone={() => qc.invalidateQueries({ queryKey: ["opportunities-page"] })}
+                          />
+                        )}
                         <Button size="sm" variant="outline" onClick={() => openInWorkspace(row)} className="gap-1.5">
                           <ExternalLink className="w-3.5 h-3.5" /> Workspace
                         </Button>
