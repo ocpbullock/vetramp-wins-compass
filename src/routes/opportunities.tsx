@@ -15,6 +15,7 @@ import {
 } from "@/components/dashboard/TrackOpportunityDialog";
 import { PwinChip } from "@/components/dashboard/PwinChip";
 import type { OppForPwin } from "@/lib/pwin-solo";
+import { canEnrichFromSam, enrichProposalFromSam } from "@/lib/sam-enrich";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/opportunities")({
