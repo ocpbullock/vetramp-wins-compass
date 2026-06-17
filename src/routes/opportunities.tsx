@@ -348,3 +348,28 @@ function OpportunitiesPage() {
     </div>
   );
 }
+
+function EnrichButton({ proposalId, onDone }: { proposalId: string; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try {
+      const res = await enrichProposalFromSam(proposalId);
+      const fields = res.updatedFields.length ? ` · updated ${res.updatedFields.join(", ")}` : "";
+      const att = res.attachmentsSaved ? ` · ${res.attachmentsSaved} doc${res.attachmentsSaved === 1 ? "" : "s"}` : "";
+      toast.success(`Enriched from SAM.gov${fields}${att}`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Enrichment failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={run} disabled={busy} className="gap-1.5">
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+      Enrich from SAM.gov
+    </Button>
+  );
+}
+
