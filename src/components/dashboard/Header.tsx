@@ -305,6 +305,20 @@ export function Header() {
                 </Link>
               );
             })}
+            {!isOpp && TOOLS_NAV.map((item) => {
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.label}
+                  to={item.to}
+                  onClick={() => setMobileOpen(false)}
+                  className="px-3 py-2 rounded-md text-xs font-medium flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-accent"
+                >
+                  {Icon && <Icon className="w-4 h-4" />}
+                  Tools · {item.label}
+                </Link>
+              );
+            })}
             {showAdminLink && (
               <Link
                 to="/admin"
