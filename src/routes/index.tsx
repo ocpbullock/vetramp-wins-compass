@@ -15,7 +15,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 
-import { useTeam, useTeamId } from "@/lib/team";
+import { useTeamId } from "@/lib/team";
 import { useOpportunityContext, type TargetProfile } from "@/lib/opportunity-context";
 import { useOnboardingGate } from "@/lib/setup-status";
 import { listCompanies, type Company } from "@/lib/companies";
