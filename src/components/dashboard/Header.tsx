@@ -83,13 +83,12 @@ export function Header() {
   const isActive = (item: NavItem) => {
     if (item.to === "/settings") return location.pathname.startsWith("/settings");
     if (item.to === "/") return onHome;
-    // Multiple placeholders temporarily share /discover; only "Discover"
-    // shows as active so the bar doesn't light up three items at once.
     if (item.to === "/opportunities") return location.pathname === "/opportunities";
     if (item.to === "/partners") return location.pathname === "/partners";
-    if (item.to === "/discover") return location.pathname === "/discover" && item.label === "Discover";
+    if (item.to === "/discover") return location.pathname === "/discover";
     return location.pathname === item.to;
   };
+  const toolsActive = TOOLS_NAV.some((t) => location.pathname === t.to);
 
   const orgTeams = availableTeams.filter((t) => t.team_type === "organization");
   const oppTeams = availableTeams.filter((t) => t.team_type === "opportunity");
