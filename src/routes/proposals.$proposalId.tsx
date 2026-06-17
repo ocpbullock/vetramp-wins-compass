@@ -1348,25 +1348,21 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
 
 
 
-        <LinkOpportunityTeamCard
-          proposalId={proposalId}
-          parentTeamId={proposal.team_id ?? null}
-          currentOpportunityTeamId={proposal.opportunity_team_id ?? null}
-          onChanged={onRefreshProposal}
-        />
+        <Card className="border-primary/40 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Workflow className="w-4 h-4 text-primary" />
+              Teaming & partner research moved
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Build the team, see suggested partners, and run live PWIN in the Capture Workspace.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <OpenInCaptureWorkspaceButton proposalId={proposalId} />
+          </CardContent>
+        </Card>
 
-        <TeamingCard
-          proposalId={proposalId}
-          teamId={proposal.team_id ?? null}
-          opportunityNaics={proposal.naics_code}
-          proposal={proposal}
-        />
-
-        <PartnerResearch
-          proposalId={proposalId}
-          teamId={proposal.team_id ?? null}
-          opportunityNaics={proposal.naics_code}
-        />
 
         <RelevantPastPerformanceCard
           teamId={proposal.team_id ?? null}
