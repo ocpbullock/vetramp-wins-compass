@@ -25,14 +25,17 @@ type NavItem = {
   icon?: React.ComponentType<{ className?: string }>;
 };
 
-// Top-level nav. Routes that don't exist yet temporarily point to /discover
-// so nothing 404s while the rest of the re-architecture lands.
+// Primary nav items, in priority order. "Capture Workspace" is home/primary;
+// "Discover" is a secondary tool surfaced via the Tools menu below.
 const ORG_NAV: NavItem[] = [
   { label: "Capture Workspace", to: "/", icon: LayoutDashboard },
   { label: "Opportunities", to: "/opportunities", icon: Target },
   { label: "Partners", to: "/partners", icon: Handshake },
-  { label: "Discover", to: "/discover", icon: Search },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
+];
+
+const TOOLS_NAV: NavItem[] = [
+  { label: "Discover", to: "/discover", icon: Search },
 ];
 
 export function Header() {
