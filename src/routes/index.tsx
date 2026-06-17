@@ -816,3 +816,31 @@ function RosterPanel({ teamId }: { teamId: string | null }) {
     </Card>
   );
 }
+
+function EnrichFromSamButton({ proposalId }: { proposalId: string }) {
+  const qc = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try {
+      const { enrichProposalFromSam } = await import("@/lib/sam-enrich");
+      const res = await enrichProposalFromSam(proposalId);
+      const fields = res.updatedFields.length ? ` · updated ${res.updatedFields.join(", ")}` : "";
+      const att = res.attachmentsSaved ? ` · ${res.attachmentsSaved} doc${res.attachmentsSaved === 1 ? "" : "s"}` : "";
+      toast.success(`Enriched from SAM.gov${fields}${att}`);
+      qc.invalidateQueries({ queryKey: ["capture-workspace-proposal", proposalId] });
+      qc.invalidateQueries({ queryKey: ["opportunities-page"] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "Enrichment failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={run} disabled={busy}>
+      {busy ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <Sparkles className="w-4 h-4 mr-1.5" />}
+      Enrich from SAM.gov
+    </Button>
+  );
+}
+
