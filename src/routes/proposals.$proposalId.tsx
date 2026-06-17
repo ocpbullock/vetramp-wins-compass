@@ -23,9 +23,7 @@ import { ArrowLeft, Upload, Download, Sparkles, RefreshCw, FileText, CheckCircle
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { exportProposalDocx } from "@/lib/proposal-export";
-import { TeamingCard, fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
-import { LinkOpportunityTeamCard } from "@/components/proposals/LinkOpportunityTeamCard";
-import { PartnerResearch } from "@/components/proposals/PartnerResearch";
+import { fetchTeamingForProposal } from "@/components/proposals/TeamingCard";
 import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPastPerformanceCard";
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
