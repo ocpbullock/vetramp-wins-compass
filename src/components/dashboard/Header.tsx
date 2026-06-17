@@ -144,6 +144,38 @@ export function Header() {
               </Link>
             );
           })}
+          {!isOpp && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className={[
+                    "relative px-3 py-2 text-xs font-medium rounded-md transition-colors flex items-center gap-1",
+                    toolsActive
+                      ? "text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  ].join(" ")}
+                >
+                  Tools <ChevronDown className="w-3 h-3 opacity-60" />
+                  {toolsActive && (
+                    <span className="absolute -bottom-3 left-3 right-3 h-[2px] bg-primary rounded-full" />
+                  )}
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-48">
+                {TOOLS_NAV.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <DropdownMenuItem key={item.label} asChild>
+                      <Link to={item.to}>
+                        {Icon && <Icon className="w-4 h-4 mr-2 opacity-70" />}
+                        {item.label}
+                      </Link>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
         </nav>
 
         <div className="flex-1" />
