@@ -9,6 +9,7 @@ import appCss from "../styles.css?url";
 import { AuthProvider } from "@/lib/auth";
 import { TeamProvider } from "@/lib/team";
 import { StarredProvider } from "@/lib/starred";
+import { OpportunityProvider } from "@/lib/opportunity-context";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
