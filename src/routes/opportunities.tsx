@@ -76,6 +76,7 @@ type Row = {
   trackedId?: string;
   proposalId?: string;
   oppForPwin: OppForPwin;
+  enrichable?: { proposalId: string; hasNoticeId: boolean };
 };
 
 const fmtDate = (d: string | null) =>
