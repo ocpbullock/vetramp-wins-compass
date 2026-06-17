@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PartnersRouteImport } from './routes/partners'
+import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -250,13 +251,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
