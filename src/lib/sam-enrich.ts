@@ -35,7 +35,11 @@ export async function enrichProposalFromSam(proposalId: string): Promise<EnrichR
   if (error) throw new Error(error.message);
   if (!proposal) throw new Error("Proposal not found");
 
-  const updates: Record<string, any> = {};
+  const updates: {
+    notice_id?: string;
+    response_deadline?: string;
+    set_aside?: string;
+  } = {};
   const updatedFields: string[] = [];
   let matched = false;
   let noticeId: string | null = proposal.notice_id ?? null;
