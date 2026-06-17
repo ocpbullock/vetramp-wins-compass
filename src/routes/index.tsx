@@ -463,6 +463,7 @@ function OpportunityContextBar({
           <Button size="sm" variant="outline" onClick={onDraftOutreach}>
             <Mail className="w-4 h-4 mr-1.5" /> Draft teaming outreach
           </Button>
+          <EnrichFromSamButton proposalId={selected.id} />
           <Button asChild size="sm" variant="ghost">
             <Link to="/proposals/$proposalId" params={{ proposalId: selected.id }}>
               Go to proposal <ArrowRight className="w-4 h-4 ml-1" />
