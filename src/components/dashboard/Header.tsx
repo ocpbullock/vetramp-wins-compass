@@ -29,7 +29,7 @@ type NavItem = {
 // so nothing 404s while the rest of the re-architecture lands.
 const ORG_NAV: NavItem[] = [
   { label: "Capture Workspace", to: "/", icon: LayoutDashboard },
-  { label: "Opportunities", to: "/discover", icon: Target },
+  { label: "Opportunities", to: "/opportunities", icon: Target },
   { label: "Partners", to: "/discover", icon: Handshake },
   { label: "Discover", to: "/discover", icon: Search },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
