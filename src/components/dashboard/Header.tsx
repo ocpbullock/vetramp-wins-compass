@@ -30,7 +30,7 @@ type NavItem = {
 const ORG_NAV: NavItem[] = [
   { label: "Capture Workspace", to: "/", icon: LayoutDashboard },
   { label: "Opportunities", to: "/opportunities", icon: Target },
-  { label: "Partners", to: "/discover", icon: Handshake },
+  { label: "Partners", to: "/partners", icon: Handshake },
   { label: "Discover", to: "/discover", icon: Search },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
 ];
