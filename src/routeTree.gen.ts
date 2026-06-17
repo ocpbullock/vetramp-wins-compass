@@ -11,10 +11,10 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
-import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProposalsProposalIdRouteImport } from './routes/proposals.$proposalId'
 
 const TeamsRoute = TeamsRouteImport.update({
@@ -25,6 +25,11 @@ const TeamsRoute = TeamsRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiscoverRoute = DiscoverRouteImport.update({
+  id: '/discover',
+  path: '/discover',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -42,11 +47,6 @@ const AcceptInviteRoute = AcceptInviteRouteImport.update({
   path: '/accept-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const ProposalsProposalIdRoute = ProposalsProposalIdRouteImport.update({
   id: '/proposals/$proposalId',
   path: '/proposals/$proposalId',
@@ -54,29 +54,29 @@ const ProposalsProposalIdRoute = ProposalsProposalIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/discover': typeof DiscoverRoute
   '/settings': typeof SettingsRoute
   '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/discover': typeof DiscoverRoute
   '/settings': typeof SettingsRoute
   '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/discover': typeof DiscoverRoute
   '/settings': typeof SettingsRoute
   '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
@@ -84,38 +84,38 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/discover'
     | '/settings'
     | '/teams'
     | '/proposals/$proposalId'
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/discover'
     | '/settings'
     | '/teams'
     | '/proposals/$proposalId'
   id:
     | '__root__'
-    | '/'
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/discover'
     | '/settings'
     | '/teams'
     | '/proposals/$proposalId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  DiscoverRoute: typeof DiscoverRoute
   SettingsRoute: typeof SettingsRoute
   TeamsRoute: typeof TeamsRoute
   ProposalsProposalIdRoute: typeof ProposalsProposalIdRoute
@@ -135,6 +135,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/discover': {
+      id: '/discover'
+      path: '/discover'
+      fullPath: '/discover'
+      preLoaderRoute: typeof DiscoverRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -158,13 +165,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/proposals/$proposalId': {
       id: '/proposals/$proposalId'
       path: '/proposals/$proposalId'
@@ -176,10 +176,10 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
   AcceptInviteRoute: AcceptInviteRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  DiscoverRoute: DiscoverRoute,
   SettingsRoute: SettingsRoute,
   TeamsRoute: TeamsRoute,
   ProposalsProposalIdRoute: ProposalsProposalIdRoute,

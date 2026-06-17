@@ -43,7 +43,7 @@ import { SetupBanner } from "@/components/settings/SetupChecklist";
 import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
 import { useOnboardingGate } from "@/lib/setup-status";
 
-export const Route = createFileRoute("/")({ component: Dashboard });
+export const Route = createFileRoute("/discover")({ component: Dashboard });
 
 const historicalLookbackFrom = () => format(subYears(new Date(), 10), "yyyy-MM-dd");
 
