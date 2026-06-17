@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Users } from "lucide-react";
+import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Users, Target, Search, Handshake, LayoutDashboard } from "lucide-react";
 import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 import { QuotaMeter } from "./QuotaMeter";
@@ -25,9 +25,13 @@ type NavItem = {
   icon?: React.ComponentType<{ className?: string }>;
 };
 
+// Top-level nav. Routes that don't exist yet temporarily point to /discover
+// so nothing 404s while the rest of the re-architecture lands.
 const ORG_NAV: NavItem[] = [
-  { label: "Search", to: "/", hash: "opportunities", matchHash: "opportunities" },
-  { label: "Proposals", to: "/", hash: "in-progress", matchHash: "in-progress" },
+  { label: "Capture Workspace", to: "/", icon: LayoutDashboard },
+  { label: "Opportunities", to: "/discover", icon: Target },
+  { label: "Partners", to: "/discover", icon: Handshake },
+  { label: "Discover", to: "/discover", icon: Search },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
 ];
 
@@ -65,7 +69,6 @@ export function Header() {
     user?.email?.split("@")[0] ||
     "Account";
 
-  const currentHash = typeof location.hash === "string" ? location.hash.replace(/^#/, "") : "";
   const onHome = location.pathname === "/";
 
   const NAV: NavItem[] = isOpp
@@ -76,9 +79,11 @@ export function Header() {
 
   const isActive = (item: NavItem) => {
     if (item.to === "/settings") return location.pathname.startsWith("/settings");
-    if (!onHome) return false;
-    if (item.matchHash) return currentHash === item.matchHash;
-    return false;
+    if (item.to === "/") return onHome;
+    // Multiple placeholders temporarily share /discover; only "Discover"
+    // shows as active so the bar doesn't light up three items at once.
+    if (item.to === "/discover") return location.pathname === "/discover" && item.label === "Discover";
+    return location.pathname === item.to;
   };
 
   const orgTeams = availableTeams.filter((t) => t.team_type === "organization");
