@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -27,6 +28,11 @@ const TeamsRoute = TeamsRouteImport.update({
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnersRoute = PartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
   getParentRoute: () => rootRouteImport,
 } as any)
 const OpportunitiesRoute = OpportunitiesRouteImport.update({
@@ -72,6 +78,7 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/opportunities': typeof OpportunitiesRoute
+  '/partners': typeof PartnersRoute
   '/settings': typeof SettingsRoute
   '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
@@ -83,6 +90,7 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/opportunities': typeof OpportunitiesRoute
+  '/partners': typeof PartnersRoute
   '/settings': typeof SettingsRoute
   '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
@@ -95,6 +103,7 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/discover': typeof DiscoverRoute
   '/opportunities': typeof OpportunitiesRoute
+  '/partners': typeof PartnersRoute
   '/settings': typeof SettingsRoute
   '/teams': typeof TeamsRoute
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
@@ -108,6 +117,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/opportunities'
+    | '/partners'
     | '/settings'
     | '/teams'
     | '/proposals/$proposalId'
@@ -119,6 +129,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/opportunities'
+    | '/partners'
     | '/settings'
     | '/teams'
     | '/proposals/$proposalId'
@@ -130,6 +141,7 @@ export interface FileRouteTypes {
     | '/auth'
     | '/discover'
     | '/opportunities'
+    | '/partners'
     | '/settings'
     | '/teams'
     | '/proposals/$proposalId'
@@ -142,6 +154,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DiscoverRoute: typeof DiscoverRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
+  PartnersRoute: typeof PartnersRoute
   SettingsRoute: typeof SettingsRoute
   TeamsRoute: typeof TeamsRoute
   ProposalsProposalIdRoute: typeof ProposalsProposalIdRoute
@@ -161,6 +174,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/partners': {
+      id: '/partners'
+      path: '/partners'
+      fullPath: '/partners'
+      preLoaderRoute: typeof PartnersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/opportunities': {
@@ -222,6 +242,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DiscoverRoute: DiscoverRoute,
   OpportunitiesRoute: OpportunitiesRoute,
+  PartnersRoute: PartnersRoute,
   SettingsRoute: SettingsRoute,
   TeamsRoute: TeamsRoute,
   ProposalsProposalIdRoute: ProposalsProposalIdRoute,

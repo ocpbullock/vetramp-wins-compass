@@ -30,7 +30,7 @@ type NavItem = {
 const ORG_NAV: NavItem[] = [
   { label: "Capture Workspace", to: "/", icon: LayoutDashboard },
   { label: "Opportunities", to: "/opportunities", icon: Target },
-  { label: "Partners", to: "/discover", icon: Handshake },
+  { label: "Partners", to: "/partners", icon: Handshake },
   { label: "Discover", to: "/discover", icon: Search },
   { label: "Capture Intel", to: "/settings", icon: BookOpen },
 ];
@@ -83,6 +83,7 @@ export function Header() {
     // Multiple placeholders temporarily share /discover; only "Discover"
     // shows as active so the bar doesn't light up three items at once.
     if (item.to === "/opportunities") return location.pathname === "/opportunities";
+    if (item.to === "/partners") return location.pathname === "/partners";
     if (item.to === "/discover") return location.pathname === "/discover" && item.label === "Discover";
     return location.pathname === item.to;
   };

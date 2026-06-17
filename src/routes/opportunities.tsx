@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ExternalLink, FileText, Workflow } from "lucide-react";
+import { Plus, ExternalLink, FileText, Workflow, Sparkles, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
@@ -15,6 +15,7 @@ import {
 } from "@/components/dashboard/TrackOpportunityDialog";
 import { PwinChip } from "@/components/dashboard/PwinChip";
 import type { OppForPwin } from "@/lib/pwin-solo";
+import { canEnrichFromSam, enrichProposalFromSam } from "@/lib/sam-enrich";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/opportunities")({
@@ -32,6 +33,8 @@ type ProposalRow = {
   updated_at: string;
   opportunity_source: string | null;
   opportunity_source_id: string | null;
+  solicitation_number: string | null;
+  notice_id: string | null;
 };
 
 type Stage = "Watching" | "Capturing" | "Proposal" | "Submitted" | "Won/Lost";
@@ -74,6 +77,7 @@ type Row = {
   trackedId?: string;
   proposalId?: string;
   oppForPwin: OppForPwin;
+  enrichable?: { proposalId: string; hasNoticeId: boolean };
 };
 
 const fmtDate = (d: string | null) =>
@@ -108,7 +112,7 @@ function OpportunitiesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposals")
-        .select("id,opportunity_title,agency,naics_code,set_aside,status,response_deadline,updated_at,opportunity_source,opportunity_source_id")
+        .select("id,opportunity_title,agency,naics_code,set_aside,status,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id")
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as ProposalRow[];
@@ -175,6 +179,13 @@ function OpportunitiesPage() {
           setAside: p.set_aside,
           vehicle: null,
         },
+        enrichable: canEnrichFromSam({
+          solicitation_number: p.solicitation_number,
+          notice_id: p.notice_id,
+          naics_code: p.naics_code,
+        })
+          ? { proposalId: p.id, hasNoticeId: !!p.notice_id }
+          : undefined,
       });
     }
 
@@ -304,6 +315,12 @@ function OpportunitiesPage() {
                       </div>
                       <div className="flex items-center gap-2">
                         <PwinChip opp={row.oppForPwin} />
+                        {row.enrichable && (
+                          <EnrichButton
+                            proposalId={row.enrichable.proposalId}
+                            onDone={() => qc.invalidateQueries({ queryKey: ["opportunities-page"] })}
+                          />
+                        )}
                         <Button size="sm" variant="outline" onClick={() => openInWorkspace(row)} className="gap-1.5">
                           <ExternalLink className="w-3.5 h-3.5" /> Workspace
                         </Button>
@@ -331,3 +348,28 @@ function OpportunitiesPage() {
     </div>
   );
 }
+
+function EnrichButton({ proposalId, onDone }: { proposalId: string; onDone: () => void }) {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try {
+      const res = await enrichProposalFromSam(proposalId);
+      const fields = res.updatedFields.length ? ` · updated ${res.updatedFields.join(", ")}` : "";
+      const att = res.attachmentsSaved ? ` · ${res.attachmentsSaved} doc${res.attachmentsSaved === 1 ? "" : "s"}` : "";
+      toast.success(`Enriched from SAM.gov${fields}${att}`);
+      onDone();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Enrichment failed");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Button size="sm" variant="outline" onClick={run} disabled={busy} className="gap-1.5">
+      {busy ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+      Enrich from SAM.gov
+    </Button>
+  );
+}
+
