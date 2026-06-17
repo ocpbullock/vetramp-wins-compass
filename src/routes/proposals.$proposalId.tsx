@@ -143,7 +143,8 @@ function ProposalPipeline() {
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState("intake");
+  const [step, setStep] = useState("intel");
+  const [intakeOpen, setIntakeOpen] = useState(false);
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
   const [isPartnerView, setIsPartnerView] = useState(false);
