@@ -80,9 +80,11 @@ export function Header() {
 
   const isActive = (item: NavItem) => {
     if (item.to === "/settings") return location.pathname.startsWith("/settings");
-    if (!onHome) return false;
-    if (item.matchHash) return currentHash === item.matchHash;
-    return false;
+    if (item.to === "/") return onHome;
+    // Multiple placeholders temporarily share /discover; only "Discover"
+    // shows as active so the bar doesn't light up three items at once.
+    if (item.to === "/discover") return location.pathname === "/discover" && item.label === "Discover";
+    return location.pathname === item.to;
   };
 
   const orgTeams = availableTeams.filter((t) => t.team_type === "organization");
