@@ -54,10 +54,12 @@ function RootComponent() {
       <AuthProvider>
         <TeamProvider>
           <StarredProvider>
-            <TooltipProvider delayDuration={150}>
-              <Outlet />
-              <Toaster richColors position="top-right" />
-            </TooltipProvider>
+            <OpportunityProvider>
+              <TooltipProvider delayDuration={150}>
+                <Outlet />
+                <Toaster richColors position="top-right" />
+              </TooltipProvider>
+            </OpportunityProvider>
           </StarredProvider>
         </TeamProvider>
       </AuthProvider>
