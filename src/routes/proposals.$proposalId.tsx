@@ -705,39 +705,56 @@ function ProposalPipeline() {
           <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
         )}
 
+        <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
+
+        <Collapsible open={intakeOpen} onOpenChange={setIntakeOpen}>
+          <Card>
+            <CollapsibleTrigger asChild>
+              <button className="w-full text-left flex items-center justify-between px-6 py-4 hover:bg-accent/50 rounded-t-lg">
+                <div>
+                  <div className="text-sm font-semibold">Opportunity details</div>
+                  <div className="text-xs text-muted-foreground">Intake fields, attachments, parsing — expand to edit.</div>
+                </div>
+                <ChevronRight className={`w-4 h-4 transition-transform ${intakeOpen ? "rotate-90" : ""}`} />
+              </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="px-6 pb-6 pt-2 space-y-4">
+                <StepErrorBoundary label="intake">
+                  <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onUpdateAttachmentNotes={updateAttachmentNotes} onAddPastedReference={addPastedReference} onRefreshProposal={async () => {
+                    const { data: fresh } = await supabase.from("proposals").select("opportunity_team_id").eq("id", proposalId).maybeSingle();
+                    if (fresh) setProposal((p: any) => ({ ...p, opportunity_team_id: fresh.opportunity_team_id ?? null }));
+                  }} />
+                </StepErrorBoundary>
+              </div>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
         <Tabs value={step} onValueChange={setStep}>
           <TabsList>
-            <TabsTrigger value="intake">1. Intake</TabsTrigger>
-            <TabsTrigger value="intel">2. Customer Intel</TabsTrigger>
+            <TabsTrigger value="intel">1. Customer Intel</TabsTrigger>
             {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
-              <TabsTrigger value="compliance">3. Compliance</TabsTrigger>
+              <TabsTrigger value="compliance">2. Compliance</TabsTrigger>
             )}
             <TabsTrigger value="solution">
               {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement"
-                ? "3. Inputs"
-                : `4. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
+                ? "2. Inputs"
+                : `3. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
             </TabsTrigger>
             <TabsTrigger value="generate">
-              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "4." : "5."} Generate
+              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "3." : "4."} Generate
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="intake" className="mt-4 space-y-4">
-            <StepErrorBoundary label="intake">
-              <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onUpdateAttachmentNotes={updateAttachmentNotes} onAddPastedReference={addPastedReference} onRefreshProposal={async () => {
-                const { data: fresh } = await supabase.from("proposals").select("opportunity_team_id").eq("id", proposalId).maybeSingle();
-                if (fresh) setProposal((p: any) => ({ ...p, opportunity_team_id: fresh.opportunity_team_id ?? null }));
-              }} />
-            </StepErrorBoundary>
-          </TabsContent>
           <TabsContent value="intel" className="mt-4">
             <StepErrorBoundary label="intel">
-              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => setStep("intake")} />
+              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => setIntakeOpen(true)} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="compliance" className="mt-4">
             <StepErrorBoundary label="compliance">
-              <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setStep("intake")} />
+              <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setIntakeOpen(true)} />
             </StepErrorBoundary>
           </TabsContent>
           <TabsContent value="solution" className="mt-4">
