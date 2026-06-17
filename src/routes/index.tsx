@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, ChevronDown, Building2, Star, Users, Swords, Target,
-  Lightbulb, ArrowRight, Mail, UserPlus,
+  Lightbulb, ArrowRight, Mail, UserPlus, Sparkles, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
