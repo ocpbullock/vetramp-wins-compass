@@ -28,7 +28,7 @@ export async function enrichProposalFromSam(proposalId: string): Promise<EnrichR
   const { data: proposal, error } = await supabase
     .from("proposals")
     .select(
-      "id, opportunity_title, agency, sub_agency, naics_code, solicitation_number, notice_id, response_deadline, set_aside, source_url, description",
+      "id, opportunity_title, agency, naics_code, solicitation_number, notice_id, response_deadline, set_aside, source_url, description",
     )
     .eq("id", proposalId)
     .maybeSingle();
