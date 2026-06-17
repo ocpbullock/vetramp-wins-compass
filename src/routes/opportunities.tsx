@@ -178,6 +178,13 @@ function OpportunitiesPage() {
           setAside: p.set_aside,
           vehicle: null,
         },
+        enrichable: canEnrichFromSam({
+          solicitation_number: p.solicitation_number,
+          notice_id: p.notice_id,
+          naics_code: p.naics_code,
+        })
+          ? { proposalId: p.id, hasNoticeId: !!p.notice_id }
+          : undefined,
       });
     }
 
