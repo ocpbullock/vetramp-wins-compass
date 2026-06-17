@@ -12,7 +12,6 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as TeamsRouteImport } from './routes/teams'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as PartnersRouteImport } from './routes/partners'
-import { Route as PartnersRouteImport } from './routes/partners'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -39,6 +38,11 @@ const PartnersRoute = PartnersRouteImport.update({
 const OpportunitiesRoute = OpportunitiesRouteImport.update({
   id: '/opportunities',
   path: '/opportunities',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PartnersRoute = PartnersRouteImport.update({
+  id: '/partners',
+  path: '/partners',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverRoute = DiscoverRouteImport.update({
