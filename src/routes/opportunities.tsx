@@ -32,6 +32,8 @@ type ProposalRow = {
   updated_at: string;
   opportunity_source: string | null;
   opportunity_source_id: string | null;
+  solicitation_number: string | null;
+  notice_id: string | null;
 };
 
 type Stage = "Watching" | "Capturing" | "Proposal" | "Submitted" | "Won/Lost";
