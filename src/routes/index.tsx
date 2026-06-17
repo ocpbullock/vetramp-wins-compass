@@ -49,7 +49,6 @@ const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
 // Capture Workspace — the app's new front door.
 // ---------------------------------------------------------------------------
 function CaptureWorkspace() {
-  const { currentTeam } = useTeam();
   const teamId = useTeamId();
   const onboarding = useOnboardingGate();
   const { selected, targetProfile, setTargetProfile } = useOpportunityContext();
