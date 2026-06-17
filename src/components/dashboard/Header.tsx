@@ -69,7 +69,6 @@ export function Header() {
     user?.email?.split("@")[0] ||
     "Account";
 
-  const currentHash = typeof location.hash === "string" ? location.hash.replace(/^#/, "") : "";
   const onHome = location.pathname === "/";
 
   const NAV: NavItem[] = isOpp
