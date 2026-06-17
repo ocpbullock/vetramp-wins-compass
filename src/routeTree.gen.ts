@@ -15,6 +15,7 @@ import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
+import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProposalsProposalIdRouteImport } from './routes/proposals.$proposalId'
 
 const TeamsRoute = TeamsRouteImport.update({
@@ -47,6 +48,11 @@ const AcceptInviteRoute = AcceptInviteRouteImport.update({
   path: '/accept-invite',
   getParentRoute: () => rootRouteImport,
 } as any)
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProposalsProposalIdRoute = ProposalsProposalIdRouteImport.update({
   id: '/proposals/$proposalId',
   path: '/proposals/$proposalId',
@@ -54,6 +60,7 @@ const ProposalsProposalIdRoute = ProposalsProposalIdRouteImport.update({
 } as any)
 
 export interface FileRoutesByFullPath {
+  '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
@@ -63,6 +70,7 @@ export interface FileRoutesByFullPath {
   '/proposals/$proposalId': typeof ProposalsProposalIdRoute
 }
 export interface FileRoutesByTo {
+  '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
@@ -73,6 +81,7 @@ export interface FileRoutesByTo {
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
+  '/': typeof IndexRoute
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
@@ -84,6 +93,7 @@ export interface FileRoutesById {
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
+    | '/'
     | '/accept-invite'
     | '/admin'
     | '/auth'
@@ -93,6 +103,7 @@ export interface FileRouteTypes {
     | '/proposals/$proposalId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/'
     | '/accept-invite'
     | '/admin'
     | '/auth'
@@ -102,6 +113,7 @@ export interface FileRouteTypes {
     | '/proposals/$proposalId'
   id:
     | '__root__'
+    | '/'
     | '/accept-invite'
     | '/admin'
     | '/auth'
@@ -112,6 +124,7 @@ export interface FileRouteTypes {
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
+  IndexRoute: typeof IndexRoute
   AcceptInviteRoute: typeof AcceptInviteRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
@@ -165,6 +178,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptInviteRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/proposals/$proposalId': {
       id: '/proposals/$proposalId'
       path: '/proposals/$proposalId'
@@ -176,6 +196,7 @@ declare module '@tanstack/react-router' {
 }
 
 const rootRouteChildren: RootRouteChildren = {
+  IndexRoute: IndexRoute,
   AcceptInviteRoute: AcceptInviteRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,

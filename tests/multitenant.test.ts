@@ -300,7 +300,7 @@ describe("multi-tenant: in-progress proposal lists rely on RLS, not user_id filt
   });
 
   it("dashboard in-progress count does not filter by user_id either", () => {
-    const src = r("src/routes/index.tsx");
+    const src = r("src/routes/discover.tsx");
     const m = src.match(/setInProgressCount[\s\S]*?\}\)\(\);/);
     expect(m, "expected an in-progress count effect").toBeTruthy();
     expect(m![0]).not.toMatch(/\.eq\(["']user_id["']/);
@@ -309,7 +309,7 @@ describe("multi-tenant: in-progress proposal lists rely on RLS, not user_id filt
 
 describe("multi-tenant: proposals from tracked opportunities inherit the org team", () => {
   const root = resolve(__dirname, "..");
-  const src = readFileSync(resolve(root, "src/routes/index.tsx"), "utf8");
+  const src = readFileSync(resolve(root, "src/routes/discover.tsx"), "utf8");
 
   it("handlePropose looks up tracked_opportunities.team_id for tracked source", () => {
     expect(src).toMatch(/source\.kind === ["']tracked["']/);
