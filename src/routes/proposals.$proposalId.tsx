@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link, useRouter } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useOpportunityContext } from "@/lib/opportunity-context";
 import { ChevronRight, Workflow } from "lucide-react";
