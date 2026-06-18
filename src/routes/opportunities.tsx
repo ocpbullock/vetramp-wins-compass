@@ -109,7 +109,7 @@ function OpportunitiesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposals")
-        .select("id,opportunity_title,agency,naics_code,set_aside,status,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id")
+        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id")
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as ProposalRow[];
