@@ -1963,3 +1963,208 @@ function OpenInCaptureWorkspaceCard({ proposal, proposalId }: { proposal: any; p
     </Card>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Hub helpers — overview summary, placeholder panels, and the Team panel.
+// ---------------------------------------------------------------------------
+
+function OpportunitySummaryCard({ proposal }: { proposal: any }) {
+  const fmtDate = (d: string | null | undefined) =>
+    d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+  const fmtMoney = (n: number | string | null | undefined) => {
+    if (n == null || n === "") return "—";
+    const num = typeof n === "number" ? n : Number(n);
+    if (!Number.isFinite(num)) return String(n);
+    return num.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  };
+  const items: { label: string; value: React.ReactNode }[] = [
+    { label: "Title", value: proposal.opportunity_title || "—" },
+    { label: "Agency", value: proposal.agency || "—" },
+    { label: "NAICS", value: proposal.naics_code ? <span className="font-mono">{proposal.naics_code}</span> : "—" },
+    { label: "Set-aside", value: proposal.set_aside || "—" },
+    { label: "Vehicle", value: proposal.contract_vehicle || proposal.opportunity_data?.vehicle || "—" },
+    { label: "Estimated value", value: fmtMoney(proposal.estimated_value) },
+    { label: "Response deadline", value: fmtDate(proposal.response_deadline) },
+    { label: "Incumbent", value: proposal.known_incumbent || "—" },
+    { label: "Capture stage", value: <span className="capitalize">{(proposal.capture_stage || "intake").replace("_", " ")}</span> },
+  ];
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-base">Opportunity overview</CardTitle>
+        <CardDescription className="text-xs">
+          Snapshot of the key fields. Edit them in “Opportunity details” below.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-x-6 gap-y-3 text-sm">
+        {items.map((it) => (
+          <div key={it.label} className="min-w-0">
+            <div className="text-xs text-muted-foreground">{it.label}</div>
+            <div className="truncate">{it.value}</div>
+          </div>
+        ))}
+        <div className="col-span-2 md:col-span-3">
+          <div className="text-xs text-muted-foreground mb-1">Capture notes</div>
+          <div className="text-sm whitespace-pre-wrap rounded-md border bg-muted/30 px-3 py-2 min-h-[2.5rem]">
+            {proposal.capture_notes || <span className="text-muted-foreground">No notes yet.</span>}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PlaceholderHubPanel({ title, description }: { title: string; description: string }) {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base">{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
+      </CardHeader>
+      <CardContent className="text-xs text-muted-foreground">
+        This panel is a placeholder — content for {title} will be added in an upcoming release.
+      </CardContent>
+    </Card>
+  );
+}
+
+function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+  const qc = useQueryClient();
+  const teamId: string | null = proposal.team_id ?? null;
+  const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
+  const [outreachOpen, setOutreachOpen] = useState(false);
+  const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
+
+  const { data: existingPartnerIds = [] } = useQuery({
+    queryKey: ["proposal-teaming", proposalId],
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await supabase
+        .from("proposal_teaming")
+        .select("company_id")
+        .eq("proposal_id", proposalId);
+      if (error) throw new Error(error.message);
+      return (data ?? []).map((r: any) => r.company_id as string);
+    },
+  });
+
+  const sandboxOpportunity = useMemo(
+    () => ({
+      title: proposal.opportunity_title || "This opportunity",
+      naicsCodes: proposal.naics_code ? [proposal.naics_code as string] : [],
+      agency: proposal.agency ?? null,
+      setAside: proposal.set_aside ?? null,
+      requiredVehicles: proposal.contract_vehicle ? [proposal.contract_vehicle as string] : [],
+      incumbentName: proposal.known_incumbent ?? null,
+      scopeKeywords: typeof proposal.targeted_scope_areas === "string"
+        ? proposal.targeted_scope_areas.split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean)
+        : [],
+    }),
+    [proposal],
+  );
+
+  const addSuggestedPartner = async (s: { partnerId: string; partnerName: string }) => {
+    const { error } = await supabase
+      .from("proposal_teaming")
+      .insert({ proposal_id: proposalId, company_id: s.partnerId, role: "sub", work_share_pct: null });
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Added ${s.partnerName} to the opportunity team`);
+    qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
+  };
+
+  if (!teamId) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Team</CardTitle>
+          <CardDescription>This opportunity isn’t linked to a team yet — assign it in Opportunity details.</CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Team actions</CardTitle>
+          <CardDescription className="text-xs">
+            Build a shared opportunity team or send a teaming outreach for this pursuit.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => setOppTeamDialogOpen(true)} className="gap-1.5">
+            <UserPlus className="w-3.5 h-3.5" /> Build Opportunity Team
+          </Button>
+          <Button size="sm" variant="outline" onClick={() => { setOutreachPartner(null); setOutreachOpen(true); }} className="gap-1.5">
+            <Mail className="w-3.5 h-3.5" /> Draft teaming outreach
+          </Button>
+        </CardContent>
+      </Card>
+
+      <SuggestedPartnersCard
+        proposal={{
+          id: proposalId,
+          team_id: teamId,
+          agency: proposal.agency ?? null,
+          naics_code: proposal.naics_code ?? null,
+          set_aside: proposal.set_aside ?? null,
+          contract_type: proposal.contract_type ?? null,
+          engagement_type: (proposal.engagement_type ?? "prime") as "prime" | "sub",
+          prime_contractor_name: proposal.prime_contractor_name ?? null,
+          targeted_scope_areas: proposal.targeted_scope_areas ?? null,
+          customer_intel: proposal.customer_intel ?? null,
+        }}
+        existingPartnerIds={existingPartnerIds}
+        onAdd={(s) => addSuggestedPartner({ partnerId: s.partnerId, partnerName: s.partnerName })}
+        onOutreach={(p) => { setOutreachPartner(p); setOutreachOpen(true); }}
+      />
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2"><Swords className="w-4 h-4" /> Teaming Sandbox</CardTitle>
+          <CardDescription>
+            Drop your company and partners into a scenario and watch pWin update live for this opportunity.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button size="sm" onClick={() => setSandboxOpen(true)} className="gap-1.5">
+            <Swords className="w-3.5 h-3.5" /> Open Teaming Sandbox
+          </Button>
+        </CardContent>
+      </Card>
+
+      <TeamingSandbox
+        open={sandboxOpen}
+        onOpenChange={setSandboxOpen}
+        parent={{ kind: "proposal", proposalId, teamId }}
+        opportunity={sandboxOpportunity}
+      />
+
+      <CreateOpportunityTeamDialog
+        open={oppTeamDialogOpen}
+        onOpenChange={setOppTeamDialogOpen}
+        opportunityTitle={proposal.opportunity_title || "This opportunity"}
+        source="sam"
+        sourceId={proposalId}
+        solicitationNumber={proposal.solicitation_number ?? undefined}
+        agency={proposal.agency}
+        naicsCode={proposal.naics_code}
+        responseDeadline={proposal.response_deadline ?? null}
+      />
+
+      <TeamingOutreachModal
+        open={outreachOpen}
+        onOpenChange={setOutreachOpen}
+        proposal={{
+          id: proposalId,
+          team_id: teamId,
+          engagement_type: (proposal.engagement_type ?? "prime") as "prime" | "sub",
+          opportunity_data: proposal.opportunity_data,
+        }}
+        partner={outreachPartner}
+        defaultScopeAreas={proposal.targeted_scope_areas ?? undefined}
+      />
+    </div>
+  );
+}
