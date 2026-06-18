@@ -40,6 +40,12 @@ import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
 import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
 import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
+import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
+import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
+import { TeamingOutreachModal, type OutreachPartnerInput } from "@/components/proposals/TeamingOutreachModal";
+import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
+import { useQueryClient } from "@tanstack/react-query";
+import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
