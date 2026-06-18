@@ -31,6 +31,7 @@ type ProposalRow = {
   naics_code: string | null;
   set_aside: string | null;
   status: string | null;
+  capture_stage: string | null;
   response_deadline: string | null;
   updated_at: string;
   opportunity_source: string | null;
@@ -39,8 +40,8 @@ type ProposalRow = {
   notice_id: string | null;
 };
 
-type Stage = "Watching" | "Capturing" | "Proposal" | "Submitted" | "Won/Lost";
-const STAGES: Stage[] = ["Watching", "Capturing", "Proposal", "Submitted", "Won/Lost"];
+type Stage = BoardStage;
+const STAGES = BOARD_STAGES;
 
 const STAGE_TONE: Record<Stage, string> = {
   Watching: "bg-muted text-muted-foreground border-border",
@@ -56,13 +57,6 @@ function trackedStage(status: string): Stage {
   if (status === "Submitted") return "Submitted";
   if (status === "Won" || status === "Lost") return "Won/Lost";
   return "Watching";
-}
-
-function proposalStage(status: string | null): Stage {
-  const s = (status ?? "").toLowerCase();
-  if (s.includes("submit")) return "Submitted";
-  if (s === "won" || s === "lost" || s.includes("award")) return "Won/Lost";
-  return "Proposal";
 }
 
 type Row = {
