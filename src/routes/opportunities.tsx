@@ -70,6 +70,7 @@ type Row = {
   updatedAt: string;
   stage: Stage;
   statusLabel: string;
+  captureStage?: string | null;
   trackedId?: string;
   proposalId?: string;
   oppForPwin: OppForPwin;
