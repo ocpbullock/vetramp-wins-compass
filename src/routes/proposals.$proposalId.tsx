@@ -39,6 +39,7 @@ import { PrimeContractorCombobox } from "@/components/proposals/PrimeContractorC
 import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
 import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
 import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
+import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
