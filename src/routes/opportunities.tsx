@@ -17,6 +17,8 @@ import { PwinChip } from "@/components/dashboard/PwinChip";
 import type { OppForPwin } from "@/lib/pwin-solo";
 import { canEnrichFromSam, enrichProposalFromSam } from "@/lib/sam-enrich";
 import { toast } from "sonner";
+import { BOARD_STAGES, captureStageToBoard, type BoardStage } from "@/lib/capture-stage";
+import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 
 export const Route = createFileRoute("/opportunities")({
   component: OpportunitiesPage,
