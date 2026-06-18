@@ -172,7 +172,7 @@ function ProposalPipeline() {
         supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle(),
         supabase.from("proposal_attachments").select("*").eq("proposal_id", proposalId).order("uploaded_at", { ascending: false }),
       ]);
-      if (pe || !p) { toast.error("Proposal not found"); navigate({ to: "/" }); return; }
+      if (pe || !p) { toast.error("Opportunity not found"); navigate({ to: "/" }); return; }
 
       // Run integrity checks; auto-assign team_id if missing
       let proposalRow: any = p;
