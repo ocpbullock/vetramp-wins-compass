@@ -662,6 +662,11 @@ function ProposalPipeline() {
             {pursuitTypeLabel(proposal.pursuit_type)}
           </Badge>
           <Badge variant="outline">{proposal.status}</Badge>
+          <CaptureStageSelect
+            proposalId={proposalId}
+            value={proposal.capture_stage}
+            onChanged={() => { /* router/query layer refetches via realtime/invalidation elsewhere */ }}
+          />
           {dataIssues.length > 0 && (
             <TooltipProvider delayDuration={200}>
               <Tooltip>
