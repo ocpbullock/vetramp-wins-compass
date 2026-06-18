@@ -312,6 +312,13 @@ function OpportunitiesPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {row.proposalId && (
+                          <CaptureStageSelect
+                            proposalId={row.proposalId}
+                            value={row.captureStage}
+                            onChanged={() => qc.invalidateQueries({ queryKey: ["opportunities-page"] })}
+                          />
+                        )}
                         <PwinChip opp={row.oppForPwin} />
                         {row.enrichable && (
                           <EnrichButton
