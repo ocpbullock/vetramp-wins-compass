@@ -39,6 +39,7 @@ import { PrimeContractorCombobox } from "@/components/proposals/PrimeContractorC
 import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
 import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
 import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
+import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 
 export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
 
@@ -662,6 +663,11 @@ function ProposalPipeline() {
             {pursuitTypeLabel(proposal.pursuit_type)}
           </Badge>
           <Badge variant="outline">{proposal.status}</Badge>
+          <CaptureStageSelect
+            proposalId={proposalId}
+            value={proposal.capture_stage}
+            onChanged={() => { /* router/query layer refetches via realtime/invalidation elsewhere */ }}
+          />
           {dataIssues.length > 0 && (
             <TooltipProvider delayDuration={200}>
               <Tooltip>

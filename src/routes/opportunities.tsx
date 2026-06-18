@@ -17,6 +17,8 @@ import { PwinChip } from "@/components/dashboard/PwinChip";
 import type { OppForPwin } from "@/lib/pwin-solo";
 import { canEnrichFromSam, enrichProposalFromSam } from "@/lib/sam-enrich";
 import { toast } from "sonner";
+import { BOARD_STAGES, captureStageToBoard, type BoardStage } from "@/lib/capture-stage";
+import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 
 export const Route = createFileRoute("/opportunities")({
   component: OpportunitiesPage,
@@ -29,6 +31,7 @@ type ProposalRow = {
   naics_code: string | null;
   set_aside: string | null;
   status: string | null;
+  capture_stage: string | null;
   response_deadline: string | null;
   updated_at: string;
   opportunity_source: string | null;
@@ -37,8 +40,8 @@ type ProposalRow = {
   notice_id: string | null;
 };
 
-type Stage = "Watching" | "Capturing" | "Proposal" | "Submitted" | "Won/Lost";
-const STAGES: Stage[] = ["Watching", "Capturing", "Proposal", "Submitted", "Won/Lost"];
+type Stage = BoardStage;
+const STAGES = BOARD_STAGES;
 
 const STAGE_TONE: Record<Stage, string> = {
   Watching: "bg-muted text-muted-foreground border-border",
@@ -56,13 +59,6 @@ function trackedStage(status: string): Stage {
   return "Watching";
 }
 
-function proposalStage(status: string | null): Stage {
-  const s = (status ?? "").toLowerCase();
-  if (s.includes("submit")) return "Submitted";
-  if (s === "won" || s === "lost" || s.includes("award")) return "Won/Lost";
-  return "Proposal";
-}
-
 type Row = {
   key: string;
   kind: "tracked" | "proposal";
@@ -74,6 +70,7 @@ type Row = {
   updatedAt: string;
   stage: Stage;
   statusLabel: string;
+  captureStage?: string | null;
   trackedId?: string;
   proposalId?: string;
   oppForPwin: OppForPwin;
@@ -112,7 +109,7 @@ function OpportunitiesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposals")
-        .select("id,opportunity_title,agency,naics_code,set_aside,status,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id")
+        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id")
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as ProposalRow[];
@@ -168,8 +165,9 @@ function OpportunitiesPage() {
         setAside: p.set_aside,
         deadline: p.response_deadline,
         updatedAt: p.updated_at,
-        stage: proposalStage(p.status),
-        statusLabel: p.status ?? "intake",
+        stage: captureStageToBoard(p.capture_stage),
+        statusLabel: p.capture_stage ?? p.status ?? "intake",
+        captureStage: p.capture_stage,
         proposalId: p.id,
         trackedId: p.opportunity_source === "tracked" ? p.opportunity_source_id ?? undefined : undefined,
         oppForPwin: {
@@ -314,6 +312,13 @@ function OpportunitiesPage() {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
+                        {row.proposalId && (
+                          <CaptureStageSelect
+                            proposalId={row.proposalId}
+                            value={row.captureStage}
+                            onChanged={() => qc.invalidateQueries({ queryKey: ["opportunities-page"] })}
+                          />
+                        )}
                         <PwinChip opp={row.oppForPwin} />
                         {row.enrichable && (
                           <EnrichButton

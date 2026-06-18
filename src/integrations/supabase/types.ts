@@ -837,6 +837,7 @@ export type Database = {
         Row: {
           agency: string | null
           capture_notes: string | null
+          capture_stage: string
           clearance_requirement: string | null
           competitive_notes: string | null
           compliance_gaps: number | null
@@ -888,6 +889,7 @@ export type Database = {
         Insert: {
           agency?: string | null
           capture_notes?: string | null
+          capture_stage?: string
           clearance_requirement?: string | null
           competitive_notes?: string | null
           compliance_gaps?: number | null
@@ -939,6 +941,7 @@ export type Database = {
         Update: {
           agency?: string | null
           capture_notes?: string | null
+          capture_stage?: string
           clearance_requirement?: string | null
           competitive_notes?: string | null
           compliance_gaps?: number | null
