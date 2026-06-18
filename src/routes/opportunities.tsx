@@ -165,8 +165,9 @@ function OpportunitiesPage() {
         setAside: p.set_aside,
         deadline: p.response_deadline,
         updatedAt: p.updated_at,
-        stage: proposalStage(p.status),
-        statusLabel: p.status ?? "intake",
+        stage: captureStageToBoard(p.capture_stage),
+        statusLabel: p.capture_stage ?? p.status ?? "intake",
+        captureStage: p.capture_stage,
         proposalId: p.id,
         trackedId: p.opportunity_source === "tracked" ? p.opportunity_source_id ?? undefined : undefined,
         oppForPwin: {
