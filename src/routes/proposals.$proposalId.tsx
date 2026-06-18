@@ -718,69 +718,118 @@ function ProposalPipeline() {
 
         <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
 
-        <Collapsible open={intakeOpen} onOpenChange={setIntakeOpen}>
-          <Card>
-            <CollapsibleTrigger asChild>
-              <button className="w-full text-left flex items-center justify-between px-6 py-4 hover:bg-accent/50 rounded-t-lg">
-                <div>
-                  <div className="text-sm font-semibold">Opportunity details</div>
-                  <div className="text-xs text-muted-foreground">Intake fields, attachments, parsing — expand to edit.</div>
-                </div>
-                <ChevronRight className={`w-4 h-4 transition-transform ${intakeOpen ? "rotate-90" : ""}`} />
-              </button>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="px-6 pb-6 pt-2 space-y-4">
-                <StepErrorBoundary label="intake">
-                  <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onUpdateAttachmentNotes={updateAttachmentNotes} onAddPastedReference={addPastedReference} onRefreshProposal={async () => {
-                    const { data: fresh } = await supabase.from("proposals").select("opportunity_team_id").eq("id", proposalId).maybeSingle();
-                    if (fresh) setProposal((p: any) => ({ ...p, opportunity_team_id: fresh.opportunity_team_id ?? null }));
-                  }} />
-                </StepErrorBoundary>
-              </div>
-            </CollapsibleContent>
-          </Card>
-        </Collapsible>
-
-        <Tabs value={step} onValueChange={setStep}>
-          <TabsList>
-            <TabsTrigger value="intel">1. Customer Intel</TabsTrigger>
-            {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
-              <TabsTrigger value="compliance">2. Compliance</TabsTrigger>
-            )}
-            <TabsTrigger value="solution">
-              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement"
-                ? "2. Inputs"
-                : `3. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
-            </TabsTrigger>
-            <TabsTrigger value="generate">
-              {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "3." : "4."} Generate
-            </TabsTrigger>
+        <Tabs value={hubTab} onValueChange={setHubTab}>
+          <TabsList className="flex-wrap h-auto">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="market_intel">Market Intel</TabsTrigger>
+            <TabsTrigger value="human_intel">Human Intel</TabsTrigger>
+            <TabsTrigger value="capture_analysis">Capture Analysis</TabsTrigger>
+            <TabsTrigger value="team">Team</TabsTrigger>
+            <TabsTrigger value="proposal">Proposal</TabsTrigger>
+            <TabsTrigger value="activities">Activities</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="intel" className="mt-4">
-            <StepErrorBoundary label="intel">
-              <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => setIntakeOpen(true)} />
-            </StepErrorBoundary>
+          <TabsContent value="overview" className="mt-4 space-y-4">
+            <OpportunitySummaryCard proposal={proposal} />
+            <Collapsible open={intakeOpen} onOpenChange={setIntakeOpen}>
+              <Card>
+                <CollapsibleTrigger asChild>
+                  <button className="w-full text-left flex items-center justify-between px-6 py-4 hover:bg-accent/50 rounded-t-lg">
+                    <div>
+                      <div className="text-sm font-semibold">Opportunity details</div>
+                      <div className="text-xs text-muted-foreground">Intake fields, attachments, parsing — expand to edit.</div>
+                    </div>
+                    <ChevronRight className={`w-4 h-4 transition-transform ${intakeOpen ? "rotate-90" : ""}`} />
+                  </button>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="px-6 pb-6 pt-2 space-y-4">
+                    <StepErrorBoundary label="intake">
+                      <IntakeStep proposal={proposal} attachments={attachments} onPatch={patchProposal} onUpload={uploadFile} onDelete={deleteAttachment} onAutoFetch={autoFetchSamAttachments} onParse={parseDocuments} parsing={parsing} parseProgress={parseProgress} proposalId={proposalId} fetchResults={fetchResults} fetching={fetching} onUpdateAttachmentType={updateAttachmentType} onUpdateAttachmentNotes={updateAttachmentNotes} onAddPastedReference={addPastedReference} onRefreshProposal={async () => {
+                        const { data: fresh } = await supabase.from("proposals").select("opportunity_team_id").eq("id", proposalId).maybeSingle();
+                        if (fresh) setProposal((p: any) => ({ ...p, opportunity_team_id: fresh.opportunity_team_id ?? null }));
+                      }} />
+                    </StepErrorBoundary>
+                  </div>
+                </CollapsibleContent>
+              </Card>
+            </Collapsible>
           </TabsContent>
-          <TabsContent value="compliance" className="mt-4">
-            <StepErrorBoundary label="compliance">
-              <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => setIntakeOpen(true)} />
-            </StepErrorBoundary>
+
+          <TabsContent value="market_intel" className="mt-4">
+            <PlaceholderHubPanel
+              title="Market Intel"
+              description="Agency forecasts, predecessor-contract digs, and competitive landscape research will live here. Coming next."
+            />
           </TabsContent>
-          <TabsContent value="solution" className="mt-4">
-            <StepErrorBoundary label="solution">
-              <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
-            </StepErrorBoundary>
+
+          <TabsContent value="human_intel" className="mt-4">
+            <PlaceholderHubPanel
+              title="Human Intel"
+              description="Notes from customer calls, industry days, and incumbent-staff conversations. Coming next."
+            />
           </TabsContent>
-          <TabsContent value="generate" className="mt-4 space-y-4">
-            <StepErrorBoundary label="generate">
-              <GenerateStep proposal={proposal} attachments={attachments} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
-                const wc = content.split(/\s+/).filter(Boolean).length;
-                const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
-                patchProposal({ sections: next });
-              }} onExport={exportDocx} />
-            </StepErrorBoundary>
+
+          <TabsContent value="capture_analysis" className="mt-4">
+            <PlaceholderHubPanel
+              title="Capture Analysis"
+              description="Bid/no-bid scoring, win-themes, ghost strategy, and price-to-win. Coming next."
+            />
+          </TabsContent>
+
+          <TabsContent value="team" className="mt-4">
+            <TeamHubPanel proposal={proposal} proposalId={proposalId} />
+          </TabsContent>
+
+          <TabsContent value="proposal" className="mt-4 space-y-4">
+            <Tabs value={step} onValueChange={setStep}>
+              <TabsList>
+                <TabsTrigger value="intel">1. Customer Intel</TabsTrigger>
+                {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
+                  <TabsTrigger value="compliance">2. Compliance</TabsTrigger>
+                )}
+                <TabsTrigger value="solution">
+                  {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement"
+                    ? "2. Inputs"
+                    : `3. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
+                </TabsTrigger>
+                <TabsTrigger value="generate">
+                  {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "3." : "4."} Generate
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="intel" className="mt-4">
+                <StepErrorBoundary label="intel">
+                  <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
+                </StepErrorBoundary>
+              </TabsContent>
+              <TabsContent value="compliance" className="mt-4">
+                <StepErrorBoundary label="compliance">
+                  <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
+                </StepErrorBoundary>
+              </TabsContent>
+              <TabsContent value="solution" className="mt-4">
+                <StepErrorBoundary label="solution">
+                  <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
+                </StepErrorBoundary>
+              </TabsContent>
+              <TabsContent value="generate" className="mt-4 space-y-4">
+                <StepErrorBoundary label="generate">
+                  <GenerateStep proposal={proposal} attachments={attachments} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
+                    const wc = content.split(/\s+/).filter(Boolean).length;
+                    const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
+                    patchProposal({ sections: next });
+                  }} onExport={exportDocx} />
+                </StepErrorBoundary>
+              </TabsContent>
+            </Tabs>
+          </TabsContent>
+
+          <TabsContent value="activities" className="mt-4">
+            <PlaceholderHubPanel
+              title="Activities"
+              description="Timeline of meetings, emails, document changes, and team actions for this opportunity. Coming next."
+            />
           </TabsContent>
         </Tabs>
       </div>
