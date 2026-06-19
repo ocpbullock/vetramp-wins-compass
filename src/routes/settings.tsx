@@ -25,7 +25,7 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { TeamPanel } from "@/components/settings/TeamPanel";
 import { useTeamId } from "@/lib/team";
-import { Link } from "@tanstack/react-router";
+
 import { PastPerformancePanel } from "@/components/settings/PastPerformancePanel";
 import { ContractVehiclesPanel } from "@/components/settings/ContractVehiclesPanel";
 import { KnowledgeBasePanel } from "@/components/settings/KnowledgeBasePanel";
