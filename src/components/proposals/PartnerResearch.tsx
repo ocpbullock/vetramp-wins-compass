@@ -140,11 +140,12 @@ export function PartnerResearch({
   useEffect(() => {
     let cancelled = false;
     if (!proposalId) return;
-    setLoadedFromSnapshot(false);
-    setAwards(null);
-    setSnapshotTargets(null);
-    setSnapshotAt(null);
-    (async () => {
+      setLoadedFromSnapshot(false);
+      setAwards(null);
+      setSnapshotTargets(null);
+      setSnapshotAt(null);
+      setSearchMeta(null);
+      (async () => {
       const { data } = await supabase
         .from("proposals")
         .select("market_snapshot, market_snapshot_at")
