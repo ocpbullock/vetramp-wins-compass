@@ -2098,12 +2098,12 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Team actions</CardTitle>
           <CardDescription className="text-xs">
-            Build a shared opportunity team or send a teaming outreach for this pursuit.
+            Spin up a Capture Room for partner collaboration, or send a teaming outreach for this pursuit.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setOppTeamDialogOpen(true)} className="gap-1.5">
-            <UserPlus className="w-3.5 h-3.5" /> Build Opportunity Team
+            <UserPlus className="w-3.5 h-3.5" /> Create Capture Room
           </Button>
           <Button size="sm" variant="outline" onClick={() => { setOutreachPartner(null); setOutreachOpen(true); }} className="gap-1.5">
             <Mail className="w-3.5 h-3.5" /> Draft teaming outreach
