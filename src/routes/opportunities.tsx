@@ -157,7 +157,7 @@ function OpportunitiesPage() {
       out.push({
         key: `p:${p.id}`,
         kind: "proposal",
-        title: p.opportunity_title ?? "(Untitled proposal)",
+        title: p.opportunity_title ?? "(Untitled opportunity)",
         agency: p.agency,
         naics: p.naics_code,
         setAside: p.set_aside,
