@@ -647,7 +647,7 @@ function ProposalPipeline() {
   return (
     <div className="min-h-screen bg-background">
       <OfflineBanner />
-      <Header />
+      
       <div className="max-w-[1400px] mx-auto px-6 py-4 space-y-4">
         <div className="flex items-center gap-3 flex-wrap">
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to opportunities</Link>
