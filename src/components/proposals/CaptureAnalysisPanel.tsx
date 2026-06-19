@@ -248,6 +248,13 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           )}
         </CardContent>
       </Card>
+
+      <SimilarPastPursuitsCard
+        proposalId={proposalId}
+        teamId={proposal?.team_id ?? null}
+        naicsCode={proposal?.naics_code ?? null}
+        agency={proposal?.agency ?? null}
+      />
     </div>
   );
 }
