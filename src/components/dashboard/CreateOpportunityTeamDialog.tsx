@@ -145,9 +145,9 @@ export function CreateOpportunityTeamDialog(props: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create opportunity team</DialogTitle>
+          <DialogTitle>Create Capture Room</DialogTitle>
           <DialogDescription>
-            Spin up a dedicated team to collaborate on this opportunity. Invited partners only see this proposal — not your other pursuits.
+            Spin up a dedicated Capture Room to collaborate on this opportunity. Invited partners only see this opportunity — not your other pursuits.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
