@@ -886,6 +886,8 @@ export type Database = {
       proposals: {
         Row: {
           agency: string | null
+          capture_analysis: Json | null
+          capture_analysis_at: string | null
           capture_notes: string | null
           capture_stage: string
           clearance_requirement: string | null
@@ -940,6 +942,8 @@ export type Database = {
         }
         Insert: {
           agency?: string | null
+          capture_analysis?: Json | null
+          capture_analysis_at?: string | null
           capture_notes?: string | null
           capture_stage?: string
           clearance_requirement?: string | null
@@ -994,6 +998,8 @@ export type Database = {
         }
         Update: {
           agency?: string | null
+          capture_analysis?: Json | null
+          capture_analysis_at?: string | null
           capture_notes?: string | null
           capture_stage?: string
           clearance_requirement?: string | null
