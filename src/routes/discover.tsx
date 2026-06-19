@@ -429,7 +429,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      
       <div id="quick-search" className="scroll-mt-24">
         <SearchControls onSearch={runSearch} onNaicsChange={setCurrentNaics} busy={busy} initial={lastInput ?? undefined} />
       </div>
