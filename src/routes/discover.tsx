@@ -5,7 +5,7 @@ import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
 import { useTeam, useTeamId } from "@/lib/team";
 import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
-import { Header } from "@/components/dashboard/Header";
+
 import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
 import { StatCards } from "@/components/dashboard/StatCards";
 import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
