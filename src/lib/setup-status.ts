@@ -141,7 +141,7 @@ export function useSetupStatus(): SetupStatus {
     totalDone,
     total: items.length,
     percent,
-    coreComplete: d.profileComplete && d.ppCount > 0,
+    coreComplete: requiredDone === required.length,
     loading: isLoading,
   };
 }
