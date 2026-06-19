@@ -42,6 +42,7 @@ import { validateProposal, validateComplianceMatrix, type ValidationIssue } from
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
+import { PartnerResearch } from "@/components/proposals/PartnerResearch";
 import { TeamingOutreachModal, type OutreachPartnerInput } from "@/components/proposals/TeamingOutreachModal";
 import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
 import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
@@ -2183,6 +2184,14 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
         existingPartnerIds={existingPartnerIds}
         onAdd={(s) => addSuggestedPartner({ partnerId: s.partnerId, partnerName: s.partnerName })}
         onOutreach={(p) => { setOutreachPartner(p); setOutreachOpen(true); }}
+      />
+
+      <PartnerResearch
+        proposalId={proposalId}
+        teamId={teamId}
+        opportunityNaics={proposal.naics_code ?? null}
+        opportunityAgency={proposal.agency ?? null}
+        opportunitySetAside={proposal.set_aside ?? null}
       />
 
       <Card>
