@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Header } from "@/components/dashboard/Header";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
