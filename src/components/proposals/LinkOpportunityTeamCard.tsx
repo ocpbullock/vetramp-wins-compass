@@ -136,7 +136,7 @@ export function LinkOpportunityTeamCard({
             </Button>
             {linkable.length === 0 && !teamsQ.isLoading && (
               <p className="text-xs text-muted-foreground">
-                Every opportunity team in this org is already linked to another proposal. Create a new opportunity team from the dashboard.
+                Every Capture Room in this org is already linked to another opportunity. Create a new Capture Room from the dashboard.
               </p>
             )}
           </div>
