@@ -174,7 +174,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
                 <RadioGroupItem value="existing" className="mt-0.5" />
                 <div className="text-sm flex-1">
                   <div className="font-medium">Link an existing proposal</div>
-                  <div className="text-xs text-muted-foreground">Choose one of your organization's proposals that isn't already linked to an opportunity team.</div>
+                  <div className="text-xs text-muted-foreground">Choose one of your organization's opportunities that isn't already linked to a Capture Room.</div>
                 </div>
               </Label>
             </RadioGroup>
