@@ -367,7 +367,7 @@ function CreateTeamDialog({
           </div>
           {teamType === "opportunity" && (
             <div>
-              <Label>Link to existing proposal (optional)</Label>
+              <Label>Link to existing opportunity (optional)</Label>
               <Select value={linkedProposalId} onValueChange={setLinkedProposalId}>
                 <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
@@ -378,7 +378,7 @@ function CreateTeamDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">Only unlinked proposals from your current organization team are shown.</p>
+              <p className="text-xs text-muted-foreground mt-1">Only unlinked opportunities from your current organization team are shown.</p>
             </div>
           )}
         </div>
