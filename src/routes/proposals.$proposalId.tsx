@@ -794,47 +794,101 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="proposal" className="mt-4 space-y-4">
-            <Tabs value={step} onValueChange={setStep}>
-              <TabsList>
-                <TabsTrigger value="intel">1. Customer Intel</TabsTrigger>
-                {proposal.pursuit_type !== "rfi_sources_sought" && proposal.pursuit_type !== "capability_statement" && (
-                  <TabsTrigger value="compliance">2. Compliance</TabsTrigger>
-                )}
-                <TabsTrigger value="solution">
-                  {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement"
-                    ? "2. Inputs"
-                    : `3. ${proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design"}`}
-                </TabsTrigger>
-                <TabsTrigger value="generate">
-                  {proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement" ? "3." : "4."} Generate
-                </TabsTrigger>
-              </TabsList>
+            {(() => {
+              const isShort = proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement";
+              const proposalSteps: { id: string; label: string }[] = [
+                { id: "intel", label: "Customer Intel" },
+                ...(!isShort ? [{ id: "compliance", label: "Compliance" }] : []),
+                { id: "solution", label: isShort ? "Inputs" : (proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design") },
+                { id: "generate", label: "Generate" },
+              ];
+              const activeIdx = Math.max(0, proposalSteps.findIndex((s) => s.id === step));
+              const currentStepId = proposalSteps[activeIdx]?.id ?? "intel";
 
-              <TabsContent value="intel" className="mt-4">
-                <StepErrorBoundary label="intel">
-                  <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
-                </StepErrorBoundary>
-              </TabsContent>
-              <TabsContent value="compliance" className="mt-4">
-                <StepErrorBoundary label="compliance">
-                  <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
-                </StepErrorBoundary>
-              </TabsContent>
-              <TabsContent value="solution" className="mt-4">
-                <StepErrorBoundary label="solution">
-                  <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
-                </StepErrorBoundary>
-              </TabsContent>
-              <TabsContent value="generate" className="mt-4 space-y-4">
-                <StepErrorBoundary label="generate">
-                  <GenerateStep proposal={proposal} attachments={attachments} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
-                    const wc = content.split(/\s+/).filter(Boolean).length;
-                    const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
-                    patchProposal({ sections: next });
-                  }} onExport={exportDocx} />
-                </StepErrorBoundary>
-              </TabsContent>
-            </Tabs>
+              return (
+                <div className="grid gap-4 md:grid-cols-[220px_1fr]">
+                  {/* Mobile: select */}
+                  <div className="md:hidden">
+                    <Select value={currentStepId} onValueChange={setStep}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {proposalSteps.map((s, i) => (
+                          <SelectItem key={s.id} value={s.id}>{i + 1}. {s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Desktop: vertical stepper rail */}
+                  <nav className="hidden md:block" aria-label="Proposal steps">
+                    <ol className="space-y-1 border-r border-border pr-2">
+                      {proposalSteps.map((s, i) => {
+                        const isActive = i === activeIdx;
+                        const isDone = i < activeIdx;
+                        return (
+                          <li key={s.id}>
+                            <button
+                              type="button"
+                              onClick={() => setStep(s.id)}
+                              aria-current={isActive ? "step" : undefined}
+                              className={[
+                                "w-full flex items-center gap-2.5 px-2.5 py-2 rounded-md text-left text-sm transition-colors",
+                                isActive
+                                  ? "bg-primary/10 text-foreground font-medium"
+                                  : "text-muted-foreground hover:bg-accent hover:text-foreground",
+                              ].join(" ")}
+                            >
+                              <span
+                                className={[
+                                  "flex items-center justify-center w-6 h-6 rounded-full text-xs font-semibold shrink-0",
+                                  isDone
+                                    ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400"
+                                    : isActive
+                                      ? "bg-primary text-primary-foreground"
+                                      : "bg-muted text-muted-foreground",
+                                ].join(" ")}
+                                aria-hidden="true"
+                              >
+                                {isDone ? <CheckCircle2 className="w-3.5 h-3.5" /> : i + 1}
+                              </span>
+                              <span className="truncate">{s.label}</span>
+                            </button>
+                          </li>
+                        );
+                      })}
+                    </ol>
+                  </nav>
+
+                  {/* Active step content */}
+                  <div className="min-w-0 space-y-4">
+                    {currentStepId === "intel" && (
+                      <StepErrorBoundary label="intel">
+                        <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
+                      </StepErrorBoundary>
+                    )}
+                    {currentStepId === "compliance" && (
+                      <StepErrorBoundary label="compliance">
+                        <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
+                      </StepErrorBoundary>
+                    )}
+                    {currentStepId === "solution" && (
+                      <StepErrorBoundary label="solution">
+                        <SolutionDesignStep proposal={proposal} proposalId={proposalId} onPatch={patchProposal} />
+                      </StepErrorBoundary>
+                    )}
+                    {currentStepId === "generate" && (
+                      <StepErrorBoundary label="generate">
+                        <GenerateStep proposal={proposal} attachments={attachments} sectionGen={sectionGen} aiBusy={aiBusy} genProgress={genProgress} onGenerate={generateSection} onGenerateAll={generateAll} onPatchSection={(id: string, content: string) => {
+                          const wc = content.split(/\s+/).filter(Boolean).length;
+                          const next = { ...(proposal.sections || {}), [id]: { ...(proposal.sections?.[id] || { status: "draft" }), content, word_count: wc } };
+                          patchProposal({ sections: next });
+                        }} onExport={exportDocx} />
+                      </StepErrorBoundary>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </TabsContent>
 
           <TabsContent value="activities" className="mt-4">
