@@ -768,10 +768,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="capture_analysis" className="mt-4">
-            <PlaceholderHubPanel
-              title="Capture Analysis"
-              description="Bid/no-bid scoring, win-themes, ghost strategy, and price-to-win. Coming next."
-            />
+            <CaptureAnalysisPanel proposal={proposal} proposalId={proposalId} />
           </TabsContent>
 
           <TabsContent value="team" className="mt-4">
