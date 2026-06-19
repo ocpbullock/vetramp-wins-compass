@@ -361,7 +361,7 @@ function CreateTeamDialog({
               </Label>
               <Label className="flex items-center gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
                 <RadioGroupItem value="opportunity" />
-                <Briefcase className="w-4 h-4" /> Opportunity
+                <Briefcase className="w-4 h-4" /> Capture Room
               </Label>
             </RadioGroup>
           </div>
