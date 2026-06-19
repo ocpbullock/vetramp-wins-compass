@@ -196,26 +196,73 @@ function OpportunitiesPage() {
     return m;
   }, [rows]);
 
-  function openInWorkspace(row: Row) {
-    if (row.proposalId) {
-      setSelectedOpportunityId(row.proposalId);
-    } else {
-      // No linked proposal yet — clear context so workspace falls back to
-      // global target profile (selecting a tracked-only id can't hydrate).
-      setSelectedOpportunityId(null);
+  async function promoteTrackedToProposal(trackedId: string): Promise<string | null> {
+    if (!user) return null;
+    const { data: t, error: tErr } = await supabase
+      .from("tracked_opportunities")
+      .select("*")
+      .eq("id", trackedId)
+      .maybeSingle();
+    if (tErr || !t) {
+      toast.error(tErr?.message ?? "Could not load tracked opportunity");
+      return null;
     }
-    navigate({ to: "/" });
+    const fullAgency = t.sub_agency ? `${t.agency} — ${t.sub_agency}` : t.agency;
+    const resolvedVehicle = t.contract_vehicle === "Custom/Other"
+      ? (t.contract_vehicle_other || "Custom/Other")
+      : t.contract_vehicle;
+    const solNum = `TRACKED-${Date.now().toString(36).toUpperCase()}`;
+    const payload = {
+      user_id: user.id,
+      team_id: currentTeam?.id ?? null,
+      solicitation_number: solNum,
+      opportunity_title: t.title,
+      agency: fullAgency,
+      naics_code: t.naics_code,
+      estimated_value: t.estimated_value,
+      response_deadline: t.response_deadline ? new Date(`${t.response_deadline}T23:59:59Z`).toISOString() : null,
+      capture_notes: t.description ?? null,
+      opportunity_source: "tracked",
+      opportunity_source_id: t.id,
+      capture_stage: "intake",
+      status: "intake",
+      opportunity_data: {
+        sub_agency: t.sub_agency ?? null,
+        contract_vehicle: resolvedVehicle,
+        source_url: t.source_url ?? null,
+      },
+    };
+    const { data: created, error } = await supabase
+      .from("proposals")
+      .insert(payload)
+      .select("id")
+      .single();
+    if (error || !created) {
+      toast.error(error?.message ?? "Failed to promote opportunity");
+      return null;
+    }
+    await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
+    return created.id;
   }
 
-  function goToProposal(row: Row) {
-    if (!row.proposalId) return;
-    setSelectedOpportunityId(row.proposalId);
-    navigate({ to: "/proposals/$proposalId", params: { proposalId: row.proposalId } });
-  }
-  async function handleCreated(proposalId: string) {
-    await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
+  async function openHub(row: Row) {
+    let proposalId = row.proposalId;
+    if (!proposalId && row.trackedId) {
+      const promoted = await promoteTrackedToProposal(row.trackedId);
+      if (!promoted) return;
+      proposalId = promoted;
+    }
+    if (!proposalId) return;
+    setSelectedOpportunityId(proposalId);
     navigate({ to: "/proposals/$proposalId", params: { proposalId } });
   }
+
+  async function handleCreated(proposalId: string) {
+    await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
+    setSelectedOpportunityId(proposalId);
+    navigate({ to: "/proposals/$proposalId", params: { proposalId } });
+  }
+
 
 
   const total = rows.length;
