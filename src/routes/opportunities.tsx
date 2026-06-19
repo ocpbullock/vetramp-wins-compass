@@ -266,7 +266,8 @@ function OpportunitiesPage() {
 
 
   const total = rows.length;
-  const loading = trackedQ.isLoading || proposalsQ.isLoading;
+  const hasData = trackedQ.data !== undefined && proposalsQ.data !== undefined;
+  const loading = !hasData && (trackedQ.isPending || proposalsQ.isPending);
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-8 space-y-6">
