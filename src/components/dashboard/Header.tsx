@@ -23,19 +23,15 @@ type NavItem = {
   hash?: string;
   matchHash?: string;
   icon?: React.ComponentType<{ className?: string }>;
+  description?: string;
 };
 
-// Primary nav items, in priority order. "Capture Workspace" is home/primary;
-// "Discover" is a secondary tool surfaced via the Tools menu below.
 const ORG_NAV: NavItem[] = [
-  { label: "Capture Workspace", to: "/", icon: LayoutDashboard },
-  { label: "Opportunities", to: "/opportunities", icon: Target },
-  { label: "Partners", to: "/partners", icon: Handshake },
-  { label: "Capture Intel", to: "/settings", icon: BookOpen },
-];
-
-const TOOLS_NAV: NavItem[] = [
-  { label: "Discover", to: "/discover", icon: Search },
+  { label: "Capture Workspace", to: "/", icon: LayoutDashboard, description: "Dashboard and quick actions" },
+  { label: "Opportunities", to: "/opportunities", icon: Target, description: "Your tracked pipeline and proposals" },
+  { label: "Discover", to: "/discover", icon: Search, description: "Search and browse SAM.gov solicitations" },
+  { label: "Partners", to: "/partners", icon: Handshake, description: "Teaming partners and competitors" },
+  { label: "Capture Intel", to: "/settings", icon: BookOpen, description: "Company profile and knowledge base" },
 ];
 
 export function Header() {
