@@ -46,6 +46,7 @@ import { TeamingOutreachModal, type OutreachPartnerInput } from "@/components/pr
 import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
 import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
 import { MarketIntelPanel } from "@/components/proposals/MarketIntelPanel";
+import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
@@ -767,10 +768,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="capture_analysis" className="mt-4">
-            <PlaceholderHubPanel
-              title="Capture Analysis"
-              description="Bid/no-bid scoring, win-themes, ghost strategy, and price-to-win. Coming next."
-            />
+            <CaptureAnalysisPanel proposal={proposal} proposalId={proposalId} />
           </TabsContent>
 
           <TabsContent value="team" className="mt-4">
