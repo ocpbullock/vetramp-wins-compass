@@ -124,6 +124,12 @@ export function PartnerResearch({
   const [snapshotTargets, setSnapshotTargets] = useState<TeamingTarget[] | null>(null);
   const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
   const [loadedFromSnapshot, setLoadedFromSnapshot] = useState(false);
+  const [searchMeta, setSearchMeta] = useState<{
+    _cached?: boolean;
+    message?: string;
+    partial_reason?: string;
+    page_metadata?: { total: number; fetched: number; hasNext: boolean; truncated: boolean };
+  } | null>(null);
   const [drilldown, setDrilldown] = useState<{ uei: string; name: string } | null>(null);
 
   // Sync inputs when the parent's opportunity context changes.
