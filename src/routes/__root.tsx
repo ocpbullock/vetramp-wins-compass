@@ -4,8 +4,10 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
+import { Header } from "@/components/dashboard/Header";
 import { AuthProvider } from "@/lib/auth";
 import { TeamProvider } from "@/lib/team";
 import { StarredProvider } from "@/lib/starred";
