@@ -393,7 +393,7 @@ function OpportunityContextBar({
           <EnrichFromSamButton proposalId={selected.id} />
           <Button asChild size="sm" variant="ghost">
             <Link to="/proposals/$proposalId" params={{ proposalId: selected.id }}>
-              Go to proposal <ArrowRight className="w-4 h-4 ml-1" />
+              Open opportunity <ArrowRight className="w-4 h-4 ml-1" />
             </Link>
           </Button>
         </div>
