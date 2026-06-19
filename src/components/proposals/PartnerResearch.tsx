@@ -124,6 +124,12 @@ export function PartnerResearch({
   const [snapshotTargets, setSnapshotTargets] = useState<TeamingTarget[] | null>(null);
   const [snapshotAt, setSnapshotAt] = useState<string | null>(null);
   const [loadedFromSnapshot, setLoadedFromSnapshot] = useState(false);
+  const [searchMeta, setSearchMeta] = useState<{
+    _cached?: boolean;
+    message?: string;
+    partial_reason?: string;
+    page_metadata?: { total: number; fetched: number; hasNext: boolean; truncated: boolean };
+  } | null>(null);
   const [drilldown, setDrilldown] = useState<{ uei: string; name: string } | null>(null);
 
   // Sync inputs when the parent's opportunity context changes.
@@ -134,11 +140,12 @@ export function PartnerResearch({
   useEffect(() => {
     let cancelled = false;
     if (!proposalId) return;
-    setLoadedFromSnapshot(false);
-    setAwards(null);
-    setSnapshotTargets(null);
-    setSnapshotAt(null);
-    (async () => {
+      setLoadedFromSnapshot(false);
+      setAwards(null);
+      setSnapshotTargets(null);
+      setSnapshotAt(null);
+      setSearchMeta(null);
+      (async () => {
       const { data } = await supabase
         .from("proposals")
         .select("market_snapshot, market_snapshot_at")
@@ -165,6 +172,7 @@ export function PartnerResearch({
       return;
     }
     setSearching(true);
+    setSearchMeta(null);
     try {
       const r = await searchUsaspending({
         naicsCodes: [naicsInput.trim()],
@@ -174,9 +182,21 @@ export function PartnerResearch({
         maxResults: 1000,
       });
       setAwards(r.results ?? []);
+      setSearchMeta({
+        _cached: (r as any)._cached,
+        message: (r as any).message,
+        partial_reason: (r as any).partial_reason,
+        page_metadata: r.page_metadata,
+      });
       setSnapshotTargets(null);
       setLoadedFromSnapshot(false);
-      toast.success(`Pulled ${r.results?.length ?? 0} awards`);
+      const count = r.results?.length ?? 0;
+      const naics = naicsInput.trim();
+      if (count === 0) {
+        toast.message(`Pulled 0 awards for NAICS ${naics} (last ${lookbackYears} years)`);
+      } else {
+        toast.success(`Pulled ${count} awards for NAICS ${naics} (last ${lookbackYears} years)`);
+      }
     } catch (e: any) {
       toast.error(e?.message || "Search failed");
     } finally {
@@ -506,11 +526,38 @@ export function PartnerResearch({
               )}
             </div>
 
-            {ranked.length === 0 && !searching && (
-              <div className="rounded-md border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
-                {naicsInput
-                  ? "No award history yet — click Search to pull from USAspending."
-                  : "Set a NAICS code above to find vendors with proven past performance."}
+            {/* Pre-search NAICS warning */}
+            {!naicsInput.trim() && !searching && (
+              <div className="rounded-md border border-dashed border-amber-300/40 bg-amber-50/30 dark:bg-amber-950/10 p-4 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-2">
+                <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
+                <span>Set the opportunity NAICS to search award history.</span>
+              </div>
+            )}
+
+            {/* Empty / zero-result state */}
+            {naicsInput.trim() && ranked.length === 0 && !searching && (
+              <div className="rounded-md border border-dashed border-border p-6 text-center space-y-2">
+                {searchMeta && (searchMeta.partial_reason || searchMeta.message) ? (
+                  <div className="text-xs text-amber-700 dark:text-amber-400 font-medium">
+                    {searchMeta.partial_reason || searchMeta.message}
+                  </div>
+                ) : null}
+                {searchMeta ? (
+                  <div className="text-xs text-muted-foreground">
+                    No award history found for NAICS {naicsInput.trim()} (last {lookbackYears} years)
+                    {agencyOnly && agencyInput ? ` at ${agencyInput}` : agencyInput ? ` · boosting ${agencyInput}` : " · all agencies"}
+                  </div>
+                ) : (
+                  <div className="text-xs text-muted-foreground">
+                    No award history yet — click Search to pull from USAspending.
+                    {loadedFromSnapshot && " (or refresh to override the saved snapshot)"}
+                  </div>
+                )}
+                {searchMeta?._cached && (
+                  <div className="text-[11px] text-muted-foreground inline-flex items-center justify-center gap-1">
+                    <CheckCircle2 className="w-3 h-3" /> Showing cached data
+                  </div>
+                )}
               </div>
             )}
 
@@ -542,7 +589,10 @@ export function PartnerResearch({
                     <ToggleGroupItem value="recent" className="h-7 px-2 text-xs">Most recent</ToggleGroupItem>
                   </ToggleGroup>
                 </div>
-
+                <div className="text-[11px] text-muted-foreground">
+                  Query: NAICS {naicsInput.trim()} · {yearsAgoIso(lookbackYears)} – {todayIso()}
+                  {agencyOnly && agencyInput ? ` · agency filter: ${agencyInput}` : agencyInput ? ` · agency boost: ${agencyInput}` : " · all agencies"}
+                </div>
                 <div className="border rounded-md divide-y max-h-[28rem] overflow-y-auto">
                   {filtered.map((t) => {
                     const key = t.uei || t.name;
