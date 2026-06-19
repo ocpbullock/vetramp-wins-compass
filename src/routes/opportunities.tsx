@@ -212,42 +212,11 @@ function OpportunitiesPage() {
     setSelectedOpportunityId(row.proposalId);
     navigate({ to: "/proposals/$proposalId", params: { proposalId: row.proposalId } });
   }
-
-  async function handleSaved() {
-    // Refetch lists and surface follow-up actions for the newly tracked opp.
-    const refreshed = await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
-    void refreshed;
-    const { data } = await supabase
-      .from("tracked_opportunities")
-      .select("*")
-      .order("created_at", { ascending: false })
-      .limit(1);
-    const t = (data?.[0] as TrackedOpportunity | undefined) ?? null;
-    if (!t) return;
-    toast.success(`Tracking "${t.title}"`, {
-      action: {
-        label: "Open in Workspace",
-        onClick: () => {
-          setSelectedOpportunityId(null);
-          navigate({ to: "/" });
-        },
-      },
-      duration: 8000,
-    });
-    // A second toast offering the proposal jump (sonner only supports one action per toast).
-    setTimeout(() => {
-      toast("Start a proposal from this opportunity?", {
-        action: {
-          label: "Start proposal",
-          onClick: () => {
-            // /discover already hosts the tracked → proposal flow.
-            navigate({ to: "/discover" });
-          },
-        },
-        duration: 8000,
-      });
-    }, 400);
+  async function handleCreated(proposalId: string) {
+    await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
+    navigate({ to: "/proposals/$proposalId", params: { proposalId } });
   }
+
 
   const total = rows.length;
   const loading = trackedQ.isLoading || proposalsQ.isLoading;
