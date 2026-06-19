@@ -612,21 +612,51 @@ export function PartnerResearch({
                               {t.relevanceScore}
                             </div>
                             {!inRoster ? (
-                              <Button
-                                size="sm" variant="outline" className="h-7 text-[11px]"
-                                disabled={!teamId}
-                                onClick={(e) => { e.stopPropagation(); addTargetToRoster(t); }}
-                              >
-                                <UserPlus className="w-3 h-3 mr-1" />Add to roster
-                              </Button>
-                            ) : hasProposal && !onProposal(inRoster.id) ? (
-                              <Button
-                                size="sm" className="h-7 text-[11px]"
-                                onClick={(e) => { e.stopPropagation(); addToProposal(inRoster); }}
-                              >
-                                <Plus className="w-3 h-3 mr-1" />Add to team
-                              </Button>
-                            ) : null}
+                              <>
+                                <Button
+                                  size="sm" variant="outline" className="h-7 text-[11px]"
+                                  disabled={!teamId}
+                                  onClick={(e) => { e.stopPropagation(); addTargetToRoster(t); }}
+                                >
+                                  <UserPlus className="w-3 h-3 mr-1" />Add to roster
+                                </Button>
+                                {hasProposal && (
+                                  <Button
+                                    size="sm" className="h-7 text-[11px]"
+                                    disabled={!teamId}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const p = await addTargetToRoster(t);
+                                      if (p) await addToProposal(p);
+                                    }}
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />Add to team
+                                  </Button>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {hasProposal && !onProposal(inRoster.id) && (
+                                  <Button
+                                    size="sm" className="h-7 text-[11px]"
+                                    onClick={(e) => { e.stopPropagation(); addToProposal(inRoster); }}
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />Add to team
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm" variant="ghost" className="h-7 text-[11px]"
+                                  disabled={verifyingKey === inRoster.id}
+                                  title="Look up this partner in SAM.gov to attach certifications, UEI/CAGE, and address (uses an entity API call)"
+                                  onClick={(e) => { e.stopPropagation(); verifyInSam(inRoster); }}
+                                >
+                                  {verifyingKey === inRoster.id
+                                    ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                    : <ShieldCheck className="w-3 h-3 mr-1" />}
+                                  Verify in SAM
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </button>
