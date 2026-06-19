@@ -18,13 +18,14 @@ import {
 import { toast } from "sonner";
 import { searchEntities, searchUsaspending, type HistoricalAward } from "@/lib/api";
 import {
-  listPartnerCompanies, findOrInsertPartnerFromSamEntity, type PartnerView as Partner,
+  listPartnerCompanies, findOrInsertPartnerFromSamEntity, upsertCompany,
+  companyToPartnerView, type PartnerView as Partner, type Company,
 } from "@/lib/companies";
 import {
   rankPartnerExperience, rankPartnerExperienceFromTargets,
   type PartnerExperienceTarget,
 } from "@/lib/partner-experience";
-import type { TeamingTarget } from "@/lib/teaming-targets";
+import { companyFromTeamingTarget, type TeamingTarget } from "@/lib/teaming-targets";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 
 const SB_TYPES = [
