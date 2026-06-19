@@ -771,3 +771,130 @@ function EnrichFromSamButton({ proposalId }: { proposalId: string }) {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// Opportunity teaming summary — replaces inline teaming tools when an
+// opportunity is selected. Shows current PWIN + top 2-3 suggested partners
+// and links to the Hub Team tab.
+// ---------------------------------------------------------------------------
+function OpportunityTeamingSummary({
+  proposalId,
+  proposal,
+  opp,
+  existingPartnerIds,
+}: {
+  proposalId: string;
+  proposal: FullProposal | null;
+  opp: OppForPwin;
+  existingPartnerIds: string[];
+}) {
+  const teamId = proposal?.team_id ?? null;
+
+  const { data: partners = [] } = useQuery({
+    queryKey: ["suggest-partners", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { listPartnerCompanies } = await import("@/lib/companies");
+      return listPartnerCompanies(teamId!);
+    },
+  });
+
+  const { data: selfProfile } = useQuery({
+    queryKey: ["suggest-self", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { getOwnCompanyProfileData } = await import("@/lib/companies");
+      const [pd, vehRes] = await Promise.all([
+        getOwnCompanyProfileData(teamId!),
+        supabase.from("contract_vehicles").select("vehicle_name").eq("team_id", teamId!).eq("status", "active"),
+      ]);
+      const profile = (pd ?? {}) as any;
+      const self: SuggestSelf = {
+        certifications: profile.certifications || profile.socioeconomic_certifications || [],
+        naics_codes: profile.naics_codes || [],
+        contract_vehicles: (vehRes.data ?? []).map((v: any) => v.vehicle_name),
+      };
+      return self;
+    },
+  });
+
+  const topSuggestions = useMemo<PartnerSuggestion[]>(() => {
+    if (!proposal || !selfProfile || partners.length === 0) return [];
+    const ctx: SuggestContext = {
+      engagementType: proposal.engagement_type,
+      opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],
+      opportunityAgency: proposal.agency,
+      setAside: proposal.set_aside,
+      requiredVehicles: proposal.contract_type
+        && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(proposal.contract_type)
+        ? [proposal.contract_type] : [],
+      scopeKeywords: (proposal.targeted_scope_areas ?? "")
+        .split(/[,;\n]/).map((s) => s.trim()).filter(Boolean),
+      incumbentName: proposal.customer_intel?.predecessor_contract?.incumbent ?? null,
+      primeContractorName: proposal.prime_contractor_name,
+    };
+    const partnersIn: SuggestPartner[] = partners.map((p) => ({
+      id: p.id,
+      company_name: p.company_name,
+      certifications: p.certifications ?? [],
+      naics_codes: p.naics_codes ?? [],
+      contract_vehicles: (p as any).contract_vehicles ?? [],
+      capabilities_summary: p.capabilities_summary,
+      past_performance_summary: p.past_performance_summary,
+      notes: p.notes,
+      relationship_status: p.relationship_status,
+    }));
+    return rankPartnerSuggestions(ctx, selfProfile, partnersIn, existingPartnerIds, { limit: 3 });
+  }, [proposal, selfProfile, partners, existingPartnerIds]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Users className="w-4 h-4 text-primary" /> Opportunity Team
+        </CardTitle>
+        <CardDescription>
+          Snapshot of pWin and top suggested partners. Manage the full team in the Hub.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Current pWin:</span>
+          <PwinChip opp={opp} />
+        </div>
+
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">Top suggested partners</div>
+          {topSuggestions.length === 0 ? (
+            <div className="text-xs text-muted-foreground border border-dashed rounded-md p-3">
+              {teamId ? "No partner suggestions yet — open the Hub Team tab to add partners." : "Save the proposal to a team to enable suggestions."}
+            </div>
+          ) : (
+            <ul className="space-y-1.5">
+              {topSuggestions.map((s) => (
+                <li key={s.partnerId} className="flex items-center gap-2 border rounded-md px-2.5 py-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium truncate">{s.partnerName}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {s.bestRoleLabel} · {s.workshareRange[0]}–{s.workshareRange[1]}% WS
+                    </div>
+                  </div>
+                  <div className={`text-base font-bold tabular-nums ${s.fitScore >= 70 ? "text-green-600" : s.fitScore >= 40 ? "text-amber-600" : "text-destructive"}`}>
+                    {s.fitScore}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <Button asChild size="sm">
+          <Link to="/proposals/$proposalId" params={{ proposalId }} search={{ tab: "team" }}>
+            <Users className="w-4 h-4 mr-1.5" /> Open Team workspace
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
