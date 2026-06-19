@@ -755,9 +755,9 @@ function ManageTeamDialog({
           {/* Linked proposals (opportunity teams) */}
           {isOpp && (
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Linked proposal</Label>
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Linked opportunity</Label>
               {(proposalsQ.data?.proposals ?? []).length === 0 ? (
-                <p className="text-xs text-muted-foreground">No linked proposals yet.</p>
+                <p className="text-xs text-muted-foreground">No linked opportunities yet.</p>
               ) : (
                 <div className="space-y-1">
                   {(proposalsQ.data?.proposals ?? []).map((p: any) => (
