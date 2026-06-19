@@ -213,7 +213,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
                       <input type="radio" readOnly checked={active} className="mt-1" />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">
-                          {p.opportunity_title || p.solicitation_number || "Untitled proposal"}
+                          {p.opportunity_title || p.solicitation_number || "Untitled opportunity"}
                         </div>
                         <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
                           {p.agency && <span>{p.agency}</span>}
