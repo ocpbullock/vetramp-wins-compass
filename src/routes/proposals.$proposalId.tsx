@@ -162,7 +162,8 @@ function ProposalPipeline() {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState("intel");
-  const [hubTab, setHubTab] = useState("overview");
+  const initialTab = (Route.useSearch().tab ?? "overview") as HubTab;
+  const [hubTab, setHubTab] = useState<HubTab>(initialTab);
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
