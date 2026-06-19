@@ -58,7 +58,7 @@ function RootComponent() {
           <StarredProvider>
             <OpportunityProvider>
               <TooltipProvider delayDuration={150}>
-                <Outlet />
+                <AppShell />
                 <Toaster richColors position="top-right" />
               </TooltipProvider>
             </OpportunityProvider>
