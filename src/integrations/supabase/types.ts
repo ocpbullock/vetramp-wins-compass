@@ -903,6 +903,8 @@ export type Database = {
           incumbent_notes: string | null
           known_incumbent: string | null
           management_approach: Json | null
+          market_snapshot: Json | null
+          market_snapshot_at: string | null
           naics_code: string | null
           notice_id: string | null
           oci_screening: Json
@@ -955,6 +957,8 @@ export type Database = {
           incumbent_notes?: string | null
           known_incumbent?: string | null
           management_approach?: Json | null
+          market_snapshot?: Json | null
+          market_snapshot_at?: string | null
           naics_code?: string | null
           notice_id?: string | null
           oci_screening?: Json
@@ -1007,6 +1011,8 @@ export type Database = {
           incumbent_notes?: string | null
           known_incumbent?: string | null
           management_approach?: Json | null
+          market_snapshot?: Json | null
+          market_snapshot_at?: string | null
           naics_code?: string | null
           notice_id?: string | null
           oci_screening?: Json
