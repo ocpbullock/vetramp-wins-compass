@@ -249,11 +249,11 @@ function TeamCard({
             <div className="text-xs mt-1 truncate">
               {team.linked_proposal ? (
                 <span className="text-foreground/80">
-                  <span className="text-muted-foreground">Linked proposal: </span>
-                  <span className="font-medium">{team.linked_proposal.opportunity_title || team.linked_proposal.solicitation_number || "Untitled proposal"}</span>
+                  <span className="text-muted-foreground">Linked opportunity: </span>
+                  <span className="font-medium">{team.linked_proposal.opportunity_title || team.linked_proposal.solicitation_number || "Untitled opportunity"}</span>
                 </span>
               ) : (
-                <span className="text-muted-foreground italic">No proposal linked yet</span>
+                <span className="text-muted-foreground italic">No opportunity linked yet</span>
               )}
             </div>
           )}
