@@ -25,6 +25,7 @@ import {
 import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies";
 import { addActivityFromAnalysis } from "./ActivitiesPanel";
 import { Plus } from "lucide-react";
+import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 
 type CaptureAnalysis = {
   bid_no_bid: {
@@ -247,6 +248,13 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           )}
         </CardContent>
       </Card>
+
+      <SimilarPastPursuitsCard
+        proposalId={proposalId}
+        teamId={proposal?.team_id ?? null}
+        naicsCode={proposal?.naics_code ?? null}
+        agency={proposal?.agency ?? null}
+      />
     </div>
   );
 }

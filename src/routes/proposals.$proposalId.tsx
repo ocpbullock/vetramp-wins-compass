@@ -47,6 +47,7 @@ import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpport
 import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
 import { MarketIntelPanel } from "@/components/proposals/MarketIntelPanel";
 import { ActivitiesPanel } from "@/components/proposals/ActivitiesPanel";
+import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursuitsCard";
 import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
@@ -758,7 +759,14 @@ function ProposalPipeline() {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+            <SimilarPastPursuitsCard
+              proposalId={proposalId}
+              teamId={proposal.team_id ?? null}
+              naicsCode={proposal.naics_code ?? null}
+              agency={proposal.agency ?? null}
+            />
           </TabsContent>
+
 
           <TabsContent value="market_intel" className="mt-4">
             <MarketIntelPanel proposal={proposal} proposalId={proposalId} />
