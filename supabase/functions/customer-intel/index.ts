@@ -4,6 +4,7 @@ import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, se
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 import { normalizeUserContext, appliedFacts, renderUserContextPrompt } from "../_shared/user-context.ts";
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
+import { loadOpportunityIntelBlock, PROPRIETARY_INTEL_SYSTEM_INSTRUCTION } from "../_shared/opportunity-intel.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
