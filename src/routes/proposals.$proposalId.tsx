@@ -640,7 +640,7 @@ function ProposalPipeline() {
     return Math.max(0, Math.min(100, score));
   }, [proposal, attachments]);
 
-  if (loading || !proposal) return <div className="min-h-screen bg-background"><Header /><div className="p-8 text-muted-foreground">Loading opportunity…</div></div>;
+  if (loading || !proposal) return <div className="min-h-screen bg-background"><div className="p-8 text-muted-foreground">Loading opportunity…</div></div>;
 
   const cd = countdown(proposal.response_deadline);
 
