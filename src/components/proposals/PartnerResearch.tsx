@@ -13,7 +13,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import {
   Search, Plus, UserPlus, Loader2, Users, AlertTriangle, Crown, HandshakeIcon,
-  CheckCircle2, RefreshCw, Sparkles, Building2,
+  CheckCircle2, RefreshCw, Sparkles, Building2, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { searchEntities, searchUsaspending, type HistoricalAward } from "@/lib/api";
