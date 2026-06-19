@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Plus, ChevronDown, Building2, Star, Users, Swords, Target,
-  Lightbulb, ArrowRight, Mail, UserPlus, Sparkles, Loader2,
+  ArrowRight, Sparkles, Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -29,17 +29,20 @@ import { NAICS_GROUPS } from "@/lib/contracts";
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
 import { PartnerResearch } from "@/components/proposals/PartnerResearch";
-import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
-import {
-  TeamingOutreachModal,
-  type OutreachPartnerInput,
-} from "@/components/proposals/TeamingOutreachModal";
 import {
   TeamingSandbox,
   type SandboxOpportunityContext,
 } from "@/components/proposals/TeamingSandbox";
-import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
 import { CONTRACT_VEHICLES } from "@/components/dashboard/TrackOpportunityDialog";
+import { PwinChip } from "@/components/dashboard/PwinChip";
+import type { OppForPwin } from "@/lib/pwin-solo";
+import {
+  rankPartnerSuggestions,
+  type PartnerSuggestion,
+  type SuggestContext,
+  type SuggestPartner,
+  type SuggestSelf,
+} from "@/lib/partner-suggest";
 
 export const Route = createFileRoute("/")({ component: CaptureWorkspace });
 
@@ -96,9 +99,6 @@ function CaptureWorkspace() {
     useOpportunityContext();
 
   const [sandboxOpen, setSandboxOpen] = useState(false);
-  const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
-  const [outreachOpen, setOutreachOpen] = useState(false);
-  const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
 
   // Selectable proposals — RLS limits this to ones the user can see.
   const { data: proposalOptions = [] } = useQuery({
@@ -181,18 +181,6 @@ function CaptureWorkspace() {
     };
   }, [selected, targetProfile]);
 
-  // Add a suggested partner to the selected proposal's teaming roster.
-  const addSuggestedPartner = async (s: { partnerId: string; partnerName: string }) => {
-    if (!selected?.id) return;
-    const { error } = await supabase
-      .from("proposal_teaming")
-      .insert({ proposal_id: selected.id, company_id: s.partnerId, role: "sub", work_share_pct: null });
-    if (error) { toast.error(error.message); return; }
-    toast.success(`Added ${s.partnerName} to the proposal team`);
-    qc.invalidateQueries({ queryKey: ["capture-workspace-teaming", selected.id] });
-    qc.invalidateQueries({ queryKey: ["proposal-teaming", selected.id] });
-  };
-
   // PartnerResearch is proposal-scoped today; in global mode we pass an empty
   // id so the roster + SAM.gov search work, while proposal-side actions stay
   // inert until the user actually creates a proposal.
@@ -213,155 +201,104 @@ function CaptureWorkspace() {
             <SetupBanner />
             <PastPerformanceAccuracyBanner />
 
-            <OpportunityContextBar
-              proposals={proposalOptions}
-              onBuildTeam={() => setOppTeamDialogOpen(true)}
-              onDraftOutreach={() => {
-                setOutreachPartner(null);
-                setOutreachOpen(true);
-              }}
-            />
+            <OpportunityContextBar proposals={proposalOptions} />
 
-            {!selected && (
-              <TargetProfileForm value={targetProfile} onChange={setTargetProfile} />
-            )}
+            {selected ? (
+              <OpportunityTeamingSummary
+                proposalId={selected.id}
+                proposal={selectedProposal ?? null}
+                opp={{
+                  id: `proposal:${selected.id}`,
+                  naics: selected.naicsCode ?? null,
+                  agency: selected.agency ?? null,
+                  setAside: selected.setAside ?? null,
+                  vehicle: null,
+                }}
+                existingPartnerIds={existingPartnerIds}
+              />
+            ) : (
+              <>
+                <TargetProfileForm value={targetProfile} onChange={setTargetProfile} />
 
-            <Tabs defaultValue={selected ? "suggested" : "partners"} className="w-full">
-              <TabsList>
-                {selected && (
-                  <TabsTrigger value="suggested">
-                    <Lightbulb className="w-4 h-4 mr-1.5" /> Suggested Partners
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="partners">
-                  <Users className="w-4 h-4 mr-1.5" /> Partner Search
-                </TabsTrigger>
-                <TabsTrigger value="roster">
-                  <Building2 className="w-4 h-4 mr-1.5" /> Roster
-                </TabsTrigger>
-                <TabsTrigger value="sandbox">
-                  <Swords className="w-4 h-4 mr-1.5" /> Teaming Sandbox
-                </TabsTrigger>
-              </TabsList>
+                <Tabs defaultValue="partners" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="partners">
+                      <Users className="w-4 h-4 mr-1.5" /> Partner Search
+                    </TabsTrigger>
+                    <TabsTrigger value="roster">
+                      <Building2 className="w-4 h-4 mr-1.5" /> Roster
+                    </TabsTrigger>
+                    <TabsTrigger value="sandbox">
+                      <Swords className="w-4 h-4 mr-1.5" /> Teaming Sandbox
+                    </TabsTrigger>
+                  </TabsList>
 
-              {selected && (
-                <TabsContent value="suggested" className="mt-4">
-                  {selectedProposal ? (
-                    <SuggestedPartnersCard
-                      proposal={selectedProposal}
-                      existingPartnerIds={existingPartnerIds}
-                      onAdd={(s) => addSuggestedPartner({ partnerId: s.partnerId, partnerName: s.partnerName })}
-                      onOutreach={(p) => {
-                        setOutreachPartner(p);
-                        setOutreachOpen(true);
-                      }}
-                    />
-                  ) : (
-                    <Card className="p-6 text-sm text-muted-foreground">Loading opportunity…</Card>
-                  )}
-                </TabsContent>
-              )}
-
-              <TabsContent value="partners" className="mt-4">
-                {teamId ? (
-                  <PartnerResearch
-                    proposalId={partnerResearchProposalId}
-                    teamId={teamId}
-                    opportunityNaics={effectiveNaics[0] ?? null}
-                  />
-                ) : (
-                  <Card className="p-6 text-sm text-muted-foreground">
-                    Pick a team to search for partners.
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="roster" className="mt-4">
-                <RosterPanel teamId={teamId} />
-              </TabsContent>
-
-              <TabsContent value="sandbox" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Swords className="w-4 h-4" /> Teaming Sandbox
-                    </CardTitle>
-                    <CardDescription>
-                      Drop your company and partners into a scenario and watch pWin update live.
-                      {selected
-                        ? " Scoped to the selected opportunity."
-                        : " Using your target profile as the opportunity context."}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline">Title: {sandboxOpportunity.title}</Badge>
-                      <Badge variant="outline">
-                        NAICS: {sandboxOpportunity.naicsCodes.length
-                          ? sandboxOpportunity.naicsCodes.join(", ")
-                          : "—"}
-                      </Badge>
-                      <Badge variant="outline">Set-aside: {sandboxOpportunity.setAside ?? "—"}</Badge>
-                      <Badge variant="outline">Agency: {sandboxOpportunity.agency ?? "—"}</Badge>
-                    </div>
-                    <Button onClick={() => setSandboxOpen(true)} disabled={!teamId}>
-                      <Swords className="w-4 h-4 mr-1.5" /> Open Teaming Sandbox
-                    </Button>
-                    {!teamId && (
-                      <div className="text-xs text-muted-foreground">
-                        Pick a team to run a teaming scenario.
-                      </div>
+                  <TabsContent value="partners" className="mt-4">
+                    {teamId ? (
+                      <PartnerResearch
+                        proposalId={partnerResearchProposalId}
+                        teamId={teamId}
+                        opportunityNaics={effectiveNaics[0] ?? null}
+                      />
+                    ) : (
+                      <Card className="p-6 text-sm text-muted-foreground">
+                        Pick a team to search for partners.
+                      </Card>
                     )}
-                  </CardContent>
-                </Card>
+                  </TabsContent>
 
-                {teamId && (
-                  <TeamingSandbox
-                    open={sandboxOpen}
-                    onOpenChange={setSandboxOpen}
-                    parent={{ kind: "preview", teamId }}
-                    opportunity={sandboxOpportunity}
-                  />
-                )}
-              </TabsContent>
-            </Tabs>
+                  <TabsContent value="roster" className="mt-4">
+                    <RosterPanel teamId={teamId} />
+                  </TabsContent>
+
+                  <TabsContent value="sandbox" className="mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Swords className="w-4 h-4" /> Teaming Sandbox
+                        </CardTitle>
+                        <CardDescription>
+                          Drop your company and partners into a scenario and watch pWin update live. Using your target profile as the opportunity context.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <Badge variant="outline">Title: {sandboxOpportunity.title}</Badge>
+                          <Badge variant="outline">
+                            NAICS: {sandboxOpportunity.naicsCodes.length
+                              ? sandboxOpportunity.naicsCodes.join(", ")
+                              : "—"}
+                          </Badge>
+                          <Badge variant="outline">Set-aside: {sandboxOpportunity.setAside ?? "—"}</Badge>
+                          <Badge variant="outline">Agency: {sandboxOpportunity.agency ?? "—"}</Badge>
+                        </div>
+                        <Button onClick={() => setSandboxOpen(true)} disabled={!teamId}>
+                          <Swords className="w-4 h-4 mr-1.5" /> Open Teaming Sandbox
+                        </Button>
+                        {!teamId && (
+                          <div className="text-xs text-muted-foreground">
+                            Pick a team to run a teaming scenario.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {teamId && (
+                      <TeamingSandbox
+                        open={sandboxOpen}
+                        onOpenChange={setSandboxOpen}
+                        parent={{ kind: "preview", teamId }}
+                        opportunity={sandboxOpportunity}
+                      />
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </>
+            )}
           </>
         )}
       </main>
 
-      {/* Build Opportunity Team dialog — pre-filled with the selected opportunity. */}
-      {selected && (
-        <CreateOpportunityTeamDialog
-          open={oppTeamDialogOpen}
-          onOpenChange={setOppTeamDialogOpen}
-          opportunityTitle={selected.title ?? "Selected opportunity"}
-          // The selected opportunity is an existing proposal in our system; we
-          // tag the source as "sam" to satisfy the dialog's enum. Users
-          // typically pick "Link an existing proposal" mode in the dialog.
-          source="sam"
-          sourceId={selected.id}
-          solicitationNumber={selectedProposal?.solicitation_number ?? undefined}
-          agency={selected.agency}
-          naicsCode={selected.naicsCode}
-          responseDeadline={selectedProposal?.response_deadline ?? null}
-        />
-      )}
-
-      {/* Draft teaming outreach modal — partner may be null until one is picked. */}
-      {selected && selectedProposal && (
-        <TeamingOutreachModal
-          open={outreachOpen}
-          onOpenChange={setOutreachOpen}
-          proposal={{
-            id: selectedProposal.id,
-            team_id: selectedProposal.team_id,
-            engagement_type: selectedProposal.engagement_type,
-            opportunity_data: selectedProposal.opportunity_data,
-          }}
-          partner={outreachPartner}
-          defaultScopeAreas={selectedProposal.targeted_scope_areas ?? undefined}
-        />
-      )}
     </div>
   );
 }
@@ -371,12 +308,8 @@ function CaptureWorkspace() {
 // ---------------------------------------------------------------------------
 function OpportunityContextBar({
   proposals,
-  onBuildTeam,
-  onDraftOutreach,
 }: {
   proposals: ProposalSummary[];
-  onBuildTeam: () => void;
-  onDraftOutreach: () => void;
 }) {
   const { selected, setSelectedOpportunityId } = useOpportunityContext();
   const NONE = "__none";
@@ -457,12 +390,6 @@ function OpportunityContextBar({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button size="sm" onClick={onBuildTeam}>
-            <UserPlus className="w-4 h-4 mr-1.5" /> Build Opportunity Team
-          </Button>
-          <Button size="sm" variant="outline" onClick={onDraftOutreach}>
-            <Mail className="w-4 h-4 mr-1.5" /> Draft teaming outreach
-          </Button>
           <EnrichFromSamButton proposalId={selected.id} />
           <Button asChild size="sm" variant="ghost">
             <Link to="/proposals/$proposalId" params={{ proposalId: selected.id }}>
@@ -844,3 +771,130 @@ function EnrichFromSamButton({ proposalId }: { proposalId: string }) {
   );
 }
 
+
+// ---------------------------------------------------------------------------
+// Opportunity teaming summary — replaces inline teaming tools when an
+// opportunity is selected. Shows current PWIN + top 2-3 suggested partners
+// and links to the Hub Team tab.
+// ---------------------------------------------------------------------------
+function OpportunityTeamingSummary({
+  proposalId,
+  proposal,
+  opp,
+  existingPartnerIds,
+}: {
+  proposalId: string;
+  proposal: FullProposal | null;
+  opp: OppForPwin;
+  existingPartnerIds: string[];
+}) {
+  const teamId = proposal?.team_id ?? null;
+
+  const { data: partners = [] } = useQuery({
+    queryKey: ["suggest-partners", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { listPartnerCompanies } = await import("@/lib/companies");
+      return listPartnerCompanies(teamId!);
+    },
+  });
+
+  const { data: selfProfile } = useQuery({
+    queryKey: ["suggest-self", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const { getOwnCompanyProfileData } = await import("@/lib/companies");
+      const [pd, vehRes] = await Promise.all([
+        getOwnCompanyProfileData(teamId!),
+        supabase.from("contract_vehicles").select("vehicle_name").eq("team_id", teamId!).eq("status", "active"),
+      ]);
+      const profile = (pd ?? {}) as any;
+      const self: SuggestSelf = {
+        certifications: profile.certifications || profile.socioeconomic_certifications || [],
+        naics_codes: profile.naics_codes || [],
+        contract_vehicles: (vehRes.data ?? []).map((v: any) => v.vehicle_name),
+      };
+      return self;
+    },
+  });
+
+  const topSuggestions = useMemo<PartnerSuggestion[]>(() => {
+    if (!proposal || !selfProfile || partners.length === 0) return [];
+    const ctx: SuggestContext = {
+      engagementType: proposal.engagement_type,
+      opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],
+      opportunityAgency: proposal.agency,
+      setAside: proposal.set_aside,
+      requiredVehicles: proposal.contract_type
+        && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(proposal.contract_type)
+        ? [proposal.contract_type] : [],
+      scopeKeywords: (proposal.targeted_scope_areas ?? "")
+        .split(/[,;\n]/).map((s) => s.trim()).filter(Boolean),
+      incumbentName: proposal.customer_intel?.predecessor_contract?.incumbent ?? null,
+      primeContractorName: proposal.prime_contractor_name,
+    };
+    const partnersIn: SuggestPartner[] = partners.map((p) => ({
+      id: p.id,
+      company_name: p.company_name,
+      certifications: p.certifications ?? [],
+      naics_codes: p.naics_codes ?? [],
+      contract_vehicles: (p as any).contract_vehicles ?? [],
+      capabilities_summary: p.capabilities_summary,
+      past_performance_summary: p.past_performance_summary,
+      notes: p.notes,
+      relationship_status: p.relationship_status,
+    }));
+    return rankPartnerSuggestions(ctx, selfProfile, partnersIn, existingPartnerIds, { limit: 3 });
+  }, [proposal, selfProfile, partners, existingPartnerIds]);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Users className="w-4 h-4 text-primary" /> Opportunity Team
+        </CardTitle>
+        <CardDescription>
+          Snapshot of pWin and top suggested partners. Manage the full team in the Hub.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-xs text-muted-foreground">Current pWin:</span>
+          <PwinChip opp={opp} />
+        </div>
+
+        <div>
+          <div className="text-xs font-medium text-muted-foreground mb-1.5">Top suggested partners</div>
+          {topSuggestions.length === 0 ? (
+            <div className="text-xs text-muted-foreground border border-dashed rounded-md p-3">
+              {teamId ? "No partner suggestions yet — open the Hub Team tab to add partners." : "Save the proposal to a team to enable suggestions."}
+            </div>
+          ) : (
+            <ul className="space-y-1.5">
+              {topSuggestions.map((s) => (
+                <li key={s.partnerId} className="flex items-center gap-2 border rounded-md px-2.5 py-1.5">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium truncate">{s.partnerName}</div>
+                    <div className="text-[11px] text-muted-foreground truncate">
+                      {s.bestRoleLabel} · {s.workshareRange[0]}–{s.workshareRange[1]}% WS
+                    </div>
+                  </div>
+                  <div className={`text-base font-bold tabular-nums ${s.fitScore >= 70 ? "text-green-600" : s.fitScore >= 40 ? "text-amber-600" : "text-destructive"}`}>
+                    {s.fitScore}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <Button asChild size="sm">
+          <Link to="/proposals/$proposalId" params={{ proposalId }} search={{ tab: "team" }}>
+            <Users className="w-4 h-4 mr-1.5" /> Open Team workspace
+            <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  );
+}
