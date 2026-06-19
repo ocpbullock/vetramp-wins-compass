@@ -311,39 +311,6 @@ function CaptureWorkspace() {
         )}
       </main>
 
-      {/* Build Opportunity Team dialog — pre-filled with the selected opportunity. */}
-      {selected && (
-        <CreateOpportunityTeamDialog
-          open={oppTeamDialogOpen}
-          onOpenChange={setOppTeamDialogOpen}
-          opportunityTitle={selected.title ?? "Selected opportunity"}
-          // The selected opportunity is an existing proposal in our system; we
-          // tag the source as "sam" to satisfy the dialog's enum. Users
-          // typically pick "Link an existing proposal" mode in the dialog.
-          source="sam"
-          sourceId={selected.id}
-          solicitationNumber={selectedProposal?.solicitation_number ?? undefined}
-          agency={selected.agency}
-          naicsCode={selected.naicsCode}
-          responseDeadline={selectedProposal?.response_deadline ?? null}
-        />
-      )}
-
-      {/* Draft teaming outreach modal — partner may be null until one is picked. */}
-      {selected && selectedProposal && (
-        <TeamingOutreachModal
-          open={outreachOpen}
-          onOpenChange={setOutreachOpen}
-          proposal={{
-            id: selectedProposal.id,
-            team_id: selectedProposal.team_id,
-            engagement_type: selectedProposal.engagement_type,
-            opportunity_data: selectedProposal.opportunity_data,
-          }}
-          partner={outreachPartner}
-          defaultScopeAreas={selectedProposal.targeted_scope_areas ?? undefined}
-        />
-      )}
     </div>
   );
 }
