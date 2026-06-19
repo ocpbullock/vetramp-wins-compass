@@ -169,6 +169,7 @@ export function TeamPanel() {
           <h2 className="font-semibold">Members</h2>
           <Badge variant="secondary">{teamMembers.length}</Badge>
         </div>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
