@@ -38,6 +38,7 @@ import {
 import { useLogStore } from "@/lib/log-store";
 import { toast } from "sonner";
 import { generateDefaultMilestones } from "@/lib/milestones";
+import { kickOffMarketSnapshot } from "@/lib/market-snapshot";
 
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
