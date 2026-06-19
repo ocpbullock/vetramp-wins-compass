@@ -179,7 +179,7 @@ export function PartnerResearch({
         startDate: yearsAgoIso(lookbackYears),
         endDate: todayIso(),
         keyword: keyword.trim() || undefined,
-        maxResults: 1000,
+        maxResults: 300,
       });
       setAwards(r.results ?? []);
       setSearchMeta({
