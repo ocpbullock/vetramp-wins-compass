@@ -161,12 +161,12 @@ export function StarredTab({
                               variant="outline"
                               className="h-7 w-7"
                               onClick={() => setTeamRow(r)}
-                              title="Create opportunity team"
+                              title="Create Capture Room"
                             >
                               <Users className="w-3.5 h-3.5" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Create team & invite partners</TooltipContent>
+                          <TooltipContent>Create Capture Room &amp; invite partners</TooltipContent>
                         </Tooltip>
                         <Tooltip>
                           <TooltipTrigger asChild>
