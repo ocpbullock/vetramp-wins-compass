@@ -110,7 +110,13 @@ function SettingsPage() {
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
           <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>
           <TabsContent value="team" className="mt-4"><TeamPanel /></TabsContent>
-          <TabsContent value="partners" className="mt-4"><PartnersPanel /></TabsContent>
+          <TabsContent value="partners" className="mt-4">
+            <Card className="p-6 text-sm">
+              The teaming partner roster has moved.{" "}
+              <Link to="/partners" className="text-primary underline">Open the Partners page</Link>{" "}
+              to manage your roster and run partner research.
+            </Card>
+          </TabsContent>
           <TabsContent value="past-performance" className="mt-4"><PastPerformancePanel /></TabsContent>
           <TabsContent value="vehicles" className="mt-4"><ContractVehiclesPanel /></TabsContent>
         </Tabs>
