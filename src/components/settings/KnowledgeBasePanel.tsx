@@ -339,6 +339,7 @@ function KbLibraryCard() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </TooltipProvider>
       )}
     </Card>
