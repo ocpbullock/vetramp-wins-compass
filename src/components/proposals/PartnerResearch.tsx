@@ -13,18 +13,19 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import {
   Search, Plus, UserPlus, Loader2, Users, AlertTriangle, Crown, HandshakeIcon,
-  CheckCircle2, RefreshCw, Sparkles, Building2,
+  CheckCircle2, RefreshCw, Sparkles, Building2, ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
 import { searchEntities, searchUsaspending, type HistoricalAward } from "@/lib/api";
 import {
-  listPartnerCompanies, findOrInsertPartnerFromSamEntity, type PartnerView as Partner,
+  listPartnerCompanies, findOrInsertPartnerFromSamEntity, upsertCompany,
+  companyToPartnerView, type PartnerView as Partner, type Company,
 } from "@/lib/companies";
 import {
   rankPartnerExperience, rankPartnerExperienceFromTargets,
   type PartnerExperienceTarget,
 } from "@/lib/partner-experience";
-import type { TeamingTarget } from "@/lib/teaming-targets";
+import { companyFromTeamingTarget, type TeamingTarget } from "@/lib/teaming-targets";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 
 const SB_TYPES = [
@@ -293,25 +294,86 @@ export function PartnerResearch({
   }, [partners, opportunityNaics]);
 
   // ---- Add a ranked vendor (TeamingTarget) to roster as a partner company ----
+  const [verifyingKey, setVerifyingKey] = useState<string | null>(null);
+
+  // Build a roster company from a USAspending teaming target — pre-populates
+  // past_performance + capabilities narrative via companyFromTeamingTarget.
   const addTargetToRoster = async (t: PartnerExperienceTarget): Promise<Partner | null> => {
     if (!teamId) { toast.error("No team selected"); return null; }
-    // Use the SAM-entity helper with a synthetic record — only name/UEI needed.
-    const fake = {
-      legal_name: t.name,
-      uei: t.uei,
-      naics_codes: opportunityNaics ? [opportunityNaics] : [],
-      small_business_types: t.isSmallBusiness && t.latestSetAside ? [t.latestSetAside] : [],
-    };
     try {
-      const partner = await findOrInsertPartnerFromSamEntity(teamId, fake);
-      if (partner) {
-        toast.success(`Added ${partner.company_name} to roster`);
+      // Dedup against existing roster.
+      const matchCol = t.uei ? "uei" : "name";
+      const matchVal = t.uei ?? t.name;
+      const { data: existing } = await supabase
+        .from("companies" as any)
+        .select("*")
+        .eq("team_id", teamId)
+        .eq(matchCol, matchVal)
+        .limit(1)
+        .maybeSingle();
+      if (existing) {
+        toast.message(`${(existing as any).name} is already in your roster`);
         qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
+        return companyToPartnerView(existing as unknown as Company);
       }
-      return partner;
+      const draft = companyFromTeamingTarget(t, teamId, {
+        naicsCodes: opportunityNaics ? [opportunityNaics] : [],
+        agency: opportunityAgency ?? null,
+      });
+      const inserted = await upsertCompany({
+        ...draft,
+        relationship_status: "prospective",
+        is_existing_partner: true,
+      });
+      toast.success(`Added ${inserted.name} to roster with USAspending past performance`);
+      qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["companies", teamId] });
+      return companyToPartnerView(inserted);
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to add to roster");
       return null;
+    }
+  };
+
+  // Optional opt-in enrichment: look the partner up in SAM via Tango entity
+  // search and patch the roster row with certifications, UEI/CAGE, address.
+  const verifyInSam = async (partner: Partner) => {
+    if (!teamId) return;
+    setVerifyingKey(partner.id);
+    try {
+      const { results } = await searchEntities({
+        uei: partner.uei || undefined,
+        vendor_name: partner.uei ? undefined : partner.company_name,
+      });
+      const hit = (results || [])[0];
+      if (!hit) {
+        toast.message(`No SAM.gov match found for ${partner.company_name}`);
+        return;
+      }
+      const certs: string[] = Array.isArray(hit.small_business_types) ? hit.small_business_types : [];
+      const naicsExtra: string[] = Array.isArray(hit.naics_codes) ? hit.naics_codes : [];
+      const mergedNaics = Array.from(new Set([...(partner.naics_codes ?? []), ...naicsExtra]));
+      const mergedCerts = Array.from(new Set([...(partner.certifications ?? []), ...certs]));
+      const cityState = [hit.city, hit.state].filter(Boolean).join(", ");
+      await upsertCompany({
+        id: partner.id,
+        team_id: teamId,
+        uei: partner.uei ?? hit.uei ?? null,
+        cage_code: hit.cage_code ?? null,
+        naics_codes: mergedNaics,
+        certifications: mergedCerts,
+        set_asides: mergedCerts,
+        notes: cityState
+          ? `SAM-verified · ${cityState}`
+          : "SAM-verified",
+      } as any);
+      toast.success(`Verified ${partner.company_name} in SAM.gov`);
+      qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["companies", teamId] });
+    } catch (e: any) {
+      toast.error(e?.message ?? "SAM verification failed");
+    } finally {
+      setVerifyingKey(null);
     }
   };
 
@@ -550,21 +612,51 @@ export function PartnerResearch({
                               {t.relevanceScore}
                             </div>
                             {!inRoster ? (
-                              <Button
-                                size="sm" variant="outline" className="h-7 text-[11px]"
-                                disabled={!teamId}
-                                onClick={(e) => { e.stopPropagation(); addTargetToRoster(t); }}
-                              >
-                                <UserPlus className="w-3 h-3 mr-1" />Add to roster
-                              </Button>
-                            ) : hasProposal && !onProposal(inRoster.id) ? (
-                              <Button
-                                size="sm" className="h-7 text-[11px]"
-                                onClick={(e) => { e.stopPropagation(); addToProposal(inRoster); }}
-                              >
-                                <Plus className="w-3 h-3 mr-1" />Add to team
-                              </Button>
-                            ) : null}
+                              <>
+                                <Button
+                                  size="sm" variant="outline" className="h-7 text-[11px]"
+                                  disabled={!teamId}
+                                  onClick={(e) => { e.stopPropagation(); addTargetToRoster(t); }}
+                                >
+                                  <UserPlus className="w-3 h-3 mr-1" />Add to roster
+                                </Button>
+                                {hasProposal && (
+                                  <Button
+                                    size="sm" className="h-7 text-[11px]"
+                                    disabled={!teamId}
+                                    onClick={async (e) => {
+                                      e.stopPropagation();
+                                      const p = await addTargetToRoster(t);
+                                      if (p) await addToProposal(p);
+                                    }}
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />Add to team
+                                  </Button>
+                                )}
+                              </>
+                            ) : (
+                              <>
+                                {hasProposal && !onProposal(inRoster.id) && (
+                                  <Button
+                                    size="sm" className="h-7 text-[11px]"
+                                    onClick={(e) => { e.stopPropagation(); addToProposal(inRoster); }}
+                                  >
+                                    <Plus className="w-3 h-3 mr-1" />Add to team
+                                  </Button>
+                                )}
+                                <Button
+                                  size="sm" variant="ghost" className="h-7 text-[11px]"
+                                  disabled={verifyingKey === inRoster.id}
+                                  title="Look up this partner in SAM.gov to attach certifications, UEI/CAGE, and address (uses an entity API call)"
+                                  onClick={(e) => { e.stopPropagation(); verifyInSam(inRoster); }}
+                                >
+                                  {verifyingKey === inRoster.id
+                                    ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                    : <ShieldCheck className="w-3 h-3 mr-1" />}
+                                  Verify in SAM
+                                </Button>
+                              </>
+                            )}
                           </div>
                         </div>
                       </button>
