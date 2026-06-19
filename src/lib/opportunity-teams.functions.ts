@@ -298,7 +298,7 @@ async function assertCanManageOppTeamLink(opportunityTeamId: string, userId: str
     .maybeSingle();
   if (tErr) throw new Error(tErr.message);
   if (!oppTeam || oppTeam.team_type !== "opportunity" || !oppTeam.parent_team_id) {
-    throw new Error("Opportunity team not found.");
+    throw new Error("Capture Room not found.");
   }
   const { data: m } = await supabaseAdmin
     .from("team_members")
@@ -342,7 +342,7 @@ export const linkProposalToOpportunityTeam = createServerFn({ method: "POST" })
       throw new Error("Proposal does not belong to this organization.");
     }
     if (prop.opportunity_team_id && prop.opportunity_team_id !== data.opportunityTeamId) {
-      throw new Error("Proposal is already linked to a different opportunity team. Unlink it first.");
+      throw new Error("Opportunity is already linked to a different Capture Room. Unlink it first.");
     }
 
     const { error: uErr } = await supabaseAdmin
