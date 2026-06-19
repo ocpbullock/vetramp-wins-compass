@@ -759,7 +759,14 @@ function ProposalPipeline() {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+            <SimilarPastPursuitsCard
+              proposalId={proposalId}
+              teamId={proposal.team_id ?? null}
+              naicsCode={proposal.naics_code ?? null}
+              agency={proposal.agency ?? null}
+            />
           </TabsContent>
+
 
           <TabsContent value="market_intel" className="mt-4">
             <MarketIntelPanel proposal={proposal} proposalId={proposalId} />
