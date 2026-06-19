@@ -250,7 +250,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
             onClick={handleCreate}
             disabled={busy || (mode === "existing" && !selectedProposalId)}
           >
-            {busy ? "Creating…" : mode === "existing" ? "Link & open proposal" : "Create team & open proposal"}
+            {busy ? "Creating…" : mode === "existing" ? "Link & open opportunity" : "Create Capture Room & open opportunity"}
           </Button>
         </DialogFooter>
       </DialogContent>
