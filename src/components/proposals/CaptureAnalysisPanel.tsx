@@ -25,6 +25,7 @@ import {
 import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies";
 import { addActivityFromAnalysis } from "./ActivitiesPanel";
 import { Plus } from "lucide-react";
+import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 
 type CaptureAnalysis = {
   bid_no_bid: {
