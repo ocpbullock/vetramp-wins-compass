@@ -191,7 +191,7 @@ export function OpportunitiesTab({
         </div>
 
         <div className="overflow-x-auto bg-card rounded-md border border-border">
-          <table className="data-table">
+          <table className="data-table" style={{ width: 'auto', minWidth: '100%' }}>
             <thead>
               <tr>
                 <th className="w-[120px]">Actions</th>
