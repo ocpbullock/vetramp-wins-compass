@@ -326,7 +326,7 @@ function OpportunityContextBar({
         <SelectItem value={NONE}>Global mode — no opportunity</SelectItem>
         {proposals.map((p) => (
           <SelectItem key={p.id} value={p.id}>
-            {p.opportunity_title || "Untitled proposal"}
+            {p.opportunity_title || "Untitled opportunity"}
             {p.agency ? ` · ${p.agency}` : ""}
           </SelectItem>
         ))}
