@@ -121,7 +121,16 @@ export async function generateMarketSnapshot(proposal: any): Promise<MarketSnaps
   // 3) prior primes & candidate partners
   const teamingTargets = deriveTeamingTargets(results, { agency, limit: 40 });
   const priorPrimes = teamingTargets.filter((t) => t.classification === "prime").slice(0, 15);
-  const candidatePartners = teamingTargets.filter((t) => t.classification === "partner").slice(0, 25);
+  // Rank candidate partners by relevance to this opportunity using the same
+  // helper as the research panel, so both surfaces order candidates identically.
+  const rankedPartners = rankPartnerExperience(
+    results,
+    { agency, set_aside: proposal.set_aside ?? null },
+    { hardFilterAgency: false, limit: 40 },
+  );
+  const candidatePartners = rankedPartners
+    .filter((t) => t.classification === "partner")
+    .slice(0, 25);
 
   // 4) competitive intel
   let competitors: CompeteVendor[] = [];
