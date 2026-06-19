@@ -44,6 +44,7 @@ import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersC
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
 import { TeamingOutreachModal, type OutreachPartnerInput } from "@/components/proposals/TeamingOutreachModal";
 import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
+import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
@@ -764,10 +765,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="human_intel" className="mt-4">
-            <PlaceholderHubPanel
-              title="Human Intel"
-              description="Notes from customer calls, industry days, and incumbent-staff conversations. Coming next."
-            />
+            <HumanIntelPanel proposalId={proposalId} teamId={proposal.team_id ?? null} />
           </TabsContent>
 
           <TabsContent value="capture_analysis" className="mt-4">
