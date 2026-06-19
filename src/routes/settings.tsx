@@ -78,7 +78,26 @@ function SettingsPage() {
   }, [hashTab]);
 
   if (loading || !user) {
-    return <div className="min-h-screen flex items-center justify-center text-muted-foreground">Loading…</div>;
+    return (
+      <div className="min-h-screen bg-background">
+        <header className="sticky top-0 z-30 bg-card border-b border-border">
+          <div className="max-w-[1400px] mx-auto px-6 py-4 flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold tracking-tight">Capture Intel</h1>
+              <p className="text-xs text-muted-foreground">Company profile, knowledge base, team, partners, and past performance</p>
+            </div>
+          </div>
+        </header>
+        <main className="max-w-[1400px] mx-auto p-6 space-y-6">
+          <Skeleton className="h-28 w-full" />
+          <Skeleton className="h-10 w-full max-w-xl" />
+          <div className="grid gap-4">
+            <Skeleton className="h-40 w-full" />
+            <Skeleton className="h-40 w-full" />
+          </div>
+        </main>
+      </div>
+    );
   }
 
   return (
