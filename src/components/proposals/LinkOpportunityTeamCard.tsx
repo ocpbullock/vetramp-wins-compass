@@ -87,10 +87,10 @@ export function LinkOpportunityTeamCard({
     <Card>
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <Briefcase className="w-4 h-4" /> Opportunity team
+          <Briefcase className="w-4 h-4" /> Capture Room
         </CardTitle>
         <CardDescription className="text-xs">
-          Link this proposal to a dedicated opportunity team so external partners can be invited without seeing the rest of your pursuits.
+          Link this opportunity to a dedicated Capture Room so external partners can be invited without seeing the rest of your pursuits.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
