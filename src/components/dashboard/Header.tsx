@@ -118,7 +118,7 @@ export function Header() {
                   : "text-muted-foreground hover:text-foreground hover:bg-accent",
               ].join(" ")}
             >
-              Proposal
+              Opportunity
             </Link>
           )}
           {NAV.map((item) => {
