@@ -256,9 +256,11 @@ export function PartnerResearch({
                               <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => addToRoster(r)}>
                                 <UserPlus className="w-3 h-3 mr-1" />Add to roster
                               </Button>
-                              <Button size="sm" className="h-7 text-[11px]" onClick={() => addEntityToProposal(r)}>
-                                <Plus className="w-3 h-3 mr-1" />Add to this proposal
-                              </Button>
+                              {hasProposal && (
+                                <Button size="sm" className="h-7 text-[11px]" onClick={() => addEntityToProposal(r)}>
+                                  <Plus className="w-3 h-3 mr-1" />Add to this proposal
+                                </Button>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>
