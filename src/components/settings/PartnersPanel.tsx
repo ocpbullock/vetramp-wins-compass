@@ -261,6 +261,7 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
             ))}
           </TableBody>
         </Table>
+        </div>
       </Card>
 
       <CompanyDialog
