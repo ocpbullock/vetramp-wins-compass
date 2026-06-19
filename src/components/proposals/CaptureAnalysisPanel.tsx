@@ -23,6 +23,8 @@ import {
   type PwinRole,
 } from "@/lib/pwin";
 import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies";
+import { addActivityFromAnalysis } from "./ActivitiesPanel";
+import { Plus } from "lucide-react";
 
 type CaptureAnalysis = {
   bid_no_bid: {
