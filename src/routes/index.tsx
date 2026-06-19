@@ -733,6 +733,7 @@ function RosterPanel({ teamId }: { teamId: string | null }) {
             ))}
           </TableBody>
         </Table>
+        </div>
 
         <div className="text-[11px] text-muted-foreground">
           Manage companies in{" "}
