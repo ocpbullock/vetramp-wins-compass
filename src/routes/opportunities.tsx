@@ -287,6 +287,13 @@ function OpportunitiesPage() {
         </Button>
       </div>
 
+      {loading ? (
+        <div className="space-y-3">
+          <div className="h-16 rounded-md bg-muted animate-pulse" />
+          <div className="h-16 rounded-md bg-muted animate-pulse" />
+          <div className="h-16 rounded-md bg-muted animate-pulse" />
+        </div>
+      ) : (
       <div className="space-y-6">
         {STAGES.map((stage) => {
           const items = grouped[stage];
