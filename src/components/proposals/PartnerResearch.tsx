@@ -37,11 +37,14 @@ export function PartnerResearch({
 
   const { data: existingTeaming = [] } = useQuery({
     queryKey: ["proposal-teaming", proposalId],
+    enabled: !!proposalId,
     queryFn: async () => {
       const { data } = await supabase.from("proposal_teaming").select("company_id").eq("proposal_id", proposalId);
       return (data ?? []).map((r: any) => r.company_id as string);
     },
   });
+
+  const hasProposal = !!proposalId;
 
   const suggested = useMemo(() => {
     if (!opportunityNaics) return [];
