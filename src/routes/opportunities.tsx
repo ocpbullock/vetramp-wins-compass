@@ -277,7 +277,7 @@ function OpportunitiesPage() {
             Pursuit Pipeline
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Tracked opportunities and in-flight proposals, grouped by stage.{" "}
+            All opportunities — tracked and active — grouped by stage.{" "}
             {loading ? "Loading…" : `${total} item${total === 1 ? "" : "s"}.`}
           </p>
         </div>
