@@ -867,7 +867,7 @@ function OpportunityTeamingSummary({
           <div className="text-xs font-medium text-muted-foreground mb-1.5">Top suggested partners</div>
           {topSuggestions.length === 0 ? (
             <div className="text-xs text-muted-foreground border border-dashed rounded-md p-3">
-              {teamId ? "No partner suggestions yet — open the Hub Team tab to add partners." : "Save the proposal to a team to enable suggestions."}
+              {teamId ? "No partner suggestions yet — open the Hub Team tab to add partners." : "Save the opportunity to a team to enable suggestions."}
             </div>
           ) : (
             <ul className="space-y-1.5">
