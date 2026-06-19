@@ -189,7 +189,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
               />
               <div className="border rounded-md max-h-56 overflow-y-auto divide-y">
                 {!isOrg && (
-                  <div className="p-3 text-xs text-muted-foreground">Switch to an organization team to link existing proposals.</div>
+                  <div className="p-3 text-xs text-muted-foreground">Switch to an organization team to link existing opportunities.</div>
                 )}
                 {isOrg && proposalsQ.isLoading && (
                   <div className="p-3 text-xs text-muted-foreground">Loading…</div>
@@ -197,8 +197,8 @@ export function CreateOpportunityTeamDialog(props: Props) {
                 {isOrg && !proposalsQ.isLoading && filteredProposals.length === 0 && (
                   <div className="p-3 text-xs text-muted-foreground">
                     {proposalsQ.data?.proposals?.length === 0
-                      ? "No unlinked proposals available in this organization."
-                      : "No proposals match your search."}
+                      ? "No unlinked opportunities available in this organization."
+                      : "No opportunities match your search."}
                   </div>
                 )}
                 {filteredProposals.map((p) => {
