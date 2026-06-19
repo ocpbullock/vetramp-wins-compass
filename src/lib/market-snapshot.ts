@@ -9,6 +9,7 @@ import {
 } from "./api";
 import { matchIncumbent, type IncumbentMatch } from "./incumbents";
 import { deriveTeamingTargets, type TeamingTarget } from "./teaming-targets";
+import { rankPartnerExperience, type PartnerExperienceTarget } from "./partner-experience";
 import { userContextFromProposal } from "./user-context";
 
 export type MarketSnapshot = {
@@ -31,7 +32,7 @@ export type MarketSnapshot = {
   };
   incumbent: IncumbentMatch | null;
   priorPrimes: TeamingTarget[];
-  candidatePartners: TeamingTarget[];
+  candidatePartners: PartnerExperienceTarget[];
   competitors: CompeteVendor[];
   competitiveIntelError?: string;
 };
