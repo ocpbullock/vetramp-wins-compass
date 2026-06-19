@@ -2077,7 +2077,7 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
       .from("proposal_teaming")
       .insert({ proposal_id: proposalId, company_id: s.partnerId, role: "sub", work_share_pct: null });
     if (error) { toast.error(error.message); return; }
-    toast.success(`Added ${s.partnerName} to the opportunity team`);
+    toast.success(`Added ${s.partnerName} to the team`);
     qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
   };
 
