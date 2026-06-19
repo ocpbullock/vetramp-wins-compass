@@ -141,38 +141,40 @@ export function PartnerResearch({
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Suggested from roster */}
-        <div>
-          <div className="text-xs font-semibold mb-2">Suggested from your roster {opportunityNaics && <span className="text-muted-foreground font-normal">· NAICS {opportunityNaics}</span>}</div>
-          {!opportunityNaics && (
-            <div className="text-xs text-muted-foreground border border-dashed border-border rounded p-3">Set the opportunity NAICS to see suggestions.</div>
-          )}
-          {opportunityNaics && suggested.length === 0 && (
-            <div className="text-xs text-muted-foreground border border-dashed border-border rounded p-3">No partners in your roster match this NAICS code.</div>
-          )}
-          {suggested.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {suggested.map((p) => (
-                <div key={p.id} className="border border-border rounded p-2 space-y-1.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm font-medium">{p.company_name}</div>
-                    <Button size="sm" variant="outline" disabled={onProposal(p.id)} onClick={() => addToProposal(p)}>
-                      <Plus className="w-3 h-3 mr-1" />{onProposal(p.id) ? "Added" : "Add to team"}
-                    </Button>
+        {hasProposal && (
+          <div>
+            <div className="text-xs font-semibold mb-2">Suggested from your roster {opportunityNaics && <span className="text-muted-foreground font-normal">· NAICS {opportunityNaics}</span>}</div>
+            {!opportunityNaics && (
+              <div className="text-xs text-muted-foreground border border-dashed border-border rounded p-3">Set the opportunity NAICS to see suggestions.</div>
+            )}
+            {opportunityNaics && suggested.length === 0 && (
+              <div className="text-xs text-muted-foreground border border-dashed border-border rounded p-3">No partners in your roster match this NAICS code.</div>
+            )}
+            {suggested.length > 0 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {suggested.map((p) => (
+                  <div key={p.id} className="border border-border rounded p-2 space-y-1.5">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-medium">{p.company_name}</div>
+                      <Button size="sm" variant="outline" disabled={onProposal(p.id)} onClick={() => addToProposal(p)}>
+                        <Plus className="w-3 h-3 mr-1" />{onProposal(p.id) ? "Added" : "Add to team"}
+                      </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {(p.certifications ?? []).slice(0, 6).map((c) => <Badge key={c} variant="outline" className="text-[10px]">{c}</Badge>)}
+                      {(p.naics_codes ?? []).slice(0, 8).map((n) => (
+                        <Badge key={n} variant={n === opportunityNaics ? "secondary" : "outline"} className="text-[10px] font-mono">{n}{n === opportunityNaics ? " ✓" : ""}</Badge>
+                      ))}
+                    </div>
                   </div>
-                  <div className="flex flex-wrap gap-1">
-                    {(p.certifications ?? []).slice(0, 6).map((c) => <Badge key={c} variant="outline" className="text-[10px]">{c}</Badge>)}
-                    {(p.naics_codes ?? []).slice(0, 8).map((n) => (
-                      <Badge key={n} variant={n === opportunityNaics ? "secondary" : "outline"} className="text-[10px] font-mono">{n}{n === opportunityNaics ? " ✓" : ""}</Badge>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Find new partners */}
-        <div className="border-t border-border pt-3">
+        <div className={hasProposal ? "border-t border-border pt-3" : ""}>
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold">Find new partners</div>
             <Button size="sm" variant="outline" onClick={() => setShowSearch((s) => !s)}>
