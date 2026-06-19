@@ -53,7 +53,7 @@ export function LinkOpportunityTeamCard({
     setBusy(true);
     try {
       await linkFn({ data: { proposalId, opportunityTeamId: picked } });
-      toast.success("Linked to opportunity team");
+      toast.success("Linked to Capture Room");
       setPicked("");
       qc.invalidateQueries({ queryKey: ["opp-teams-for-org", parentTeamId] });
       onChanged?.();
