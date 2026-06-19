@@ -215,6 +215,12 @@ export function PartnerResearch({
                 Entity data from SAM.gov via Tango API. Verify credentials before teaming.
               </div>
 
+              {results === null && (
+                <div className="rounded-md border border-dashed border-border p-6 text-center text-xs text-muted-foreground">
+                  Enter a NAICS code, state, or keyword above and search SAM.gov to find new partners.
+                </div>
+              )}
+
               {results !== null && (
                 <div className="border border-border rounded overflow-x-auto">
                   <Table>
@@ -231,7 +237,7 @@ export function PartnerResearch({
                     </TableHeader>
                     <TableBody>
                       {results.length === 0 && (
-                        <TableRow><TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-4">No results.</TableCell></TableRow>
+                        <TableRow><TableCell colSpan={7} className="text-center text-xs text-muted-foreground py-6">No matches found — try a broader NAICS or keyword.</TableCell></TableRow>
                       )}
                       {results.map((r) => (
                         <TableRow key={r.tango_id || r.uei || `${r.legal_name}-${r.cage_code}`}>

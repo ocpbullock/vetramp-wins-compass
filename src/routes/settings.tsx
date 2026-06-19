@@ -99,14 +99,16 @@ function SettingsPage() {
         <SetupChecklist />
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList>
-            {isAdmin && <TabsTrigger value="company">Company Profile</TabsTrigger>}
-            <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
-            <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
-            <TabsTrigger value="past-performance">Past Performance</TabsTrigger>
-            <TabsTrigger value="vehicles">Contract Vehicles</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <TabsList className="w-max">
+              {isAdmin && <TabsTrigger value="company">Company Profile</TabsTrigger>}
+              <TabsTrigger value="knowledge">Knowledge Base</TabsTrigger>
+              <TabsTrigger value="team">Team</TabsTrigger>
+              <TabsTrigger value="partners">Teaming Partners</TabsTrigger>
+              <TabsTrigger value="past-performance">Past Performance</TabsTrigger>
+              <TabsTrigger value="vehicles">Contract Vehicles</TabsTrigger>
+            </TabsList>
+          </div>
           {isAdmin && <TabsContent value="company" className="mt-4"><CompanyProfilePanel /></TabsContent>}
           <TabsContent value="knowledge" className="mt-4"><KnowledgeBasePanel /></TabsContent>
           <TabsContent value="team" className="mt-4"><TeamPanel /></TabsContent>

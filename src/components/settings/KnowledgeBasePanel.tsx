@@ -266,6 +266,7 @@ function KbLibraryCard() {
         <div className="p-6 text-sm text-destructive">Could not load entries: {(error as Error)?.message}</div>
       ) : (
         <TooltipProvider delayDuration={200}>
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -338,6 +339,7 @@ function KbLibraryCard() {
               ))}
             </TableBody>
           </Table>
+          </div>
         </TooltipProvider>
       )}
     </Card>
