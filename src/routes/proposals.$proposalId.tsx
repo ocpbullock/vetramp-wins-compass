@@ -822,10 +822,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="activities" className="mt-4">
-            <PlaceholderHubPanel
-              title="Activities"
-              description="Timeline of meetings, emails, document changes, and team actions for this opportunity. Coming next."
-            />
+            <ActivitiesPanel proposalId={proposalId} teamId={proposal.team_id ?? null} />
           </TabsContent>
         </Tabs>
       </div>
