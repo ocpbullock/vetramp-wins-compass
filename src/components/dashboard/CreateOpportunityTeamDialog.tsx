@@ -240,7 +240,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
               className="mt-1"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Comma- or newline-separated. They'll get an email invite that lands them on this proposal.
+              Comma- or newline-separated. They'll get an email invite that lands them on this opportunity.
             </p>
           </div>
         </div>
