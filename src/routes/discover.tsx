@@ -166,11 +166,13 @@ function Dashboard() {
       opportunity_source: source.kind,
       opportunity_source_id: source.id,
       status: "intake",
-    }).select("id").single();
+    }).select("*").single();
     if (error) { toast.error(error.message); return; }
     if (o.responseDeadLine) {
       await generateDefaultMilestones(data.id, o.responseDeadLine);
     }
+    // Background market snapshot generation (non-blocking).
+    kickOffMarketSnapshot(data);
     navigate({ to: "/proposals/$proposalId", params: { proposalId: data.id } });
   }
 
