@@ -340,14 +340,9 @@ function OpportunitiesPage() {
                             onDone={() => qc.invalidateQueries({ queryKey: ["opportunities-page"] })}
                           />
                         )}
-                        <Button size="sm" variant="outline" onClick={() => openInWorkspace(row)} className="gap-1.5">
-                          <ExternalLink className="w-3.5 h-3.5" /> Workspace
+                        <Button size="sm" variant="outline" onClick={() => openHub(row)} className="gap-1.5">
+                          <ExternalLink className="w-3.5 h-3.5" /> Open
                         </Button>
-                        {row.proposalId && (
-                          <Button size="sm" variant="ghost" onClick={() => goToProposal(row)} className="gap-1.5">
-                            <FileText className="w-3.5 h-3.5" /> Proposal
-                          </Button>
-                        )}
                       </div>
                     </Card>
                   ))}
