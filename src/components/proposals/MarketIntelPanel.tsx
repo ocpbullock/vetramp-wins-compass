@@ -261,6 +261,8 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
                       {fmtUsd(t.totalValue)} · {t.awardCount} awards
                       {t.isSmallBusiness && " · SB"}
                       {t.latestSetAside && ` · ${t.latestSetAside}`}
+                      {typeof t.relevanceScore === "number" && ` · relevance ${t.relevanceScore}`}
+                      {t.agencyExperience && " · agency ✓"}
                     </div>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => addPartner(t)} disabled={savingPartner === (t.uei || t.name)}>
