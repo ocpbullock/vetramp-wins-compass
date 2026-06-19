@@ -213,118 +213,100 @@ function CaptureWorkspace() {
             <SetupBanner />
             <PastPerformanceAccuracyBanner />
 
-            <OpportunityContextBar
-              proposals={proposalOptions}
-              onBuildTeam={() => setOppTeamDialogOpen(true)}
-              onDraftOutreach={() => {
-                setOutreachPartner(null);
-                setOutreachOpen(true);
-              }}
-            />
+            <OpportunityContextBar proposals={proposalOptions} />
 
-            {!selected && (
-              <TargetProfileForm value={targetProfile} onChange={setTargetProfile} />
-            )}
+            {selected ? (
+              <OpportunityTeamingSummary
+                proposalId={selected.id}
+                proposal={selectedProposal ?? null}
+                opp={{
+                  id: `proposal:${selected.id}`,
+                  naics: selected.naicsCode ?? null,
+                  agency: selected.agency ?? null,
+                  setAside: selected.setAside ?? null,
+                  vehicle: null,
+                }}
+                existingPartnerIds={existingPartnerIds}
+              />
+            ) : (
+              <>
+                <TargetProfileForm value={targetProfile} onChange={setTargetProfile} />
 
-            <Tabs defaultValue={selected ? "suggested" : "partners"} className="w-full">
-              <TabsList>
-                {selected && (
-                  <TabsTrigger value="suggested">
-                    <Lightbulb className="w-4 h-4 mr-1.5" /> Suggested Partners
-                  </TabsTrigger>
-                )}
-                <TabsTrigger value="partners">
-                  <Users className="w-4 h-4 mr-1.5" /> Partner Search
-                </TabsTrigger>
-                <TabsTrigger value="roster">
-                  <Building2 className="w-4 h-4 mr-1.5" /> Roster
-                </TabsTrigger>
-                <TabsTrigger value="sandbox">
-                  <Swords className="w-4 h-4 mr-1.5" /> Teaming Sandbox
-                </TabsTrigger>
-              </TabsList>
+                <Tabs defaultValue="partners" className="w-full">
+                  <TabsList>
+                    <TabsTrigger value="partners">
+                      <Users className="w-4 h-4 mr-1.5" /> Partner Search
+                    </TabsTrigger>
+                    <TabsTrigger value="roster">
+                      <Building2 className="w-4 h-4 mr-1.5" /> Roster
+                    </TabsTrigger>
+                    <TabsTrigger value="sandbox">
+                      <Swords className="w-4 h-4 mr-1.5" /> Teaming Sandbox
+                    </TabsTrigger>
+                  </TabsList>
 
-              {selected && (
-                <TabsContent value="suggested" className="mt-4">
-                  {selectedProposal ? (
-                    <SuggestedPartnersCard
-                      proposal={selectedProposal}
-                      existingPartnerIds={existingPartnerIds}
-                      onAdd={(s) => addSuggestedPartner({ partnerId: s.partnerId, partnerName: s.partnerName })}
-                      onOutreach={(p) => {
-                        setOutreachPartner(p);
-                        setOutreachOpen(true);
-                      }}
-                    />
-                  ) : (
-                    <Card className="p-6 text-sm text-muted-foreground">Loading opportunity…</Card>
-                  )}
-                </TabsContent>
-              )}
-
-              <TabsContent value="partners" className="mt-4">
-                {teamId ? (
-                  <PartnerResearch
-                    proposalId={partnerResearchProposalId}
-                    teamId={teamId}
-                    opportunityNaics={effectiveNaics[0] ?? null}
-                  />
-                ) : (
-                  <Card className="p-6 text-sm text-muted-foreground">
-                    Pick a team to search for partners.
-                  </Card>
-                )}
-              </TabsContent>
-
-              <TabsContent value="roster" className="mt-4">
-                <RosterPanel teamId={teamId} />
-              </TabsContent>
-
-              <TabsContent value="sandbox" className="mt-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-base flex items-center gap-2">
-                      <Swords className="w-4 h-4" /> Teaming Sandbox
-                    </CardTitle>
-                    <CardDescription>
-                      Drop your company and partners into a scenario and watch pWin update live.
-                      {selected
-                        ? " Scoped to the selected opportunity."
-                        : " Using your target profile as the opportunity context."}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
-                      <Badge variant="outline">Title: {sandboxOpportunity.title}</Badge>
-                      <Badge variant="outline">
-                        NAICS: {sandboxOpportunity.naicsCodes.length
-                          ? sandboxOpportunity.naicsCodes.join(", ")
-                          : "—"}
-                      </Badge>
-                      <Badge variant="outline">Set-aside: {sandboxOpportunity.setAside ?? "—"}</Badge>
-                      <Badge variant="outline">Agency: {sandboxOpportunity.agency ?? "—"}</Badge>
-                    </div>
-                    <Button onClick={() => setSandboxOpen(true)} disabled={!teamId}>
-                      <Swords className="w-4 h-4 mr-1.5" /> Open Teaming Sandbox
-                    </Button>
-                    {!teamId && (
-                      <div className="text-xs text-muted-foreground">
-                        Pick a team to run a teaming scenario.
-                      </div>
+                  <TabsContent value="partners" className="mt-4">
+                    {teamId ? (
+                      <PartnerResearch
+                        proposalId={partnerResearchProposalId}
+                        teamId={teamId}
+                        opportunityNaics={effectiveNaics[0] ?? null}
+                      />
+                    ) : (
+                      <Card className="p-6 text-sm text-muted-foreground">
+                        Pick a team to search for partners.
+                      </Card>
                     )}
-                  </CardContent>
-                </Card>
+                  </TabsContent>
 
-                {teamId && (
-                  <TeamingSandbox
-                    open={sandboxOpen}
-                    onOpenChange={setSandboxOpen}
-                    parent={{ kind: "preview", teamId }}
-                    opportunity={sandboxOpportunity}
-                  />
-                )}
-              </TabsContent>
-            </Tabs>
+                  <TabsContent value="roster" className="mt-4">
+                    <RosterPanel teamId={teamId} />
+                  </TabsContent>
+
+                  <TabsContent value="sandbox" className="mt-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Swords className="w-4 h-4" /> Teaming Sandbox
+                        </CardTitle>
+                        <CardDescription>
+                          Drop your company and partners into a scenario and watch pWin update live. Using your target profile as the opportunity context.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                          <Badge variant="outline">Title: {sandboxOpportunity.title}</Badge>
+                          <Badge variant="outline">
+                            NAICS: {sandboxOpportunity.naicsCodes.length
+                              ? sandboxOpportunity.naicsCodes.join(", ")
+                              : "—"}
+                          </Badge>
+                          <Badge variant="outline">Set-aside: {sandboxOpportunity.setAside ?? "—"}</Badge>
+                          <Badge variant="outline">Agency: {sandboxOpportunity.agency ?? "—"}</Badge>
+                        </div>
+                        <Button onClick={() => setSandboxOpen(true)} disabled={!teamId}>
+                          <Swords className="w-4 h-4 mr-1.5" /> Open Teaming Sandbox
+                        </Button>
+                        {!teamId && (
+                          <div className="text-xs text-muted-foreground">
+                            Pick a team to run a teaming scenario.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {teamId && (
+                      <TeamingSandbox
+                        open={sandboxOpen}
+                        onOpenChange={setSandboxOpen}
+                        parent={{ kind: "preview", teamId }}
+                        opportunity={sandboxOpportunity}
+                      />
+                    )}
+                  </TabsContent>
+                </Tabs>
+              </>
+            )}
           </>
         )}
       </main>
