@@ -371,12 +371,8 @@ function CaptureWorkspace() {
 // ---------------------------------------------------------------------------
 function OpportunityContextBar({
   proposals,
-  onBuildTeam,
-  onDraftOutreach,
 }: {
   proposals: ProposalSummary[];
-  onBuildTeam: () => void;
-  onDraftOutreach: () => void;
 }) {
   const { selected, setSelectedOpportunityId } = useOpportunityContext();
   const NONE = "__none";
