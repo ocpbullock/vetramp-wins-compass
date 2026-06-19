@@ -732,7 +732,7 @@ function ProposalPipeline() {
 
         <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
 
-        <Tabs value={hubTab} onValueChange={setHubTab}>
+        <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)}>
           <TabsList className="flex-wrap h-auto">
             <TabsTrigger value="overview">Overview</TabsTrigger>
             <TabsTrigger value="market_intel">Market Intel</TabsTrigger>
