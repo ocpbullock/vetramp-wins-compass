@@ -239,6 +239,8 @@ function CaptureWorkspace() {
                         proposalId={partnerResearchProposalId}
                         teamId={teamId}
                         opportunityNaics={effectiveNaics[0] ?? null}
+                        opportunityAgency={targetProfile.agency ?? null}
+                        opportunitySetAside={targetProfile.setAside ?? null}
                       />
                     ) : (
                       <Card className="p-6 text-sm text-muted-foreground">
