@@ -128,14 +128,14 @@ export function CreateOpportunityTeamDialog(props: Props) {
             toast.error(`Failed to invite ${email}: ${e instanceof Error ? e.message : "unknown"}`);
           }
         }
-        toast.success(`Created opportunity team and sent ${list.length} invite${list.length === 1 ? "" : "s"}.`);
+        toast.success(`Created Capture Room and sent ${list.length} invite${list.length === 1 ? "" : "s"}.`);
       } else {
-        toast.success("Opportunity team created.");
+        toast.success("Capture Room created.");
       }
       onOpenChange(false);
       navigate({ to: "/proposals/$proposalId", params: { proposalId } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not create opportunity team.");
+      toast.error(e instanceof Error ? e.message : "Could not create Capture Room.");
     } finally {
       setBusy(false);
     }
