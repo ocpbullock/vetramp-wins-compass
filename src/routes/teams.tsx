@@ -306,7 +306,7 @@ function CreateTeamDialog({
       let parentTeamId: string | null = null;
       if (teamType === "opportunity") {
         if (!currentTeam || currentTeam.team_type !== "organization") {
-          throw new Error("Switch to an organization team before creating an opportunity team.");
+          throw new Error("Switch to an organization team before creating a Capture Room.");
         }
         parentTeamId = currentTeam.id;
       }
