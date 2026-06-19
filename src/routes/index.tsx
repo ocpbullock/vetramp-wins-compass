@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Header } from "@/components/dashboard/Header";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -200,7 +200,7 @@ function CaptureWorkspace() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
         {onboarding.showOnboarding ? (
           <OnboardingFlow

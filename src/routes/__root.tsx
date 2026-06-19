@@ -4,8 +4,10 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
+import { Header } from "@/components/dashboard/Header";
 import { AuthProvider } from "@/lib/auth";
 import { TeamProvider } from "@/lib/team";
 import { StarredProvider } from "@/lib/starred";
@@ -56,7 +58,7 @@ function RootComponent() {
           <StarredProvider>
             <OpportunityProvider>
               <TooltipProvider delayDuration={150}>
-                <Outlet />
+                <AppShell />
                 <Toaster richColors position="top-right" />
               </TooltipProvider>
             </OpportunityProvider>
@@ -64,5 +66,16 @@ function RootComponent() {
         </TeamProvider>
       </AuthProvider>
     </QueryClientProvider>
+  );
+}
+
+function AppShell() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const hideHeader = pathname.startsWith("/auth") || pathname.startsWith("/accept-invite");
+  return (
+    <>
+      {!hideHeader && <Header />}
+      <Outlet />
+    </>
   );
 }

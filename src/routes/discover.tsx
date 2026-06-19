@@ -5,7 +5,7 @@ import { format, subYears } from "date-fns";
 import { useAuth } from "@/lib/auth";
 import { useTeam, useTeamId } from "@/lib/team";
 import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
-import { Header } from "@/components/dashboard/Header";
+
 import { SearchControls, type SearchInput } from "@/components/dashboard/SearchControls";
 import { StatCards } from "@/components/dashboard/StatCards";
 import { OpportunitiesTab } from "@/components/dashboard/OpportunitiesTab";
@@ -385,17 +385,6 @@ function Dashboard() {
   if (loading || !user) {
     return (
       <div className="min-h-screen bg-background">
-        {/* Header placeholder */}
-        <div className="border-b">
-          <div className="max-w-[1400px] mx-auto px-6 h-14 flex items-center justify-between">
-            <Skeleton className="h-6 w-40" />
-            <div className="flex items-center gap-3">
-              <Skeleton className="h-8 w-24" />
-              <Skeleton className="h-8 w-8 rounded-full" />
-            </div>
-          </div>
-        </div>
-
         {/* Search controls placeholder */}
         <div className="border-b">
           <div className="max-w-[1400px] mx-auto px-6 py-4 flex flex-wrap items-center gap-3">
@@ -431,7 +420,6 @@ function Dashboard() {
     }
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <main className="max-w-[1400px] mx-auto px-6 py-10">
           <Skeleton className="h-32 w-full" />
         </main>
@@ -441,7 +429,7 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header />
+      
       <div id="quick-search" className="scroll-mt-24">
         <SearchControls onSearch={runSearch} onNaicsChange={setCurrentNaics} busy={busy} initial={lastInput ?? undefined} />
       </div>

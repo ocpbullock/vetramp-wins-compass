@@ -9,7 +9,7 @@ import { getOwnCompanyProfileData } from "@/lib/companies";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
-import { Header } from "@/components/dashboard/Header";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -640,14 +640,14 @@ function ProposalPipeline() {
     return Math.max(0, Math.min(100, score));
   }, [proposal, attachments]);
 
-  if (loading || !proposal) return <div className="min-h-screen bg-background"><Header /><div className="p-8 text-muted-foreground">Loading opportunity…</div></div>;
+  if (loading || !proposal) return <div className="min-h-screen bg-background"><div className="p-8 text-muted-foreground">Loading opportunity…</div></div>;
 
   const cd = countdown(proposal.response_deadline);
 
   return (
     <div className="min-h-screen bg-background">
       <OfflineBanner />
-      <Header />
+      
       <div className="max-w-[1400px] mx-auto px-6 py-4 space-y-4">
         <div className="flex items-center gap-3 flex-wrap">
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to opportunities</Link>
