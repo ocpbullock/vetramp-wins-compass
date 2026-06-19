@@ -53,6 +53,26 @@ function recencyScore(months: number | null): number {
   return 30 * (1 - months / 60);
 }
 
+function scoreTarget(
+  t: TeamingTarget,
+  opportunity: PartnerExperienceOpportunity,
+  agencyExperience: boolean,
+  now: Date,
+): PartnerExperienceTarget {
+  const oppSetAsideIsSmall = isSmallBusinessSetAside(opportunity.set_aside);
+  const recencyMonths = monthsSince(t.latestAwardDate, now);
+
+  let score = 0;
+  score += volumeScore(t.awardCount, t.totalValue);          // up to 30
+  score += recencyScore(recencyMonths);                       // up to 30
+  if (agencyExperience) score += 25;                          // agency boost
+  if (oppSetAsideIsSmall && t.isSmallBusiness) score += 10;   // set-aside match
+  if (t.classification === "partner") score += 5;             // mild teaming bias
+
+  score = Math.max(0, Math.min(100, Math.round(score)));
+  return { ...t, agencyExperience, recencyMonths, relevanceScore: score };
+}
+
 export function rankPartnerExperience(
   awards: HistoricalAward[],
   opportunity: PartnerExperienceOpportunity,
@@ -67,10 +87,7 @@ export function rankPartnerExperience(
     limit,
   });
 
-  const oppSetAsideIsSmall = isSmallBusinessSetAside(opportunity.set_aside);
-
-  const ranked: PartnerExperienceTarget[] = targets.map((t) => {
-    // agency experience: any of THIS recipient's awards touched the opp agency
+  const ranked = targets.map((t) => {
     let agencyExperience = false;
     if (agencyLc) {
       agencyExperience = awards.some((a) => {
@@ -79,26 +96,27 @@ export function rankPartnerExperience(
         return key === tKey && agencyMatches(a, agencyLc);
       });
     }
-
-    const recencyMonths = monthsSince(t.latestAwardDate, now);
-
-    let score = 0;
-    score += volumeScore(t.awardCount, t.totalValue);          // up to 30
-    score += recencyScore(recencyMonths);                       // up to 30
-    if (agencyExperience) score += 25;                          // agency boost
-    if (oppSetAsideIsSmall && t.isSmallBusiness) score += 10;   // set-aside match
-    if (t.classification === "partner") score += 5;             // mild teaming bias
-
-    score = Math.max(0, Math.min(100, Math.round(score)));
-
-    return {
-      ...t,
-      agencyExperience,
-      recencyMonths,
-      relevanceScore: score,
-    };
+    return scoreTarget(t, opportunity, agencyExperience, now);
   });
 
+  ranked.sort((a, b) => b.relevanceScore - a.relevanceScore);
+  return ranked;
+}
+
+/**
+ * Rank pre-computed teaming targets (e.g. from a saved market_snapshot) without
+ * raw awards. Caller indicates whether those targets already represent
+ * agency-filtered awards (true => agencyExperience set on every result).
+ */
+export function rankPartnerExperienceFromTargets(
+  targets: TeamingTarget[],
+  opportunity: PartnerExperienceOpportunity,
+  opts: { agencyExperienceForAll?: boolean; now?: Date } = {},
+): PartnerExperienceTarget[] {
+  const { agencyExperienceForAll = false, now = new Date() } = opts;
+  const ranked = targets.map((t) =>
+    scoreTarget(t, opportunity, agencyExperienceForAll, now),
+  );
   ranked.sort((a, b) => b.relevanceScore - a.relevanceScore);
   return ranked;
 }
