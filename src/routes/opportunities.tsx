@@ -9,10 +9,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
 import { useOpportunityContext } from "@/lib/opportunity-context";
-import {
-  TrackOpportunityDialog,
-  type TrackedOpportunity,
-} from "@/components/dashboard/TrackOpportunityDialog";
+import { type TrackedOpportunity } from "@/components/dashboard/TrackOpportunityDialog";
+import { AddOpportunityDialog } from "@/components/dashboard/AddOpportunityDialog";
 import { PwinChip } from "@/components/dashboard/PwinChip";
 import type { OppForPwin } from "@/lib/pwin-solo";
 import { canEnrichFromSam, enrichProposalFromSam } from "@/lib/sam-enrich";
