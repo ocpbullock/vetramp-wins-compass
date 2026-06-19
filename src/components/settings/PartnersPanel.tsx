@@ -165,6 +165,7 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
       </div>
 
       <Card>
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
@@ -182,7 +183,7 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
               <TableRow><TableCell colSpan={7} className="text-sm text-muted-foreground py-6 text-center">Loading…</TableCell></TableRow>
             )}
             {!isLoading && filtered.length === 0 && (
-              <TableRow><TableCell colSpan={7} className="text-sm text-muted-foreground py-6 text-center">No companies yet.</TableCell></TableRow>
+              <TableRow><TableCell colSpan={7} className="text-sm text-muted-foreground py-8 text-center">No partners yet — search above or add one.</TableCell></TableRow>
             )}
             {filtered.map((c) => (
               <TableRow key={c.id} className={c.is_own_company ? "bg-muted/30" : ""}>
