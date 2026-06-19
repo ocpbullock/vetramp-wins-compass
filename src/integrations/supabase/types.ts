@@ -431,6 +431,56 @@ export type Database = {
         }
         Relationships: []
       }
+      opportunity_intel: {
+        Row: {
+          body: string | null
+          created_at: string
+          file_storage_path: string | null
+          id: string
+          intel_type: string
+          occurred_on: string | null
+          proposal_id: string
+          source_name: string | null
+          team_id: string | null
+          title: string | null
+          user_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          file_storage_path?: string | null
+          id?: string
+          intel_type: string
+          occurred_on?: string | null
+          proposal_id: string
+          source_name?: string | null
+          team_id?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          file_storage_path?: string | null
+          id?: string
+          intel_type?: string
+          occurred_on?: string | null
+          proposal_id?: string
+          source_name?: string | null
+          team_id?: string | null
+          title?: string | null
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_intel_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       past_performance: {
         Row: {
           agency: string
