@@ -1,0 +1,1 @@
+ALTER TABLE public.proposals ADD COLUMN market_snapshot jsonb NULL; ALTER TABLE public.proposals ADD COLUMN market_snapshot_at timestamptz NULL;
