@@ -178,18 +178,6 @@ function CaptureWorkspace() {
     };
   }, [selected, targetProfile]);
 
-  // Add a suggested partner to the selected proposal's teaming roster.
-  const addSuggestedPartner = async (s: { partnerId: string; partnerName: string }) => {
-    if (!selected?.id) return;
-    const { error } = await supabase
-      .from("proposal_teaming")
-      .insert({ proposal_id: selected.id, company_id: s.partnerId, role: "sub", work_share_pct: null });
-    if (error) { toast.error(error.message); return; }
-    toast.success(`Added ${s.partnerName} to the proposal team`);
-    qc.invalidateQueries({ queryKey: ["capture-workspace-teaming", selected.id] });
-    qc.invalidateQueries({ queryKey: ["proposal-teaming", selected.id] });
-  };
-
   // PartnerResearch is proposal-scoped today; in global mode we pass an empty
   // id so the roster + SAM.gov search work, while proposal-side actions stay
   // inert until the user actually creates a proposal.
