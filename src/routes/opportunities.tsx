@@ -360,6 +360,7 @@ function OpportunitiesPage() {
           );
         })}
       </div>
+      )}
 
       <AddOpportunityDialog
         open={dialogOpen}
