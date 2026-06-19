@@ -312,7 +312,7 @@ function OpportunitiesPage() {
                             {row.title}
                           </button>
                           <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                            {row.kind === "proposal" ? "Proposal" : "Tracked"}
+                            {row.kind === "proposal" ? "Opportunity" : "Tracked"}
                           </Badge>
                           <Badge variant="outline" className="text-[10px] capitalize">
                             {row.statusLabel}
