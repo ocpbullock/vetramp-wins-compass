@@ -242,6 +242,7 @@ export function TeamPanel() {
             })}
           </TableBody>
         </Table>
+        </div>
       </Card>
     </div>
   );
