@@ -457,12 +457,6 @@ function OpportunityContextBar({
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          <Button size="sm" onClick={onBuildTeam}>
-            <UserPlus className="w-4 h-4 mr-1.5" /> Build Opportunity Team
-          </Button>
-          <Button size="sm" variant="outline" onClick={onDraftOutreach}>
-            <Mail className="w-4 h-4 mr-1.5" /> Draft teaming outreach
-          </Button>
           <EnrichFromSamButton proposalId={selected.id} />
           <Button asChild size="sm" variant="ghost">
             <Link to="/proposals/$proposalId" params={{ proposalId: selected.id }}>
