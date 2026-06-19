@@ -420,7 +420,6 @@ function Dashboard() {
     }
     return (
       <div className="min-h-screen bg-background">
-        <Header />
         <main className="max-w-[1400px] mx-auto px-6 py-10">
           <Skeleton className="h-32 w-full" />
         </main>
