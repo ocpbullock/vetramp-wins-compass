@@ -138,8 +138,8 @@ function TeamsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold">Team Management</h1>
-            <p className="text-sm text-muted-foreground">View and manage organizations and opportunity teams you belong to.</p>
+            <h1 className="text-2xl font-semibold">Teams &amp; Capture Rooms</h1>
+            <p className="text-sm text-muted-foreground">View and manage organizations and Capture Rooms you belong to.</p>
           </div>
         </div>
         <Button onClick={() => setOpenCreate(true)}>
