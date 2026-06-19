@@ -118,7 +118,7 @@ export function ActivitiesPanel({
       .select()
       .single();
     if (error) { toast.error(error.message); return; }
-    setItems((xs) => [...xs, data as Activity]);
+    setItems((xs) => [...xs, data as unknown as Activity]);
     setNewTitle(""); setNewDetail(""); setNewDate(""); setNewOwner("none");
     setShowAdd(false);
   }
