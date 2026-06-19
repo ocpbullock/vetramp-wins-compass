@@ -9,7 +9,7 @@ import { getOwnCompanyProfileData } from "@/lib/companies";
 import { supabase } from "@/integrations/supabase/client";
 import type { TablesUpdate } from "@/integrations/supabase/types";
 import { useAuth } from "@/lib/auth";
-import { Header } from "@/components/dashboard/Header";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
