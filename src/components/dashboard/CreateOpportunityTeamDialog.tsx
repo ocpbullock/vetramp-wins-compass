@@ -128,14 +128,14 @@ export function CreateOpportunityTeamDialog(props: Props) {
             toast.error(`Failed to invite ${email}: ${e instanceof Error ? e.message : "unknown"}`);
           }
         }
-        toast.success(`Created opportunity team and sent ${list.length} invite${list.length === 1 ? "" : "s"}.`);
+        toast.success(`Created Capture Room and sent ${list.length} invite${list.length === 1 ? "" : "s"}.`);
       } else {
-        toast.success("Opportunity team created.");
+        toast.success("Capture Room created.");
       }
       onOpenChange(false);
       navigate({ to: "/proposals/$proposalId", params: { proposalId } });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not create opportunity team.");
+      toast.error(e instanceof Error ? e.message : "Could not create Capture Room.");
     } finally {
       setBusy(false);
     }
@@ -145,9 +145,9 @@ export function CreateOpportunityTeamDialog(props: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Create opportunity team</DialogTitle>
+          <DialogTitle>Create Capture Room</DialogTitle>
           <DialogDescription>
-            Spin up a dedicated team to collaborate on this opportunity. Invited partners only see this proposal — not your other pursuits.
+            Spin up a dedicated Capture Room to collaborate on this opportunity. Invited partners only see this opportunity — not your other pursuits.
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
@@ -157,7 +157,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
           </div>
 
           <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Proposal</Label>
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Opportunity record</Label>
             <RadioGroup
               value={mode}
               onValueChange={(v) => setMode(v as Mode)}
@@ -166,15 +166,15 @@ export function CreateOpportunityTeamDialog(props: Props) {
               <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
                 <RadioGroupItem value="new" className="mt-0.5" />
                 <div className="text-sm">
-                  <div className="font-medium">Start a new proposal</div>
-                  <div className="text-xs text-muted-foreground">Creates a fresh proposal stub from this opportunity.</div>
+                  <div className="font-medium">Start a new opportunity</div>
+                  <div className="text-xs text-muted-foreground">Creates a fresh opportunity stub from this listing.</div>
                 </div>
               </Label>
               <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
                 <RadioGroupItem value="existing" className="mt-0.5" />
                 <div className="text-sm flex-1">
-                  <div className="font-medium">Link an existing proposal</div>
-                  <div className="text-xs text-muted-foreground">Choose one of your organization's proposals that isn't already linked to an opportunity team.</div>
+                  <div className="font-medium">Link an existing opportunity</div>
+                  <div className="text-xs text-muted-foreground">Choose one of your organization's opportunities that isn't already linked to a Capture Room.</div>
                 </div>
               </Label>
             </RadioGroup>
@@ -189,7 +189,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
               />
               <div className="border rounded-md max-h-56 overflow-y-auto divide-y">
                 {!isOrg && (
-                  <div className="p-3 text-xs text-muted-foreground">Switch to an organization team to link existing proposals.</div>
+                  <div className="p-3 text-xs text-muted-foreground">Switch to an organization team to link existing opportunities.</div>
                 )}
                 {isOrg && proposalsQ.isLoading && (
                   <div className="p-3 text-xs text-muted-foreground">Loading…</div>
@@ -197,8 +197,8 @@ export function CreateOpportunityTeamDialog(props: Props) {
                 {isOrg && !proposalsQ.isLoading && filteredProposals.length === 0 && (
                   <div className="p-3 text-xs text-muted-foreground">
                     {proposalsQ.data?.proposals?.length === 0
-                      ? "No unlinked proposals available in this organization."
-                      : "No proposals match your search."}
+                      ? "No unlinked opportunities available in this organization."
+                      : "No opportunities match your search."}
                   </div>
                 )}
                 {filteredProposals.map((p) => {
@@ -213,7 +213,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
                       <input type="radio" readOnly checked={active} className="mt-1" />
                       <div className="min-w-0 flex-1">
                         <div className="text-sm font-medium truncate">
-                          {p.opportunity_title || p.solicitation_number || "Untitled proposal"}
+                          {p.opportunity_title || p.solicitation_number || "Untitled opportunity"}
                         </div>
                         <div className="text-xs text-muted-foreground flex flex-wrap gap-x-2">
                           {p.agency && <span>{p.agency}</span>}
@@ -240,7 +240,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
               className="mt-1"
             />
             <p className="text-xs text-muted-foreground mt-1">
-              Comma- or newline-separated. They'll get an email invite that lands them on this proposal.
+              Comma- or newline-separated. They'll get an email invite that lands them on this opportunity.
             </p>
           </div>
         </div>
@@ -250,7 +250,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
             onClick={handleCreate}
             disabled={busy || (mode === "existing" && !selectedProposalId)}
           >
-            {busy ? "Creating…" : mode === "existing" ? "Link & open proposal" : "Create team & open proposal"}
+            {busy ? "Creating…" : mode === "existing" ? "Link & open opportunity" : "Create Capture Room & open opportunity"}
           </Button>
         </DialogFooter>
       </DialogContent>

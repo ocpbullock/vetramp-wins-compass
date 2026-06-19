@@ -427,7 +427,7 @@ export function TrackedOpportunitiesTab({
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setTeamRow(i)}>
                             <Users className="w-4 h-4 mr-2" />
-                            Create opportunity team
+                            Create Capture Room
                           </DropdownMenuItem>
                           <DropdownMenuItem onClick={() => setSandboxRow(i)}>
                             <Sparkles className="w-4 h-4 mr-2" />

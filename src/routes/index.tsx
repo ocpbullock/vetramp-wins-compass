@@ -326,7 +326,7 @@ function OpportunityContextBar({
         <SelectItem value={NONE}>Global mode — no opportunity</SelectItem>
         {proposals.map((p) => (
           <SelectItem key={p.id} value={p.id}>
-            {p.opportunity_title || "Untitled proposal"}
+            {p.opportunity_title || "Untitled opportunity"}
             {p.agency ? ` · ${p.agency}` : ""}
           </SelectItem>
         ))}
@@ -393,7 +393,7 @@ function OpportunityContextBar({
           <EnrichFromSamButton proposalId={selected.id} />
           <Button asChild size="sm" variant="ghost">
             <Link to="/proposals/$proposalId" params={{ proposalId: selected.id }}>
-              Go to proposal <ArrowRight className="w-4 h-4 ml-1" />
+              Open opportunity <ArrowRight className="w-4 h-4 ml-1" />
             </Link>
           </Button>
         </div>
@@ -851,7 +851,7 @@ function OpportunityTeamingSummary({
     <Card>
       <CardHeader>
         <CardTitle className="text-base flex items-center gap-2">
-          <Users className="w-4 h-4 text-primary" /> Opportunity Team
+          <Users className="w-4 h-4 text-primary" /> Build Team
         </CardTitle>
         <CardDescription>
           Snapshot of pWin and top suggested partners. Manage the full team in the Hub.
@@ -867,7 +867,7 @@ function OpportunityTeamingSummary({
           <div className="text-xs font-medium text-muted-foreground mb-1.5">Top suggested partners</div>
           {topSuggestions.length === 0 ? (
             <div className="text-xs text-muted-foreground border border-dashed rounded-md p-3">
-              {teamId ? "No partner suggestions yet — open the Hub Team tab to add partners." : "Save the proposal to a team to enable suggestions."}
+              {teamId ? "No partner suggestions yet — open the Hub Team tab to add partners." : "Save the opportunity to a team to enable suggestions."}
             </div>
           ) : (
             <ul className="space-y-1.5">

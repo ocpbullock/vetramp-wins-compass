@@ -45,7 +45,7 @@ export function DataHealthPanel() {
           out.push({
             id: `prop:${p.id}`,
             category: "stale_proposal",
-            title: p.opportunity_title || p.solicitation_number || "Untitled proposal",
+            title: p.opportunity_title || p.solicitation_number || "Untitled opportunity",
             detail: "No attachments and no compliance matrix — likely abandoned.",
             actionLabel: "Archive",
             run: async () => {

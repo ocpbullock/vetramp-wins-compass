@@ -157,7 +157,7 @@ function OpportunitiesPage() {
       out.push({
         key: `p:${p.id}`,
         kind: "proposal",
-        title: p.opportunity_title ?? "(Untitled proposal)",
+        title: p.opportunity_title ?? "(Untitled opportunity)",
         agency: p.agency,
         naics: p.naics_code,
         setAside: p.set_aside,
@@ -277,7 +277,7 @@ function OpportunitiesPage() {
             Pursuit Pipeline
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Tracked opportunities and in-flight proposals, grouped by stage.{" "}
+            All opportunities — tracked and active — grouped by stage.{" "}
             {loading ? "Loading…" : `${total} item${total === 1 ? "" : "s"}.`}
           </p>
         </div>
@@ -312,7 +312,7 @@ function OpportunitiesPage() {
                             {row.title}
                           </button>
                           <Badge variant="secondary" className="text-[10px] uppercase tracking-wide">
-                            {row.kind === "proposal" ? "Proposal" : "Tracked"}
+                            {row.kind === "proposal" ? "Opportunity" : "Tracked"}
                           </Badge>
                           <Badge variant="outline" className="text-[10px] capitalize">
                             {row.statusLabel}

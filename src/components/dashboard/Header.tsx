@@ -118,7 +118,7 @@ export function Header() {
                   : "text-muted-foreground hover:text-foreground hover:bg-accent",
               ].join(" ")}
             >
-              Proposal
+              Opportunity
             </Link>
           )}
           {NAV.map((item) => {
@@ -281,7 +281,7 @@ export function Header() {
                 onClick={() => setMobileOpen(false)}
                 className="px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 text-muted-foreground hover:text-foreground hover:bg-accent"
               >
-                Proposal
+                Opportunity
               </Link>
             )}
             {NAV.map((item) => {

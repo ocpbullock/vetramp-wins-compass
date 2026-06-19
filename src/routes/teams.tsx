@@ -138,8 +138,8 @@ function TeamsPage() {
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold">Team Management</h1>
-            <p className="text-sm text-muted-foreground">View and manage organizations and opportunity teams you belong to.</p>
+            <h1 className="text-2xl font-semibold">Teams &amp; Capture Rooms</h1>
+            <p className="text-sm text-muted-foreground">View and manage organizations and Capture Rooms you belong to.</p>
           </div>
         </div>
         <Button onClick={() => setOpenCreate(true)}>
@@ -172,10 +172,10 @@ function TeamsPage() {
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-          <Briefcase className="w-4 h-4" /> Opportunity teams ({oppTeams.length})
+          <Briefcase className="w-4 h-4" /> Capture Rooms ({oppTeams.length})
         </h2>
         {oppTeams.length === 0 ? (
-          <Card className="p-6 text-sm text-muted-foreground">No opportunity teams yet.</Card>
+          <Card className="p-6 text-sm text-muted-foreground">No Capture Rooms yet.</Card>
         ) : (
           <div className="grid gap-3">
             {oppTeams.map((t) => (
@@ -249,11 +249,11 @@ function TeamCard({
             <div className="text-xs mt-1 truncate">
               {team.linked_proposal ? (
                 <span className="text-foreground/80">
-                  <span className="text-muted-foreground">Linked proposal: </span>
-                  <span className="font-medium">{team.linked_proposal.opportunity_title || team.linked_proposal.solicitation_number || "Untitled proposal"}</span>
+                  <span className="text-muted-foreground">Linked opportunity: </span>
+                  <span className="font-medium">{team.linked_proposal.opportunity_title || team.linked_proposal.solicitation_number || "Untitled opportunity"}</span>
                 </span>
               ) : (
-                <span className="text-muted-foreground italic">No proposal linked yet</span>
+                <span className="text-muted-foreground italic">No opportunity linked yet</span>
               )}
             </div>
           )}
@@ -306,7 +306,7 @@ function CreateTeamDialog({
       let parentTeamId: string | null = null;
       if (teamType === "opportunity") {
         if (!currentTeam || currentTeam.team_type !== "organization") {
-          throw new Error("Switch to an organization team before creating an opportunity team.");
+          throw new Error("Switch to an organization team before creating a Capture Room.");
         }
         parentTeamId = currentTeam.id;
       }
@@ -345,7 +345,7 @@ function CreateTeamDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create team</DialogTitle>
-          <DialogDescription>Start a new organization or opportunity team. You become the owner.</DialogDescription>
+          <DialogDescription>Start a new organization or Capture Room. You become the owner.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
@@ -361,13 +361,13 @@ function CreateTeamDialog({
               </Label>
               <Label className="flex items-center gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
                 <RadioGroupItem value="opportunity" />
-                <Briefcase className="w-4 h-4" /> Opportunity
+                <Briefcase className="w-4 h-4" /> Capture Room
               </Label>
             </RadioGroup>
           </div>
           {teamType === "opportunity" && (
             <div>
-              <Label>Link to existing proposal (optional)</Label>
+              <Label>Link to existing opportunity (optional)</Label>
               <Select value={linkedProposalId} onValueChange={setLinkedProposalId}>
                 <SelectTrigger><SelectValue placeholder="None" /></SelectTrigger>
                 <SelectContent>
@@ -378,7 +378,7 @@ function CreateTeamDialog({
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground mt-1">Only unlinked proposals from your current organization team are shown.</p>
+              <p className="text-xs text-muted-foreground mt-1">Only unlinked opportunities from your current organization team are shown.</p>
             </div>
           )}
         </div>
@@ -755,9 +755,9 @@ function ManageTeamDialog({
           {/* Linked proposals (opportunity teams) */}
           {isOpp && (
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Linked proposal</Label>
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Linked opportunity</Label>
               {(proposalsQ.data?.proposals ?? []).length === 0 ? (
-                <p className="text-xs text-muted-foreground">No linked proposals yet.</p>
+                <p className="text-xs text-muted-foreground">No linked opportunities yet.</p>
               ) : (
                 <div className="space-y-1">
                   {(proposalsQ.data?.proposals ?? []).map((p: any) => (
