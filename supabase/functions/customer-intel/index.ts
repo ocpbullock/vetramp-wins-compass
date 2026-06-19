@@ -4,6 +4,7 @@ import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, se
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 import { normalizeUserContext, appliedFacts, renderUserContextPrompt } from "../_shared/user-context.ts";
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
+import { loadOpportunityIntelBlock, PROPRIETARY_INTEL_SYSTEM_INSTRUCTION } from "../_shared/opportunity-intel.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -77,6 +78,10 @@ serve(async (req) => {
     } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
     const userId = ctx.user.id;
 
+    // Load proprietary human intelligence for this opportunity (RLS-scoped).
+    const { block: proprietaryIntelBlock, count: proprietaryIntelCount } =
+      await loadOpportunityIntelBlock(ctx.userClient, proposalId ?? null);
+
     // Cache key over the inputs that materially affect the result
     const cacheKey = await hashCacheKey({
       opportunity,
@@ -86,6 +91,7 @@ serve(async (req) => {
       primeContractorName: primeContractorName ?? "",
       targetedScopeAreas: targetedScopeAreas ?? "",
       userContext: userContext ?? {},
+      proprietaryIntelHash: proprietaryIntelBlock ? await hashCacheKey(proprietaryIntelBlock) : "",
     });
     if (!skipCache) {
       const cached = await getCachedResponse("customer-intel", cacheKey, verifiedTeamId);
@@ -98,7 +104,7 @@ serve(async (req) => {
       }
     }
 
-    const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + (engagement === "sub"
+    const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + PROPRIETARY_INTEL_SYSTEM_INSTRUCTION + "\n\n" + (engagement === "sub"
       ? `You are a senior federal capture manager doing pre-RFP intelligence for a SUBCONTRACTOR pursuit. The offeror is teaming UNDER a prime contractor. Profile BOTH (a) the END CUSTOMER (buying agency / end-user unit) and (b) the PRIME CONTRACTOR the offeror is teaming with: what the prime has won before in this domain, their small-business subcontracting history and posture, what scope they typically self-perform vs. sub out, and what they look for in subs. Use your knowledge of US federal agencies, FPDS, USA Spending, SAM.gov, agency strategic plans, recent press, and SubAward data. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`
       : `You are a senior federal capture manager doing pre-RFP customer intelligence. Use your knowledge of US federal agencies, DoD components, USA Spending, FPDS, SAM.gov, agency strategic plans, and recent press to build a deep profile of the buying customer. Be specific. Cite URLs when you can. If data is unknown, say so explicitly rather than fabricating.`);
 
@@ -115,9 +121,9 @@ ${JSON.stringify(opportunity, null, 2)}
 
 OUR COMPANY PROFILE (for win-theme alignment):
 ${JSON.stringify(companyProfile, null, 2)}
-${subContext}${userContextBlock}
+${subContext}${userContextBlock}${proprietaryIntelBlock}
 ${attachmentsBlock ? `\nREFERENCE DOCUMENTS PROVIDED BY USER (incumbent past performance, agency plans, prior SOWs, org charts, etc.):\n${attachmentsBlock}\n` : ""}
-Research this customer${engagement === "sub" ? " AND the named prime contractor" : ""} and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.${userContext?.knownIncumbent ? `\n\nNote: the offeror has confirmed the incumbent as "${userContext.knownIncumbent}". Use this as the predecessor_contract.incumbent value and do not propose a different incumbent.` : ""}`;
+Research this customer${engagement === "sub" ? " AND the named prime contractor" : ""} and return structured intel. Focus on: who actually uses the result, what they're trying to accomplish, what their recent contracting pattern looks like, who the incumbent is (if any), and what evaluation criteria will likely matter most.${proprietaryIntelCount > 0 ? `\n\nThere are ${proprietaryIntelCount} proprietary intel item(s) above — prefer them over public assumptions when they conflict, and cite the intel id (e.g. "(per proprietary-intel:abcd1234)") when an evaluation_signal, win_theme, or risk is materially shaped by one.` : ""}${userContext?.knownIncumbent ? `\n\nNote: the offeror has confirmed the incumbent as "${userContext.knownIncumbent}". Use this as the predecessor_contract.incumbent value and do not propose a different incumbent.` : ""}`;
 
 
     let data: any;
