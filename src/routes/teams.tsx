@@ -172,10 +172,10 @@ function TeamsPage() {
 
       <section className="space-y-3">
         <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-2">
-          <Briefcase className="w-4 h-4" /> Opportunity teams ({oppTeams.length})
+          <Briefcase className="w-4 h-4" /> Capture Rooms ({oppTeams.length})
         </h2>
         {oppTeams.length === 0 ? (
-          <Card className="p-6 text-sm text-muted-foreground">No opportunity teams yet.</Card>
+          <Card className="p-6 text-sm text-muted-foreground">No Capture Rooms yet.</Card>
         ) : (
           <div className="grid gap-3">
             {oppTeams.map((t) => (
