@@ -78,6 +78,10 @@ serve(async (req) => {
     } catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
     const userId = ctx.user.id;
 
+    // Load proprietary human intelligence for this opportunity (RLS-scoped).
+    const { block: proprietaryIntelBlock, count: proprietaryIntelCount } =
+      await loadOpportunityIntelBlock(ctx.userClient, proposalId ?? null);
+
     // Cache key over the inputs that materially affect the result
     const cacheKey = await hashCacheKey({
       opportunity,
@@ -87,6 +91,7 @@ serve(async (req) => {
       primeContractorName: primeContractorName ?? "",
       targetedScopeAreas: targetedScopeAreas ?? "",
       userContext: userContext ?? {},
+      proprietaryIntelHash: proprietaryIntelBlock ? await hashCacheKey(proprietaryIntelBlock) : "",
     });
     if (!skipCache) {
       const cached = await getCachedResponse("customer-intel", cacheKey, verifiedTeamId);
