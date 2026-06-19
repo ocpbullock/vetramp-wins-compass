@@ -759,10 +759,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="market_intel" className="mt-4">
-            <PlaceholderHubPanel
-              title="Market Intel"
-              description="Agency forecasts, predecessor-contract digs, and competitive landscape research will live here. Coming next."
-            />
+            <MarketIntelPanel proposal={proposal} proposalId={proposalId} />
           </TabsContent>
 
           <TabsContent value="human_intel" className="mt-4">
