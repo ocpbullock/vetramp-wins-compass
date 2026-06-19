@@ -68,3 +68,14 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+
+function AppShell() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const hideHeader = pathname.startsWith("/auth") || pathname.startsWith("/accept-invite");
+  return (
+    <>
+      {!hideHeader && <Header />}
+      <Outlet />
+    </>
+  );
+}
