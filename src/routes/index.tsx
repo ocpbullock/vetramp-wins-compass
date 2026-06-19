@@ -96,9 +96,6 @@ function CaptureWorkspace() {
     useOpportunityContext();
 
   const [sandboxOpen, setSandboxOpen] = useState(false);
-  const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
-  const [outreachOpen, setOutreachOpen] = useState(false);
-  const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
 
   // Selectable proposals — RLS limits this to ones the user can see.
   const { data: proposalOptions = [] } = useQuery({
