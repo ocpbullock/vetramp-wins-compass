@@ -653,6 +653,7 @@ function RosterPanel({ teamId }: { teamId: string | null }) {
           </div>
         </div>
 
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
