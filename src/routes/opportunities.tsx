@@ -307,7 +307,7 @@ function OpportunitiesPage() {
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
                             className="text-sm font-medium truncate text-left hover:underline"
-                            onClick={() => openInWorkspace(row)}
+                            onClick={() => openHub(row)}
                           >
                             {row.title}
                           </button>
