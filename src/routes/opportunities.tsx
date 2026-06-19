@@ -311,11 +311,11 @@ function OpportunitiesPage() {
         })}
       </div>
 
-      <TrackOpportunityDialog
+      <AddOpportunityDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         agencySuggestions={(trackedQ.data ?? []).map((t) => t.agency).filter(Boolean) as string[]}
-        onSaved={handleSaved}
+        onCreated={handleCreated}
       />
     </div>
   );
