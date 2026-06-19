@@ -29,17 +29,20 @@ import { NAICS_GROUPS } from "@/lib/contracts";
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
 import { PartnerResearch } from "@/components/proposals/PartnerResearch";
-import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
-import {
-  TeamingOutreachModal,
-  type OutreachPartnerInput,
-} from "@/components/proposals/TeamingOutreachModal";
 import {
   TeamingSandbox,
   type SandboxOpportunityContext,
 } from "@/components/proposals/TeamingSandbox";
-import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
 import { CONTRACT_VEHICLES } from "@/components/dashboard/TrackOpportunityDialog";
+import { PwinChip } from "@/components/dashboard/PwinChip";
+import type { OppForPwin } from "@/lib/pwin-solo";
+import {
+  rankPartnerSuggestions,
+  type PartnerSuggestion,
+  type SuggestContext,
+  type SuggestPartner,
+  type SuggestSelf,
+} from "@/lib/partner-suggest";
 
 export const Route = createFileRoute("/")({ component: CaptureWorkspace });
 
