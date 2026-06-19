@@ -23,6 +23,8 @@ import {
   type PwinRole,
 } from "@/lib/pwin";
 import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies";
+import { addActivityFromAnalysis } from "./ActivitiesPanel";
+import { Plus } from "lucide-react";
 
 type CaptureAnalysis = {
   bid_no_bid: {
@@ -218,8 +220,25 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
               {analysis.next_actions.map((a, i) => (
                 <li key={i} className="border rounded-md p-2">
                   <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm font-medium">{a.action}</div>
+                    <div className="text-sm font-medium flex-1">{a.action}</div>
                     <Badge variant={PRIORITY_VARIANT[a.priority]} className="capitalize shrink-0">{a.priority}</Badge>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs shrink-0"
+                      onClick={async () => {
+                        const res = await addActivityFromAnalysis({
+                          proposalId,
+                          teamId: proposal?.team_id ?? null,
+                          title: a.action,
+                          detail: a.why,
+                        });
+                        if (res.ok) toast.success("Added to activities");
+                        else toast.error(res.error ?? "Failed to add activity");
+                      }}
+                    >
+                      <Plus className="w-3 h-3 mr-1" /> Add to activities
+                    </Button>
                   </div>
                   <div className="text-xs text-muted-foreground mt-1">{a.why}</div>
                 </li>

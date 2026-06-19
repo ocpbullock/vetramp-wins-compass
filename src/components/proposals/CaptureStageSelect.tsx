@@ -8,6 +8,7 @@ import {
   isCaptureStage,
   type CaptureStage,
 } from "@/lib/capture-stage";
+import { OutcomeDialog, isTerminalOutcome } from "./OutcomeDialog";
 
 type Props = {
   proposalId: string;
@@ -21,10 +22,10 @@ export function CaptureStageSelect({ proposalId, value, onChanged, className, si
   const current: CaptureStage = isCaptureStage(value) ? value : "researching";
   const [busy, setBusy] = useState(false);
   const [stage, setStage] = useState<CaptureStage>(current);
+  const [outcomeOpen, setOutcomeOpen] = useState<null | "won" | "lost" | "no_bid">(null);
 
   // Keep in sync if parent changes value
   if (current !== stage && !busy) {
-    // best-effort sync without effect
     queueMicrotask(() => setStage(current));
   }
 
@@ -44,24 +45,37 @@ export function CaptureStageSelect({ proposalId, value, onChanged, className, si
       return;
     }
     onChanged?.(next);
+    if (isTerminalOutcome(next) && !isTerminalOutcome(prev)) {
+      setOutcomeOpen(next);
+    }
   }
 
   return (
-    <Select value={stage} onValueChange={handle} disabled={busy}>
-      <SelectTrigger
-        className={
-          (size === "sm" ? "h-7 text-xs px-2 " : "") + (className ?? "")
-        }
-      >
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {CAPTURE_STAGES.map((s) => (
-          <SelectItem key={s} value={s} className="text-xs">
-            {CAPTURE_STAGE_LABEL[s]}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <>
+      <Select value={stage} onValueChange={handle} disabled={busy}>
+        <SelectTrigger
+          className={
+            (size === "sm" ? "h-7 text-xs px-2 " : "") + (className ?? "")
+          }
+        >
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {CAPTURE_STAGES.map((s) => (
+            <SelectItem key={s} value={s} className="text-xs">
+              {CAPTURE_STAGE_LABEL[s]}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {outcomeOpen && (
+        <OutcomeDialog
+          open={!!outcomeOpen}
+          onOpenChange={(v) => { if (!v) setOutcomeOpen(null); }}
+          proposalId={proposalId}
+          outcome={outcomeOpen}
+        />
+      )}
+    </>
   );
 }

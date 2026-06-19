@@ -46,6 +46,7 @@ import { TeamingOutreachModal, type OutreachPartnerInput } from "@/components/pr
 import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
 import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
 import { MarketIntelPanel } from "@/components/proposals/MarketIntelPanel";
+import { ActivitiesPanel } from "@/components/proposals/ActivitiesPanel";
 import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
@@ -820,10 +821,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="activities" className="mt-4">
-            <PlaceholderHubPanel
-              title="Activities"
-              description="Timeline of meetings, emails, document changes, and team actions for this opportunity. Coming next."
-            />
+            <ActivitiesPanel proposalId={proposalId} teamId={proposal.team_id ?? null} />
           </TabsContent>
         </Tabs>
       </div>
