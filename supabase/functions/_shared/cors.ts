@@ -12,6 +12,8 @@
 const DEFAULT_ALLOWED_ORIGINS = [
   "https://vetramp-wins-compass.lovable.app",
   "https://id-preview--bafe3a4b-f889-4ccf-8587-5e092cb4ed6c.lovable.app",
+  "https://bafe3a4b-f889-4ccf-8587-5e092cb4ed6c.lovableproject.com",
+  "http://localhost:8080",
   "http://localhost:5173",
   "http://localhost:3000",
 ];
