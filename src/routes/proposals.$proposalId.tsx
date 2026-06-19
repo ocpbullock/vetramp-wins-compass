@@ -733,15 +733,17 @@ function ProposalPipeline() {
         <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
 
         <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)}>
-          <TabsList className="flex-wrap h-auto">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="market_intel">Market Intel</TabsTrigger>
-            <TabsTrigger value="human_intel">Human Intel</TabsTrigger>
-            <TabsTrigger value="capture_analysis">Capture Analysis</TabsTrigger>
-            <TabsTrigger value="team">Team</TabsTrigger>
-            <TabsTrigger value="proposal">Proposal</TabsTrigger>
-            <TabsTrigger value="activities">Activities</TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-1 px-1">
+            <TabsList className="w-max">
+              <TabsTrigger value="overview">Overview</TabsTrigger>
+              <TabsTrigger value="market_intel">Market Intel</TabsTrigger>
+              <TabsTrigger value="human_intel">Human Intel</TabsTrigger>
+              <TabsTrigger value="capture_analysis">Capture Analysis</TabsTrigger>
+              <TabsTrigger value="team">Team</TabsTrigger>
+              <TabsTrigger value="proposal">Proposal</TabsTrigger>
+              <TabsTrigger value="activities">Activities</TabsTrigger>
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="mt-4 space-y-4">
             <OpportunitySummaryCard proposal={proposal} />
