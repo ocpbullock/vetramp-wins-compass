@@ -15,7 +15,6 @@ import {
 import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Users, Target, Search, Handshake, LayoutDashboard } from "lucide-react";
 import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
-import { QuotaMeter } from "./QuotaMeter";
 
 type NavItem = {
   label: string;
@@ -27,11 +26,11 @@ type NavItem = {
 };
 
 const ORG_NAV: NavItem[] = [
-  { label: "Capture Workspace", to: "/", icon: LayoutDashboard, description: "Dashboard and quick actions" },
+  { label: "Workspace", to: "/", icon: LayoutDashboard, description: "Dashboard and quick actions" },
   { label: "Opportunities", to: "/opportunities", icon: Target, description: "Your tracked pipeline and proposals" },
   { label: "Discover", to: "/discover", icon: Search, description: "Search and browse SAM.gov solicitations" },
   { label: "Partners", to: "/partners", icon: Handshake, description: "Teaming partners and competitors" },
-  { label: "Capture Intel", to: "/settings", icon: BookOpen, description: "Company profile and knowledge base" },
+  { label: "Intel", to: "/settings", icon: BookOpen, description: "Company profile and knowledge base" },
 ];
 
 export function Header() {
@@ -72,7 +71,7 @@ export function Header() {
 
   const NAV: NavItem[] = isOpp
     ? [
-        { label: "Capture Intel", to: "/settings", icon: BookOpen },
+        { label: "Intel", to: "/settings", icon: BookOpen },
       ]
     : ORG_NAV;
 
@@ -91,24 +90,24 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-30 bg-card border-b border-border">
-      <div className="max-w-[1400px] mx-auto px-6 min-h-20 py-2 flex items-center gap-5">
+      <div className="max-w-[1400px] mx-auto px-4 min-h-16 py-2 flex items-center gap-3">
         <Link to="/" className="flex items-center shrink-0" aria-label="VetRamp Pursuit home">
           <img
             src={logoUrl}
             alt="VetRamp Pursuit"
-            className="h-12 sm:h-14 md:h-16 lg:h-18 w-auto max-w-full object-contain"
+            className="h-10 sm:h-12 md:h-14 w-auto max-w-full object-contain"
             width={1679}
             height={322}
           />
         </Link>
 
-        <nav className="hidden md:flex items-center gap-2 ml-0 xl:ml-4">
+        <nav className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-hide">
           {isOpp && oppProposalId && (
             <Link
               to="/proposals/$proposalId"
               params={{ proposalId: oppProposalId }}
               className={[
-                "relative px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5",
+                "relative px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shrink-0",
                 location.pathname.startsWith("/proposals/")
                   ? "text-primary"
                   : "text-muted-foreground hover:text-foreground hover:bg-accent",
@@ -127,7 +126,7 @@ export function Header() {
                 hash={item.hash}
                 title={item.description}
                 className={[
-                  "relative px-4 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5",
+                  "relative px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shrink-0",
                   active
                     ? "text-primary"
                     : "text-muted-foreground hover:text-foreground hover:bg-accent",
@@ -136,7 +135,7 @@ export function Header() {
                 {Icon && <Icon className="w-4 h-4" />}
                 {item.label}
                 {active && (
-                  <span className="absolute -bottom-3 left-3 right-3 h-[2px] bg-primary rounded-full" />
+                  <span className="absolute -bottom-2 left-2 right-2 h-[2px] bg-primary rounded-full" />
                 )}
               </Link>
             );
@@ -144,8 +143,6 @@ export function Header() {
         </nav>
 
         <div className="flex-1" />
-
-        <QuotaMeter />
 
         {/* Team switcher */}
         {availableTeams.length > 0 && (
