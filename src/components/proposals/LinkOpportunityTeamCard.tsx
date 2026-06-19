@@ -117,8 +117,8 @@ export function LinkOpportunityTeamCard({
                     teamsQ.isLoading
                       ? "Loading…"
                       : linkable.length === 0
-                        ? "No available opportunity teams"
-                        : "Choose an opportunity team"
+                        ? "No available Capture Rooms"
+                        : "Choose a Capture Room"
                   }
                 />
               </SelectTrigger>
