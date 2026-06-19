@@ -345,7 +345,7 @@ function CreateTeamDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Create team</DialogTitle>
-          <DialogDescription>Start a new organization or opportunity team. You become the owner.</DialogDescription>
+          <DialogDescription>Start a new organization or Capture Room. You become the owner.</DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-2">
           <div>
