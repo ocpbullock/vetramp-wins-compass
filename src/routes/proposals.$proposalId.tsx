@@ -52,7 +52,15 @@ import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPane
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
-export const Route = createFileRoute("/proposals/$proposalId")({ component: ProposalPipeline });
+const HUB_TABS = ["overview", "market_intel", "human_intel", "capture_analysis", "team", "proposal", "activities"] as const;
+type HubTab = typeof HUB_TABS[number];
+export const Route = createFileRoute("/proposals/$proposalId")({
+  component: ProposalPipeline,
+  validateSearch: (s: Record<string, unknown>) => {
+    const tab = typeof s.tab === "string" && (HUB_TABS as readonly string[]).includes(s.tab) ? (s.tab as HubTab) : undefined;
+    return { tab };
+  },
+});
 
 const PRIME_SECTIONS: { id: string; title: string }[] = [
   { id: "cover_letter", title: "Cover Letter" },
