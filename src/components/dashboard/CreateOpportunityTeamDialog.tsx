@@ -157,7 +157,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
           </div>
 
           <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Proposal</Label>
+            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Opportunity record</Label>
             <RadioGroup
               value={mode}
               onValueChange={(v) => setMode(v as Mode)}
@@ -166,14 +166,14 @@ export function CreateOpportunityTeamDialog(props: Props) {
               <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
                 <RadioGroupItem value="new" className="mt-0.5" />
                 <div className="text-sm">
-                  <div className="font-medium">Start a new proposal</div>
-                  <div className="text-xs text-muted-foreground">Creates a fresh proposal stub from this opportunity.</div>
+                  <div className="font-medium">Start a new opportunity</div>
+                  <div className="text-xs text-muted-foreground">Creates a fresh opportunity stub from this listing.</div>
                 </div>
               </Label>
               <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
                 <RadioGroupItem value="existing" className="mt-0.5" />
                 <div className="text-sm flex-1">
-                  <div className="font-medium">Link an existing proposal</div>
+                  <div className="font-medium">Link an existing opportunity</div>
                   <div className="text-xs text-muted-foreground">Choose one of your organization's opportunities that isn't already linked to a Capture Room.</div>
                 </div>
               </Label>
