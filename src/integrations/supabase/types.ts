@@ -431,6 +431,53 @@ export type Database = {
         }
         Relationships: []
       }
+      opportunity_activities: {
+        Row: {
+          created_at: string
+          created_from_analysis: boolean | null
+          detail: string | null
+          due_date: string | null
+          id: string
+          owner_user_id: string | null
+          proposal_id: string
+          status: string
+          team_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          created_from_analysis?: boolean | null
+          detail?: string | null
+          due_date?: string | null
+          id?: string
+          owner_user_id?: string | null
+          proposal_id: string
+          status?: string
+          team_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          created_from_analysis?: boolean | null
+          detail?: string | null
+          due_date?: string | null
+          id?: string
+          owner_user_id?: string | null
+          proposal_id?: string
+          status?: string
+          team_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_activities_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       opportunity_intel: {
         Row: {
           body: string | null
@@ -904,6 +951,7 @@ export type Database = {
           id: string
           incumbent_notes: string | null
           known_incumbent: string | null
+          lessons_learned: string | null
           management_approach: Json | null
           market_snapshot: Json | null
           market_snapshot_at: string | null
@@ -916,6 +964,9 @@ export type Database = {
           opportunity_team_id: string | null
           opportunity_title: string | null
           opportunity_type: string | null
+          outcome: string | null
+          outcome_reasons: string | null
+          outcome_recorded_at: string | null
           parsing_status: string
           pop_base_months: number | null
           pop_option_months: number | null
@@ -960,6 +1011,7 @@ export type Database = {
           id?: string
           incumbent_notes?: string | null
           known_incumbent?: string | null
+          lessons_learned?: string | null
           management_approach?: Json | null
           market_snapshot?: Json | null
           market_snapshot_at?: string | null
@@ -972,6 +1024,9 @@ export type Database = {
           opportunity_team_id?: string | null
           opportunity_title?: string | null
           opportunity_type?: string | null
+          outcome?: string | null
+          outcome_reasons?: string | null
+          outcome_recorded_at?: string | null
           parsing_status?: string
           pop_base_months?: number | null
           pop_option_months?: number | null
@@ -1016,6 +1071,7 @@ export type Database = {
           id?: string
           incumbent_notes?: string | null
           known_incumbent?: string | null
+          lessons_learned?: string | null
           management_approach?: Json | null
           market_snapshot?: Json | null
           market_snapshot_at?: string | null
@@ -1028,6 +1084,9 @@ export type Database = {
           opportunity_team_id?: string | null
           opportunity_title?: string | null
           opportunity_type?: string | null
+          outcome?: string | null
+          outcome_reasons?: string | null
+          outcome_recorded_at?: string | null
           parsing_status?: string
           pop_base_months?: number | null
           pop_option_months?: number | null
