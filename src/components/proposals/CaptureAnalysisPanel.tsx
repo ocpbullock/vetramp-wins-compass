@@ -31,6 +31,7 @@ import { addActivityFromAnalysis } from "./ActivitiesPanel";
 import { Plus } from "lucide-react";
 import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
+import { PositioningMatrixCard } from "./PositioningMatrixCard";
 
 type CaptureAnalysis = {
   bid_no_bid: {
@@ -221,6 +222,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
         intelItems,
         teamingSummary,
         darkHorses: (proposal?.market_snapshot as any)?.darkHorses ?? null,
+        positioningMatrix: (proposal as any)?.positioning_matrix ?? null,
       }, { variant });
       toast.success(variant === "internal" ? "Internal capture report downloaded" : "Partner-facing brief downloaded");
     } catch (e: any) {
@@ -339,6 +341,11 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           <p className="text-sm whitespace-pre-wrap">{analysis.competitor_assessment || "—"}</p>
         </CardContent>
       </Card>
+
+      {/* Competitive Positioning Matrix */}
+      <PositioningMatrixCard proposal={proposal} proposalId={proposalId} />
+
+
 
       {/* Teaming Recommendation (computed locally) */}
       <TeamingRecommendationCard proposal={proposal} proposalId={proposalId} />

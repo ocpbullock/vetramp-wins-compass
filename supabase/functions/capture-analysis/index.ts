@@ -47,7 +47,7 @@ serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { proposalId, skipCache, userContext: userContextRaw } = await req.json();
+    const { proposalId, skipCache, userContext: userContextRaw, mode } = await req.json();
     if (!proposalId) {
       return new Response(JSON.stringify({ error: "proposalId required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -99,6 +99,137 @@ serve(async (req) => {
     const userContextBlock = renderUserContextPrompt(userContext);
 
     const marketSnapshot = (proposal as any).market_snapshot ?? null;
+
+    // -----------------------------------------------------------------
+    // Positioning-matrix prefill mode. Returns { matrix } and short-circuits.
+    // -----------------------------------------------------------------
+    if (mode === "positioning_matrix") {
+      const existing = (proposal as any).positioning_matrix ?? null;
+      const dimensions: string[] = Array.isArray(existing?.dimensions) && existing.dimensions.length
+        ? existing.dimensions.slice(0, 6).map((d: any) => String(d))
+        : ["Technical Capability", "Workforce & Staffing", "Relevant Past Performance", "Operational Scale"];
+
+      // Load our company profile via the team, if available.
+      let ourCompany: string | null = null;
+      try {
+        if (verifiedTeamId) {
+          const { data: profile } = await ctx.userClient
+            .from("company_profile")
+            .select("company_name")
+            .eq("team_id", verifiedTeamId)
+            .maybeSingle();
+          ourCompany = (profile as any)?.company_name ?? null;
+        }
+      } catch { /* ignore */ }
+
+      // Assemble the candidate seed list from snapshot.
+      const seedCompanies = new Set<string>();
+      const inc = marketSnapshot?.incumbent?.topRecipient;
+      if (inc) seedCompanies.add(String(inc));
+      const comps = Array.isArray(marketSnapshot?.competitors) ? marketSnapshot.competitors : [];
+      for (const c of comps.slice(0, 8)) if (c?.name) seedCompanies.add(String(c.name));
+
+      // Exclude current teaming partners.
+      try {
+        const { data: teamingRows } = await ctx.userClient
+          .from("proposal_teaming")
+          .select("partner_name")
+          .eq("proposal_id", proposalId);
+        for (const t of (teamingRows ?? []) as any[]) {
+          if (t?.partner_name) seedCompanies.delete(String(t.partner_name));
+        }
+      } catch { /* ignore */ }
+
+      const candidateList = [...seedCompanies].slice(0, 10);
+      const captureAnalysis = (proposal as any).capture_analysis ?? null;
+
+      const matrixSchema = {
+        type: "object",
+        properties: {
+          dimensions: { type: "array", items: { type: "string" } },
+          rows: {
+            type: "array",
+            items: {
+              type: "object",
+              properties: {
+                company: { type: "string" },
+                isUs: { type: "boolean" },
+                threat: { type: "string", enum: ["very_high", "high", "medium", "low"] },
+                ratings: {
+                  type: "object",
+                  additionalProperties: { type: "string", enum: ["strong", "moderate", "weak", "unknown"] },
+                },
+                coverage: { type: "string" },
+              },
+              required: ["company", "isUs", "threat", "ratings", "coverage"],
+            },
+          },
+        },
+        required: ["dimensions", "rows"],
+      };
+
+      const sys = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + PROPRIETARY_INTEL_SYSTEM_INSTRUCTION + "\n\n" +
+        `You are a federal capture manager producing a Competitive Positioning Matrix (briefing-grade stoplight grid). For each company, output threat level and per-dimension ratings ("strong" | "moderate" | "weak" | "unknown"). Use "unknown" honestly rather than guessing. Add a one-sentence "coverage" note per row summarizing overall positioning. Include exactly one row with isUs=true representing the offeror's own team when a company name is known. Do NOT include current teaming partners — they are excluded upstream. Use the provided dimensions verbatim.`;
+
+      const usr = `DIMENSIONS (use verbatim): ${JSON.stringify(dimensions)}
+OUR TEAM: ${ourCompany ? JSON.stringify(ourCompany) : "(unknown — omit the isUs row)"}
+CANDIDATE COMPANIES (competitors + incumbent): ${JSON.stringify(candidateList)}
+
+${wrapUntrusted("opportunity", JSON.stringify({
+  title: proposal.opportunity_title,
+  agency: proposal.agency,
+  naics_code: proposal.naics_code,
+  set_aside: proposal.set_aside,
+  solicitation_number: proposal.solicitation_number,
+}, null, 2))}
+
+${marketSnapshot ? `MARKET SNAPSHOT:\n${wrapUntrusted("market-snapshot", JSON.stringify(marketSnapshot).slice(0, 40000))}\n` : ""}
+${captureAnalysis ? `CAPTURE ANALYSIS:\n${wrapUntrusted("capture-analysis", JSON.stringify(captureAnalysis).slice(0, 20000))}\n` : ""}
+${proprietaryIntelBlock}
+
+Return the matrix. Include ${ourCompany ? "one row for our team plus " : ""}up to ${candidateList.length} rows for the candidate companies above (skip any you have no signal on).`;
+
+      let data: any;
+      try {
+        data = await callAI({
+          functionName: "capture-analysis",
+          teamId: verifiedTeamId,
+          userId,
+          proposalId,
+          timeoutMs: 60_000,
+          body: {
+            model: pickModel("capture-analysis"),
+            messages: [{ role: "system", content: sys }, { role: "user", content: usr }],
+            tools: [{ type: "function", function: { name: "return_positioning_matrix", description: "Return positioning matrix.", parameters: matrixSchema } }],
+            tool_choice: { type: "function", function: { name: "return_positioning_matrix" } },
+          },
+        });
+      } catch (e) {
+        return aiErrorResponse(e, corsHeaders);
+      }
+
+      const args = data.choices?.[0]?.message?.tool_calls?.[0]?.function?.arguments;
+      const parsed = args ? JSON.parse(args) : null;
+      if (!parsed) throw new Error("No matrix returned");
+
+      const matrix = {
+        updatedAt: new Date().toISOString(),
+        dimensions: Array.isArray(parsed.dimensions) && parsed.dimensions.length ? parsed.dimensions.slice(0, 6) : dimensions,
+        rows: Array.isArray(parsed.rows) ? parsed.rows : [],
+      };
+
+      try {
+        await ctx.userClient
+          .from("proposals")
+          .update({ positioning_matrix: matrix as any })
+          .eq("id", proposalId);
+      } catch (e) { console.error("positioning_matrix persist failed:", e); }
+
+      return new Response(JSON.stringify({ matrix }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
 
     const cacheKey = await hashCacheKey({
       proposalId,
