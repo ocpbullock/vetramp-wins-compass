@@ -695,13 +695,18 @@ function TeamingRecommendationCard({
         </Link>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-baseline gap-3">
-          <div className={`text-3xl font-bold num ${pwinTextColor}`}>{pwinResult.pwin}</div>
-          <div className="text-sm text-muted-foreground">current PWIN</div>
-          {pwinResult.overAllocated && (
-            <Badge variant="destructive" className="ml-auto">Over-allocated</Badge>
-          )}
+        <div className="flex items-center gap-4">
+          <PwinDial value={pwinResult.pwin} size="sm" label="Current PWIN" />
+          <div className="text-xs text-muted-foreground">
+            {pwinResult.overAllocated ? (
+              <Badge variant="destructive">Over-allocated</Badge>
+            ) : (
+              <>Roster of {pwinResult.factors.length} factor(s) scored.</>
+            )}
+          </div>
         </div>
+
+
 
         <div>
           <div className="briefing-label flex items-center gap-1 mb-1">
