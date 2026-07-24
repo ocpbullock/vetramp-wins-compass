@@ -246,7 +246,7 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           {(["strong","moderate","weak","unknown"] as MatrixRating[]).map((r) => (
             <span key={r} className="inline-flex items-center gap-1.5">
-              <span className={`inline-block w-3 h-3 rounded-full ${RATING_COLOR[r]}`} /> {RATING_LABEL[r]}
+              <StoplightDot rating={r} size="md" /> {RATING_LABEL[r]}
             </span>
           ))}
           <span className="ml-auto">{matrix.rows.length} row(s) · {matrix.dimensions.length}/6 dimensions</span>
