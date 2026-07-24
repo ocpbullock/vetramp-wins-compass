@@ -9,8 +9,8 @@ const LABEL: Record<Level, string> = {
 
 function Icon({ level }: { level: Level }) {
   if (level === "strong") return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
-  if (level === "moderate") return <AlertTriangle className="w-4 h-4 text-amber-500" />;
-  return <XCircle className="w-4 h-4 text-red-500" />;
+  if (level === "moderate") return <AlertTriangle className="w-4 h-4 text-warning" />;
+  return <XCircle className="w-4 h-4 text-destructive" />;
 }
 
 function fmtUsd(n: number) {
@@ -129,10 +129,10 @@ export function BidScorecard({
   const avg = rows.reduce((s, x) => s + VAL[x.r.lvl], 0) / rows.length;
   const overall: Level = avg >= 1.4 ? "strong" : avg >= 0.85 ? "moderate" : "weak";
   const overallColor = overall === "strong"
-    ? "border-emerald-500/40 bg-emerald-500/5"
+    ? "border-emerald-500/40 bg-success/5"
     : overall === "moderate"
-    ? "border-amber-500/40 bg-amber-500/5"
-    : "border-red-500/40 bg-red-500/5";
+    ? "border-amber-500/40 bg-warning/5"
+    : "border-red-500/40 bg-destructive/5";
 
   return (
     <div className={`border rounded-lg overflow-hidden ${overallColor}`}>

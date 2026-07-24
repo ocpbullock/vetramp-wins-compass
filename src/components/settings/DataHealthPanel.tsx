@@ -138,9 +138,9 @@ export function DataHealthPanel() {
 
   const categoryIcon = (c: Finding["category"]) => {
     if (c === "stale_proposal") return <Archive className="w-4 h-4 text-muted-foreground" />;
-    if (c === "watching_past_deadline") return <Calendar className="w-4 h-4 text-amber-500" />;
-    if (c === "expired_pp") return <FileWarning className="w-4 h-4 text-amber-500" />;
-    return <AlertTriangle className="w-4 h-4 text-amber-500" />;
+    if (c === "watching_past_deadline") return <Calendar className="w-4 h-4 text-warning" />;
+    if (c === "expired_pp") return <FileWarning className="w-4 h-4 text-warning" />;
+    return <AlertTriangle className="w-4 h-4 text-warning" />;
   };
 
   return (
@@ -160,7 +160,7 @@ export function DataHealthPanel() {
           <div className="text-sm text-muted-foreground">Running checks…</div>
         ) : findings.length === 0 ? (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <CheckCircle2 className="w-4 h-4 text-green-500" />
+            <CheckCircle2 className="w-4 h-4 text-success" />
             All checks passed — no data health issues found.
           </div>
         ) : (

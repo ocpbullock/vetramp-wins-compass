@@ -545,7 +545,7 @@ function PartnerCard({ member, onChange }: {
 
 function PwinPanel({ result }: { result: PwinResult }) {
   const c = colorFor(result.pwin);
-  const headColor = c === "green" ? "text-green-600" : c === "amber" ? "text-amber-600" : "text-destructive";
+  const headColor = c === "green" ? "text-success" : c === "amber" ? "text-warning" : "text-destructive";
   return (
     <div>
       <div className="text-center py-4 border rounded-md">
@@ -562,7 +562,7 @@ function PwinPanel({ result }: { result: PwinResult }) {
       <div className="mt-4 space-y-2">
         {result.factors.map((f) => {
           const col = colorFor(f.score);
-          const bar = col === "green" ? "bg-green-500" : col === "amber" ? "bg-amber-500" : "bg-destructive";
+          const bar = col === "green" ? "bg-success" : col === "amber" ? "bg-warning" : "bg-destructive";
           return (
             <div key={f.key} className="border rounded-md p-2.5">
               <div className="flex items-center justify-between text-xs">
@@ -594,7 +594,7 @@ function CompareView({ scenarios, onDelete, currentScore }: {
       <div className={`grid gap-3 ${scenarios.length === 1 ? "grid-cols-1" : scenarios.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
         {scenarios.map((s) => {
           const c = colorFor(Number(s.pwin_score));
-          const head = c === "green" ? "text-green-600" : c === "amber" ? "text-amber-600" : "text-destructive";
+          const head = c === "green" ? "text-success" : c === "amber" ? "text-warning" : "text-destructive";
           return (
             <div key={s.id} className="border rounded-md p-3">
               <div className="flex items-start justify-between gap-2">
@@ -619,7 +619,7 @@ function CompareView({ scenarios, onDelete, currentScore }: {
                   const f = (s.factor_scores ?? []).find((x: any) => x.key === k);
                   if (!f) return null;
                   const col = colorFor(f.score);
-                  const bar = col === "green" ? "bg-green-500" : col === "amber" ? "bg-amber-500" : "bg-destructive";
+                  const bar = col === "green" ? "bg-success" : col === "amber" ? "bg-warning" : "bg-destructive";
                   return (
                     <div key={String(k)}>
                       <div className="flex justify-between text-[11px]">
@@ -636,7 +636,7 @@ function CompareView({ scenarios, onDelete, currentScore }: {
 
               {Array.isArray(s.strengths) && s.strengths.length > 0 && (
                 <div className="mt-3">
-                  <div className="text-[10px] uppercase text-green-700 font-semibold flex items-center gap-1">
+                  <div className="text-[10px] uppercase text-success font-semibold flex items-center gap-1">
                     <ThumbsUp className="w-3 h-3" /> Strengths
                   </div>
                   <ul className="text-[11px] mt-1 space-y-0.5 list-disc list-inside">
@@ -680,7 +680,7 @@ function InsightsPanel({ insights }: { insights: ScenarioInsights }) {
         Scenario insights
       </div>
       <div>
-        <div className="text-[11px] font-semibold text-green-700 flex items-center gap-1">
+        <div className="text-[11px] font-semibold text-success flex items-center gap-1">
           <ThumbsUp className="w-3 h-3" /> Strengths
         </div>
         {insights.strengths.length === 0 ? (
