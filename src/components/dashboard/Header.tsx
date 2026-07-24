@@ -90,16 +90,18 @@ export function Header() {
   const oppTeams = availableTeams.filter((t) => t.team_type === "opportunity");
 
   return (
-    <header className="sticky top-0 z-30 bg-card border-b border-border">
+    <header className="sticky top-0 z-30 bg-[color:var(--header-bg)] text-[color:var(--header-fg)] border-b border-black/20 shadow-sm">
       <div className="max-w-[1400px] mx-auto px-4 min-h-16 py-2 flex items-center gap-3">
         <Link to="/" className="flex items-center shrink-0" aria-label="VetRamp Pursuit home">
-          <img
-            src={logoUrl}
-            alt="VetRamp Pursuit"
-            className="h-10 sm:h-12 md:h-14 w-auto max-w-full object-contain"
-            width={1679}
-            height={322}
-          />
+          <span className="inline-flex items-center rounded-md bg-white/95 px-2 py-1">
+            <img
+              src={logoUrl}
+              alt="VetRamp Pursuit"
+              className="h-8 sm:h-10 md:h-11 w-auto max-w-full object-contain"
+              width={1679}
+              height={322}
+            />
+          </span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-hide">
