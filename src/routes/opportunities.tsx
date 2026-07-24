@@ -286,21 +286,21 @@ function OpportunitiesPage() {
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-8 space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Workflow className="w-5 h-5 text-primary" />
-            Pursuit Pipeline
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
+      <PageHeader
+        icon={<Workflow className="w-5 h-5" />}
+        title="Pursuit Pipeline"
+        description={
+          <>
             All opportunities — tracked and active — grouped by stage.{" "}
             {loading ? "Loading…" : `${total} item${total === 1 ? "" : "s"}.`}
-          </p>
-        </div>
-        <Button onClick={() => setDialogOpen(true)} className="gap-1.5">
-          <Plus className="w-4 h-4" /> Add Opportunity
-        </Button>
-      </div>
+          </>
+        }
+        actions={
+          <Button onClick={() => setDialogOpen(true)} className="gap-1.5">
+            <Plus className="w-4 h-4" /> Add Opportunity
+          </Button>
+        }
+      />
 
       {loading ? (
         <div className="space-y-3">
@@ -313,19 +313,32 @@ function OpportunitiesPage() {
         {STAGES.map((stage) => {
           const items = grouped[stage];
           return (
-            <section key={stage}>
-              <div className="flex items-center gap-2 mb-2">
+            <section key={stage} className="space-y-2">
+              <div className="flex items-center gap-2">
                 <Badge variant="outline" className={STAGE_TONE[stage]}>
                   {stage}
                 </Badge>
-                <span className="text-xs text-muted-foreground">{items.length}</span>
+                <span
+                  className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${STAGE_COUNT_TONE[stage]}`}
+                >
+                  {items.length}
+                </span>
               </div>
               {items.length === 0 ? (
-                <Card className="p-4 text-xs text-muted-foreground">No opportunities in this stage.</Card>
+                <EmptyState
+                  icon={<Workflow className="w-5 h-5" />}
+                  title="No opportunities in this stage"
+                  hint="Move items in from a neighboring stage or add a new opportunity."
+                />
               ) : (
                 <div className="grid gap-2">
-                  {items.map((row) => (
-                    <Card key={row.key} className="p-3 flex flex-wrap items-center gap-3">
+                  {items.map((row) => {
+                    const daysLeft = row.deadline
+                      ? Math.ceil((new Date(row.deadline).getTime() - Date.now()) / 86_400_000)
+                      : null;
+                    const deadlineNear = daysLeft !== null && daysLeft <= 14;
+                    return (
+                    <Card key={row.key} className="p-4 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 sm:flex sm:flex-wrap">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2 flex-wrap">
                           <button
@@ -341,14 +354,41 @@ function OpportunitiesPage() {
                             {row.statusLabel}
                           </Badge>
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5 truncate">
+                        <div className="text-xs text-muted-foreground mt-1 truncate">
+                          <span className="briefing-label mr-1">Agency</span>
                           {row.agency ?? "—"}
-                          {row.naics ? <> · NAICS <span className="font-mono">{row.naics}</span></> : null}
-                          {row.setAside ? <> · {row.setAside}</> : null}
-                          {row.deadline ? <> · Due {fmtDate(row.deadline)}</> : null}
+                          {row.naics ? (
+                            <>
+                              {" · "}
+                              <span className="briefing-label mr-1">NAICS</span>
+                              <span className="font-mono">{row.naics}</span>
+                            </>
+                          ) : null}
+                          {row.setAside ? (
+                            <>
+                              {" · "}
+                              <span className="briefing-label mr-1">Set-aside</span>
+                              {row.setAside}
+                            </>
+                          ) : null}
+                          {row.deadline ? (
+                            <>
+                              {" · "}
+                              <span className="briefing-label mr-1">Due</span>
+                              <span
+                                className={
+                                  deadlineNear
+                                    ? "rounded px-1.5 py-0.5 bg-warning/15 text-warning font-medium"
+                                    : ""
+                                }
+                              >
+                                {fmtDate(row.deadline)}
+                              </span>
+                            </>
+                          ) : null}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap justify-end">
                         {row.proposalId && (
                           <CaptureStageSelect
                             proposalId={row.proposalId}
@@ -368,7 +408,8 @@ function OpportunitiesPage() {
                         </Button>
                       </div>
                     </Card>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </section>
@@ -376,6 +417,7 @@ function OpportunitiesPage() {
         })}
       </div>
       )}
+
 
       <AddOpportunityDialog
         open={dialogOpen}
