@@ -52,6 +52,7 @@ import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursu
 import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
+import { NaicsCombobox } from "@/components/NaicsCombobox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
