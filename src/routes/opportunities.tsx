@@ -187,6 +187,7 @@ function OpportunitiesPage() {
       });
     }
 
+    const activity = activityQ.data ?? {};
     for (const p of proposals) {
       out.push({
         key: `p:${p.id}`,
@@ -216,11 +217,13 @@ function OpportunitiesPage() {
         })
           ? { proposalId: p.id, hasNoticeId: !!p.notice_id }
           : undefined,
+        watchEnabled: Boolean(p.watch_enabled),
+        unreviewedActivity: activity[p.id] ?? 0,
       });
     }
 
     return out;
-  }, [trackedQ.data, proposalsQ.data]);
+  }, [trackedQ.data, proposalsQ.data, activityQ.data]);
 
   const grouped = useMemo(() => {
     const m: Record<Stage, Row[]> = {
