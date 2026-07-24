@@ -43,11 +43,22 @@ const STAGES = BOARD_STAGES;
 
 const STAGE_TONE: Record<Stage, string> = {
   Watching: "bg-muted text-muted-foreground border-border",
-  Capturing: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
-  Proposal: "bg-violet-500/15 text-violet-700 dark:text-violet-300 border-violet-500/30",
-  Submitted: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  "Won/Lost": "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  Capturing: "bg-primary/15 text-primary border-primary/30",
+  Proposal:
+    "border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_18%,transparent)] text-[color:var(--brand-brass)]",
+  Submitted: "bg-warning/15 text-warning border-warning/30",
+  "Won/Lost": "bg-success/15 text-success border-success/30",
 };
+
+const STAGE_COUNT_TONE: Record<Stage, string> = {
+  Watching: "bg-muted text-muted-foreground",
+  Capturing: "bg-primary text-primary-foreground",
+  Proposal:
+    "bg-[color:var(--brand-brass)] text-[color:var(--brand-brass-foreground)]",
+  Submitted: "bg-warning text-warning-foreground",
+  "Won/Lost": "bg-success text-success-foreground",
+};
+
 
 function trackedStage(status: string): Stage {
   if (status === "Watching" || status === "No-Bid") return "Watching";
