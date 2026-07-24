@@ -454,6 +454,38 @@ export function TeamingCard({
   );
 }
 
+function OutreachNotesPopover({
+  entry, onSave,
+}: { entry: TeamingEntry; onSave: (notes: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(entry.outreach_notes ?? "");
+  useEffect(() => { setVal(entry.outreach_notes ?? ""); }, [entry.outreach_notes]);
+  const hasNotes = !!(entry.outreach_notes && entry.outreach_notes.trim());
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" title="Outreach notes" className="gap-1">
+          <MessageSquare className={`w-3.5 h-3.5 ${hasNotes ? "text-primary" : ""}`} />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 space-y-2" align="end">
+        <Label className="text-xs">Outreach notes</Label>
+        <Textarea
+          rows={4}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder="Call outcomes, blockers, next steps…"
+          className="text-xs"
+        />
+        <div className="flex justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button size="sm" onClick={() => { onSave(val.trim() || null); setOpen(false); }}>Save</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
 function TotalShare({ entries }: { entries: TeamingEntry[] }) {
   const total = entries.reduce((s, e) => s + (e.work_share_pct ?? 0), 0);
