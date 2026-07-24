@@ -110,7 +110,11 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
             </Button>
           )}
           {(!proposal?.naics_code || !proposal?.agency) && (
-            <p className="text-xs text-muted-foreground">NAICS and agency are required.</p>
+            <p className="text-xs text-muted-foreground">
+              {!proposal?.naics_code
+                ? "No NAICS yet — parse your documents or set it in Opportunity details."
+                : "Agency is required — set it in Opportunity details."}
+            </p>
           )}
           {polling && <Skeleton className="h-24 w-full" />}
         </CardContent>
