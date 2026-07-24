@@ -112,11 +112,14 @@ export function Header() {
               className={[
                 "relative px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shrink-0",
                 location.pathname.startsWith("/proposals/")
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  ? "text-[color:var(--header-fg)]"
+                  : "text-[color:var(--header-muted)] hover:text-[color:var(--header-fg)] hover:bg-white/5",
               ].join(" ")}
             >
               Opportunity
+              {location.pathname.startsWith("/proposals/") && (
+                <span className="absolute -bottom-2 left-2 right-2 h-[2px] bg-[color:var(--header-accent)] rounded-full" />
+              )}
             </Link>
           )}
           {NAV.map((item) => {
@@ -131,14 +134,14 @@ export function Header() {
                 className={[
                   "relative px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shrink-0",
                   active
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                    ? "text-[color:var(--header-fg)]"
+                    : "text-[color:var(--header-muted)] hover:text-[color:var(--header-fg)] hover:bg-white/5",
                 ].join(" ")}
               >
                 {Icon && <Icon className="w-4 h-4" />}
                 {item.label}
                 {active && (
-                  <span className="absolute -bottom-2 left-2 right-2 h-[2px] bg-primary rounded-full" />
+                  <span className="absolute -bottom-2 left-2 right-2 h-[2px] bg-[color:var(--header-accent)] rounded-full" />
                 )}
               </Link>
             );
@@ -146,6 +149,8 @@ export function Header() {
         </nav>
 
         <div className="flex-1" />
+
+        <ThemeToggle className="hidden sm:inline-flex" />
 
         {/* Team switcher */}
         {availableTeams.length > 0 && (
