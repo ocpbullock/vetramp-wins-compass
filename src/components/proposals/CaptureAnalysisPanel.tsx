@@ -668,11 +668,8 @@ function TeamingRecommendationCard({
   }
 
   const { pwinResult, suggestions } = teaming;
-  const pwinColor = colorFor(pwinResult.pwin);
-  const pwinTextColor =
-    pwinColor === "green" ? "text-success"
-    : pwinColor === "amber" ? "text-warning"
-    : "text-destructive";
+
+
 
   return (
     <Card>
