@@ -530,7 +530,7 @@ export function PartnerResearch({
             {!naicsInput.trim() && !searching && (
               <div className="rounded-md border border-dashed border-amber-300/40 bg-amber-50/30 dark:bg-amber-950/10 p-4 text-xs text-amber-700 dark:text-amber-400 flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0" />
-                <span>Set the opportunity NAICS to search award history.</span>
+                <span>No NAICS yet — parse your documents or set it in Opportunity details.</span>
               </div>
             )}
 
