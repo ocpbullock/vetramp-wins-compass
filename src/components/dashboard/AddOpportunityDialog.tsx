@@ -7,16 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import { ChevronDown, Upload, X, FileText } from "lucide-react";
-import { NAICS_GROUPS } from "@/lib/contracts";
+import { Upload, X, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
 import { toast } from "sonner";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { classifyFilename } from "@/lib/attachment-classify";
-
-const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
+import { NaicsCombobox } from "@/components/NaicsCombobox";
 
 export function AddOpportunityDialog({
   open,
