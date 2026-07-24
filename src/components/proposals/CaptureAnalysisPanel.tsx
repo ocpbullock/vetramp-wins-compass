@@ -31,6 +31,7 @@ import { addActivityFromAnalysis } from "./ActivitiesPanel";
 import { Plus } from "lucide-react";
 import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
+import { PositioningMatrixCard } from "./PositioningMatrixCard";
 
 type CaptureAnalysis = {
   bid_no_bid: {
