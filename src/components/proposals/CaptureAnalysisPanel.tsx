@@ -410,12 +410,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   // ---- Summary band values ----
   const rec = REC_LABEL[analysis.bid_no_bid.recommendation];
   const pwinValue = teaming.ready ? teaming.pwinResult.pwin : null;
-  const pwinColor = pwinValue != null ? colorFor(pwinValue) : null;
-  const pwinTextColor =
-    pwinColor === "green" ? "text-success"
-    : pwinColor === "amber" ? "text-warning"
-    : pwinColor === "red" ? "text-destructive"
-    : "text-muted-foreground";
+
 
   // PTW "as assumed" from saved inputs (recompute — logic lives in ptw.ts).
   let ptwAsAssumed: number | null = null;
