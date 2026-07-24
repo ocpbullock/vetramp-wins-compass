@@ -444,58 +444,17 @@ function TargetProfileForm({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* NAICS multi-select */}
+          {/* NAICS multi-select — full 2022 catalog via NaicsCombobox */}
           <div>
             <Label className="text-xs">NAICS codes</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between mt-1 font-normal">
-                  <span className="truncate text-xs">
-                    {value.naics.length === 0
-                      ? "Select NAICS codes"
-                      : `${value.naics.length} selected · ${value.naics.slice(0, 3).join(", ")}${value.naics.length > 3 ? "…" : ""}`}
-                  </span>
-                  <ChevronDown className="w-4 h-4 ml-2 opacity-60" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-[380px] max-h-[360px] overflow-y-auto p-3">
-                {NAICS_GROUPS.map((g) => (
-                  <div key={g.label} className="mb-3">
-                    <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">
-                      {g.label}
-                    </div>
-                    <div className="space-y-1.5">
-                      {g.codes.map((c) => (
-                        <label
-                          key={c.code}
-                          className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-1 py-1"
-                        >
-                          <Checkbox
-                            checked={value.naics.includes(c.code)}
-                            onCheckedChange={() => toggleNaics(c.code)}
-                          />
-                          <span className="font-mono text-xs">{c.code}</span>
-                          <span className="text-muted-foreground text-xs">{c.name}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </PopoverContent>
-            </Popover>
-            {value.naics.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-2">
-                {value.naics.map((n) => {
-                  const meta = ALL_NAICS_FLAT.find((c) => c.code === n);
-                  return (
-                    <Badge key={n} variant="secondary" className="text-[10px] font-mono">
-                      {n}
-                      {meta && <span className="ml-1 font-sans text-muted-foreground">· {meta.name}</span>}
-                    </Badge>
-                  );
-                })}
-              </div>
-            )}
+            <div className="mt-1">
+              <NaicsCombobox
+                mode="multiple"
+                value={value.naics}
+                onChange={(codes) => patch({ naics: codes })}
+                placeholder="Select NAICS codes"
+              />
+            </div>
           </div>
 
           {/* Set-aside */}
