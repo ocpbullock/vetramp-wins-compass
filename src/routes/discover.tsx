@@ -43,6 +43,8 @@ import { kickOffMarketSnapshot } from "@/lib/market-snapshot";
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
 import { useOnboardingGate } from "@/lib/setup-status";
+import { PageHeader } from "@/components/ui/page-header";
+import { Search } from "lucide-react";
 
 export const Route = createFileRoute("/discover")({ component: Dashboard });
 
@@ -456,6 +458,11 @@ function Dashboard() {
         </div>
       )}
       <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
+        <PageHeader
+          icon={<Search className="w-5 h-5" />}
+          title="Discover Opportunities"
+          description="Search SAM.gov active opportunities and USAspending historical awards for your target NAICS."
+        />
         {onboarding.showOnboarding ? (
           <OnboardingFlow
             onComplete={onboarding.skip}
@@ -484,7 +491,7 @@ function Dashboard() {
         {!onboarding.showOnboarding && (
 
         <Tabs value={tab} onValueChange={setTab}>
-          <TabsList>
+          <TabsList className="brass-tabs w-full">
             <TabsTrigger value="opportunities">Active Opportunities</TabsTrigger>
             <TabsTrigger value="historical">Historical Awards</TabsTrigger>
             <TabsTrigger value="starred">Starred{starredCount ? ` (${starredCount})` : ""}</TabsTrigger>
@@ -494,6 +501,7 @@ function Dashboard() {
           <TabsContent value="opportunities" className="mt-4">
             <OpportunitiesTab opportunities={opps} awards={awards} searchedNaics={searchedNaics} activeFilterNaics={currentNaics} searchKey={searchedNaics.join(",")} onPropose={handlePropose} onCompete={setCompeteOpp} />
           </TabsContent>
+
           <TabsContent value="historical" className="mt-4">
             <HistoricalTab
               awards={awards}

@@ -24,15 +24,15 @@ export function StatCards(p: Props) {
       value: p.historicalTotal != null && p.historicalTotal > p.historicalCount
         ? `${p.historicalCount.toLocaleString()} of ${p.historicalTotal.toLocaleString()}`
         : p.historicalCount.toLocaleString(),
-      icon: History, tab: "historical", color: "text-violet-600",
+      icon: History, tab: "historical", color: "text-[color:var(--chart-5)]",
     },
     {
       label: p.totalObligatedIsFiltered ? "Total Obligated (filtered)" : "Total Obligated",
       value: fmtMoney(p.totalObligatedIsFiltered ? (p.totalObligatedFiltered ?? 0) : p.totalObligated),
       icon: DollarSign, tab: "historical", color: "text-money",
     },
-    { label: "Works in Progress", value: (p.inProgressCount ?? 0).toLocaleString(), icon: FileEdit, tab: "in-progress", color: "text-amber-600" },
-    { label: "Starred", value: (p.starredCount ?? 0).toLocaleString(), icon: Star, tab: "starred", color: "text-amber-500" },
+    { label: "Works in Progress", value: (p.inProgressCount ?? 0).toLocaleString(), icon: FileEdit, tab: "in-progress", color: "text-warning" },
+    { label: "Starred", value: (p.starredCount ?? 0).toLocaleString(), icon: Star, tab: "starred", color: "text-[color:var(--brand-brass)]" },
   ];
 
   return (

@@ -27,7 +27,7 @@ export function DeadlinesPanel() {
       <div className="space-y-2">
         {upcoming.map((d) => {
           const days = daysUntil(d.dueDate);
-          const dColor = days < 0 ? "text-destructive" : days <= 7 ? "text-destructive" : days <= 14 ? "text-amber-600" : "text-muted-foreground";
+          const dColor = days < 0 ? "text-destructive" : days <= 7 ? "text-destructive" : days <= 14 ? "text-warning" : "text-muted-foreground";
           const dLabel = days < 0 ? `${Math.abs(days)}d overdue` : days === 0 ? "today" : `in ${days}d`;
           const c = urgencyColor(days);
           const row = (
