@@ -25,6 +25,7 @@ import {
   type PwinTeamMember, type PwinContext, type PwinRole, type PwinResult,
   type RelationshipModel,
 } from "@/lib/pwin";
+import { PwinDial } from "@/components/PwinDial";
 
 export type SandboxOpportunityContext = {
   title: string;
