@@ -1,0 +1,148 @@
+{
+  "version": 1,
+  "sdk_version": "0.24.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://exmygycifebzmhabnnad.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "vetramp-pursuit-mcp",
+      "version": "0.1.0",
+      "title": "VetRamp Pursuit"
+    },
+    "tools": [
+      {
+        "name": "list_opportunities",
+        "title": "List opportunities",
+        "description": "List the signed-in user's federal contracting opportunities (proposals), optionally filtered by capture stage.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "stage": {
+              "type": "string",
+              "enum": [
+                "identified",
+                "qualifying",
+                "pursuing",
+                "proposal",
+                "submitted",
+                "won",
+                "lost",
+                "no_bid"
+              ],
+              "description": "Filter to opportunities in this capture stage."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max rows to return (default 25)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_opportunity",
+        "title": "Get opportunity",
+        "description": "Fetch the full detail of one opportunity (proposal) by id, including capture stage, agency, NAICS, deadlines, market snapshot, capture analysis, and notes.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "The opportunity (proposal) id."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_partners",
+        "title": "List partner companies",
+        "description": "List companies in the user's teaming-partner roster, optionally filtered by name.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "search": {
+              "type": "string",
+              "minLength": 1,
+              "description": "Case-insensitive substring match on company name."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_activities",
+        "title": "List opportunity activities",
+        "description": "List capture activities/tasks for a given opportunity (proposal id).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "proposalId": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Opportunity (proposal) id."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "open",
+                "in_progress",
+                "done",
+                "cancelled"
+              ]
+            }
+          },
+          "required": [
+            "proposalId"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
