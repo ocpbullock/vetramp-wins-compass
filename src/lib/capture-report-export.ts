@@ -8,6 +8,7 @@ import type { PwinResult } from "@/lib/pwin";
 import type { PartnerSuggestion } from "@/lib/partner-suggest";
 import type { DarkHorseTarget } from "@/lib/partner-experience";
 import type { TeamingTarget } from "@/lib/teaming-targets";
+import { computePtw, type EvalRating, type PtwCompetitor } from "@/lib/ptw";
 
 const FONT_BODY = "Times New Roman";
 const FONT_HEAD = "Arial";
