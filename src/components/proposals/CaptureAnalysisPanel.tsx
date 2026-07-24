@@ -6,7 +6,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AlertTriangle, ArrowRight, Lightbulb, Loader2, RefreshCw, Sparkles, Users } from "lucide-react";
+import {
+  DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
+} from "@/components/ui/dropdown-menu";
+import { AlertTriangle, ArrowRight, Download, Lightbulb, Loader2, RefreshCw, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   rankPartnerSuggestions,
@@ -19,6 +22,7 @@ import {
   calculatePwin,
   colorFor,
   type PwinContext,
+  type PwinResult,
   type PwinTeamMember,
   type PwinRole,
 } from "@/lib/pwin";
@@ -26,6 +30,7 @@ import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies"
 import { addActivityFromAnalysis } from "./ActivitiesPanel";
 import { Plus } from "lucide-react";
 import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
+import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 
 type CaptureAnalysis = {
   bid_no_bid: {
