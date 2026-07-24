@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.generate-teaming-outreach]
 verify_jwt = true
+
+[functions.extract-intel]
+verify_jwt = true
