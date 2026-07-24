@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Paperclip, Trash2, Pencil, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Paperclip, Trash2, Pencil, Download, ChevronDown, ChevronUp, Sparkles, Loader2, X } from "lucide-react";
 
 const INTEL_TYPES = [
   { value: "incumbent_interview", label: "Incumbent interview" },
