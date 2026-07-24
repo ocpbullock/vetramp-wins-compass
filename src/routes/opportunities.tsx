@@ -446,6 +446,15 @@ function OpportunitiesPage() {
                             </>
                           ) : null}
                         </div>
+                        {row.teamingSummary && row.teamingSummary.total > 0 && (
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            <span className="briefing-label mr-1">Team</span>
+                            {row.teamingSummary.total} partner{row.teamingSummary.total === 1 ? "" : "s"}
+                            {row.teamingSummary.contacted ? ` · ${row.teamingSummary.contacted} contacted` : ""}
+                            {row.teamingSummary.nda ? ` · ${row.teamingSummary.nda} NDA` : ""}
+                            {row.teamingSummary.ta ? ` · ${row.teamingSummary.ta} TA` : ""}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap justify-end">
                         {row.proposalId && (
