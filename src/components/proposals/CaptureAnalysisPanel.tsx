@@ -357,6 +357,10 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
             contractVehicles: p.contract_vehicles ?? [],
             pastPerformance: [],
             isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
+            isEstablishedPartner: !!p.is_existing_partner,
+            priorContractTogether: !!p.worked_together_before,
+            hasNda: !!p.has_nda,
+            hasTeamingAgreement: !!p.has_teaming_agreement,
           };
         });
         const pwinResult: PwinResult = calculatePwin({
