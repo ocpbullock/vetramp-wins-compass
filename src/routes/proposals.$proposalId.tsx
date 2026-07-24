@@ -751,6 +751,32 @@ function ProposalPipeline() {
           </div>
 
           <TabsContent value="overview" className="mt-4 space-y-4">
+            {showParseBanner && (
+              <Card className="border-primary/40 bg-primary/5">
+                <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="text-sm font-medium">Parse documents to auto-fill NAICS, value, deadline and more</div>
+                    <div className="text-xs text-muted-foreground">
+                      {attachments.length} document{attachments.length === 1 ? "" : "s"} uploaded. We'll extract requirements and fill empty fields.
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        setParseBannerDismissed(true);
+                        await parseDocuments();
+                      }}
+                      disabled={parsing}
+                    >
+                      {parsing ? "Parsing…" : "Parse documents"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setParseBannerDismissed(true)}>Dismiss</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <OpportunitySummaryCard proposal={proposal} />
             <Collapsible open={intakeOpen} onOpenChange={setIntakeOpen}>
               <Card>
