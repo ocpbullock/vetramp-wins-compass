@@ -124,10 +124,27 @@ function OpportunitiesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposals")
-        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id")
+        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id,watch_enabled")
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as ProposalRow[];
+    },
+  });
+
+  const activityQ = useQuery({
+    queryKey: ["opportunities-page", "watch-activity", currentTeam?.id ?? "none", user?.id ?? "none"],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("opportunity_watch_events" as any)
+        .select("proposal_id")
+        .eq("reviewed", false);
+      if (error) throw new Error(error.message);
+      const counts: Record<string, number> = {};
+      for (const r of (data ?? []) as { proposal_id: string }[]) {
+        counts[r.proposal_id] = (counts[r.proposal_id] ?? 0) + 1;
+      }
+      return counts;
     },
   });
 
