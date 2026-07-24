@@ -754,7 +754,110 @@ export function PartnerResearch({
                 </div>
               </>
             )}
+
+            {/* ============ DARK HORSES ============ */}
+            <div className="border-t pt-3 mt-4 space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  <label className="flex items-center gap-2 text-xs cursor-pointer font-medium">
+                    <Switch checked={darkHorsesEnabled} onCheckedChange={setDarkHorsesEnabled} />
+                    <Sparkles className="w-3.5 h-3.5" />
+                    Dark horses
+                  </label>
+                  <div className="text-[11px] text-muted-foreground mt-1 ml-9">
+                    Strong performers at this customer in adjacent domains — potential crossover partners or competitors.
+                  </div>
+                </div>
+                {darkHorsesEnabled && (
+                  <Button
+                    size="sm" variant="outline"
+                    onClick={runDarkHorseSearch}
+                    disabled={dhSearching || !agencyInput.trim() || !naicsInput.trim()}
+                  >
+                    {dhSearching
+                      ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      : (dhAwards ? <RefreshCw className="w-3 h-3 mr-1" /> : <Search className="w-3 h-3 mr-1" />)}
+                    {dhSearching ? "Scanning agency…" : (dhAwards ? "Refresh dark horses" : "Find dark horses")}
+                  </Button>
+                )}
+              </div>
+
+              {darkHorsesEnabled && !agencyInput.trim() && (
+                <div className="text-[11px] text-amber-700 dark:text-amber-400 ml-9">
+                  Set an agency above to scan for dark horses.
+                </div>
+              )}
+
+              {darkHorsesEnabled && dhAwards && darkHorses.length === 0 && !dhSearching && (
+                <div className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
+                  No adjacent-NAICS performers found for this agency.
+                </div>
+              )}
+
+              {darkHorsesEnabled && darkHorses.length > 0 && (
+                <div className="border rounded-md divide-y max-h-[24rem] overflow-y-auto">
+                  {darkHorses.map((t) => {
+                    const key = t.uei || t.name;
+                    const inRoster = findRosterMatch(t);
+                    return (
+                      <button
+                        key={key}
+                        type="button"
+                        className="w-full text-left px-3 py-2 hover:bg-muted/40 focus:bg-muted/40 outline-none"
+                        onClick={() => setDrilldown({ uei: t.uei || t.name, name: t.name })}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="text-sm font-medium truncate">{t.name}</span>
+                              <Badge className="bg-purple-500/15 text-purple-700 dark:text-purple-300 hover:bg-purple-500/15 text-[10px] px-1.5 py-0 h-5">
+                                <Sparkles className="w-3 h-3 mr-0.5" />Dark horse
+                              </Badge>
+                              {t.isSmallBusiness && (
+                                <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                                  {t.latestSetAside?.slice(0, 24) ?? "Small business"}
+                                </Badge>
+                              )}
+                              {inRoster && (
+                                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-5">In roster</Badge>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground mt-0.5 flex gap-2 flex-wrap">
+                              <span><span className="font-mono">{t.awardCount}</span> award{t.awardCount !== 1 ? "s" : ""} at agency</span>
+                              <span className="font-medium text-foreground tabular-nums">{fmtMoney(t.sameAgencyValue)}</span>
+                              {t.latestAwardDate && (
+                                <span>latest <span className="font-mono">{t.latestAwardDate.slice(0, 10)}</span></span>
+                              )}
+                            </div>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {t.adjacentNaics.slice(0, 6).map((n) => (
+                                <Badge key={n} variant="outline" className="text-[10px] font-mono">{n}</Badge>
+                              ))}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <div className="text-[10px] font-mono tabular-nums px-2 py-0.5 rounded bg-primary/10 text-primary" title="Relevance score">
+                              {t.relevanceScore}
+                            </div>
+                            {!inRoster && (
+                              <Button
+                                size="sm" variant="outline" className="h-7 text-[11px]"
+                                disabled={!teamId}
+                                onClick={(e) => { e.stopPropagation(); addTargetToRoster(t); }}
+                              >
+                                <UserPlus className="w-3 h-3 mr-1" />Add to roster
+                              </Button>
+                            )}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </TabsContent>
+
 
           {/* ============== ENTITY MODE (secondary) ============== */}
           <TabsContent value="entity" className="mt-4 space-y-3">
