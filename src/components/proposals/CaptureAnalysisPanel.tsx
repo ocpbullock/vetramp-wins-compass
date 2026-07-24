@@ -110,7 +110,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       const [intelRes, partnersRes, entriesRes, selfRes] = await Promise.all([
         supabase
           .from("opportunity_intel" as any)
-          .select("intel_type, occurred_on, created_at, source, summary, title")
+          .select("intel_type, occurred_on, created_at, source_name, body, title")
           .eq("proposal_id", proposalId)
           .order("occurred_on", { ascending: false, nullsFirst: false })
           .order("created_at", { ascending: false }),
@@ -120,6 +120,9 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           .eq("proposal_id", proposalId),
         teamId ? getOwnCompanyProfileData(teamId) : Promise.resolve(null),
       ]);
+      if ((intelRes as any)?.error) {
+        toast.warning("Couldn't load intel log", { description: "The rest of the report will still download." });
+      }
       const intelItems = ((intelRes as any)?.data ?? []) as any[];
       const partners = (partnersRes as any[]) ?? [];
       const entries = (((entriesRes as any)?.data ?? []) as any[]);
