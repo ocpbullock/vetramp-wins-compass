@@ -16,8 +16,10 @@ import { Plus, Paperclip, Trash2, Pencil, Download, ChevronDown, ChevronUp } fro
 
 const INTEL_TYPES = [
   { value: "incumbent_interview", label: "Incumbent interview" },
+  { value: "candidate_interview", label: "Candidate interview" },
   { value: "partner_conversation", label: "Partner conversation" },
   { value: "customer_meeting", label: "Customer meeting" },
+  { value: "conference_note", label: "Conference / event note" },
   { value: "capture_note", label: "Capture note" },
   { value: "other", label: "Other" },
 ] as const;
