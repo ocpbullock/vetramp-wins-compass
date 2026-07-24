@@ -204,13 +204,15 @@ export function Header() {
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-accent transition-colors ml-1">
               <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
+            <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-white/10 transition-colors ml-1 text-[color:var(--header-fg)]">
+              <div className="w-9 h-9 rounded-full bg-[color:var(--header-accent)] text-[color:var(--brand-brass-foreground)] flex items-center justify-center text-xs font-semibold">
                 {initials}
               </div>
               <div className="hidden sm:block text-left leading-tight">
                 <div className="text-sm font-semibold">{displayName}</div>
-                <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">{currentTeam?.name ?? "No team"}</div>
+                <div className="text-[11px] text-[color:var(--header-muted)] truncate max-w-[140px]">{currentTeam?.name ?? "No team"}</div>
               </div>
-              <ChevronDown className="w-4 h-4 text-muted-foreground hidden sm:block" />
+              <ChevronDown className="w-4 h-4 text-[color:var(--header-muted)] hidden sm:block" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
@@ -237,7 +239,7 @@ export function Header() {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden"
+          className="md:hidden text-[color:var(--header-fg)] hover:bg-white/10 hover:text-[color:var(--header-fg)]"
           aria-label="Toggle navigation"
           onClick={() => setMobileOpen((v) => !v)}
         >
@@ -246,7 +248,7 @@ export function Header() {
       </div>
 
       {mobileOpen && (
-        <nav className="md:hidden border-t border-border bg-card">
+        <nav className="md:hidden border-t border-white/10 bg-[color:var(--header-bg)] text-[color:var(--header-fg)]">
           <div className="max-w-[1400px] mx-auto px-6 py-3 flex flex-col gap-1">
             {isOpp && oppProposalId && (
               <Link
