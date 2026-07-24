@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { lovable } from "@/integrations/lovable";
@@ -11,18 +11,36 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
-export const Route = createFileRoute("/auth")({ component: AuthPage });
+export const Route = createFileRoute("/auth")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    next: typeof s.next === "string" ? s.next : undefined,
+  }),
+  component: AuthPage,
+});
+
+// Only allow same-origin relative paths.
+function safeNext(next: string | undefined): string {
+  if (!next || typeof next !== "string") return "/";
+  if (!next.startsWith("/") || next.startsWith("//")) return "/";
+  return next;
+}
 
 function AuthPage() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
+  const { next } = useSearch({ from: "/auth" });
+  const destination = safeNext(next);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: "/" });
-  }, [user, loading, navigate]);
+    if (!loading && user) {
+      // Use window.location for non-router destinations (e.g. /.lovable/oauth/consent)
+      if (destination !== "/") window.location.href = destination;
+      else navigate({ to: "/" });
+    }
+  }, [user, loading, navigate, destination]);
 
   async function handleSignIn(e: React.FormEvent) {
     e.preventDefault();
@@ -30,19 +48,32 @@ function AuthPage() {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     setBusy(false);
     if (error) toast.error(error.message);
+    else if (destination !== "/") window.location.href = destination;
     else navigate({ to: "/" });
   }
   async function handleGoogle() {
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: window.location.origin });
-    if (result.error) { toast.error("Google sign-in failed"); setBusy(false); return; }
+    const redirectUri =
+      destination !== "/"
+        ? `${window.location.origin}/auth?next=${encodeURIComponent(destination)}`
+        : window.location.origin;
+    const result = await lovable.auth.signInWithOAuth("google", { redirect_uri: redirectUri });
+    if (result.error) {
+      toast.error("Google sign-in failed");
+      setBusy(false);
+      return;
+    }
     if (result.redirected) return;
-    navigate({ to: "/" });
+    if (destination !== "/") window.location.href = destination;
+    else navigate({ to: "/" });
   }
   async function handleMagicLink() {
     if (!email) { toast.error("Enter email first"); return; }
     setBusy(true);
-    const redirectTo = `${window.location.origin}/`;
+    const redirectTo =
+      destination !== "/"
+        ? `${window.location.origin}/auth?next=${encodeURIComponent(destination)}`
+        : `${window.location.origin}/`;
     const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } });
     setBusy(false);
     if (error) toast.error(error.message);
