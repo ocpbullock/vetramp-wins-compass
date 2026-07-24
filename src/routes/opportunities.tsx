@@ -495,3 +495,35 @@ function EnrichButton({ proposalId, onDone }: { proposalId: string; onDone: () =
   );
 }
 
+function WatchToggle({
+  proposalId,
+  enabled,
+  onChanged,
+}: {
+  proposalId: string;
+  enabled: boolean;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const toggle = async (v: boolean) => {
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("proposals").update({ watch_enabled: v } as any).eq("id", proposalId);
+      if (error) throw new Error(error.message);
+      toast.success(v ? "SAM watcher enabled" : "SAM watcher paused");
+      onChanged();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to update");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer" title="Watch SAM.gov for activity">
+      <Radar className="w-3.5 h-3.5" />
+      <Switch checked={enabled} onCheckedChange={toggle} disabled={busy} />
+    </label>
+  );
+}
+
+
