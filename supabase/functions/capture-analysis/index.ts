@@ -129,16 +129,37 @@ serve(async (req) => {
       const comps = Array.isArray(marketSnapshot?.competitors) ? marketSnapshot.competitors : [];
       for (const c of comps.slice(0, 8)) if (c?.name) seedCompanies.add(String(c.name));
 
-      // Exclude current teaming partners.
+      // Exclude current teaming partners (resolve company_id -> companies.name).
       try {
-        const { data: teamingRows } = await ctx.userClient
+        const { data: teamingRows, error: teamingErr } = await ctx.userClient
           .from("proposal_teaming")
-          .select("partner_name")
+          .select("company_id")
           .eq("proposal_id", proposalId);
-        for (const t of (teamingRows ?? []) as any[]) {
-          if (t?.partner_name) seedCompanies.delete(String(t.partner_name));
+        if (teamingErr) throw teamingErr;
+        const companyIds = [...new Set(
+          (teamingRows ?? [])
+            .map((t: any) => t?.company_id)
+            .filter((v: any): v is string => !!v),
+        )];
+        if (companyIds.length > 0) {
+          const { data: companyRows, error: companyErr } = await ctx.userClient
+            .from("companies")
+            .select("id, name")
+            .in("id", companyIds);
+          if (companyErr) throw companyErr;
+          const excludeLower = new Set(
+            (companyRows ?? [])
+              .map((c: any) => (c?.name ? String(c.name).trim().toLowerCase() : ""))
+              .filter(Boolean),
+          );
+          for (const name of [...seedCompanies]) {
+            if (excludeLower.has(name.trim().toLowerCase())) seedCompanies.delete(name);
+          }
         }
-      } catch { /* ignore */ }
+      } catch (e) {
+        console.error("positioning_matrix: teaming-partner exclusion failed:", e);
+      }
+
 
       const candidateList = [...seedCompanies].slice(0, 10);
       const captureAnalysis = (proposal as any).capture_analysis ?? null;
