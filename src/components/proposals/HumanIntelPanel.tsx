@@ -47,6 +47,7 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | IntelType>("all");
   const [composerOpen, setComposerOpen] = useState(false);
+  const [extractOpen, setExtractOpen] = useState(false);
   const [editing, setEditing] = useState<IntelRow | null>(null);
 
   const { data: items = [], isLoading } = useQuery({
