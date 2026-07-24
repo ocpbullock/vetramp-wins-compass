@@ -17,6 +17,8 @@ import { canEnrichFromSam, enrichProposalFromSam } from "@/lib/sam-enrich";
 import { toast } from "sonner";
 import { BOARD_STAGES, captureStageToBoard, type BoardStage } from "@/lib/capture-stage";
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
+import { PageHeader } from "@/components/ui/page-header";
+import { EmptyState } from "@/components/ui/empty-state";
 
 export const Route = createFileRoute("/opportunities")({
   component: OpportunitiesPage,
