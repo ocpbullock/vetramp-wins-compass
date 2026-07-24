@@ -50,6 +50,8 @@ import { MarketIntelPanel } from "@/components/proposals/MarketIntelPanel";
 import { ActivitiesPanel } from "@/components/proposals/ActivitiesPanel";
 import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursuitsCard";
 import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
+import { VehiclePicker } from "@/components/proposals/VehiclePicker";
+import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
