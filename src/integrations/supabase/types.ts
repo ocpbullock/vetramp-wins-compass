@@ -970,6 +970,7 @@ export type Database = {
           parsing_status: string
           pop_base_months: number | null
           pop_option_months: number | null
+          positioning_matrix: Json | null
           price_strategy: Json | null
           pricing: Json | null
           prime_contractor_id: string | null
@@ -1032,6 +1033,7 @@ export type Database = {
           parsing_status?: string
           pop_base_months?: number | null
           pop_option_months?: number | null
+          positioning_matrix?: Json | null
           price_strategy?: Json | null
           pricing?: Json | null
           prime_contractor_id?: string | null
@@ -1094,6 +1096,7 @@ export type Database = {
           parsing_status?: string
           pop_base_months?: number | null
           pop_option_months?: number | null
+          positioning_matrix?: Json | null
           price_strategy?: Json | null
           pricing?: Json | null
           prime_contractor_id?: string | null
