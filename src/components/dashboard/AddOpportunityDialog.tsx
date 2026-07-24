@@ -37,8 +37,9 @@ export function AddOpportunityDialog({
   const [title, setTitle] = useState("");
   const [agency, setAgency] = useState("");
   const [subAgency, setSubAgency] = useState("");
-  const [vehicle, setVehicle] = useState<string>("GSA Schedule");
-  const [vehicleOther, setVehicleOther] = useState("");
+  const [vehicleStatus, setVehicleStatus] = useState<string>("unknown");
+  const [vehicleRegistryId, setVehicleRegistryId] = useState<string | null>(null);
+  const [contractVehicleName, setContractVehicleName] = useState<string | null>(null);
   const [naicsCode, setNaicsCode] = useState<string>("");
   const [estValue, setEstValue] = useState<string>("");
   const [deadline, setDeadline] = useState("");
@@ -51,8 +52,9 @@ export function AddOpportunityDialog({
 
   useEffect(() => {
     if (!open) return;
-    setTitle(""); setAgency(""); setSubAgency(""); setVehicle("GSA Schedule");
-    setVehicleOther(""); setNaicsCode(""); setEstValue(""); setDeadline("");
+    setTitle(""); setAgency(""); setSubAgency("");
+    setVehicleStatus("unknown"); setVehicleRegistryId(null); setContractVehicleName(null);
+    setNaicsCode(""); setEstValue(""); setDeadline("");
     setSourceUrl(""); setIncumbent(""); setDescription(""); setFiles([]);
   }, [open]);
 
@@ -73,7 +75,6 @@ export function AddOpportunityDialog({
       return;
     }
     setSaving(true);
-    const resolvedVehicle = vehicle === "Custom/Other" ? (vehicleOther.trim() || "Custom/Other") : vehicle;
     const fullAgency = subAgency.trim() ? `${agency.trim()} — ${subAgency.trim()}` : agency.trim();
     const solNum = `MANUAL-${Date.now().toString(36).toUpperCase()}`;
     const payload = {
@@ -90,9 +91,12 @@ export function AddOpportunityDialog({
       opportunity_source: "manual",
       capture_stage: "intake",
       status: "intake",
+      contract_vehicle: contractVehicleName,
+      vehicle_status: vehicleStatus,
+      vehicle_registry_id: vehicleRegistryId,
       opportunity_data: {
         sub_agency: subAgency.trim() || null,
-        contract_vehicle: resolvedVehicle,
+        contract_vehicle: contractVehicleName,
         source_url: sourceUrl.trim() || null,
       },
     };
@@ -170,26 +174,21 @@ export function AddOpportunityDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-xs">Contract Vehicle</Label>
-              <Select value={vehicle} onValueChange={setVehicle}>
-                <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {CONTRACT_VEHICLES.map((v) => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              {vehicle === "Custom/Other" && (
-                <Input
-                  value={vehicleOther}
-                  onChange={(e) => setVehicleOther(e.target.value)}
-                  placeholder="Specify vehicle"
-                  className="mt-2"
-                />
-              )}
-            </div>
-            <div>
-              <Label className="text-xs">NAICS Code</Label>
+          <div className="rounded-md border p-3">
+            <VehiclePicker
+              teamId={teamId}
+              status={vehicleStatus}
+              vehicleId={vehicleRegistryId}
+              onChange={(patch) => {
+                setVehicleStatus(patch.vehicle_status);
+                setVehicleRegistryId(patch.vehicle_registry_id);
+                setContractVehicleName(patch.contract_vehicle);
+              }}
+            />
+          </div>
+
+          <div>
+            <Label className="text-xs">NAICS Code</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-between mt-1 font-normal">
