@@ -179,6 +179,18 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
             />
           </Dialog>
         )}
+
+        {extractOpen && (
+          <Dialog open onOpenChange={(o) => !o && setExtractOpen(false)}>
+            <ExtractIntelDialog
+              proposalId={proposalId}
+              teamId={teamId}
+              userId={user?.id ?? null}
+              onClose={() => setExtractOpen(false)}
+              onSavedAny={() => qc.invalidateQueries({ queryKey: ["opportunity_intel", proposalId] })}
+            />
+          </Dialog>
+        )}
       </CardContent>
     </Card>
   );
