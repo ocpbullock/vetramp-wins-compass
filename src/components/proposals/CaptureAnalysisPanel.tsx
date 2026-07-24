@@ -262,10 +262,28 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
               )}
             </CardDescription>
           </div>
-          <Button size="sm" variant="outline" onClick={rerun} disabled={running}>
-            {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-            Re-run analysis
-          </Button>
+          <div className="flex items-center gap-2">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="sm" variant="outline" disabled={!!exporting}>
+                  {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                  Export report
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => handleExport("internal")}>
+                  Internal capture report (full)
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport("partner")}>
+                  Partner-facing brief (no internal intel)
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button size="sm" variant="outline" onClick={rerun} disabled={running}>
+              {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+              Re-run analysis
+            </Button>
+          </div>
         </CardHeader>
       </Card>
 
