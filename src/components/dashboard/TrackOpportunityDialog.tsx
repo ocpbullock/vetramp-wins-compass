@@ -139,7 +139,7 @@ export function TrackOpportunityDialog({
     onOpenChange(false);
   };
 
-  const naicsLabel = ALL_NAICS_FLAT.find((c) => c.code === naicsCode);
+  // NAICS label now rendered inside NaicsCombobox trigger.
   const dedupedAgencies = Array.from(new Set(agencySuggestions.filter(Boolean))).slice(0, 200);
 
   return (
