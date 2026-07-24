@@ -236,8 +236,8 @@ export function rankDarkHorses(
       isSmallBusiness: isSmall,
       classification: !isSmall && b.totalValue >= 10_000_000 ? "prime" : "partner",
       sampleDescriptions: b.descriptions,
-      naics_codes: Array.from(b.adjacentNaics),
       agencyExperience: b.sameAgencyValue > 0,
+
       recencyMonths,
       relevanceScore: score,
       darkHorse: true,
