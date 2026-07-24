@@ -1546,6 +1546,21 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
               ? "Sub mode: only attach the scope blurb or partner brief if you have one. Full SOW parsing is skipped."
               : "SOW, Section L/M, amendments"}
           </CardDescription>
+          {(() => {
+            const m = acquisitionMaturity(sowAttachments);
+            if (!m.label) return null;
+            const tone =
+              m.stage === "final_out" ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" :
+              m.stage === "draft_out" ? "border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-300" :
+              m.stage === "market_research" ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300" :
+              "border-slate-400/50 bg-slate-500/10 text-slate-700 dark:text-slate-300";
+            return (
+              <div className={`mt-2 rounded-md border px-2 py-1 text-[11px] inline-flex items-center gap-1.5 ${tone}`}>
+                <Circle className="w-2 h-2 fill-current" />
+                <span>Acquisition maturity: {m.label}</span>
+              </div>
+            );
+          })()}
         </CardHeader>
         <CardContent className="space-y-3">
           {proposal.engagement_type !== "sub" && (
