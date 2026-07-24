@@ -59,7 +59,8 @@ export const Route = createFileRoute("/proposals/$proposalId")({
   component: ProposalPipeline,
   validateSearch: (s: Record<string, unknown>) => {
     const tab = typeof s.tab === "string" && (HUB_TABS as readonly string[]).includes(s.tab) ? (s.tab as HubTab) : undefined;
-    return { tab };
+    const parseDocs = s.parseDocs === 1 || s.parseDocs === "1" ? 1 : undefined;
+    return { tab, parseDocs };
   },
 });
 
@@ -163,8 +164,11 @@ function ProposalPipeline() {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState("intel");
-  const initialTab = (Route.useSearch().tab ?? "overview") as HubTab;
+  const searchParams = Route.useSearch();
+  const initialTab = (searchParams.tab ?? "overview") as HubTab;
   const [hubTab, setHubTab] = useState<HubTab>(initialTab);
+  const [parseBannerDismissed, setParseBannerDismissed] = useState(false);
+  const showParseBanner = searchParams.parseDocs === 1 && !parseBannerDismissed && attachments.length > 0 && !proposal?.naics_code;
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
@@ -747,6 +751,32 @@ function ProposalPipeline() {
           </div>
 
           <TabsContent value="overview" className="mt-4 space-y-4">
+            {showParseBanner && (
+              <Card className="border-primary/40 bg-primary/5">
+                <CardContent className="pt-4 pb-4 flex flex-wrap items-center gap-3">
+                  <Sparkles className="w-5 h-5 text-primary shrink-0" />
+                  <div className="flex-1 min-w-[200px]">
+                    <div className="text-sm font-medium">Parse documents to auto-fill NAICS, value, deadline and more</div>
+                    <div className="text-xs text-muted-foreground">
+                      {attachments.length} document{attachments.length === 1 ? "" : "s"} uploaded. We'll extract requirements and fill empty fields.
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={async () => {
+                        setParseBannerDismissed(true);
+                        await parseDocuments();
+                      }}
+                      disabled={parsing}
+                    >
+                      {parsing ? "Parsing…" : "Parse documents"}
+                    </Button>
+                    <Button size="sm" variant="ghost" onClick={() => setParseBannerDismissed(true)}>Dismiss</Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
             <OpportunitySummaryCard proposal={proposal} />
             <Collapsible open={intakeOpen} onOpenChange={setIntakeOpen}>
               <Card>

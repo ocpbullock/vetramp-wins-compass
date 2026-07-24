@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,13 +7,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Upload, X, FileText } from "lucide-react";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
 import { toast } from "sonner";
 import { CONTRACT_VEHICLES } from "@/components/dashboard/TrackOpportunityDialog";
+import { classifyFilename } from "@/lib/attachment-classify";
 
 const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
 
@@ -26,7 +27,7 @@ export function AddOpportunityDialog({
   open: boolean;
   onOpenChange: (o: boolean) => void;
   agencySuggestions?: string[];
-  onCreated: (proposalId: string) => void;
+  onCreated: (proposalId: string, opts?: { hasDocs?: boolean }) => void;
 }) {
   const { user } = useAuth();
   const { currentTeam } = useTeam();
@@ -38,24 +39,37 @@ export function AddOpportunityDialog({
   const [subAgency, setSubAgency] = useState("");
   const [vehicle, setVehicle] = useState<string>("GSA Schedule");
   const [vehicleOther, setVehicleOther] = useState("");
-  const [naicsCode, setNaicsCode] = useState("541512");
+  const [naicsCode, setNaicsCode] = useState<string>("");
   const [estValue, setEstValue] = useState<string>("");
   const [deadline, setDeadline] = useState("");
   const [sourceUrl, setSourceUrl] = useState("");
   const [incumbent, setIncumbent] = useState("");
   const [description, setDescription] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setTitle(""); setAgency(""); setSubAgency(""); setVehicle("GSA Schedule");
-    setVehicleOther(""); setNaicsCode("541512"); setEstValue(""); setDeadline("");
-    setSourceUrl(""); setIncumbent(""); setDescription("");
+    setVehicleOther(""); setNaicsCode(""); setEstValue(""); setDeadline("");
+    setSourceUrl(""); setIncumbent(""); setDescription(""); setFiles([]);
   }, [open]);
+
+  const addFiles = (list: FileList | File[] | null) => {
+    if (!list) return;
+    const arr = Array.from(list);
+    setFiles((prev) => [...prev, ...arr]);
+  };
+
+  const removeFile = (idx: number) => {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  };
 
   const handleSave = async () => {
     if (!user) return;
-    if (!title.trim() || !agency.trim() || !naicsCode) {
-      toast.error("Title, Agency, and NAICS are required");
+    if (!title.trim() || !agency.trim()) {
+      toast.error("Title and Agency are required");
       return;
     }
     setSaving(true);
@@ -68,7 +82,7 @@ export function AddOpportunityDialog({
       solicitation_number: solNum,
       opportunity_title: title.trim(),
       agency: fullAgency,
-      naics_code: naicsCode,
+      naics_code: naicsCode || null,
       estimated_value: estValue ? Number(estValue) : null,
       response_deadline: deadline ? new Date(`${deadline}T23:59:59Z`).toISOString() : null,
       known_incumbent: incumbent.trim() || null,
@@ -87,11 +101,37 @@ export function AddOpportunityDialog({
       .insert(payload)
       .select("id")
       .single();
+    if (error || !data) {
+      setSaving(false);
+      toast.error(error?.message ?? "Failed to create opportunity");
+      return;
+    }
+    const proposalId = data.id;
+
+    // Upload attachments if any
+    let uploaded = 0;
+    let failed = 0;
+    for (const file of files) {
+      const ft = classifyFilename(file.name);
+      const path = `proposals/${proposalId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+      const { error: upErr } = await supabase.storage.from("proposal-attachments").upload(path, file);
+      if (upErr) { failed++; continue; }
+      const { error: insErr } = await supabase.from("proposal_attachments").insert({
+        proposal_id: proposalId,
+        filename: file.name,
+        file_type: ft,
+        storage_path: path,
+        source: "manual",
+        size_bytes: file.size,
+      });
+      if (insErr) { failed++; continue; }
+      uploaded++;
+    }
     setSaving(false);
-    if (error || !data) { toast.error(error?.message ?? "Failed to create opportunity"); return; }
-    toast.success("Opportunity created");
+    if (failed > 0) toast.warning(`Uploaded ${uploaded} of ${files.length} document${files.length === 1 ? "" : "s"}`);
+    else toast.success(uploaded > 0 ? `Opportunity created with ${uploaded} document${uploaded === 1 ? "" : "s"}` : "Opportunity created");
     onOpenChange(false);
-    onCreated(data.id);
+    onCreated(proposalId, { hasDocs: uploaded > 0 });
   };
 
   const naicsLabel = ALL_NAICS_FLAT.find((c) => c.code === naicsCode);
@@ -149,18 +189,31 @@ export function AddOpportunityDialog({
               )}
             </div>
             <div>
-              <Label className="text-xs">NAICS Code *</Label>
+              <Label className="text-xs">NAICS Code</Label>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button variant="outline" className="w-full justify-between mt-1 font-normal">
                     <span className="truncate">
-                      <span className="font-mono text-xs mr-2">{naicsCode}</span>
-                      <span className="text-muted-foreground text-xs">{naicsLabel?.name}</span>
+                      {naicsCode ? (
+                        <>
+                          <span className="font-mono text-xs mr-2">{naicsCode}</span>
+                          <span className="text-muted-foreground text-xs">{naicsLabel?.name}</span>
+                        </>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">Not sure yet — I'll add documents</span>
+                      )}
                     </span>
                     <ChevronDown className="w-4 h-4 ml-2 opacity-60" />
                   </Button>
                 </PopoverTrigger>
                 <PopoverContent className="w-[380px] max-h-[360px] overflow-y-auto p-3">
+                  <label className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-1 py-1 mb-2 border-b pb-2">
+                    <Checkbox
+                      checked={naicsCode === ""}
+                      onCheckedChange={() => setNaicsCode("")}
+                    />
+                    <span className="text-xs">Not sure yet — I'll add documents</span>
+                  </label>
                   {NAICS_GROUPS.map((g) => (
                     <div key={g.label} className="mb-3">
                       <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">{g.label}</div>
@@ -223,6 +276,56 @@ export function AddOpportunityDialog({
               rows={3}
               className="mt-1"
             />
+          </div>
+
+          <div>
+            <Label className="text-xs">Opportunity documents</Label>
+            <div
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={(e) => {
+                e.preventDefault();
+                setDragging(false);
+                addFiles(e.dataTransfer.files);
+              }}
+              onClick={() => fileInputRef.current?.click()}
+              className={`mt-1 rounded-md border-2 border-dashed p-4 text-center cursor-pointer transition-colors ${
+                dragging ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+              }`}
+            >
+              <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+              <div className="text-xs text-muted-foreground">
+                Drop SOW/PWS, Section L/M, amendments, or attachments here — or click to browse.
+              </div>
+              <div className="text-[11px] text-muted-foreground mt-0.5">
+                We'll parse them after creation to auto-fill NAICS, value, deadline and more.
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => { addFiles(e.target.files); e.target.value = ""; }}
+              />
+            </div>
+            {files.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {files.map((f, i) => (
+                  <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+                    <FileText className="w-3.5 h-3.5 shrink-0 text-muted-foreground" />
+                    <span className="truncate flex-1">{f.name}</span>
+                    <span className="text-muted-foreground shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                    <button
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); removeFile(i); }}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
