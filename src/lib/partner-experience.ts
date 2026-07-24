@@ -120,3 +120,133 @@ export function rankPartnerExperienceFromTargets(
   ranked.sort((a, b) => b.relevanceScore - a.relevanceScore);
   return ranked;
 }
+
+// =====================================================================
+// Dark horses: strong performers in ADJACENT NAICS (same 4-digit prefix)
+// or at the same agency in different NAICS. Excludes firms that already
+// have direct experience at the opportunity's exact NAICS.
+// =====================================================================
+
+export type DarkHorseTarget = PartnerExperienceTarget & {
+  darkHorse: true;
+  adjacentNaics: string[];
+  sameAgencyValue: number;
+};
+
+const NAICS_PREFIX_LEN = 4;
+
+export type RankDarkHorsesOpportunity = PartnerExperienceOpportunity & {
+  naics_code: string;
+};
+
+export function rankDarkHorses(
+  awards: HistoricalAward[],
+  opportunity: RankDarkHorsesOpportunity,
+  opts: RankPartnerExperienceOpts = {},
+): DarkHorseTarget[] {
+  const { limit = 40, now = new Date() } = opts;
+  const oppNaics = (opportunity.naics_code || "").trim();
+  if (!oppNaics) return [];
+  const oppPrefix = oppNaics.slice(0, NAICS_PREFIX_LEN);
+  const agencyLc = opportunity.agency ? opportunity.agency.toLowerCase() : null;
+
+  // Agency-scope hard filter when an agency is provided.
+  const scoped = agencyLc
+    ? awards.filter((a) => agencyMatches(a, agencyLc))
+    : awards;
+
+  type Bucket = {
+    name: string;
+    uei: string | null;
+    awardCount: number;
+    totalValue: number;
+    sameAgencyValue: number;
+    latestAwardDate: string | null;
+    latestSetAside: string | null;
+    smallBizHits: number;
+    descriptions: string[];
+    hasExactNaics: boolean;
+    adjacentNaics: Set<string>;
+  };
+
+  const byVendor = new Map<string, Bucket>();
+  for (const a of scoped) {
+    const name = a["Recipient Name"];
+    if (!name) continue;
+    const key = (a["Recipient UEI"] || name).toUpperCase();
+    let b = byVendor.get(key);
+    if (!b) {
+      b = {
+        name,
+        uei: a["Recipient UEI"] ?? null,
+        awardCount: 0,
+        totalValue: 0,
+        sameAgencyValue: 0,
+        latestAwardDate: null,
+        latestSetAside: null,
+        smallBizHits: 0,
+        descriptions: [],
+        hasExactNaics: false,
+        adjacentNaics: new Set(),
+      };
+      byVendor.set(key, b);
+    }
+    const amt = Number(a["Award Amount"]) || 0;
+    b.awardCount += 1;
+    b.totalValue += amt;
+    const isAgency = agencyLc ? agencyMatches(a, agencyLc) : true;
+    if (isAgency) b.sameAgencyValue += amt;
+    const d = a["Start Date"] || null;
+    if (d && (!b.latestAwardDate || d > b.latestAwardDate)) {
+      b.latestAwardDate = d;
+      b.latestSetAside = a["Type of Set Aside"] || b.latestSetAside;
+    }
+    if (isSmallBusinessSetAside(a["Type of Set Aside"])) b.smallBizHits += 1;
+    if (a.Description && b.descriptions.length < 3) b.descriptions.push(a.Description);
+    const n = (a.NAICS || "").trim();
+    if (n) {
+      if (n === oppNaics) b.hasExactNaics = true;
+      else if (n.slice(0, NAICS_PREFIX_LEN) === oppPrefix) b.adjacentNaics.add(n);
+    }
+  }
+
+  const oppSetAsideIsSmall = isSmallBusinessSetAside(opportunity.set_aside);
+  const results: DarkHorseTarget[] = [];
+  for (const b of byVendor.values()) {
+    if (b.hasExactNaics) continue; // has direct experience — not a dark horse
+    if (b.adjacentNaics.size === 0) continue; // no adjacency signal
+
+    const recencyMonths = monthsSince(b.latestAwardDate, now);
+    const isSmall = b.smallBizHits > 0;
+
+    let score = 0;
+    score += volumeScore(b.awardCount, b.sameAgencyValue); // up to 30
+    score += recencyScore(recencyMonths);                    // up to 30
+    score += Math.min(40, 15 + b.adjacentNaics.size * 12);   // up to 40
+    if (oppSetAsideIsSmall && isSmall) score += 5;
+    score = Math.max(0, Math.min(100, Math.round(score)));
+
+    results.push({
+      name: b.name,
+      uei: b.uei,
+      totalValue: b.totalValue,
+      awardCount: b.awardCount,
+      latestAwardDate: b.latestAwardDate,
+      latestSetAside: b.latestSetAside,
+      isSmallBusiness: isSmall,
+      classification: !isSmall && b.totalValue >= 10_000_000 ? "prime" : "partner",
+      sampleDescriptions: b.descriptions,
+      agencyExperience: b.sameAgencyValue > 0,
+
+      recencyMonths,
+      relevanceScore: score,
+      darkHorse: true,
+      adjacentNaics: Array.from(b.adjacentNaics),
+      sameAgencyValue: b.sameAgencyValue,
+    });
+  }
+
+  results.sort((a, b) => b.relevanceScore - a.relevanceScore);
+  return results.slice(0, limit);
+}
+

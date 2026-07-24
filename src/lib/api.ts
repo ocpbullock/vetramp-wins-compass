@@ -73,6 +73,7 @@ export async function searchUsaspending(input: {
   startDate: string;
   endDate: string;
   keyword?: string;
+  agency?: string;
   maxResults?: number;
 }) {
   logCall(`USAspending awards (up to ${input.maxResults ?? 1000})`);
