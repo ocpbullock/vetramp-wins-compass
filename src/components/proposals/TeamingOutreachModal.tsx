@@ -419,11 +419,43 @@ export function TeamingOutreachModal({
             </TabsContent>
           </Tabs>
 
-          <div className="flex justify-between pt-2 border-t border-border">
+          <div className="flex flex-wrap justify-between gap-2 pt-2 border-t border-border">
             <Button variant="ghost" size="sm" onClick={() => generate(true)} disabled={loading || !partner}>
               <RefreshCw className="w-3.5 h-3.5 mr-1" /> Regenerate
             </Button>
-            <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>Close</Button>
+            <div className="flex gap-2">
+              {partner?.id && outreach && (
+                <Button
+                  variant="outline" size="sm"
+                  onClick={async () => {
+                    const { data: existing } = await supabase
+                      .from("proposal_teaming")
+                      .select("id, outreach_status")
+                      .eq("proposal_id", proposal.id)
+                      .eq("company_id", partner.id!)
+                      .maybeSingle();
+                    if (!existing) {
+                      toast.error("Add this partner to teaming first, then mark contacted.");
+                      return;
+                    }
+                    // Only advance from earlier stages; don't clobber NDA/TA/declined.
+                    if (existing.outreach_status !== "not_started") {
+                      toast.info(`Status already "${existing.outreach_status.replace(/_/g, " ")}"`);
+                      return;
+                    }
+                    const { error } = await supabase
+                      .from("proposal_teaming")
+                      .update({ outreach_status: "contacted" } as any)
+                      .eq("id", existing.id);
+                    if (error) { toast.error(error.message); return; }
+                    toast.success("Marked contacted");
+                  }}
+                >
+                  Mark contacted
+                </Button>
+              )}
+              <Button variant="secondary" size="sm" onClick={() => onOpenChange(false)}>Close</Button>
+            </div>
           </div>
         </div>
       </DialogContent>
