@@ -34,6 +34,8 @@ import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
 import { PtwCard } from "./PtwCard";
 import { computePtw } from "@/lib/ptw";
+import { PwinDial } from "@/components/PwinDial";
+import { MetricCard } from "@/components/MetricCard";
 
 type CaptureAnalysis = {
   bid_no_bid: {
