@@ -141,7 +141,7 @@ function OpportunitiesPage() {
         .eq("reviewed", false);
       if (error) throw new Error(error.message);
       const counts: Record<string, number> = {};
-      for (const r of (data ?? []) as { proposal_id: string }[]) {
+      for (const r of ((data ?? []) as unknown) as { proposal_id: string }[]) {
         counts[r.proposal_id] = (counts[r.proposal_id] ?? 0) + 1;
       }
       return counts;
