@@ -90,6 +90,7 @@ type Row = {
   enrichable?: { proposalId: string; hasNoticeId: boolean };
   watchEnabled?: boolean;
   unreviewedActivity?: number;
+  teamingSummary?: { total: number; contacted: number; nda: number; ta: number };
 };
 
 const fmtDate = (d: string | null) =>
