@@ -49,6 +49,7 @@ import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
 import { MarketIntelPanel } from "@/components/proposals/MarketIntelPanel";
 import { ActivitiesPanel } from "@/components/proposals/ActivitiesPanel";
 import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursuitsCard";
+import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
 import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
@@ -835,6 +836,19 @@ function ProposalPipeline() {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+            <RecompeteWatchCard
+              proposalId={proposalId}
+              watchEnabled={Boolean((proposal as any).watch_enabled)}
+              lastWatchedAt={(proposal as any).last_watched_at ?? null}
+              onChanged={async () => {
+                const { data: fresh } = await supabase
+                  .from("proposals")
+                  .select("watch_enabled, last_watched_at")
+                  .eq("id", proposalId)
+                  .maybeSingle();
+                if (fresh) setProposal((p: any) => ({ ...p, ...fresh }));
+              }}
+            />
             <SimilarPastPursuitsCard
               proposalId={proposalId}
               teamId={proposal.team_id ?? null}

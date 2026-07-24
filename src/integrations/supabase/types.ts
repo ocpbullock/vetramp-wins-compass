@@ -528,6 +528,59 @@ export type Database = {
           },
         ]
       }
+      opportunity_watch_events: {
+        Row: {
+          created_at: string
+          detail: string | null
+          event_type: string
+          id: string
+          maturity_hint: string | null
+          notice_id: string | null
+          notice_type: string | null
+          posted_date: string | null
+          proposal_id: string
+          reviewed: boolean
+          team_id: string | null
+          title: string | null
+        }
+        Insert: {
+          created_at?: string
+          detail?: string | null
+          event_type: string
+          id?: string
+          maturity_hint?: string | null
+          notice_id?: string | null
+          notice_type?: string | null
+          posted_date?: string | null
+          proposal_id: string
+          reviewed?: boolean
+          team_id?: string | null
+          title?: string | null
+        }
+        Update: {
+          created_at?: string
+          detail?: string | null
+          event_type?: string
+          id?: string
+          maturity_hint?: string | null
+          notice_id?: string | null
+          notice_type?: string | null
+          posted_date?: string | null
+          proposal_id?: string
+          reviewed?: boolean
+          team_id?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "opportunity_watch_events_proposal_id_fkey"
+            columns: ["proposal_id"]
+            isOneToOne: false
+            referencedRelation: "proposals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       past_performance: {
         Row: {
           agency: string
@@ -951,6 +1004,7 @@ export type Database = {
           id: string
           incumbent_notes: string | null
           known_incumbent: string | null
+          last_watched_at: string | null
           lessons_learned: string | null
           management_approach: Json | null
           market_snapshot: Json | null
@@ -994,6 +1048,7 @@ export type Database = {
           user_notes: string | null
           vehicle_registry_id: string | null
           vehicle_status: string | null
+          watch_enabled: boolean
         }
         Insert: {
           agency?: string | null
@@ -1015,6 +1070,7 @@ export type Database = {
           id?: string
           incumbent_notes?: string | null
           known_incumbent?: string | null
+          last_watched_at?: string | null
           lessons_learned?: string | null
           management_approach?: Json | null
           market_snapshot?: Json | null
@@ -1058,6 +1114,7 @@ export type Database = {
           user_notes?: string | null
           vehicle_registry_id?: string | null
           vehicle_status?: string | null
+          watch_enabled?: boolean
         }
         Update: {
           agency?: string | null
@@ -1079,6 +1136,7 @@ export type Database = {
           id?: string
           incumbent_notes?: string | null
           known_incumbent?: string | null
+          last_watched_at?: string | null
           lessons_learned?: string | null
           management_approach?: Json | null
           market_snapshot?: Json | null
@@ -1122,6 +1180,7 @@ export type Database = {
           user_notes?: string | null
           vehicle_registry_id?: string | null
           vehicle_status?: string | null
+          watch_enabled?: boolean
         }
         Relationships: [
           {

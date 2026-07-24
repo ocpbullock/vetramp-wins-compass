@@ -4,7 +4,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, ExternalLink, Workflow, Sparkles, Loader2 } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Plus, ExternalLink, Workflow, Sparkles, Loader2, Radar } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
@@ -38,6 +39,7 @@ type ProposalRow = {
   opportunity_source_id: string | null;
   solicitation_number: string | null;
   notice_id: string | null;
+  watch_enabled: boolean | null;
 };
 
 type Stage = BoardStage;
@@ -86,6 +88,8 @@ type Row = {
   proposalId?: string;
   oppForPwin: OppForPwin;
   enrichable?: { proposalId: string; hasNoticeId: boolean };
+  watchEnabled?: boolean;
+  unreviewedActivity?: number;
 };
 
 const fmtDate = (d: string | null) =>
@@ -120,10 +124,27 @@ function OpportunitiesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposals")
-        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id")
+        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id,watch_enabled")
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as ProposalRow[];
+    },
+  });
+
+  const activityQ = useQuery({
+    queryKey: ["opportunities-page", "watch-activity", currentTeam?.id ?? "none", user?.id ?? "none"],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("opportunity_watch_events" as any)
+        .select("proposal_id")
+        .eq("reviewed", false);
+      if (error) throw new Error(error.message);
+      const counts: Record<string, number> = {};
+      for (const r of ((data ?? []) as unknown) as { proposal_id: string }[]) {
+        counts[r.proposal_id] = (counts[r.proposal_id] ?? 0) + 1;
+      }
+      return counts;
     },
   });
 
@@ -166,6 +187,7 @@ function OpportunitiesPage() {
       });
     }
 
+    const activity = activityQ.data ?? {};
     for (const p of proposals) {
       out.push({
         key: `p:${p.id}`,
@@ -195,11 +217,13 @@ function OpportunitiesPage() {
         })
           ? { proposalId: p.id, hasNoticeId: !!p.notice_id }
           : undefined,
+        watchEnabled: Boolean(p.watch_enabled),
+        unreviewedActivity: activity[p.id] ?? 0,
       });
     }
 
     return out;
-  }, [trackedQ.data, proposalsQ.data]);
+  }, [trackedQ.data, proposalsQ.data, activityQ.data]);
 
   const grouped = useMemo(() => {
     const m: Record<Stage, Row[]> = {
@@ -355,6 +379,15 @@ function OpportunitiesPage() {
                           <Badge variant="outline" className="text-[10px] capitalize">
                             {row.statusLabel}
                           </Badge>
+                          {row.unreviewedActivity ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] uppercase tracking-wide gap-1 border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_18%,transparent)] text-[color:var(--brand-brass)]"
+                            >
+                              <Radar className="w-3 h-3" />
+                              {row.unreviewedActivity} new SAM activity
+                            </Badge>
+                          ) : null}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 truncate">
                           <span className="briefing-label mr-1">Agency</span>
@@ -399,6 +432,13 @@ function OpportunitiesPage() {
                           />
                         )}
                         <PwinChip opp={row.oppForPwin} />
+                        {row.proposalId && (
+                          <WatchToggle
+                            proposalId={row.proposalId}
+                            enabled={row.watchEnabled ?? false}
+                            onChanged={() => qc.invalidateQueries({ queryKey: ["opportunities-page"] })}
+                          />
+                        )}
                         {row.enrichable && (
                           <EnrichButton
                             proposalId={row.enrichable.proposalId}
@@ -454,4 +494,36 @@ function EnrichButton({ proposalId, onDone }: { proposalId: string; onDone: () =
     </Button>
   );
 }
+
+function WatchToggle({
+  proposalId,
+  enabled,
+  onChanged,
+}: {
+  proposalId: string;
+  enabled: boolean;
+  onChanged: () => void;
+}) {
+  const [busy, setBusy] = useState(false);
+  const toggle = async (v: boolean) => {
+    setBusy(true);
+    try {
+      const { error } = await supabase.from("proposals").update({ watch_enabled: v } as any).eq("id", proposalId);
+      if (error) throw new Error(error.message);
+      toast.success(v ? "SAM watcher enabled" : "SAM watcher paused");
+      onChanged();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to update");
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <label className="flex items-center gap-1.5 text-xs text-muted-foreground cursor-pointer" title="Watch SAM.gov for activity">
+      <Radar className="w-3.5 h-3.5" />
+      <Switch checked={enabled} onCheckedChange={toggle} disabled={busy} />
+    </label>
+  );
+}
+
 
