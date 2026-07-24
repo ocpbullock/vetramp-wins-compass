@@ -202,8 +202,6 @@ export function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-accent transition-colors ml-1">
-              <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
             <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-white/10 transition-colors ml-1 text-[color:var(--header-fg)]">
               <div className="w-9 h-9 rounded-full bg-[color:var(--header-accent)] text-[color:var(--brand-brass-foreground)] flex items-center justify-center text-xs font-semibold">
                 {initials}
