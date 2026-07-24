@@ -853,7 +853,7 @@ function OpportunityTeamingSummary({
                       {s.bestRoleLabel} · {s.workshareRange[0]}–{s.workshareRange[1]}% WS
                     </div>
                   </div>
-                  <div className={`text-base font-bold tabular-nums ${s.fitScore >= 70 ? "text-green-600" : s.fitScore >= 40 ? "text-amber-600" : "text-destructive"}`}>
+                  <div className={`text-base font-bold tabular-nums ${s.fitScore >= 70 ? "text-success" : s.fitScore >= 40 ? "text-warning" : "text-destructive"}`}>
                     {s.fitScore}
                   </div>
                 </li>
