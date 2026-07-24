@@ -10,7 +10,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Plus, Trash2, Users, Search, Sparkles, Mail } from "lucide-react";
+import { Plus, Trash2, Users, Search, Sparkles, Mail, MessageSquare } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type { PartnerView as Partner } from "@/lib/companies";
 import { listPartnerCompanies, companyToPartnerView, type Company } from "@/lib/companies";
@@ -38,6 +39,9 @@ const ROLE_VARIANT: Record<RoleValue, "default" | "secondary" | "outline"> = {
   jv_partner: "outline",
 };
 
+export type OutreachStatus =
+  | "not_started" | "contacted" | "call_held" | "nda_signed" | "ta_signed" | "declined";
+
 export type TeamingEntry = {
   id: string;
   proposal_id: string;
@@ -46,8 +50,47 @@ export type TeamingEntry = {
   work_share_pct: number | null;
   naics_contribution: string[];
   notes: string | null;
+  outreach_status: OutreachStatus;
+  outreach_updated_at: string | null;
+  outreach_notes: string | null;
   partner?: Partner;
 };
+
+const OUTREACH_STATUSES: { value: OutreachStatus; label: string }[] = [
+  { value: "not_started", label: "Not started" },
+  { value: "contacted", label: "Contacted" },
+  { value: "call_held", label: "Call held" },
+  { value: "nda_signed", label: "NDA signed" },
+  { value: "ta_signed", label: "TA signed" },
+  { value: "declined", label: "Declined" },
+];
+const OUTREACH_LABEL: Record<OutreachStatus, string> = Object.fromEntries(
+  OUTREACH_STATUSES.map((s) => [s.value, s.label]),
+) as Record<OutreachStatus, string>;
+
+function outreachChipClass(s: OutreachStatus): string {
+  switch (s) {
+    case "not_started": return "bg-muted text-muted-foreground border-border";
+    case "contacted": return "bg-primary/15 text-primary border-primary/30";
+    case "call_held":
+      return "border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_18%,transparent)] text-[color:var(--brand-brass)]";
+    case "nda_signed":
+    case "ta_signed":
+      return "bg-success/15 text-success border-success/30";
+    case "declined":
+      return "bg-destructive/15 text-destructive border-destructive/30";
+  }
+}
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return "";
+  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24); if (d < 30) return `${d}d ago`;
+  const mo = Math.floor(d / 30); return `${mo}mo ago`;
+}
 
 export function TeamingCard({
   proposalId, teamId, opportunityNaics, proposal,
@@ -135,10 +178,28 @@ export function TeamingCard({
     await addPartner(p, { role, workShare: midShare });
   };
 
-  const updateEntry = async (id: string, patch: Partial<Pick<TeamingEntry, "role" | "work_share_pct">>) => {
+  const updateEntry = async (id: string, patch: Partial<Pick<TeamingEntry, "role" | "work_share_pct" | "outreach_notes">>) => {
     const { error } = await supabase.from("proposal_teaming").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
     refetch();
+  };
+
+  const updateOutreach = async (entry: TeamingEntry, status: OutreachStatus) => {
+    const { error } = await supabase
+      .from("proposal_teaming")
+      .update({ outreach_status: status } as any)
+      .eq("id", entry.id);
+    if (error) { toast.error(error.message); return; }
+
+    // Sync PWIN-visible company flags when NDA/TA are signed.
+    if ((status === "nda_signed" || status === "ta_signed") && entry.partner_id) {
+      const patch: { has_nda: boolean; has_teaming_agreement?: boolean } = { has_nda: true };
+      if (status === "ta_signed") patch.has_teaming_agreement = true;
+      const { error: cErr } = await supabase.from("companies").update(patch).eq("id", entry.partner_id);
+      if (!cErr) toast.success("Partner record updated");
+    }
+    refetch();
+    qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
   };
 
   const removeEntry = async (id: string) => {
@@ -146,6 +207,12 @@ export function TeamingCard({
     if (error) { toast.error(error.message); return; }
     refetch();
   };
+
+  const pipelineCounts = useMemo(() => {
+    const c: Partial<Record<OutreachStatus, number>> = {};
+    for (const e of entries) c[e.outreach_status] = (c[e.outreach_status] ?? 0) + 1;
+    return c;
+  }, [entries]);
 
   return (
     <div className="space-y-4">
@@ -239,6 +306,15 @@ export function TeamingCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {entries.length > 0 && (
+          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 border-b border-border pb-2">
+            <span className="briefing-label">Outreach pipeline</span>
+            <span>{entries.length} partner{entries.length === 1 ? "" : "s"}</span>
+            {OUTREACH_STATUSES.filter((s) => s.value !== "not_started" && (pipelineCounts[s.value] ?? 0) > 0).map((s) => (
+              <span key={s.value}>· {pipelineCounts[s.value]} {s.label.toLowerCase()}</span>
+            ))}
+          </div>
+        )}
         {entries.length === 0 && (
           <div className="text-sm text-muted-foreground border border-dashed border-border rounded-md p-6 text-center">
             No teaming partners on this bid yet.
@@ -251,10 +327,30 @@ export function TeamingCard({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium text-sm">{e.partner?.company_name ?? "Unknown partner"}</div>
-                  <div className="flex flex-wrap gap-1 mt-1">
+                  <div className="flex flex-wrap items-center gap-1 mt-1">
                     <Badge variant={ROLE_VARIANT[e.role]} className="text-[10px]">
                       {ROLES.find((r) => r.value === e.role)?.label}
                     </Badge>
+                    <Select
+                      value={e.outreach_status}
+                      onValueChange={(v) => updateOutreach(e, v as OutreachStatus)}
+                    >
+                      <SelectTrigger
+                        className={`h-6 px-2 text-[10px] uppercase tracking-wide gap-1 border ${outreachChipClass(e.outreach_status)}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OUTREACH_STATUSES.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {e.outreach_updated_at && (
+                      <span className="text-[10px] text-muted-foreground">
+                        · updated {timeAgo(e.outreach_updated_at)}
+                      </span>
+                    )}
                     {(e.partner?.certifications ?? []).map((c) => (
                       <Badge key={c} variant="outline" className="text-[10px]">{c}</Badge>
                     ))}
@@ -264,6 +360,7 @@ export function TeamingCard({
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <OutreachNotesPopover entry={e} onSave={(notes) => updateEntry(e.id, { outreach_notes: notes })} />
                   {proposal && e.partner && (
                     <Button
                       variant="ghost" size="sm"
@@ -354,6 +451,38 @@ export function TeamingCard({
     )}
     </div>
 
+  );
+}
+
+function OutreachNotesPopover({
+  entry, onSave,
+}: { entry: TeamingEntry; onSave: (notes: string | null) => void }) {
+  const [open, setOpen] = useState(false);
+  const [val, setVal] = useState(entry.outreach_notes ?? "");
+  useEffect(() => { setVal(entry.outreach_notes ?? ""); }, [entry.outreach_notes]);
+  const hasNotes = !!(entry.outreach_notes && entry.outreach_notes.trim());
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="ghost" size="sm" title="Outreach notes" className="gap-1">
+          <MessageSquare className={`w-3.5 h-3.5 ${hasNotes ? "text-primary" : ""}`} />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 space-y-2" align="end">
+        <Label className="text-xs">Outreach notes</Label>
+        <Textarea
+          rows={4}
+          value={val}
+          onChange={(e) => setVal(e.target.value)}
+          placeholder="Call outcomes, blockers, next steps…"
+          className="text-xs"
+        />
+        <div className="flex justify-end gap-2">
+          <Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Cancel</Button>
+          <Button size="sm" onClick={() => { onSave(val.trim() || null); setOpen(false); }}>Save</Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 

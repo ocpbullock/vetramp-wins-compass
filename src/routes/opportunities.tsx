@@ -90,6 +90,7 @@ type Row = {
   enrichable?: { proposalId: string; hasNoticeId: boolean };
   watchEnabled?: boolean;
   unreviewedActivity?: number;
+  teamingSummary?: { total: number; contacted: number; nda: number; ta: number };
 };
 
 const fmtDate = (d: string | null) =>
@@ -148,6 +149,27 @@ function OpportunitiesPage() {
     },
   });
 
+  const teamingQ = useQuery({
+    queryKey: ["opportunities-page", "teaming-summary", currentTeam?.id ?? "none", user?.id ?? "none"],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proposal_teaming")
+        .select("proposal_id, outreach_status");
+      if (error) throw new Error(error.message);
+      const acc: Record<string, { total: number; contacted: number; nda: number; ta: number }> = {};
+      for (const r of (data ?? []) as { proposal_id: string; outreach_status: string }[]) {
+        const s = acc[r.proposal_id] ?? { total: 0, contacted: 0, nda: 0, ta: 0 };
+        s.total += 1;
+        if (r.outreach_status === "contacted" || r.outreach_status === "call_held") s.contacted += 1;
+        if (r.outreach_status === "nda_signed") s.nda += 1;
+        if (r.outreach_status === "ta_signed") s.ta += 1;
+        acc[r.proposal_id] = s;
+      }
+      return acc;
+    },
+  });
+
   const rows = useMemo<Row[]>(() => {
     const tracked = trackedQ.data ?? [];
     const proposals = proposalsQ.data ?? [];
@@ -188,6 +210,7 @@ function OpportunitiesPage() {
     }
 
     const activity = activityQ.data ?? {};
+    const teaming = teamingQ.data ?? {};
     for (const p of proposals) {
       out.push({
         key: `p:${p.id}`,
@@ -219,11 +242,12 @@ function OpportunitiesPage() {
           : undefined,
         watchEnabled: Boolean(p.watch_enabled),
         unreviewedActivity: activity[p.id] ?? 0,
+        teamingSummary: teaming[p.id],
       });
     }
 
     return out;
-  }, [trackedQ.data, proposalsQ.data, activityQ.data]);
+  }, [trackedQ.data, proposalsQ.data, activityQ.data, teamingQ.data]);
 
   const grouped = useMemo(() => {
     const m: Record<Stage, Row[]> = {
@@ -422,6 +446,15 @@ function OpportunitiesPage() {
                             </>
                           ) : null}
                         </div>
+                        {row.teamingSummary && row.teamingSummary.total > 0 && (
+                          <div className="text-[11px] text-muted-foreground mt-1">
+                            <span className="briefing-label mr-1">Team</span>
+                            {row.teamingSummary.total} partner{row.teamingSummary.total === 1 ? "" : "s"}
+                            {row.teamingSummary.contacted ? ` · ${row.teamingSummary.contacted} contacted` : ""}
+                            {row.teamingSummary.nda ? ` · ${row.teamingSummary.nda} NDA` : ""}
+                            {row.teamingSummary.ta ? ` · ${row.teamingSummary.ta} TA` : ""}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2 flex-wrap justify-end">
                         {row.proposalId && (
