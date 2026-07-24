@@ -136,7 +136,7 @@ export function AddOpportunityDialog({
     onCreated(proposalId, { hasDocs: uploaded > 0 });
   };
 
-  const naicsLabel = ALL_NAICS_FLAT.find((c) => c.code === naicsCode);
+  // Removed unused naicsLabel lookup; NaicsCombobox handles labels.
   const dedupedAgencies = Array.from(new Set(agencySuggestions.filter(Boolean))).slice(0, 200);
 
   return (
