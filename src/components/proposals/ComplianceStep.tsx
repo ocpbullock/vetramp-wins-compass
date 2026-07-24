@@ -24,18 +24,18 @@ const STATUS_ORDER: ReqStatus[] = ["not_started", "in_progress", "drafted", "rev
 
 const STATUS_COLOR: Record<ReqStatus, string> = {
   not_started: "bg-muted text-muted-foreground",
-  in_progress: "bg-blue-500/15 text-blue-700 dark:text-blue-300",
-  drafted: "bg-amber-500/15 text-amber-700 dark:text-amber-300",
-  reviewed: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300",
-  final: "bg-emerald-600/20 text-emerald-700 dark:text-emerald-300",
+  in_progress: "bg-primary/15 text-primary",
+  drafted: "bg-warning/15 text-warning",
+  reviewed: "bg-success/15 text-success",
+  final: "bg-success/25 text-success",
 };
 
 const STATUS_BAR: Record<ReqStatus, string> = {
   not_started: "bg-muted-foreground/40",
-  in_progress: "bg-blue-500",
-  drafted: "bg-amber-500",
-  reviewed: "bg-emerald-500",
-  final: "bg-emerald-600",
+  in_progress: "bg-primary",
+  drafted: "bg-warning",
+  reviewed: "bg-success",
+  final: "bg-success",
 };
 
 function initials(member?: TeamMember | null) {
