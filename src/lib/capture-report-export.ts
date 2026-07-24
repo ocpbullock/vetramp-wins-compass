@@ -121,6 +121,17 @@ export type CaptureReportInputs = {
     ourCompanyName?: string | null;
   } | null;
   darkHorses?: DarkHorseTarget[] | null;
+  positioningMatrix?: {
+    updatedAt?: string;
+    dimensions?: string[];
+    rows?: Array<{
+      company?: string;
+      isUs?: boolean;
+      threat?: string;
+      ratings?: Record<string, string>;
+      coverage?: string;
+    }>;
+  } | null;
 };
 
 export type CaptureReportOptions = {
