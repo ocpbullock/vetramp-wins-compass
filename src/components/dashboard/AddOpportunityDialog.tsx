@@ -13,7 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
 import { toast } from "sonner";
-import { CONTRACT_VEHICLES } from "@/components/dashboard/TrackOpportunityDialog";
+import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { classifyFilename } from "@/lib/attachment-classify";
 
 const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
