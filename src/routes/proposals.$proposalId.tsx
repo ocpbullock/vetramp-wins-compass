@@ -1286,9 +1286,31 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
     saveState === "error" ? "Save failed — retry" :
     "";
 
+  const baselineFields: string[] = (proposal?.compliance_matrix as any)?.parse_metadata?.baseline_fields ?? [];
+  const baselineSet = new Set(baselineFields);
+  const BASELINE_LABELS: Record<string, string> = {
+    opportunity_title: "Title", agency: "Agency", solicitation_number: "Solicitation #",
+    naics_code: "NAICS", set_aside: "Set-aside", contract_type: "Contract type",
+    estimated_value: "Estimated value", pop_base_months: "PoP base", pop_option_months: "Option months",
+    clearance_requirement: "Clearance", response_deadline: "Response deadline",
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 space-y-4">
+        {baselineSet.size > 0 && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 px-3 py-2 text-xs flex items-start gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <div>
+              <div className="font-medium">Values below were auto-filled from a previous solicitation — verify against new docs.</div>
+              <div className="mt-0.5 flex flex-wrap gap-1">
+                {baselineFields.map((f) => (
+                  <Badge key={f} variant="outline" className="text-[10px] border-amber-500/60 text-amber-800 dark:text-amber-200">{BASELINE_LABELS[f] ?? f}</Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         <Card className="border-primary/40">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Pursuit type</CardTitle>
