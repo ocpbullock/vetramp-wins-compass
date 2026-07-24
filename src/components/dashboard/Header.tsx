@@ -156,10 +156,14 @@ export function Header() {
         {availableTeams.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 max-w-[220px]">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 max-w-[220px] bg-white/10 border-white/20 text-[color:var(--header-fg)] hover:bg-white/15 hover:text-[color:var(--header-fg)]"
+              >
                 {isOpp ? <Briefcase className="w-3.5 h-3.5 shrink-0" /> : <Building2 className="w-3.5 h-3.5 shrink-0" />}
                 <span className="truncate">{currentTeam?.name ?? "Select team"}</span>
-                <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-70" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
