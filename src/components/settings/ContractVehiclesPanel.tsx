@@ -493,6 +493,7 @@ function RegistryVehicleRow({
   const qc = useQueryClient();
   const [addAwardeeOpen, setAddAwardeeOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
 
   const { data: awardees = [], isLoading } = useQuery({
     queryKey: ["vehicle-awardees", vehicle.id],
@@ -549,7 +550,8 @@ function RegistryVehicleRow({
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold text-muted-foreground">Awardees</div>
             {canEditRow && (
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
+                <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV</Button>
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Bulk paste</Button>
                 <Button size="sm" onClick={() => setAddAwardeeOpen(true)}><Plus className="w-3 h-3 mr-1" /> Add awardee</Button>
               </div>
@@ -598,6 +600,15 @@ function RegistryVehicleRow({
               open={bulkOpen}
               onOpenChange={setBulkOpen}
               onSaved={() => { invalidateAwardees(); setBulkOpen(false); }}
+            />
+          )}
+          {csvOpen && (
+            <CsvImportAwardeesDialog
+              vehicleId={vehicle.id}
+              existing={awardees}
+              open={csvOpen}
+              onOpenChange={setCsvOpen}
+              onSaved={() => { invalidateAwardees(); setCsvOpen(false); }}
             />
           )}
         </div>
@@ -765,3 +776,216 @@ function BulkAwardeesDialog({
   );
 }
 
+
+// ---------------- CSV Import ----------------
+
+type CsvFieldKey = "company_name" | "uei" | "small_business" | "socioeconomic";
+const CSV_FIELDS: { key: CsvFieldKey; label: string; required?: boolean }[] = [
+  { key: "company_name", label: "Company name", required: true },
+  { key: "uei", label: "UEI" },
+  { key: "small_business", label: "Small business (yes/no)" },
+  { key: "socioeconomic", label: "Socioeconomic certs (delimited)" },
+];
+
+const NONE = "__none__";
+
+function guessMapping(headers: string[]): Record<CsvFieldKey, string> {
+  const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const find = (...needles: string[]) =>
+    headers.find((h) => {
+      const n = norm(h);
+      return needles.some((needle) => n === needle || n.includes(needle));
+    }) ?? NONE;
+  return {
+    company_name: find("companyname", "company", "vendor", "awardeename", "awardee", "name", "firm"),
+    uei: find("uei", "samuei", "ueisam", "duns", "cage"),
+    small_business: find("smallbusiness", "smallbiz", "issmall", "sb"),
+    socioeconomic: find("socioeconomic", "socio", "certs", "certifications", "setaside", "designations"),
+  };
+}
+
+function parseBool(v: unknown): boolean {
+  if (v === true) return true;
+  if (typeof v !== "string") return false;
+  const s = v.trim().toLowerCase();
+  return s === "true" || s === "yes" || s === "y" || s === "x" || s === "1";
+}
+
+function parseSocio(v: unknown): string[] | null {
+  if (typeof v !== "string") return null;
+  const parts = v.split(/[;,|/]/).map((s) => s.trim()).filter(Boolean);
+  return parts.length ? parts : null;
+}
+
+function CsvImportAwardeesDialog({
+  vehicleId, existing, open, onOpenChange, onSaved,
+}: {
+  vehicleId: string;
+  existing: Awardee[];
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [rows, setRows] = useState<Record<string, string>[] | null>(null);
+  const [headers, setHeaders] = useState<string[]>([]);
+  const [mapping, setMapping] = useState<Record<CsvFieldKey, string>>({
+    company_name: NONE, uei: NONE, small_business: NONE, socioeconomic: NONE,
+  });
+  const [fileName, setFileName] = useState<string>("");
+  const [importing, setImporting] = useState(false);
+
+  const onFile = async (file: File) => {
+    setFileName(file.name);
+    const Papa = (await import("papaparse")).default;
+    Papa.parse<Record<string, string>>(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const hdrs = (result.meta.fields ?? []).filter(Boolean);
+        setHeaders(hdrs);
+        setRows(result.data);
+        setMapping(guessMapping(hdrs));
+      },
+      error: (err) => toast.error(`Parse failed: ${err.message}`),
+    });
+  };
+
+  const mapped = (rows ?? []).map((r) => ({
+    company_name: mapping.company_name !== NONE ? String(r[mapping.company_name] ?? "").trim() : "",
+    uei: mapping.uei !== NONE ? String(r[mapping.uei] ?? "").trim() || null : null,
+    small_business: mapping.small_business !== NONE ? parseBool(r[mapping.small_business]) : false,
+    socioeconomic: mapping.socioeconomic !== NONE ? parseSocio(r[mapping.socioeconomic]) : null,
+  }));
+
+  const runImport = async () => {
+    if (mapping.company_name === NONE) { toast.error("Map the Company name column"); return; }
+    setImporting(true);
+    const existingUeis = new Set(existing.map((a) => (a.uei ?? "").trim().toUpperCase()).filter(Boolean));
+    const existingNames = new Set(existing.map((a) => a.company_name.trim().toLowerCase()));
+    const seenUei = new Set<string>();
+    const seenName = new Set<string>();
+    let invalid = 0;
+    let dup = 0;
+    const toInsert: TablesInsert<"vehicle_awardees">[] = [];
+    for (const m of mapped) {
+      if (!m.company_name) { invalid++; continue; }
+      const ueiKey = (m.uei ?? "").trim().toUpperCase();
+      const nameKey = m.company_name.trim().toLowerCase();
+      if (ueiKey) {
+        if (existingUeis.has(ueiKey) || seenUei.has(ueiKey)) { dup++; continue; }
+        seenUei.add(ueiKey);
+      } else {
+        if (existingNames.has(nameKey) || seenName.has(nameKey)) { dup++; continue; }
+        seenName.add(nameKey);
+      }
+      toInsert.push({
+        vehicle_id: vehicleId,
+        company_name: m.company_name,
+        uei: m.uei,
+        small_business: m.small_business,
+        socioeconomic: m.socioeconomic,
+      });
+    }
+    let inserted = 0;
+    const batchSize = 200;
+    for (let i = 0; i < toInsert.length; i += batchSize) {
+      const batch = toInsert.slice(i, i + batchSize);
+      const { error } = await supabase.from("vehicle_awardees").insert(batch);
+      if (error) {
+        setImporting(false);
+        toast.error(`Import failed after ${inserted} rows: ${error.message}`);
+        onSaved();
+        return;
+      }
+      inserted += batch.length;
+    }
+    setImporting(false);
+    toast.success(`Imported ${inserted} · skipped ${dup} duplicate${dup === 1 ? "" : "s"} · ${invalid} invalid`);
+    onSaved();
+  };
+
+  const preview = mapped.slice(0, 10);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader><DialogTitle>Import awardees from CSV</DialogTitle></DialogHeader>
+        <div className="space-y-3 py-2">
+          {!rows ? (
+            <div className="space-y-2">
+              <Label>CSV file</Label>
+              <Input
+                type="file"
+                accept=".csv,text/csv"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (f) onFile(f);
+                }}
+              />
+              <div className="text-xs text-muted-foreground">
+                Expected columns include company name (required), UEI, small business flag, and socioeconomic certs.
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="text-xs text-muted-foreground">
+                <span className="briefing-label mr-1">File</span>{fileName} · {rows.length} row{rows.length === 1 ? "" : "s"}
+              </div>
+              <div className="space-y-2">
+                <div className="briefing-label text-xs">Column mapping</div>
+                {CSV_FIELDS.map((f) => (
+                  <div key={f.key} className="flex items-center gap-2">
+                    <Label className="w-52 text-xs">{f.label}{f.required && " *"}</Label>
+                    <Select
+                      value={mapping[f.key]}
+                      onValueChange={(v) => setMapping((m) => ({ ...m, [f.key]: v }))}
+                    >
+                      <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE}>— none —</SelectItem>
+                        {headers.map((h) => <SelectItem key={h} value={h}>{h}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+              <div className="space-y-1">
+                <div className="briefing-label text-xs">Preview (first {preview.length})</div>
+                <div className="border rounded max-h-64 overflow-auto text-xs">
+                  <table className="w-full">
+                    <thead className="bg-muted/50 sticky top-0">
+                      <tr>
+                        <th className="text-left px-2 py-1">Company</th>
+                        <th className="text-left px-2 py-1">UEI</th>
+                        <th className="text-left px-2 py-1">SB</th>
+                        <th className="text-left px-2 py-1">Certs</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.map((m, i) => (
+                        <tr key={i} className="border-t">
+                          <td className="px-2 py-1">{m.company_name || <span className="text-destructive">(missing)</span>}</td>
+                          <td className="px-2 py-1 font-mono">{m.uei ?? ""}</td>
+                          <td className="px-2 py-1">{m.small_business ? "yes" : ""}</td>
+                          <td className="px-2 py-1">{(m.socioeconomic ?? []).join(", ")}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          {rows && (
+            <Button onClick={runImport} disabled={importing || mapping.company_name === NONE}>
+              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : `Import ${mapped.length} awardee${mapped.length === 1 ? "" : "s"}`}
+            </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
