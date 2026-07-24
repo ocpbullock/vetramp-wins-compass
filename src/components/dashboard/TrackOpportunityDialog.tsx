@@ -200,36 +200,13 @@ export function TrackOpportunityDialog({
             </div>
             <div>
               <Label className="text-xs">NAICS Code *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between mt-1 font-normal">
-                    <span className="truncate">
-                      <span className="font-mono text-xs mr-2">{naicsCode}</span>
-                      <span className="text-muted-foreground text-xs">{naicsLabel?.name}</span>
-                    </span>
-                    <ChevronDown className="w-4 h-4 ml-2 opacity-60" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[380px] max-h-[360px] overflow-y-auto p-3">
-                  {NAICS_GROUPS.map((g) => (
-                    <div key={g.label} className="mb-3">
-                      <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">{g.label}</div>
-                      <div className="space-y-1.5">
-                        {g.codes.map((c) => (
-                          <label key={c.code} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-1 py-1">
-                            <Checkbox
-                              checked={naicsCode === c.code}
-                              onCheckedChange={() => setNaicsCode(c.code)}
-                            />
-                            <span className="font-mono text-xs">{c.code}</span>
-                            <span className="text-muted-foreground text-xs">{c.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </PopoverContent>
-              </Popover>
+              <div className="mt-1">
+                <NaicsCombobox
+                  value={naicsCode || null}
+                  onChange={(c) => setNaicsCode(c ?? "")}
+                  placeholder="Select NAICS code"
+                />
+              </div>
             </div>
           </div>
 
