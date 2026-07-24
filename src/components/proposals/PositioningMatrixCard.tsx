@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowDown, ArrowUp, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { StoplightDot, STOPLIGHT_LABEL } from "@/components/StoplightDot";
 
 export type MatrixRating = "strong" | "moderate" | "weak" | "unknown";
 export type MatrixThreat = "very_high" | "high" | "medium" | "low";
@@ -40,15 +41,7 @@ export const DEFAULT_DIMENSIONS = [
 ];
 
 const RATING_CYCLE: MatrixRating[] = ["strong", "moderate", "weak", "unknown"];
-const RATING_COLOR: Record<MatrixRating, string> = {
-  strong: "bg-emerald-500",
-  moderate: "bg-amber-500",
-  weak: "bg-red-500",
-  unknown: "bg-muted-foreground/40",
-};
-const RATING_LABEL: Record<MatrixRating, string> = {
-  strong: "Strong", moderate: "Moderate", weak: "Weak", unknown: "Unknown",
-};
+const RATING_LABEL = STOPLIGHT_LABEL;
 const THREAT_LABEL: Record<MatrixThreat, string> = {
   very_high: "Very High", high: "High", medium: "Medium", low: "Low",
 };
