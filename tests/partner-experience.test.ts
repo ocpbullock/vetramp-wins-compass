@@ -73,5 +73,67 @@ describe("rankPartnerExperience", () => {
       { hardFilterAgency: true, now: NOW },
     );
     expect(out.map((t) => t.name)).toEqual(["VAVendor"]);
+});
+
+describe("rankDarkHorses", () => {
+  it("surfaces firms in adjacent NAICS (same 4-digit prefix)", () => {
+    const awards: HistoricalAward[] = [
+      // Adjacent: 5415xx family
+      award({ "Recipient Name": "AdjacentCo", "Recipient UEI": "UEI-ADJ",
+              "Awarding Agency": "Department of Veterans Affairs",
+              NAICS: "541519", "Award Amount": 2_000_000, "Start Date": "2025-06-01" }),
+      // Far away NAICS
+      award({ "Recipient Name": "FarCo", "Recipient UEI": "UEI-FAR",
+              "Awarding Agency": "Department of Veterans Affairs",
+              NAICS: "236220", "Award Amount": 2_000_000, "Start Date": "2025-06-01" }),
+    ];
+    const out = rankDarkHorses(
+      awards,
+      { agency: "Veterans Affairs", naics_code: "541512" },
+      { now: NOW },
+    );
+    expect(out.map((t) => t.name)).toEqual(["AdjacentCo"]);
+    expect(out[0].adjacentNaics).toContain("541519");
+    expect(out[0].darkHorse).toBe(true);
   });
+
+  it("excludes firms with any exact-NAICS award (they have direct experience)", () => {
+    const awards: HistoricalAward[] = [
+      award({ "Recipient Name": "DirectExp", "Recipient UEI": "UEI-DIR",
+              "Awarding Agency": "Department of Veterans Affairs",
+              NAICS: "541512", "Award Amount": 1_000_000, "Start Date": "2025-01-01" }),
+      award({ "Recipient Name": "DirectExp", "Recipient UEI": "UEI-DIR",
+              "Awarding Agency": "Department of Veterans Affairs",
+              NAICS: "541519", "Award Amount": 1_000_000, "Start Date": "2025-01-01" }),
+      award({ "Recipient Name": "PureDarkHorse", "Recipient UEI": "UEI-PDH",
+              "Awarding Agency": "Department of Veterans Affairs",
+              NAICS: "541519", "Award Amount": 1_000_000, "Start Date": "2025-01-01" }),
+    ];
+    const out = rankDarkHorses(
+      awards,
+      { agency: "Veterans Affairs", naics_code: "541512" },
+      { now: NOW },
+    );
+    expect(out.map((t) => t.name)).toEqual(["PureDarkHorse"]);
+  });
+
+  it("scopes to opportunity agency", () => {
+    const awards: HistoricalAward[] = [
+      award({ "Recipient Name": "AtAgency", "Recipient UEI": "UEI-AT",
+              "Awarding Agency": "Department of Veterans Affairs",
+              NAICS: "541519", "Award Amount": 1_000_000, "Start Date": "2025-01-01" }),
+      award({ "Recipient Name": "ElsewhereCo", "Recipient UEI": "UEI-ELS",
+              "Awarding Agency": "Department of Defense",
+              NAICS: "541519", "Award Amount": 5_000_000, "Start Date": "2025-01-01" }),
+    ];
+    const out = rankDarkHorses(
+      awards,
+      { agency: "Veterans Affairs", naics_code: "541512" },
+      { now: NOW },
+    );
+    expect(out.map((t) => t.name)).toEqual(["AtAgency"]);
+    expect(out[0].sameAgencyValue).toBe(1_000_000);
+  });
+});
+
 });
