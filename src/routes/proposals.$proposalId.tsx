@@ -59,7 +59,8 @@ export const Route = createFileRoute("/proposals/$proposalId")({
   component: ProposalPipeline,
   validateSearch: (s: Record<string, unknown>) => {
     const tab = typeof s.tab === "string" && (HUB_TABS as readonly string[]).includes(s.tab) ? (s.tab as HubTab) : undefined;
-    return { tab };
+    const parseDocs = s.parseDocs === 1 || s.parseDocs === "1" ? 1 : undefined;
+    return { tab, parseDocs };
   },
 });
 
