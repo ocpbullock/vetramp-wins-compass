@@ -50,6 +50,8 @@ import { MarketIntelPanel } from "@/components/proposals/MarketIntelPanel";
 import { ActivitiesPanel } from "@/components/proposals/ActivitiesPanel";
 import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursuitsCard";
 import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
+import { VehiclePicker } from "@/components/proposals/VehiclePicker";
+import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
@@ -2103,6 +2105,7 @@ function OpenInCaptureWorkspaceCard({ proposal, proposalId }: { proposal: any; p
 // ---------------------------------------------------------------------------
 
 function OpportunitySummaryCard({ proposal }: { proposal: any }) {
+  const qc = useQueryClient();
   const fmtDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
   const fmtMoney = (n: number | string | null | undefined) => {
@@ -2111,17 +2114,34 @@ function OpportunitySummaryCard({ proposal }: { proposal: any }) {
     if (!Number.isFinite(num)) return String(n);
     return num.toLocaleString(undefined, { style: "currency", currency: "USD", maximumFractionDigits: 0 });
   };
+  const vehicleStatusLabel: Record<string, string> = {
+    unknown: "Unknown",
+    tbd_market_research: "TBD — market research",
+    identified: "Identified vehicle",
+    new_vehicle_expected: "New vehicle expected",
+  };
+  const vehicleDisplay = proposal.contract_vehicle
+    ? proposal.contract_vehicle
+    : vehicleStatusLabel[proposal.vehicle_status as string] ?? "—";
   const items: { label: string; value: React.ReactNode }[] = [
     { label: "Title", value: proposal.opportunity_title || "—" },
     { label: "Agency", value: proposal.agency || "—" },
     { label: "NAICS", value: proposal.naics_code ? <span className="font-mono">{proposal.naics_code}</span> : "—" },
     { label: "Set-aside", value: proposal.set_aside || "—" },
-    { label: "Vehicle", value: proposal.contract_vehicle || proposal.opportunity_data?.vehicle || "—" },
+    { label: "Vehicle", value: vehicleDisplay },
     { label: "Estimated value", value: fmtMoney(proposal.estimated_value) },
     { label: "Response deadline", value: fmtDate(proposal.response_deadline) },
     { label: "Incumbent", value: proposal.known_incumbent || "—" },
     { label: "Capture stage", value: <span className="capitalize">{(proposal.capture_stage || "intake").replace("_", " ")}</span> },
   ];
+
+  const saveVehicle = async (patch: { vehicle_status: string; vehicle_registry_id: string | null; contract_vehicle: string | null }) => {
+    const { error } = await supabase.from("proposals").update(patch as any).eq("id", proposal.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Vehicle updated");
+    qc.invalidateQueries({ queryKey: ["proposal", proposal.id] });
+  };
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -2143,10 +2163,19 @@ function OpportunitySummaryCard({ proposal }: { proposal: any }) {
             {proposal.capture_notes || <span className="text-muted-foreground">No notes yet.</span>}
           </div>
         </div>
+        <div className="col-span-2 md:col-span-3 rounded-md border p-3">
+          <VehiclePicker
+            teamId={proposal.team_id ?? null}
+            status={(proposal.vehicle_status as string) ?? "unknown"}
+            vehicleId={(proposal.vehicle_registry_id as string) ?? null}
+            onChange={saveVehicle}
+          />
+        </div>
       </CardContent>
     </Card>
   );
 }
+
 
 function PlaceholderHubPanel({ title, description }: { title: string; description: string }) {
   return (
@@ -2253,6 +2282,17 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
         onAdd={(s) => addSuggestedPartner({ partnerId: s.partnerId, partnerName: s.partnerName })}
         onOutreach={(p) => { setOutreachPartner(p); setOutreachOpen(true); }}
       />
+
+      {proposal.vehicle_registry_id && (
+        <AwardeePoolCard
+          vehicleId={proposal.vehicle_registry_id as string}
+          vehicleName={proposal.contract_vehicle ?? "Selected vehicle"}
+          teamId={teamId ?? ""}
+          existingCompanyKeys={new Set(existingPartnerIds)}
+        />
+      )}
+
+
 
       <PartnerResearch
         proposalId={proposalId}
