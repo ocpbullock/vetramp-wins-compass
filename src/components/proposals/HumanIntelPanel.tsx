@@ -107,22 +107,27 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
             Proprietary notes from incumbent interviews, partner calls, and customer meetings.
           </CardDescription>
         </div>
-        <Dialog open={composerOpen} onOpenChange={setComposerOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1" />Add intel</Button>
-          </DialogTrigger>
-          <IntelComposerDialog
-            proposalId={proposalId}
-            teamId={teamId}
-            userId={user?.id ?? null}
-            existing={null}
-            onClose={() => setComposerOpen(false)}
-            onSaved={() => {
-              setComposerOpen(false);
-              qc.invalidateQueries({ queryKey: ["opportunity_intel", proposalId] });
-            }}
-          />
-        </Dialog>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => setExtractOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-1" />Extract from transcript
+          </Button>
+          <Dialog open={composerOpen} onOpenChange={setComposerOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Plus className="h-4 w-4 mr-1" />Add intel</Button>
+            </DialogTrigger>
+            <IntelComposerDialog
+              proposalId={proposalId}
+              teamId={teamId}
+              userId={user?.id ?? null}
+              existing={null}
+              onClose={() => setComposerOpen(false)}
+              onSaved={() => {
+                setComposerOpen(false);
+                qc.invalidateQueries({ queryKey: ["opportunity_intel", proposalId] });
+              }}
+            />
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
