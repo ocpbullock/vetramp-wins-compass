@@ -10,7 +10,8 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@
 import {
   Popover, PopoverContent, PopoverTrigger,
 } from "@/components/ui/popover";
-import { Plus, Trash2, Users, Search, Sparkles, Mail } from "lucide-react";
+import { Plus, Trash2, Users, Search, Sparkles, Mail, MessageSquare } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import type { PartnerView as Partner } from "@/lib/companies";
 import { listPartnerCompanies, companyToPartnerView, type Company } from "@/lib/companies";
