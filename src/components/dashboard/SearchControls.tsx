@@ -91,6 +91,34 @@ export function SearchControls({
                   </div>
                 </div>
               ))}
+              <div className="mt-3 pt-3 border-t">
+                <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">Add any code</div>
+                <NaicsCombobox
+                  value={null}
+                  onChange={(code) => {
+                    if (code && !naics.includes(code)) setNaics((p) => [...p, code]);
+                  }}
+                  placeholder="Search all NAICS or type a 6-digit code…"
+                  allowClear={false}
+                />
+                {naics.some((c) => !NAICS_GROUPS.some((g) => g.codes.some((x) => x.code === c))) && (
+                  <div className="mt-2 flex flex-wrap gap-1">
+                    {naics
+                      .filter((c) => !NAICS_GROUPS.some((g) => g.codes.some((x) => x.code === c)))
+                      .map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          onClick={() => toggle(c)}
+                          className="rounded bg-secondary px-1.5 py-0.5 font-mono text-[10px] hover:bg-secondary/70"
+                          title={naicsTitle(c) ?? "Custom code"}
+                        >
+                          {c} ✕
+                        </button>
+                      ))}
+                  </div>
+                )}
+              </div>
             </PopoverContent>
           </Popover>
         </div>
