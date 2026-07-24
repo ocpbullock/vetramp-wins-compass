@@ -7,6 +7,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
+import { themeBootScript } from "@/components/ThemeToggle";
 import { Header } from "@/components/dashboard/Header";
 import { AuthProvider } from "@/lib/auth";
 import { TeamProvider } from "@/lib/team";
