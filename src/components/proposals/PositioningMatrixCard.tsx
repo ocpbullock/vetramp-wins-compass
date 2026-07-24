@@ -329,10 +329,12 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
                           <button
                             type="button"
                             onClick={() => cycleRating(i, dim)}
-                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${RATING_COLOR[val]} hover:scale-110 transition-transform`}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/60 transition-colors"
                             title={`${dim}: ${RATING_LABEL[val]} (click to cycle)`}
                             aria-label={`${dim}: ${RATING_LABEL[val]}`}
-                          />
+                          >
+                            <StoplightDot rating={val} size="lg" ariaLabel={`${dim}: ${RATING_LABEL[val]}`} />
+                          </button>
                         </td>
                       );
                     })}
