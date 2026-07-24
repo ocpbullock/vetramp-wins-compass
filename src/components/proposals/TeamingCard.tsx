@@ -38,6 +38,9 @@ const ROLE_VARIANT: Record<RoleValue, "default" | "secondary" | "outline"> = {
   jv_partner: "outline",
 };
 
+export type OutreachStatus =
+  | "not_started" | "contacted" | "call_held" | "nda_signed" | "ta_signed" | "declined";
+
 export type TeamingEntry = {
   id: string;
   proposal_id: string;
@@ -46,8 +49,47 @@ export type TeamingEntry = {
   work_share_pct: number | null;
   naics_contribution: string[];
   notes: string | null;
+  outreach_status: OutreachStatus;
+  outreach_updated_at: string | null;
+  outreach_notes: string | null;
   partner?: Partner;
 };
+
+const OUTREACH_STATUSES: { value: OutreachStatus; label: string }[] = [
+  { value: "not_started", label: "Not started" },
+  { value: "contacted", label: "Contacted" },
+  { value: "call_held", label: "Call held" },
+  { value: "nda_signed", label: "NDA signed" },
+  { value: "ta_signed", label: "TA signed" },
+  { value: "declined", label: "Declined" },
+];
+const OUTREACH_LABEL: Record<OutreachStatus, string> = Object.fromEntries(
+  OUTREACH_STATUSES.map((s) => [s.value, s.label]),
+) as Record<OutreachStatus, string>;
+
+function outreachChipClass(s: OutreachStatus): string {
+  switch (s) {
+    case "not_started": return "bg-muted text-muted-foreground border-border";
+    case "contacted": return "bg-primary/15 text-primary border-primary/30";
+    case "call_held":
+      return "border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_18%,transparent)] text-[color:var(--brand-brass)]";
+    case "nda_signed":
+    case "ta_signed":
+      return "bg-success/15 text-success border-success/30";
+    case "declined":
+      return "bg-destructive/15 text-destructive border-destructive/30";
+  }
+}
+
+function timeAgo(iso: string | null): string {
+  if (!iso) return "";
+  const s = Math.max(1, Math.floor((Date.now() - new Date(iso).getTime()) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24); if (d < 30) return `${d}d ago`;
+  const mo = Math.floor(d / 30); return `${mo}mo ago`;
+}
 
 export function TeamingCard({
   proposalId, teamId, opportunityNaics, proposal,
