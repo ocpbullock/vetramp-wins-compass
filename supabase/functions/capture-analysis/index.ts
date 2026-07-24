@@ -47,7 +47,7 @@ serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { proposalId, skipCache, userContext: userContextRaw } = await req.json();
+    const { proposalId, skipCache, userContext: userContextRaw, mode } = await req.json();
     if (!proposalId) {
       return new Response(JSON.stringify({ error: "proposalId required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
