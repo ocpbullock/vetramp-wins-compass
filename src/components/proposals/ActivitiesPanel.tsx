@@ -36,11 +36,11 @@ const STATUS_LABEL: Record<ActivityStatus, string> = {
 };
 
 function statusDotClass(s: ActivityStatus, overdue: boolean) {
-  if (s === "done") return "bg-emerald-500";
+  if (s === "done") return "bg-success";
   if (s === "cancelled") return "bg-muted-foreground/40";
-  if (s === "in_progress") return "bg-blue-500";
+  if (s === "in_progress") return "bg-primary";
   if (overdue) return "bg-destructive";
-  return "bg-amber-500";
+  return "bg-warning";
 }
 
 function initials(m?: TeamMember | null) {

@@ -46,10 +46,10 @@ const THREAT_LABEL: Record<MatrixThreat, string> = {
   very_high: "Very High", high: "High", medium: "Medium", low: "Low",
 };
 const THREAT_BADGE: Record<MatrixThreat, string> = {
-  very_high: "bg-red-600 text-white",
-  high: "bg-red-500/90 text-white",
-  medium: "bg-amber-500 text-white",
-  low: "bg-emerald-600 text-white",
+  very_high: "bg-destructive text-destructive-foreground",
+  high: "bg-destructive/85 text-destructive-foreground",
+  medium: "bg-warning text-warning-foreground",
+  low: "bg-success text-success-foreground",
 };
 
 function emptyMatrix(): PositioningMatrix {

@@ -285,7 +285,7 @@ export function TeamingSandbox({
           <DialogDescription className="text-xs">
             {opportunity.title} — assemble a candidate team from your company library, pick the perspective company, and compare scenarios.
             {!canPersist && (
-              <span className="text-amber-600 ml-1">Preview mode: scenarios won't persist. Promote to a tracked opportunity to save.</span>
+              <span className="text-warning ml-1">Preview mode: scenarios won't persist. Promote to a tracked opportunity to save.</span>
             )}
           </DialogDescription>
         </DialogHeader>
@@ -515,7 +515,7 @@ function InsightsBox({ insights }: { insights: ReturnType<typeof deriveInsights>
     <div className="mt-4 border rounded p-3 text-xs space-y-2">
       {insights.strengths.length > 0 && (
         <div>
-          <div className="text-[10px] font-semibold text-green-700 flex items-center gap-1">
+          <div className="text-[10px] font-semibold text-success flex items-center gap-1">
             <ThumbsUp className="w-3 h-3" /> Strengths
           </div>
           <ul className="mt-1 list-disc list-inside space-y-0.5">
@@ -551,7 +551,7 @@ function CompareGrid({ scenarios, onDelete, currentScore }: { scenarios: any[]; 
       <div className={`grid gap-3 ${scenarios.length === 1 ? "grid-cols-1" : scenarios.length === 2 ? "grid-cols-2" : "grid-cols-3"}`}>
         {scenarios.map((s) => {
           const c = colorFor(Number(s.pwin_score));
-          const head = c === "green" ? "text-green-600" : c === "amber" ? "text-amber-600" : "text-destructive";
+          const head = c === "green" ? "text-success" : c === "amber" ? "text-warning" : "text-destructive";
           const perspectiveName = (s.team_composition ?? []).find((m: any) => m.isSelf)?.name;
           return (
             <div key={s.id} className="border rounded-md p-3">
@@ -575,7 +575,7 @@ function CompareGrid({ scenarios, onDelete, currentScore }: { scenarios: any[]; 
                   const f = (s.factor_scores ?? []).find((x: any) => x.key === k);
                   if (!f) return null;
                   const col = colorFor(f.score);
-                  const bar = col === "green" ? "bg-green-500" : col === "amber" ? "bg-amber-500" : "bg-destructive";
+                  const bar = col === "green" ? "bg-success" : col === "amber" ? "bg-warning" : "bg-destructive";
                   return (
                     <div key={String(k)}>
                       <div className="flex justify-between text-[11px]">

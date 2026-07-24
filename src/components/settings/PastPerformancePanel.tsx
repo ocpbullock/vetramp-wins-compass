@@ -30,9 +30,9 @@ export function cparsBadgeVariant(rating?: string | null): "default" | "secondar
 }
 
 export function cparsBadgeClass(rating?: string | null): string {
-  if (rating === "Exceptional" || rating === "Very Good") return "bg-emerald-600 text-white hover:bg-emerald-600";
-  if (rating === "Satisfactory") return "bg-amber-500 text-white hover:bg-amber-500";
-  if (rating === "Marginal" || rating === "Unsatisfactory") return "bg-red-600 text-white hover:bg-red-600";
+  if (rating === "Exceptional" || rating === "Very Good") return "bg-success text-success-foreground hover:bg-success";
+  if (rating === "Satisfactory") return "bg-warning text-warning-foreground hover:bg-warning";
+  if (rating === "Marginal" || rating === "Unsatisfactory") return "bg-destructive text-destructive-foreground hover:bg-destructive";
   return "";
 }
 
