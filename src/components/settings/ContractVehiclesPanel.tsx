@@ -493,6 +493,7 @@ function RegistryVehicleRow({
   const qc = useQueryClient();
   const [addAwardeeOpen, setAddAwardeeOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [csvOpen, setCsvOpen] = useState(false);
 
   const { data: awardees = [], isLoading } = useQuery({
     queryKey: ["vehicle-awardees", vehicle.id],
