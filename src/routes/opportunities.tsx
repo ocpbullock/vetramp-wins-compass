@@ -257,10 +257,14 @@ function OpportunitiesPage() {
     navigate({ to: "/proposals/$proposalId", params: { proposalId } });
   }
 
-  async function handleCreated(proposalId: string) {
+  async function handleCreated(proposalId: string, opts?: { hasDocs?: boolean }) {
     await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
     setSelectedOpportunityId(proposalId);
-    navigate({ to: "/proposals/$proposalId", params: { proposalId } });
+    navigate({
+      to: "/proposals/$proposalId",
+      params: { proposalId },
+      search: opts?.hasDocs ? { parseDocs: 1 as const } : {},
+    });
   }
 
 
