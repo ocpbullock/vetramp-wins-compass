@@ -28,7 +28,7 @@ import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPast
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
 import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
-import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-classify";
+import { classifyFilename, ATTACHMENT_TYPE_OPTIONS, acquisitionMaturity } from "@/lib/attachment-classify";
 import { composeAttachmentsText } from "@/lib/attachments-text";
 import { extractTemplateStructure, findActiveTemplate, type TemplateSection } from "@/lib/proposal-template";
 import { DataProvenance } from "@/components/dashboard/DataSourceBadge";
