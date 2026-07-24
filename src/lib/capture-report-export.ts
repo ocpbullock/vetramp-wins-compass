@@ -111,8 +111,8 @@ export type CaptureReportInputs = {
     intel_type?: string | null;
     occurred_on?: string | null;
     created_at?: string | null;
-    source?: string | null;
-    summary?: string | null;
+    source_name?: string | null;
+    body?: string | null;
     title?: string | null;
   }>;
   teamingSummary: {
