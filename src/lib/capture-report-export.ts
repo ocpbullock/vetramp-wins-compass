@@ -386,8 +386,8 @@ export async function exportCaptureReportDocx(
         intelItems.slice(0, 60).map((i) => [
           String(i.intel_type ?? "—"),
           String((i.occurred_on || i.created_at || "").slice(0, 10) || "—"),
-          String(i.source ?? "—"),
-          String(i.summary ?? i.title ?? "—").slice(0, 240),
+          String(i.source_name ?? "—"),
+          String(i.body ?? i.title ?? "—").slice(0, 240),
         ]),
         [1400, 1200, 1800, 4960],
       ));
