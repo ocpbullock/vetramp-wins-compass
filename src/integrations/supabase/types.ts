@@ -929,6 +929,9 @@ export type Database = {
           id: string
           naics_contribution: string[]
           notes: string | null
+          outreach_notes: string | null
+          outreach_status: string
+          outreach_updated_at: string | null
           partner_id: string | null
           proposal_id: string
           role: string
@@ -941,6 +944,9 @@ export type Database = {
           id?: string
           naics_contribution?: string[]
           notes?: string | null
+          outreach_notes?: string | null
+          outreach_status?: string
+          outreach_updated_at?: string | null
           partner_id?: string | null
           proposal_id: string
           role?: string
@@ -953,6 +959,9 @@ export type Database = {
           id?: string
           naics_contribution?: string[]
           notes?: string | null
+          outreach_notes?: string | null
+          outreach_status?: string
+          outreach_updated_at?: string | null
           partner_id?: string | null
           proposal_id?: string
           role?: string
