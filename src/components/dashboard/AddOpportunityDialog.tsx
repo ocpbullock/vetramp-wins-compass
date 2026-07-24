@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { ChevronDown, Upload, X, FileText } from "lucide-react";
 import { NAICS_GROUPS } from "@/lib/contracts";
 import { supabase } from "@/integrations/supabase/client";
