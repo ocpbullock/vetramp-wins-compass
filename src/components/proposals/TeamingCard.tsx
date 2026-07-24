@@ -177,10 +177,28 @@ export function TeamingCard({
     await addPartner(p, { role, workShare: midShare });
   };
 
-  const updateEntry = async (id: string, patch: Partial<Pick<TeamingEntry, "role" | "work_share_pct">>) => {
+  const updateEntry = async (id: string, patch: Partial<Pick<TeamingEntry, "role" | "work_share_pct" | "outreach_notes">>) => {
     const { error } = await supabase.from("proposal_teaming").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
     refetch();
+  };
+
+  const updateOutreach = async (entry: TeamingEntry, status: OutreachStatus) => {
+    const { error } = await supabase
+      .from("proposal_teaming")
+      .update({ outreach_status: status } as any)
+      .eq("id", entry.id);
+    if (error) { toast.error(error.message); return; }
+
+    // Sync PWIN-visible company flags when NDA/TA are signed.
+    if ((status === "nda_signed" || status === "ta_signed") && entry.partner_id) {
+      const patch: Record<string, boolean> = { has_nda: true };
+      if (status === "ta_signed") patch.has_teaming_agreement = true;
+      const { error: cErr } = await supabase.from("companies").update(patch).eq("id", entry.partner_id);
+      if (!cErr) toast.success("Partner record updated");
+    }
+    refetch();
+    qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
   };
 
   const removeEntry = async (id: string) => {
@@ -188,6 +206,12 @@ export function TeamingCard({
     if (error) { toast.error(error.message); return; }
     refetch();
   };
+
+  const pipelineCounts = useMemo(() => {
+    const c: Partial<Record<OutreachStatus, number>> = {};
+    for (const e of entries) c[e.outreach_status] = (c[e.outreach_status] ?? 0) + 1;
+    return c;
+  }, [entries]);
 
   return (
     <div className="space-y-4">
