@@ -990,6 +990,8 @@ export type Database = {
           updated_at: string
           user_id: string
           user_notes: string | null
+          vehicle_registry_id: string | null
+          vehicle_status: string | null
         }
         Insert: {
           agency?: string | null
@@ -1050,6 +1052,8 @@ export type Database = {
           updated_at?: string
           user_id: string
           user_notes?: string | null
+          vehicle_registry_id?: string | null
+          vehicle_status?: string | null
         }
         Update: {
           agency?: string | null
@@ -1110,6 +1114,8 @@ export type Database = {
           updated_at?: string
           user_id?: string
           user_notes?: string | null
+          vehicle_registry_id?: string | null
+          vehicle_status?: string | null
         }
         Relationships: [
           {
@@ -1124,6 +1130,13 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "proposals_vehicle_registry_id_fkey"
+            columns: ["vehicle_registry_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_registry"
             referencedColumns: ["id"]
           },
         ]
@@ -1894,6 +1907,80 @@ export type Database = {
           id?: string
           role?: Database["public"]["Enums"]["app_role"]
           user_id?: string
+        }
+        Relationships: []
+      }
+      vehicle_awardees: {
+        Row: {
+          company_name: string
+          created_at: string | null
+          id: string
+          small_business: boolean | null
+          socioeconomic: string[] | null
+          uei: string | null
+          vehicle_id: string
+        }
+        Insert: {
+          company_name: string
+          created_at?: string | null
+          id?: string
+          small_business?: boolean | null
+          socioeconomic?: string[] | null
+          uei?: string | null
+          vehicle_id: string
+        }
+        Update: {
+          company_name?: string
+          created_at?: string | null
+          id?: string
+          small_business?: boolean | null
+          socioeconomic?: string[] | null
+          uei?: string | null
+          vehicle_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_awardees_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_registry"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vehicle_registry: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          id: string
+          managing_agency: string | null
+          status: string | null
+          team_id: string | null
+          url: string | null
+          vehicle_name: string
+          vehicle_type: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          managing_agency?: string | null
+          status?: string | null
+          team_id?: string | null
+          url?: string | null
+          vehicle_name: string
+          vehicle_type?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          managing_agency?: string | null
+          status?: string | null
+          team_id?: string | null
+          url?: string | null
+          vehicle_name?: string
+          vehicle_type?: string | null
         }
         Relationships: []
       }
