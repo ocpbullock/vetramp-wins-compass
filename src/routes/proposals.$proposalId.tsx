@@ -667,70 +667,90 @@ function ProposalPipeline() {
       <OfflineBanner />
       
       <div className="max-w-[1400px] mx-auto px-6 py-4 space-y-4">
-        <div className="flex items-center gap-3 flex-wrap">
+        <div className="flex items-center">
           <Link to="/" className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-1"><ArrowLeft className="w-4 h-4" /> Back to opportunities</Link>
-          <div className="flex-1" />
-          {proposal.engagement_type === "sub" ? (
-            <Badge className="bg-amber-500 hover:bg-amber-500/90" title={proposal.prime_contractor_name ? `Pursuing as sub — supporting ${proposal.prime_contractor_name}'s bid` : "Pursuing as sub"}>
-              {proposal.prime_contractor_name
-                ? `Pursuing as sub — supporting ${proposal.prime_contractor_name}'s bid`
-                : "Pursuing as sub"}
-            </Badge>
-          ) : (
-            <Badge className="bg-blue-600 hover:bg-blue-600/90">PRIME</Badge>
-          )}
-          <Badge
-            variant="outline"
-            className={
-              proposal.pursuit_type === "rfi_sources_sought"
-                ? "border-purple-500/60 text-purple-700 dark:text-purple-400"
-                : proposal.pursuit_type === "capability_statement"
-                ? "border-emerald-500/60 text-emerald-700 dark:text-emerald-400"
-                : "border-blue-500/60 text-blue-700 dark:text-blue-400"
-            }
-            title={PURSUIT_TYPES.find((t) => t.value === (proposal.pursuit_type ?? "rfp_rfq"))?.description}
-          >
-            {pursuitTypeLabel(proposal.pursuit_type)}
-          </Badge>
-          <Badge variant="outline">{proposal.status}</Badge>
-          <CaptureStageSelect
-            proposalId={proposalId}
-            value={proposal.capture_stage}
-            onChanged={() => { /* router/query layer refetches via realtime/invalidation elsewhere */ }}
-          />
-          {dataIssues.length > 0 && (
-            <TooltipProvider delayDuration={200}>
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="outline" className="border-amber-500/60 text-amber-700 dark:text-amber-400 cursor-help">
-                    <AlertTriangle className="w-3 h-3 mr-1" />
-                    Data issues detected ({dataIssues.length})
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent className="max-w-xs">
-                  <ul className="text-xs space-y-1 list-disc list-inside">
-                    {dataIssues.map((i) => <li key={i.code}>{i.message}</li>)}
-                  </ul>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          )}
-          {cd && <Badge className={cd === "PAST DUE" ? "bg-destructive" : ""}>{cd === "PAST DUE" ? cd : `${cd} until deadline`}</Badge>}
-          <Button onClick={exportDocx} variant="outline"><Download className="w-4 h-4 mr-1" />Export .docx</Button>
         </div>
 
+        {/* --- Title block --- */}
         <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">{proposal.opportunity_title || "Untitled opportunity"}</CardTitle>
-            <CardDescription className="text-xs">
-              Sol #: <span className="font-mono">{proposal.solicitation_number}</span> · {proposal.agency} · NAICS {proposal.naics_code}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-3">
-              <div className="text-xs text-muted-foreground w-32">Opportunity readiness</div>
+          <CardContent className="p-5 space-y-4">
+            <div className="flex flex-wrap items-start gap-4">
+              <div className="flex-1 min-w-0 space-y-2">
+                <h1 className="text-2xl font-bold text-foreground leading-tight break-words">
+                  {proposal.opportunity_title || "Untitled opportunity"}
+                </h1>
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+                  <span><span className="briefing-label mr-1.5">Agency</span>{proposal.agency || "—"}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span><span className="briefing-label mr-1.5">NAICS</span><span className="num">{proposal.naics_code || "—"}</span></span>
+                  <span className="text-muted-foreground">·</span>
+                  <span><span className="briefing-label mr-1.5">Set-aside</span>{proposal.set_aside || "—"}</span>
+                  <span className="text-muted-foreground">·</span>
+                  <span><span className="briefing-label mr-1.5">Vehicle</span>{proposal.contract_type || "—"}</span>
+                  {proposal.solicitation_number && (
+                    <>
+                      <span className="text-muted-foreground">·</span>
+                      <span><span className="briefing-label mr-1.5">Sol #</span><span className="font-mono text-xs">{proposal.solicitation_number}</span></span>
+                    </>
+                  )}
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {proposal.engagement_type === "sub" ? (
+                    <Badge className="bg-warning text-warning-foreground hover:bg-warning/90" title={proposal.prime_contractor_name ? `Pursuing as sub — supporting ${proposal.prime_contractor_name}'s bid` : "Pursuing as sub"}>
+                      {proposal.prime_contractor_name
+                        ? `Sub — supporting ${proposal.prime_contractor_name}`
+                        : "Pursuing as sub"}
+                    </Badge>
+                  ) : (
+                    <Badge className="bg-primary text-primary-foreground hover:bg-primary/90">PRIME</Badge>
+                  )}
+                  <Badge
+                    variant="outline"
+                    title={PURSUIT_TYPES.find((t) => t.value === (proposal.pursuit_type ?? "rfp_rfq"))?.description}
+                  >
+                    {pursuitTypeLabel(proposal.pursuit_type)}
+                  </Badge>
+                  <Badge variant="outline">{proposal.status}</Badge>
+                  {cd && (
+                    <Badge className={cd === "PAST DUE" ? "bg-destructive text-destructive-foreground" : "bg-secondary text-secondary-foreground"}>
+                      {cd === "PAST DUE" ? cd : `${cd} until deadline`}
+                    </Badge>
+                  )}
+                  {dataIssues.length > 0 && (
+                    <TooltipProvider delayDuration={200}>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge variant="outline" className="border-warning/60 text-warning cursor-help">
+                            <AlertTriangle className="w-3 h-3 mr-1" />
+                            Data issues ({dataIssues.length})
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <ul className="text-xs space-y-1 list-disc list-inside">
+                            {dataIssues.map((i) => <li key={i.code}>{i.message}</li>)}
+                          </ul>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <CaptureStageSelect
+                  proposalId={proposalId}
+                  value={proposal.capture_stage}
+                  size="default"
+                  className="min-w-[140px]"
+                  onChanged={() => { /* router/query layer refetches via realtime/invalidation elsewhere */ }}
+                />
+                <Button onClick={exportDocx} variant="outline" size="sm"><Download className="w-4 h-4 mr-1" />Export .docx</Button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 pt-2 border-t">
+              <div className="briefing-label w-32">Readiness</div>
               <Progress value={readiness} className="h-2 flex-1" />
-              <div className="text-xs font-mono w-10 text-right">{readiness}%</div>
+              <div className="text-xs font-mono num w-10 text-right">{readiness}%</div>
             </div>
           </CardContent>
         </Card>
@@ -742,15 +762,25 @@ function ProposalPipeline() {
         <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
 
         <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)}>
-          <div className="overflow-x-auto -mx-1 px-1">
-            <TabsList className="w-max">
-              <TabsTrigger value="overview">Overview</TabsTrigger>
-              <TabsTrigger value="market_intel">Market Intel</TabsTrigger>
-              <TabsTrigger value="human_intel">Human Intel</TabsTrigger>
-              <TabsTrigger value="capture_analysis">Capture Analysis</TabsTrigger>
-              <TabsTrigger value="team">Team</TabsTrigger>
-              <TabsTrigger value="proposal">Proposal</TabsTrigger>
-              <TabsTrigger value="activities">Activities</TabsTrigger>
+          <div className="overflow-x-auto -mx-1 px-1 border-b border-border">
+            <TabsList className="w-max bg-transparent p-0 h-auto rounded-none gap-1">
+              {([
+                ["overview", "Overview"],
+                ["market_intel", "Market Intel"],
+                ["human_intel", "Human Intel"],
+                ["capture_analysis", "Capture Analysis"],
+                ["team", "Team"],
+                ["proposal", "Opportunity"],
+                ["activities", "Activities"],
+              ] as [HubTab, string][]).map(([v, label]) => (
+                <TabsTrigger
+                  key={v}
+                  value={v}
+                  className="rounded-none border-b-2 border-transparent bg-transparent shadow-none px-3 py-2 text-sm text-muted-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=active]:border-[color:var(--brand-brass)] data-[state=active]:font-semibold"
+                >
+                  {label}
+                </TabsTrigger>
+              ))}
             </TabsList>
           </div>
 
