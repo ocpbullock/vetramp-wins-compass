@@ -258,6 +258,10 @@ export function TeamCompositionAnalyzer({
         isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
         workedWithIncumbent: false,
         primeRelationshipStrength: isThePrime ? 50 : 0,
+        isEstablishedPartner: !!(p as any).is_existing_partner,
+        priorContractTogether: !!(p as any).worked_together_before,
+        hasNda: !!(p as any).has_nda,
+        hasTeamingAgreement: !!(p as any).has_teaming_agreement,
       };
     });
 
