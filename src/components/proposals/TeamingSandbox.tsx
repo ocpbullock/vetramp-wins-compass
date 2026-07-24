@@ -471,13 +471,10 @@ export function TeamingSandbox({
 }
 
 function PwinDisplay({ result }: { result: PwinResult }) {
-  const c = colorFor(result.pwin);
-  const headColor = c === "green" ? "text-green-600" : c === "amber" ? "text-amber-600" : "text-destructive";
   return (
     <div>
-      <div className="text-center py-3 border rounded-md">
-        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Estimated pWin</div>
-        <div className={`text-5xl font-bold tabular-nums ${headColor}`}>{result.pwin}%</div>
+      <div className="flex flex-col items-center py-3 border rounded-md">
+        <PwinDial value={result.pwin} size="md" label="Estimated pWin" />
         <div className="text-[11px] text-muted-foreground mt-1">
           Partners {result.totalPartnerShare}% · perspective {result.selfShare}%
         </div>
@@ -490,7 +487,10 @@ function PwinDisplay({ result }: { result: PwinResult }) {
       <div className="mt-3 space-y-1.5">
         {result.factors.map((f) => {
           const col = colorFor(f.score);
-          const bar = col === "green" ? "bg-green-500" : col === "amber" ? "bg-amber-500" : "bg-destructive";
+          const bar =
+            col === "green" ? "bg-success"
+            : col === "amber" ? "bg-warning"
+            : "bg-destructive";
           return (
             <div key={f.key} className="border rounded p-2">
               <div className="flex justify-between text-[11px]">
@@ -507,6 +507,7 @@ function PwinDisplay({ result }: { result: PwinResult }) {
     </div>
   );
 }
+
 
 function InsightsBox({ insights }: { insights: ReturnType<typeof deriveInsights> }) {
   return (
