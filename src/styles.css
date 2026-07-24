@@ -300,3 +300,64 @@
   background: color-mix(in oklab, var(--color-brand-navy) 55%, var(--color-card));
 }
 
+
+/* ============================================================
+ * PASS 5 — micro-interactions, mobile sweep, a11y
+ * ============================================================ */
+
+/* Prevent horizontal page overflow on any main content viewport. */
+@layer base {
+  html, body { overflow-x: hidden; }
+
+  /* Consistent focus ring on interactive tokens. */
+  :focus-visible { outline: 2px solid var(--color-ring); outline-offset: 2px; }
+
+  /* Respect prefers-reduced-motion globally: kill anims/transitions. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* Card hover affordance — barely visible border shift for clickable cards.
+   Add manually to clickable <Card>s: className="card-hoverable". */
+@utility card-hoverable {
+  transition: border-color 150ms ease, box-shadow 150ms ease;
+  cursor: pointer;
+  &:hover {
+    border-color: color-mix(in oklab, var(--color-brand-brass) 55%, var(--color-border));
+    box-shadow: 0 2px 8px -4px color-mix(in oklab, var(--color-foreground) 15%, transparent);
+  }
+}
+
+/* Horizontal-scroll container for tables / tab strips on mobile. */
+@utility scroll-x {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+/* Hide scrollbar chrome (used on header nav and tab strips). */
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+}
+
+/* Skeleton block variants that match real card / header chrome. */
+@utility skeleton-card {
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklab, var(--color-muted) 65%, var(--color-card));
+  border: 1px solid var(--color-border);
+}
+@utility skeleton-line {
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--color-muted) 80%, transparent);
+}
+@utility skeleton-navy {
+  border-radius: var(--radius-md);
+  background: color-mix(in oklab, var(--color-brand-navy) 20%, var(--color-muted));
+}
