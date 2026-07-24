@@ -149,6 +149,27 @@ function OpportunitiesPage() {
     },
   });
 
+  const teamingQ = useQuery({
+    queryKey: ["opportunities-page", "teaming-summary", currentTeam?.id ?? "none", user?.id ?? "none"],
+    enabled,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("proposal_teaming")
+        .select("proposal_id, outreach_status");
+      if (error) throw new Error(error.message);
+      const acc: Record<string, { total: number; contacted: number; nda: number; ta: number }> = {};
+      for (const r of (data ?? []) as { proposal_id: string; outreach_status: string }[]) {
+        const s = acc[r.proposal_id] ?? { total: 0, contacted: 0, nda: 0, ta: 0 };
+        s.total += 1;
+        if (r.outreach_status === "contacted" || r.outreach_status === "call_held") s.contacted += 1;
+        if (r.outreach_status === "nda_signed") s.nda += 1;
+        if (r.outreach_status === "ta_signed") s.ta += 1;
+        acc[r.proposal_id] = s;
+      }
+      return acc;
+    },
+  });
+
   const rows = useMemo<Row[]>(() => {
     const tracked = trackedQ.data ?? [];
     const proposals = proposalsQ.data ?? [];
