@@ -194,7 +194,7 @@ export function ComplianceStep({
         </CardHeader>
         <CardContent>
           <div className="border border-dashed border-border rounded-md p-6 text-center space-y-3">
-            <AlertTriangle className="w-6 h-6 text-yellow-500 mx-auto" />
+            <AlertTriangle className="w-6 h-6 text-warning mx-auto" />
             <div className="text-sm">Documents haven't been parsed yet — go to Intake to upload and parse your SOW/PWS.</div>
             <Button size="sm" onClick={onGoToIntake}><ArrowLeft className="w-4 h-4 mr-1" />Go to Intake</Button>
           </div>
@@ -209,7 +209,7 @@ export function ComplianceStep({
     <div className="space-y-4">
       {/* Validation summary */}
       {reqs.length > 0 && (
-        <Card className="border-blue-500/30 bg-blue-500/5">
+        <Card className="border-primary/30 bg-primary/5">
           <CardContent className="py-3 space-y-2">
             <div className="text-sm">
               Extracted <span className="font-semibold">{stats.total}</span> requirements

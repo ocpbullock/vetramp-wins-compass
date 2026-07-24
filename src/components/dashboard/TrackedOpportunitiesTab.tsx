@@ -64,10 +64,10 @@ const NAICS_NAME = new Map(NAICS_GROUPS.flatMap((g) => g.codes.map((c) => [c.cod
 
 const STATUS_VARIANTS: Record<string, string> = {
   Watching: "bg-muted text-muted-foreground border-border",
-  Preparing: "bg-blue-500/15 text-blue-600 border-blue-500/30",
-  Submitted: "bg-amber-500/15 text-amber-700 border-amber-500/30",
-  Won: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
-  Lost: "bg-red-500/15 text-red-600 border-red-500/30",
+  Preparing: "bg-primary/15 text-primary border-primary/30",
+  Submitted: "bg-warning/15 text-warning border-warning/30",
+  Won: "bg-success/15 text-success border-success/30",
+  Lost: "bg-destructive/15 text-destructive border-destructive/30",
   "No-Bid": "bg-muted text-muted-foreground border-border opacity-70",
 };
 
@@ -84,9 +84,9 @@ function deadlineColor(d: string | null): string {
   try {
     const days = differenceInCalendarDays(parseISO(d), new Date());
     if (days < 0) return "text-muted-foreground line-through";
-    if (days <= 7) return "text-red-600 font-semibold";
-    if (days <= 14) return "text-amber-600 font-medium";
-    return "text-emerald-700";
+    if (days <= 7) return "text-destructive font-semibold";
+    if (days <= 14) return "text-warning font-medium";
+    return "text-success";
   } catch { return ""; }
 }
 
