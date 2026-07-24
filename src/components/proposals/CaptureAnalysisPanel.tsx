@@ -20,7 +20,6 @@ import {
 } from "@/lib/partner-suggest";
 import {
   calculatePwin,
-  colorFor,
   type PwinContext,
   type PwinResult,
   type PwinTeamMember,
@@ -34,6 +33,8 @@ import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
 import { PtwCard } from "./PtwCard";
 import { computePtw } from "@/lib/ptw";
+import { PwinDial } from "@/components/PwinDial";
+import { MetricCard } from "@/components/MetricCard";
 
 type CaptureAnalysis = {
   bid_no_bid: {
@@ -408,12 +409,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   // ---- Summary band values ----
   const rec = REC_LABEL[analysis.bid_no_bid.recommendation];
   const pwinValue = teaming.ready ? teaming.pwinResult.pwin : null;
-  const pwinColor = pwinValue != null ? colorFor(pwinValue) : null;
-  const pwinTextColor =
-    pwinColor === "green" ? "text-success"
-    : pwinColor === "amber" ? "text-warning"
-    : pwinColor === "red" ? "text-destructive"
-    : "text-muted-foreground";
+
 
   // PTW "as assumed" from saved inputs (recompute — logic lives in ptw.ts).
   let ptwAsAssumed: number | null = null;
@@ -439,37 +435,33 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
             <div className="text-xs opacity-90 mt-1 capitalize">{analysis.bid_no_bid.confidence} confidence</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="briefing-label">Current PWIN</div>
-            <div className={`text-2xl font-bold num mt-1 ${pwinTextColor}`}>
-              {pwinValue != null ? `${pwinValue}%` : (teaming.teamId ? "…" : "—")}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {teaming.ready && teaming.pwinResult.overAllocated ? "Roster over-allocated" : "From current roster"}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="briefing-label">PTW · as assumed</div>
-            <div className="text-2xl font-bold num mt-1">{fmtMoneyM(ptwAsAssumed)}</div>
-            <div className="text-xs text-muted-foreground mt-1">Recommended TEP</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="briefing-label">Response deadline</div>
-            <div className={`text-2xl font-bold num mt-1 ${cd === "PAST DUE" ? "text-destructive" : "text-foreground"}`}>
-              {cd ?? "—"}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {proposal?.response_deadline
-                ? new Date(proposal.response_deadline).toLocaleDateString()
-                : "No deadline set"}
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          label="Current PWIN"
+          visual={<PwinDial value={pwinValue} size="sm" />}
+          sub={
+            pwinValue == null
+              ? (teaming.teamId ? "Computing…" : "—")
+              : teaming.ready && teaming.pwinResult.overAllocated
+                ? "Roster over-allocated"
+                : "From current roster"
+          }
+        />
+        <MetricCard
+          label="PTW · as assumed"
+          value={fmtMoneyM(ptwAsAssumed)}
+          tone="money"
+          sub="Recommended TEP"
+        />
+        <MetricCard
+          label="Response deadline"
+          value={cd ?? "—"}
+          tone={cd === "PAST DUE" ? "destructive" : "default"}
+          sub={
+            proposal?.response_deadline
+              ? new Date(proposal.response_deadline).toLocaleDateString()
+              : "No deadline set"
+          }
+        />
       </div>
 
       {/* --- Toolbar --- */}
@@ -670,11 +662,8 @@ function TeamingRecommendationCard({
   }
 
   const { pwinResult, suggestions } = teaming;
-  const pwinColor = colorFor(pwinResult.pwin);
-  const pwinTextColor =
-    pwinColor === "green" ? "text-success"
-    : pwinColor === "amber" ? "text-warning"
-    : "text-destructive";
+
+
 
   return (
     <Card>
@@ -697,13 +686,18 @@ function TeamingRecommendationCard({
         </Link>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-baseline gap-3">
-          <div className={`text-3xl font-bold num ${pwinTextColor}`}>{pwinResult.pwin}</div>
-          <div className="text-sm text-muted-foreground">current PWIN</div>
-          {pwinResult.overAllocated && (
-            <Badge variant="destructive" className="ml-auto">Over-allocated</Badge>
-          )}
+        <div className="flex items-center gap-4">
+          <PwinDial value={pwinResult.pwin} size="sm" label="Current PWIN" />
+          <div className="text-xs text-muted-foreground">
+            {pwinResult.overAllocated ? (
+              <Badge variant="destructive">Over-allocated</Badge>
+            ) : (
+              <>Roster of {pwinResult.factors.length} factor(s) scored.</>
+            )}
+          </div>
         </div>
+
+
 
         <div>
           <div className="briefing-label flex items-center gap-1 mb-1">

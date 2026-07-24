@@ -336,21 +336,47 @@ export function PtwCard({ proposal, proposalId }: { proposal: any; proposalId: s
             ) : (
               <ResponsiveContainer width="100%" height="100%">
                 <ScatterChart margin={{ top: 10, right: 20, bottom: 30, left: 10 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis type="number" dataKey="x" name="FTE" label={{ value: "Proposed FTE", position: "insideBottom", offset: -15, fontSize: 11 }} />
-                  <YAxis type="number" dataKey="y" name="TEP" label={{ value: "TEP ($M)", angle: -90, position: "insideLeft", fontSize: 11 }} />
-                  <Tooltip cursor={{ strokeDasharray: "3 3" }} formatter={(v: any, k: any) => k === "y" ? `$${Number(v).toFixed(2)}M` : v} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                  <XAxis
+                    type="number" dataKey="x" name="FTE"
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                    stroke="var(--border)"
+                    label={{ value: "Proposed FTE", position: "insideBottom", offset: -15, fontSize: 11, fill: "var(--muted-foreground)" }}
+                  />
+                  <YAxis
+                    type="number" dataKey="y" name="TEP"
+                    tick={{ fill: "var(--muted-foreground)", fontSize: 11 }}
+                    stroke="var(--border)"
+                    label={{ value: "TEP ($M)", angle: -90, position: "insideLeft", fontSize: 11, fill: "var(--muted-foreground)" }}
+                  />
+                  <Tooltip
+                    cursor={{ strokeDasharray: "3 3", stroke: "var(--border)" }}
+                    contentStyle={{
+                      background: "var(--card)",
+                      color: "var(--card-foreground)",
+                      border: "1px solid var(--border)",
+                      borderRadius: 6,
+                      fontSize: 12,
+                    }}
+                    formatter={(v: any, k: any) => k === "y" ? `$${Number(v).toFixed(2)}M` : v}
+                  />
                   {result.scenarios.map((s, idx) => (
                     <ReferenceLine
                       key={idx}
                       y={s.recommendedTepM}
-                      stroke={idx === 0 ? "hsl(var(--primary))" : "hsl(var(--muted-foreground))"}
+                      stroke="var(--chart-2)"
                       strokeDasharray="4 4"
-                      label={{ value: `${s.label}: $${s.recommendedTepM.toFixed(2)}M`, fontSize: 10, position: "insideTopRight" }}
+                      strokeWidth={idx === 0 ? 2 : 1.25}
+                      label={{
+                        value: `${s.label}: $${s.recommendedTepM.toFixed(2)}M`,
+                        fontSize: 10,
+                        position: "insideTopRight",
+                        fill: "var(--chart-2)",
+                      }}
                     />
                   ))}
-                  <Scatter data={scatterData} fill="hsl(var(--primary))">
-                    <LabelList dataKey="label" position="top" style={{ fontSize: 10 }} />
+                  <Scatter data={scatterData} fill="var(--chart-1)">
+                    <LabelList dataKey="label" position="top" style={{ fontSize: 10, fill: "var(--foreground)" }} />
                   </Scatter>
                 </ScatterChart>
               </ResponsiveContainer>

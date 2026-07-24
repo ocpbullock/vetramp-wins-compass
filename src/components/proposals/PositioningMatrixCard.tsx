@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { ArrowDown, ArrowUp, Loader2, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { toast } from "sonner";
+import { StoplightDot, STOPLIGHT_LABEL } from "@/components/StoplightDot";
 
 export type MatrixRating = "strong" | "moderate" | "weak" | "unknown";
 export type MatrixThreat = "very_high" | "high" | "medium" | "low";
@@ -40,15 +41,7 @@ export const DEFAULT_DIMENSIONS = [
 ];
 
 const RATING_CYCLE: MatrixRating[] = ["strong", "moderate", "weak", "unknown"];
-const RATING_COLOR: Record<MatrixRating, string> = {
-  strong: "bg-emerald-500",
-  moderate: "bg-amber-500",
-  weak: "bg-red-500",
-  unknown: "bg-muted-foreground/40",
-};
-const RATING_LABEL: Record<MatrixRating, string> = {
-  strong: "Strong", moderate: "Moderate", weak: "Weak", unknown: "Unknown",
-};
+const RATING_LABEL = STOPLIGHT_LABEL;
 const THREAT_LABEL: Record<MatrixThreat, string> = {
   very_high: "Very High", high: "High", medium: "Medium", low: "Low",
 };
@@ -253,7 +246,7 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
         <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
           {(["strong","moderate","weak","unknown"] as MatrixRating[]).map((r) => (
             <span key={r} className="inline-flex items-center gap-1.5">
-              <span className={`inline-block w-3 h-3 rounded-full ${RATING_COLOR[r]}`} /> {RATING_LABEL[r]}
+              <StoplightDot rating={r} size="md" /> {RATING_LABEL[r]}
             </span>
           ))}
           <span className="ml-auto">{matrix.rows.length} row(s) · {matrix.dimensions.length}/6 dimensions</span>
@@ -336,10 +329,12 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
                           <button
                             type="button"
                             onClick={() => cycleRating(i, dim)}
-                            className={`inline-flex items-center justify-center w-8 h-8 rounded-full ${RATING_COLOR[val]} hover:scale-110 transition-transform`}
+                            className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/60 transition-colors"
                             title={`${dim}: ${RATING_LABEL[val]} (click to cycle)`}
                             aria-label={`${dim}: ${RATING_LABEL[val]}`}
-                          />
+                          >
+                            <StoplightDot rating={val} size="lg" ariaLabel={`${dim}: ${RATING_LABEL[val]}`} />
+                          </button>
                         </td>
                       );
                     })}
