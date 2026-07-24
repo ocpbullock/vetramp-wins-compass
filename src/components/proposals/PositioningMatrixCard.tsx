@@ -131,7 +131,7 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
       company: "",
       isUs: false,
       threat: "medium",
-      ratings: matrix.dimensions.reduce<Record<string, MatrixRating>>((a, d) => { a[d] = "unknown"; return a; }, {}),
+      ratings: matrix.dimensions.reduce((a: Record<string, MatrixRating>, d: string) => { a[d] = "unknown"; return a; }, {} as Record<string, MatrixRating>),
       coverage: "",
     },
   ]);
