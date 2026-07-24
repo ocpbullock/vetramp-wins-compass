@@ -7,6 +7,27 @@ import { authenticate, assertProposalAccess, authErrorResponse } from "../_share
 
 const SAM_KEY = Deno.env.get("SAM_GOV_API_KEY");
 
+// Only allow attaching the SAM.gov API key to first-party SAM.gov hosts.
+// resourceLinks originates from proposals.opportunity_data (jsonb writable by
+// team members), so any other host is treated as untrusted and refused.
+const SAM_HOST_ALLOWLIST = new Set([
+  "sam.gov",
+  "www.sam.gov",
+  "api.sam.gov",
+  "beta.sam.gov",
+  "api.beta.sam.gov",
+]);
+
+function isAllowedSamUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:") return false;
+    return SAM_HOST_ALLOWLIST.has(u.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 function appendKey(url: string) {
   const sep = url.includes("?") ? "&" : "?";
   return `${url}${sep}api_key=${SAM_KEY}`;
@@ -76,7 +97,43 @@ Deno.serve(async (req) => {
       for (const link of links) {
         const guessedName = nameFromUrl(link);
         try {
-          const r = await fetch(appendKey(link), { redirect: "follow" });
+          if (!isAllowedSamUrl(link)) {
+            results.push({ link, filename: guessedName, status: "error", error: "Link is not a SAM.gov URL" });
+            errors.push({ link, error: "Link is not a SAM.gov URL" });
+            continue;
+          }
+          // Do not follow redirects automatically — a redirect to a non-SAM
+          // host would leak the API key. Follow up to 5 hops manually, only
+          // if each intermediate Location is still an allowed SAM.gov host.
+          let currentUrl = link;
+          let r: Response | null = null;
+          let hops = 0;
+          while (true) {
+            r = await fetch(appendKey(currentUrl), { redirect: "manual" });
+            if (r.status >= 300 && r.status < 400) {
+              const loc = r.headers.get("location");
+              if (!loc) break;
+              const next = new URL(loc, currentUrl).toString();
+              if (!isAllowedSamUrl(next)) {
+                results.push({ link, filename: guessedName, status: "error", error: "Redirect to non-SAM.gov host blocked" });
+                errors.push({ link, error: "Redirect to non-SAM.gov host blocked" });
+                r = null;
+                break;
+              }
+              hops += 1;
+              if (hops > 5) {
+                results.push({ link, filename: guessedName, status: "error", error: "Too many redirects" });
+                errors.push({ link, error: "Too many redirects" });
+                r = null;
+                break;
+              }
+              currentUrl = next;
+              continue;
+            }
+            break;
+          }
+          if (!r) continue;
+
           if (r.status === 401 || r.status === 403) {
             results.push({ link, filename: guessedName, status: "auth_required", httpStatus: r.status });
             errors.push({ link, error: `HTTP ${r.status} — SAM.gov login required` });
