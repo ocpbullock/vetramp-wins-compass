@@ -25,6 +25,7 @@ import { useOpportunityContext, type TargetProfile } from "@/lib/opportunity-con
 import { useOnboardingGate } from "@/lib/setup-status";
 import { listCompanies, type Company } from "@/lib/companies";
 import { NAICS_GROUPS } from "@/lib/contracts";
+import { NaicsCombobox } from "@/components/NaicsCombobox";
 
 import { SetupBanner } from "@/components/settings/SetupChecklist";
 import { OnboardingFlow, PastPerformanceAccuracyBanner } from "@/components/onboarding/OnboardingFlow";
