@@ -129,10 +129,10 @@ export function BidScorecard({
   const avg = rows.reduce((s, x) => s + VAL[x.r.lvl], 0) / rows.length;
   const overall: Level = avg >= 1.4 ? "strong" : avg >= 0.85 ? "moderate" : "weak";
   const overallColor = overall === "strong"
-    ? "border-emerald-500/40 bg-success/5"
+    ? "border-success/40 bg-success/5"
     : overall === "moderate"
-    ? "border-amber-500/40 bg-warning/5"
-    : "border-red-500/40 bg-destructive/5";
+    ? "border-warning/40 bg-warning/5"
+    : "border-destructive/40 bg-destructive/5";
 
   return (
     <div className={`border rounded-lg overflow-hidden ${overallColor}`}>
