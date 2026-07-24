@@ -39,6 +39,7 @@ type ProposalRow = {
   opportunity_source_id: string | null;
   solicitation_number: string | null;
   notice_id: string | null;
+  watch_enabled: boolean | null;
 };
 
 type Stage = BoardStage;
