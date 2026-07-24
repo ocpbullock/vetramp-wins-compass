@@ -35,6 +35,18 @@
   --color-brand-navy: var(--brand-navy);
   --color-brand-red: var(--brand-red);
   --color-brand-red-foreground: var(--brand-red-foreground);
+  --color-brand-brass: var(--brand-brass);
+  --color-brand-brass-foreground: var(--brand-brass-foreground);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+
+  --color-header: var(--header-bg);
+  --color-header-foreground: var(--header-fg);
+  --color-header-muted: var(--header-muted);
+  --color-header-accent: var(--header-accent);
 
   --color-badge-award: var(--badge-award);
   --color-badge-solicitation: var(--badge-solicitation);
@@ -59,44 +71,56 @@
   --color-chart-5: var(--chart-5);
 }
 
+/* ---------- LIGHT: warm paper + deep navy + brass ---------- */
 :root {
   --radius: 0.5rem;
 
-  /* Surfaces */
-  --background: oklch(0.98 0.005 247);          /* #f8f9fa-ish */
-  --foreground: oklch(0.21 0.03 260);
+  /* Surfaces — warm paper background, white cards */
+  --background: oklch(0.962 0.006 85);          /* ~#F4F3EF */
+  --foreground: oklch(0.22 0.03 265);           /* near-navy ink */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.21 0.03 260);
+  --card-foreground: oklch(0.22 0.03 265);
   --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.21 0.03 260);
+  --popover-foreground: oklch(0.22 0.03 265);
 
-  /* Brand — VetRamp Pursuit: deep navy + crimson red accent */
-  --brand-navy: oklch(0.27 0.10 263);           /* ~#0F2A5F */
-  --brand-red: oklch(0.55 0.22 27);             /* ~#C8102E */
+  /* Brand */
+  --brand-navy: oklch(0.245 0.055 265);         /* ~#16233F */
+  --brand-red: oklch(0.45 0.16 27);             /* deep red */
   --brand-red-foreground: oklch(0.99 0 0);
+  --brand-brass: oklch(0.62 0.11 82);           /* ~#B08D3E */
+  --brand-brass-foreground: oklch(0.99 0 0);
 
-  --primary: oklch(0.27 0.10 263);              /* navy */
+  --primary: oklch(0.245 0.055 265);            /* deep navy */
   --primary-foreground: oklch(0.99 0 0);
 
-  --secondary: oklch(0.96 0.008 247);
-  --secondary-foreground: oklch(0.25 0.03 260);
+  --secondary: oklch(0.93 0.008 85);
+  --secondary-foreground: oklch(0.25 0.03 265);
 
-  --muted: oklch(0.96 0.008 247);
-  --muted-foreground: oklch(0.5 0.02 260);
+  --muted: oklch(0.93 0.008 85);
+  --muted-foreground: oklch(0.48 0.015 260);    /* slate gray */
 
-  --accent: oklch(0.95 0.02 250);
-  --accent-foreground: oklch(0.25 0.03 260);
+  --accent: oklch(0.62 0.11 82);                /* brass highlight */
+  --accent-foreground: oklch(0.99 0 0);
 
-  --destructive: oklch(0.6 0.22 27);
+  --success: oklch(0.48 0.12 155);              /* ~#1D6B4F */
+  --success-foreground: oklch(0.99 0 0);
+  --warning: oklch(0.62 0.11 82);               /* brass amber */
+  --warning-foreground: oklch(0.99 0 0);
+  --destructive: oklch(0.44 0.16 27);           /* ~#8C2F2F */
   --destructive-foreground: oklch(0.99 0 0);
 
-  --border: oklch(0.9 0.01 255);                /* #e2e8f0 */
-  --input: oklch(0.9 0.01 255);
-  --ring: oklch(0.27 0.10 263);
+  --border: oklch(0.855 0.008 85);              /* warm gray ~#D8D5CC */
+  --input: oklch(0.855 0.008 85);
+  --ring: oklch(0.245 0.055 265);
 
-  /* Money */
-  --money: oklch(0.6 0.16 155);
+  --money: oklch(0.48 0.12 155);
   --money-foreground: oklch(0.99 0 0);
+
+  /* Header — navy command bar in BOTH themes */
+  --header-bg: oklch(0.22 0.05 265);
+  --header-fg: oklch(0.98 0.005 85);
+  --header-muted: oklch(0.72 0.02 250);
+  --header-accent: oklch(0.72 0.11 85);         /* brass */
 
   /* Notice-type badge palette */
   --badge-award: oklch(0.92 0.09 155);
@@ -107,53 +131,129 @@
   --badge-presol: oklch(0.92 0.05 220);
   --badge-setaside: oklch(0.9 0.1 305);
 
-  /* Charts */
-  --chart-1: oklch(0.27 0.10 263);
-  --chart-2: oklch(0.55 0.22 27);
-  --chart-3: oklch(0.6 0.16 155);
-  --chart-4: oklch(0.7 0.17 50);
-  --chart-5: oklch(0.65 0.15 200);
+  --chart-1: oklch(0.245 0.055 265);
+  --chart-2: oklch(0.62 0.11 82);
+  --chart-3: oklch(0.48 0.12 155);
+  --chart-4: oklch(0.55 0.15 40);
+  --chart-5: oklch(0.5 0.1 220);
 
   --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.21 0.03 260);
-  --sidebar-primary: oklch(0.27 0.10 263);
+  --sidebar-foreground: oklch(0.22 0.03 265);
+  --sidebar-primary: oklch(0.245 0.055 265);
   --sidebar-primary-foreground: oklch(0.99 0 0);
-  --sidebar-accent: oklch(0.95 0.02 250);
-  --sidebar-accent-foreground: oklch(0.25 0.03 260);
-  --sidebar-border: oklch(0.9 0.01 255);
-  --sidebar-ring: oklch(0.27 0.10 263);
+  --sidebar-accent: oklch(0.93 0.008 85);
+  --sidebar-accent-foreground: oklch(0.25 0.03 265);
+  --sidebar-border: oklch(0.855 0.008 85);
+  --sidebar-ring: oklch(0.245 0.055 265);
 }
 
+/* ---------- DARK: deep navy-slate ---------- */
 .dark {
-  --background: oklch(0.18 0.02 260);
-  --foreground: oklch(0.98 0 0);
-  --card: oklch(0.22 0.02 260);
-  --card-foreground: oklch(0.98 0 0);
-  --popover: oklch(0.22 0.02 260);
-  --popover-foreground: oklch(0.98 0 0);
-  --primary: oklch(0.7 0.18 260);
-  --primary-foreground: oklch(0.18 0.02 260);
-  --secondary: oklch(0.28 0.03 260);
-  --secondary-foreground: oklch(0.98 0 0);
-  --muted: oklch(0.28 0.03 260);
-  --muted-foreground: oklch(0.7 0.02 260);
-  --accent: oklch(0.28 0.03 260);
-  --accent-foreground: oklch(0.98 0 0);
-  --destructive: oklch(0.7 0.19 22);
-  --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.55 0.22 260);
+  --background: oklch(0.18 0.03 260);           /* ~#0E1523 */
+  --foreground: oklch(0.97 0.005 85);
+  --card: oklch(0.25 0.045 265);                /* ~#16203A */
+  --card-foreground: oklch(0.97 0.005 85);
+  --popover: oklch(0.25 0.045 265);
+  --popover-foreground: oklch(0.97 0.005 85);
+
+  --brand-navy: oklch(0.25 0.045 265);
+  --brand-brass: oklch(0.75 0.11 85);           /* ~#C9A961 */
+  --brand-brass-foreground: oklch(0.18 0.03 260);
+  --brand-red: oklch(0.68 0.18 25);
+  --brand-red-foreground: oklch(0.99 0 0);
+
+  --primary: oklch(0.62 0.08 250);              /* lighter steel-blue */
+  --primary-foreground: oklch(0.15 0.03 260);
+
+  --secondary: oklch(0.29 0.035 265);
+  --secondary-foreground: oklch(0.97 0.005 85);
+
+  --muted: oklch(0.29 0.035 265);
+  --muted-foreground: oklch(0.72 0.015 260);
+
+  --accent: oklch(0.75 0.11 85);                /* brass stays warm */
+  --accent-foreground: oklch(0.18 0.03 260);
+
+  --success: oklch(0.78 0.16 150);              /* ~#4ADE80 */
+  --success-foreground: oklch(0.15 0.03 260);
+  --warning: oklch(0.82 0.15 85);               /* ~#FBBF24 */
+  --warning-foreground: oklch(0.18 0.03 260);
+  --destructive: oklch(0.72 0.17 22);           /* ~#F87171 */
+  --destructive-foreground: oklch(0.15 0.03 260);
+
+  --border: oklch(0.33 0.04 265);               /* ~#2A3550 */
+  --input: oklch(0.33 0.04 265);
+  --ring: oklch(0.62 0.08 250);
+
+  --money: oklch(0.78 0.16 150);
+  --money-foreground: oklch(0.15 0.03 260);
+
+  /* Header stays navy anchor */
+  --header-bg: oklch(0.16 0.03 260);
+  --header-fg: oklch(0.97 0.005 85);
+  --header-muted: oklch(0.68 0.02 250);
+  --header-accent: oklch(0.75 0.11 85);
+
+  --badge-award: oklch(0.38 0.09 155);
+  --badge-solicitation: oklch(0.38 0.09 250);
+  --badge-sources: oklch(0.42 0.13 95);
+  --badge-special: oklch(0.4 0.1 305);
+  --badge-justification: oklch(0.4 0.09 0);
+  --badge-presol: oklch(0.38 0.05 220);
+  --badge-setaside: oklch(0.4 0.1 305);
+
+  --chart-1: oklch(0.7 0.09 250);
+  --chart-2: oklch(0.75 0.11 85);
+  --chart-3: oklch(0.78 0.16 150);
+  --chart-4: oklch(0.72 0.15 40);
+  --chart-5: oklch(0.68 0.12 220);
+
+  --sidebar: oklch(0.22 0.04 260);
+  --sidebar-foreground: oklch(0.97 0.005 85);
+  --sidebar-primary: oklch(0.62 0.08 250);
+  --sidebar-primary-foreground: oklch(0.15 0.03 260);
+  --sidebar-accent: oklch(0.29 0.035 265);
+  --sidebar-accent-foreground: oklch(0.97 0.005 85);
+  --sidebar-border: oklch(0.33 0.04 265);
+  --sidebar-ring: oklch(0.62 0.08 250);
 }
 
 @layer base {
   * { border-color: var(--color-border); }
-  html, body { background-color: var(--color-background); color: var(--color-foreground); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  html, body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  /* Tabular numerics for all numeric-heavy displays */
+  .tabular, table, .font-mono { font-variant-numeric: tabular-nums; }
 
   /* Table styling */
-  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
-  .data-table th { text-align: left; padding: 8px 8px; background: var(--color-secondary); border-bottom: 1px solid var(--color-border); font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap; }
+  .data-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+  .data-table th {
+    text-align: left; padding: 8px 8px;
+    background: var(--color-secondary);
+    border-bottom: 1px solid var(--color-border);
+    font-weight: 600; cursor: pointer; user-select: none; white-space: nowrap;
+    color: var(--color-foreground);
+  }
   .data-table td { padding: 8px 8px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
-  .data-table tr:nth-child(even) td { background: oklch(0.985 0.005 247); }
-  .data-table tr:hover td { background: oklch(0.96 0.03 250); }
+  .data-table tr:nth-child(even) td { background: color-mix(in oklab, var(--color-secondary) 55%, transparent); }
+  .data-table tr:hover td { background: color-mix(in oklab, var(--color-accent) 12%, transparent); }
+}
+
+/* Briefing label — small caps section header */
+@utility briefing-label {
+  font-size: 11px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  color: var(--color-muted-foreground);
+}
+
+/* Tabular numerics utility */
+@utility num {
+  font-variant-numeric: tabular-nums;
 }
