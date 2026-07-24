@@ -65,16 +65,18 @@ function emptyMatrix(): PositioningMatrix {
 
 function normalize(m: any | null): PositioningMatrix {
   if (!m || typeof m !== "object") return emptyMatrix();
-  const dims = Array.isArray(m.dimensions) && m.dimensions.length ? m.dimensions.slice(0, 6) : [...DEFAULT_DIMENSIONS];
-  const rows = Array.isArray(m.rows) ? m.rows.map((r: any) => ({
+  const dims: string[] = Array.isArray(m.dimensions) && m.dimensions.length
+    ? (m.dimensions as any[]).slice(0, 6).map((d) => String(d))
+    : [...DEFAULT_DIMENSIONS];
+  const rows: MatrixRow[] = Array.isArray(m.rows) ? m.rows.map((r: any) => ({
     company: String(r?.company ?? ""),
     isUs: !!r?.isUs,
     threat: (["very_high","high","medium","low"].includes(r?.threat) ? r.threat : "medium") as MatrixThreat,
-    ratings: dims.reduce<Record<string, MatrixRating>>((acc, d) => {
+    ratings: dims.reduce((acc: Record<string, MatrixRating>, d: string) => {
       const v = r?.ratings?.[d];
       acc[d] = (RATING_CYCLE as string[]).includes(v) ? v : "unknown";
       return acc;
-    }, {}),
+    }, {} as Record<string, MatrixRating>),
     coverage: String(r?.coverage ?? ""),
   })) : [];
   return { updatedAt: m.updatedAt ?? new Date().toISOString(), dimensions: dims, rows };
