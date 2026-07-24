@@ -347,8 +347,9 @@ function ProposalPipeline() {
   async function parseDocuments(opts?: { skipCache?: boolean }) {
     if (!online) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
     if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
-    const sowAtts = attachments.filter((a) => a.file_type === "sow");
-    if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
+    const parseable = ["sow", "instructions", "final_solicitation", "draft_solicitation", "previous_solicitation", "rfi", "amendment"];
+    const sowAtts = attachments.filter((a) => parseable.includes(String(a.file_type)));
+    if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS, RFI, draft, final, or previous solicitation first"); return; }
     setParsing(true); setAiBusy(true);
     setParseProgress("Starting…");
     try {
