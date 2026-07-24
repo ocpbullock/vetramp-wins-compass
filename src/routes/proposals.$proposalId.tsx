@@ -164,8 +164,11 @@ function ProposalPipeline() {
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [step, setStep] = useState("intel");
-  const initialTab = (Route.useSearch().tab ?? "overview") as HubTab;
+  const searchParams = Route.useSearch();
+  const initialTab = (searchParams.tab ?? "overview") as HubTab;
   const [hubTab, setHubTab] = useState<HubTab>(initialTab);
+  const [parseBannerDismissed, setParseBannerDismissed] = useState(false);
+  const showParseBanner = searchParams.parseDocs === 1 && !parseBannerDismissed && attachments.length > 0 && !proposal?.naics_code;
   const [intakeOpen, setIntakeOpen] = useState(false);
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
