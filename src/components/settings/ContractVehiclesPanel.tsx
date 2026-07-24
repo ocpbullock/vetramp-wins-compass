@@ -550,7 +550,8 @@ function RegistryVehicleRow({
           <div className="flex items-center justify-between">
             <div className="text-xs font-semibold text-muted-foreground">Awardees</div>
             {canEditRow && (
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
+                <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV</Button>
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Bulk paste</Button>
                 <Button size="sm" onClick={() => setAddAwardeeOpen(true)}><Plus className="w-3 h-3 mr-1" /> Add awardee</Button>
               </div>
