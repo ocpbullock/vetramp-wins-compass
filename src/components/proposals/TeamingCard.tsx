@@ -192,7 +192,7 @@ export function TeamingCard({
 
     // Sync PWIN-visible company flags when NDA/TA are signed.
     if ((status === "nda_signed" || status === "ta_signed") && entry.partner_id) {
-      const patch: Record<string, boolean> = { has_nda: true };
+      const patch: { has_nda: boolean; has_teaming_agreement?: boolean } = { has_nda: true };
       if (status === "ta_signed") patch.has_teaming_agreement = true;
       const { error: cErr } = await supabase.from("companies").update(patch).eq("id", entry.partner_id);
       if (!cErr) toast.success("Partner record updated");
