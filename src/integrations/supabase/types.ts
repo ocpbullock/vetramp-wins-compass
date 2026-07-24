@@ -1995,47 +1995,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      has_opp_team_access_to_org: {
-        Args: { _org_team_id: string; _user_id: string }
-        Returns: boolean
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_opp_team_member: {
-        Args: { _team_id: string; _user_id: string }
-        Returns: boolean
-      }
-      is_org_team_member: {
-        Args: { _team_id: string; _user_id: string }
-        Returns: boolean
-      }
-      is_team_member: {
-        Args: { _team_id: string; _user_id: string }
-        Returns: boolean
-      }
-      team_role: {
-        Args: { _team_id: string; _user_id: string }
-        Returns: string
-      }
-      team_role_in: {
-        Args: { _roles: string[]; _team_id: string; _user_id: string }
-        Returns: boolean
-      }
-      team_type: { Args: { _team_id: string }; Returns: string }
-      user_can_see_proposal: {
-        Args: { _proposal_id: string; _user_id: string }
-        Returns: boolean
-      }
-      user_can_see_tracked: {
-        Args: { _id: string; _user_id: string }
-        Returns: boolean
-      }
-      users_share_team: { Args: { _a: string; _b: string }; Returns: boolean }
+      [_ in never]: never
     }
     Enums: {
       app_role: "admin" | "member"
