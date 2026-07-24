@@ -42,9 +42,9 @@ const VEHICLE_TYPES = ["GWAC", "IDIQ", "BPA", "GSA Schedule", "Other"] as const;
 const STATUSES = ["active", "pending", "expired"] as const;
 
 function statusClass(s: string): string {
-  if (s === "active") return "bg-emerald-600 text-white hover:bg-emerald-600";
-  if (s === "pending") return "bg-amber-500 text-white hover:bg-amber-500";
-  return "bg-red-600 text-white hover:bg-red-600";
+  if (s === "active") return "bg-success text-success-foreground hover:bg-success";
+  if (s === "pending") return "bg-warning text-warning-foreground hover:bg-warning";
+  return "bg-destructive text-destructive-foreground hover:bg-destructive";
 }
 
 function fmtMoney(v: number | null | undefined) {
