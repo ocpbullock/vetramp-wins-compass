@@ -191,7 +191,19 @@ function CaptureWorkspace() {
   return (
     <div className="min-h-screen bg-background">
       
-      <main className="max-w-[1400px] mx-auto px-6 py-6 space-y-6">
+      <main className="max-w-[1400px] mx-auto px-6 py-8 space-y-6">
+        <PageHeader
+          icon={<Compass className="w-5 h-5" />}
+          title="Capture Workspace"
+          description="Your front door for teaming, partner research, and opportunity capture."
+          actions={
+            <Button asChild size="sm">
+              <Link to="/discover">
+                <Plus className="w-4 h-4 mr-1.5" /> Add opportunity
+              </Link>
+            </Button>
+          }
+        />
         {onboarding.showOnboarding ? (
           <OnboardingFlow
             onComplete={onboarding.skip}
@@ -204,6 +216,7 @@ function CaptureWorkspace() {
             <PastPerformanceAccuracyBanner />
 
             <OpportunityContextBar proposals={proposalOptions} />
+
 
             {selected ? (
               <OpportunityTeamingSummary
@@ -223,7 +236,7 @@ function CaptureWorkspace() {
                 <TargetProfileForm value={targetProfile} onChange={setTargetProfile} />
 
                 <Tabs defaultValue="partners" className="w-full">
-                  <TabsList>
+                  <TabsList className="brass-tabs w-full">
                     <TabsTrigger value="partners">
                       <Users className="w-4 h-4 mr-1.5" /> Partner Search
                     </TabsTrigger>
@@ -234,6 +247,7 @@ function CaptureWorkspace() {
                       <Swords className="w-4 h-4 mr-1.5" /> Teaming Sandbox
                     </TabsTrigger>
                   </TabsList>
+
 
                   <TabsContent value="partners" className="mt-4">
                     {teamId ? (
@@ -340,71 +354,69 @@ function OpportunityContextBar({
 
   if (!selected) {
     return (
-      <Card className="border-dashed">
-        <CardContent className="p-4 flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-2 text-sm">
-            <Target className="w-4 h-4 text-muted-foreground" />
-            <span className="font-medium">Exploring globally</span>
-            <span className="text-muted-foreground">— no opportunity selected</span>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {selector}
-            <Button asChild size="sm">
-              {/* /opportunities doesn't exist yet — header nav routes it to /discover for now. */}
-              <Link to="/discover">
-                <Plus className="w-4 h-4 mr-1.5" /> Add opportunity
-              </Link>
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="context-strip px-4 py-3 flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2 text-sm min-w-0">
+          <Target className="w-4 h-4 text-[color:var(--brand-brass)] shrink-0" />
+          <span className="briefing-label">Context</span>
+          <span className="font-medium">Global exploration</span>
+          <span className="text-muted-foreground">— no opportunity selected</span>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          {selector}
+          <Button asChild size="sm">
+            <Link to="/discover">
+              <Plus className="w-4 h-4 mr-1.5" /> Add opportunity
+            </Link>
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Card>
-      <CardContent className="p-4 space-y-3">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="space-y-1 min-w-0">
-            <div className="flex items-center gap-2 text-sm">
-              <Target className="w-4 h-4 text-primary" />
-              <span className="font-medium truncate">{selected.title ?? "Selected opportunity"}</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5 text-[11px]">
-              {selected.agency && <Badge variant="outline">{selected.agency}</Badge>}
-              {selected.naicsCode && (
-                <Badge variant="secondary" className="font-mono">NAICS {selected.naicsCode}</Badge>
-              )}
-              {selected.setAside && <Badge variant="outline">{selected.setAside}</Badge>}
-              {selected.incumbentName && (
-                <Badge variant="outline">Incumbent: {selected.incumbentName}</Badge>
-              )}
-            </div>
+    <div className="context-strip px-4 py-3 space-y-3">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 text-sm min-w-0">
+            <Target className="w-4 h-4 text-[color:var(--brand-brass)] shrink-0" />
+            <span className="briefing-label">Opportunity</span>
+            <span className="font-medium truncate">{selected.title ?? "Selected opportunity"}</span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {selector}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedOpportunityId(null)}
-            >
-              Clear
-            </Button>
+          <div className="flex flex-wrap gap-1.5 text-[11px]">
+            {selected.agency && <Badge variant="outline">{selected.agency}</Badge>}
+            {selected.naicsCode && (
+              <Badge variant="secondary" className="font-mono">NAICS {selected.naicsCode}</Badge>
+            )}
+            {selected.setAside && <Badge variant="outline">{selected.setAside}</Badge>}
+            {selected.incumbentName && (
+              <Badge variant="outline">Incumbent: {selected.incumbentName}</Badge>
+            )}
           </div>
         </div>
-
         <div className="flex items-center gap-2 flex-wrap">
-          <EnrichFromSamButton proposalId={selected.id} />
-          <Button asChild size="sm" variant="ghost">
-            <Link to="/proposals/$proposalId" params={{ proposalId: selected.id }}>
-              Open opportunity <ArrowRight className="w-4 h-4 ml-1" />
-            </Link>
+          {selector}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setSelectedOpportunityId(null)}
+          >
+            Clear
           </Button>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+
+      <div className="flex items-center gap-2 flex-wrap">
+        <EnrichFromSamButton proposalId={selected.id} />
+        <Button asChild size="sm" variant="ghost">
+          <Link to="/proposals/$proposalId" params={{ proposalId: selected.id }}>
+            Open opportunity <ArrowRight className="w-4 h-4 ml-1" />
+          </Link>
+        </Button>
+      </div>
+    </div>
   );
 }
+
 
 // ---------------------------------------------------------------------------
 // Target profile editor (shown when no opportunity is selected)
