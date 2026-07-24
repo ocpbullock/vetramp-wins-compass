@@ -417,12 +417,9 @@ function TargetProfileForm({
 }) {
   const patch = (p: Partial<TargetProfile>) => onChange({ ...value, ...p });
 
-  const toggleNaics = (code: string) =>
-    patch({
-      naics: value.naics.includes(code)
-        ? value.naics.filter((c) => c !== code)
-        : [...value.naics, code],
-    });
+  // NAICS multi-select now handled by NaicsCombobox (patches value.naics directly).
+
+
 
   const toggleVehicle = (v: string) =>
     patch({
