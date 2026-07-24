@@ -132,6 +132,41 @@ export function PartnerResearch({
   } | null>(null);
   const [drilldown, setDrilldown] = useState<{ uei: string; name: string } | null>(null);
 
+  // ===== DARK HORSES =====
+  const [darkHorsesEnabled, setDarkHorsesEnabled] = useState(false);
+  const [dhSearching, setDhSearching] = useState(false);
+  const [dhAwards, setDhAwards] = useState<HistoricalAward[] | null>(null);
+
+  const runDarkHorseSearch = async () => {
+    const agency = agencyInput.trim();
+    if (!agency) { toast.error("Enter an agency to find dark horses."); return; }
+    setDhSearching(true);
+    try {
+      const r = await searchUsaspending({
+        naicsCodes: [],
+        agency,
+        startDate: yearsAgoIso(lookbackYears),
+        endDate: todayIso(),
+        maxResults: 500,
+      });
+      setDhAwards(r.results ?? []);
+      toast.success(`Pulled ${r.results?.length ?? 0} agency-scoped awards for dark-horse analysis`);
+    } catch (e: any) {
+      toast.error(e?.message || "Dark-horse search failed");
+    } finally {
+      setDhSearching(false);
+    }
+  };
+
+  const darkHorses: DarkHorseTarget[] = useMemo(() => {
+    if (!darkHorsesEnabled || !dhAwards || !naicsInput.trim()) return [];
+    return rankDarkHorses(
+      dhAwards,
+      { agency: agencyInput || null, set_aside: opportunitySetAside, naics_code: naicsInput.trim() },
+      { limit: 25 },
+    );
+  }, [darkHorsesEnabled, dhAwards, naicsInput, agencyInput, opportunitySetAside]);
+
   // Sync inputs when the parent's opportunity context changes.
   useEffect(() => { setNaicsInput(opportunityNaics ?? ""); }, [opportunityNaics]);
   useEffect(() => { setAgencyInput(opportunityAgency ?? ""); }, [opportunityAgency]);
