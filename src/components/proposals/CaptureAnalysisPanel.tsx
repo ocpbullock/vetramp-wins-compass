@@ -33,6 +33,7 @@ import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
 import { PtwCard } from "./PtwCard";
+import { computePtw } from "@/lib/ptw";
 
 type CaptureAnalysis = {
   bid_no_bid: {
@@ -48,16 +49,164 @@ type CaptureAnalysis = {
   _fetched_at?: string;
 };
 
-const REC_LABEL: Record<CaptureAnalysis["bid_no_bid"]["recommendation"], { text: string; color: string }> = {
-  bid: { text: "Bid", color: "bg-green-600 text-white" },
-  lean_bid: { text: "Lean Bid", color: "bg-emerald-500 text-white" },
-  lean_no_bid: { text: "Lean No-Bid", color: "bg-amber-500 text-white" },
-  no_bid: { text: "No-Bid", color: "bg-destructive text-destructive-foreground" },
+const REC_LABEL: Record<CaptureAnalysis["bid_no_bid"]["recommendation"], { text: string; className: string }> = {
+  bid: { text: "Bid", className: "bg-success text-success-foreground" },
+  lean_bid: { text: "Lean Bid", className: "bg-success/80 text-success-foreground" },
+  lean_no_bid: { text: "Lean No-Bid", className: "bg-warning text-warning-foreground" },
+  no_bid: { text: "No-Bid", className: "bg-destructive text-destructive-foreground" },
 };
 
 const PRIORITY_VARIANT: Record<"high" | "medium" | "low", "destructive" | "default" | "secondary"> = {
   high: "destructive", medium: "default", low: "secondary",
 };
+
+function fmtMoneyM(m: number | null | undefined): string {
+  if (m == null || !Number.isFinite(m)) return "—";
+  if (m >= 1000) return `$${(m / 1000).toFixed(1)}B`;
+  return `$${m.toFixed(1)}M`;
+}
+
+function countdown(deadline?: string | null) {
+  if (!deadline) return null;
+  const ms = new Date(deadline).getTime() - Date.now();
+  if (ms < 0) return "PAST DUE";
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  const hrs = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  return `${days}d ${hrs}h`;
+}
+
+// ---- Shared hook: deterministic teaming summary (PWIN + suggestions) ----
+function useTeamingSummary(proposal: any, proposalId: string) {
+  const teamId: string | null = proposal?.team_id ?? null;
+
+  const { data: partners = [], isLoading: loadingPartners } = useQuery({
+    queryKey: ["capture-partners", teamId],
+    enabled: !!teamId,
+    queryFn: () => listPartnerCompanies(teamId!),
+  });
+
+  const { data: self } = useQuery({
+    queryKey: ["capture-self", teamId],
+    enabled: !!teamId,
+    queryFn: async () => {
+      const [pd, vehRes, ppRes] = await Promise.all([
+        getOwnCompanyProfileData(teamId!),
+        supabase.from("contract_vehicles").select("vehicle_name").eq("team_id", teamId!).eq("status", "active"),
+        supabase.from("past_performance").select("naics_code, agency, period_of_performance_end, relevance_keywords")
+          .eq("team_id", teamId!).limit(50),
+      ]);
+      const profile = (pd ?? {}) as any;
+      return {
+        company_name: profile.legal_name || "Our Company",
+        certifications: profile.certifications || profile.socioeconomic_certifications || [],
+        naics_codes: profile.naics_codes || [],
+        vehicles: (vehRes.data ?? []).map((v: any) => v.vehicle_name),
+        pastPerf: (ppRes.data ?? []).map((p: any) => ({
+          naics: p.naics_code, agency: p.agency, end: p.period_of_performance_end,
+          keywords: p.relevance_keywords ?? [],
+        })),
+      };
+    },
+  });
+
+  const { data: entries = [] } = useQuery({
+    queryKey: ["capture-entries", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase.from("proposal_teaming")
+        .select("company_id, role, work_share_pct")
+        .eq("proposal_id", proposalId);
+      return (data ?? []) as { company_id: string; role: PwinRole; work_share_pct: number }[];
+    },
+  });
+
+  if (!teamId || loadingPartners || !self) {
+    return { ready: false as const, teamId };
+  }
+
+  const incumbentName: string | null =
+    proposal.customer_intel?.predecessor_contract?.incumbent
+    ?? proposal.market_snapshot?.incumbent?.topRecipient
+    ?? null;
+
+  const suggestCtx: SuggestContext = {
+    engagementType: proposal.engagement_type === "sub" ? "sub" : "prime",
+    opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],
+    opportunityAgency: proposal.agency,
+    setAside: proposal.set_aside,
+    requiredVehicles: proposal.contract_type
+      && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(proposal.contract_type)
+      ? [proposal.contract_type] : [],
+    scopeKeywords: (proposal.targeted_scope_areas ?? "")
+      .split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean),
+    incumbentName,
+    primeContractorName: proposal.prime_contractor_name,
+  };
+  const suggestSelf: SuggestSelf = {
+    certifications: self.certifications,
+    naics_codes: self.naics_codes,
+    contract_vehicles: self.vehicles,
+  };
+  const suggestPartners: SuggestPartner[] = partners.map((p: any) => ({
+    id: p.id,
+    company_name: p.company_name,
+    certifications: p.certifications ?? [],
+    naics_codes: p.naics_codes ?? [],
+    contract_vehicles: p.contract_vehicles ?? [],
+    capabilities_summary: p.capabilities_summary,
+    past_performance_summary: p.past_performance_summary,
+    notes: p.notes,
+    relationship_status: p.relationship_status,
+  }));
+  const existingPartnerIds = entries.map((e) => e.company_id);
+  const suggestions: PartnerSuggestion[] = rankPartnerSuggestions(
+    suggestCtx, suggestSelf, suggestPartners, existingPartnerIds, { limit: 5 },
+  );
+
+  const isSelfPrime = proposal.engagement_type !== "sub";
+  const selfMember: PwinTeamMember = {
+    id: "self",
+    name: self.company_name,
+    isSelf: true,
+    role: isSelfPrime ? "prime" : "sub",
+    workShare: isSelfPrime
+      ? Math.max(0, 100 - entries.reduce((s, e) => s + (Number(e.work_share_pct) || 0), 0))
+      : (entries.find((e) => e.role !== "prime")?.work_share_pct ?? 0),
+    active: true,
+    certifications: self.certifications,
+    naicsCodes: self.naics_codes,
+    contractVehicles: self.vehicles,
+    pastPerformance: self.pastPerf,
+    isIncumbent: !!incumbentName && self.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
+  };
+  const entryMap = new Map(entries.map((e) => [e.company_id, e]));
+  const partnerMembers: PwinTeamMember[] = partners.map((p: any) => {
+    const e = entryMap.get(p.id);
+    return {
+      id: p.id,
+      name: p.company_name,
+      isSelf: false,
+      role: (e?.role ?? "sub") as PwinRole,
+      workShare: e?.work_share_pct ?? 0,
+      active: !!e,
+      certifications: p.certifications ?? [],
+      naicsCodes: p.naics_codes ?? [],
+      contractVehicles: p.contract_vehicles ?? [],
+      pastPerformance: [],
+      isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
+    };
+  });
+  const pwinCtx: PwinContext = {
+    engagementType: isSelfPrime ? "prime" : "sub",
+    opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],
+    opportunityAgency: proposal.agency,
+    setAside: proposal.set_aside,
+    requiredVehicles: suggestCtx.requiredVehicles,
+    scopeKeywords: suggestCtx.scopeKeywords,
+    incumbentName,
+  };
+  const pwinResult = calculatePwin(pwinCtx, [selfMember, ...partnerMembers]);
+  return { ready: true as const, teamId, self, partners, entries, suggestions, pwinResult };
+}
 
 export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
   const qc = useQueryClient();
@@ -65,6 +214,8 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   const generatedAt: string | null = proposal?.capture_analysis_at ?? null;
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState<"internal" | "partner" | null>(null);
+
+  const teaming = useTeamingSummary(proposal, proposalId);
 
   // "Inputs changed" check — newest opportunity_intel timestamp.
   const { data: latestIntelAt } = useQuery({
@@ -254,243 +405,263 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
     );
   }
 
+  // ---- Summary band values ----
+  const rec = REC_LABEL[analysis.bid_no_bid.recommendation];
+  const pwinValue = teaming.ready ? teaming.pwinResult.pwin : null;
+  const pwinColor = pwinValue != null ? colorFor(pwinValue) : null;
+  const pwinTextColor =
+    pwinColor === "green" ? "text-success"
+    : pwinColor === "amber" ? "text-warning"
+    : pwinColor === "red" ? "text-destructive"
+    : "text-muted-foreground";
+
+  // PTW "as assumed" from saved inputs (recompute — logic lives in ptw.ts).
+  let ptwAsAssumed: number | null = null;
+  const ptwInputs = (proposal as any)?.ptw_analysis;
+  if (ptwInputs?.competitors?.length) {
+    try {
+      const ptw = computePtw(ptwInputs);
+      const s = ptw.scenarios.find((x) => x.label === "If rated as assumed");
+      ptwAsAssumed = s?.recommendedTepM ?? null;
+    } catch { /* ignore */ }
+  }
+
+  const cd = countdown(proposal?.response_deadline);
+
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader className="flex-row items-start justify-between space-y-0">
-          <div>
-            <CardTitle className="text-lg">Capture Analysis</CardTitle>
-            <CardDescription>
-              Last generated {generatedAt ? new Date(generatedAt).toLocaleString() : "—"}
-              {inputsChangedSince && (
-                <span className="ml-2 inline-flex items-center gap-1 text-amber-600">
-                  <AlertTriangle className="w-3 h-3" /> inputs changed since last run
-                </span>
-              )}
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button size="sm" variant="outline" disabled={!!exporting}>
-                  {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                  Export report
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => handleExport("internal")}>
-                  Internal capture report (full)
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => handleExport("partner")}>
-                  Partner-facing brief (no internal intel)
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <Button size="sm" variant="outline" onClick={rerun} disabled={running}>
-              {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
-              Re-run analysis
-            </Button>
-          </div>
-        </CardHeader>
-      </Card>
-
-      {/* Bid/No-Bid */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Bid / No-Bid recommendation</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-3">
-            <span className={`px-3 py-1 rounded-md text-sm font-semibold ${REC_LABEL[analysis.bid_no_bid.recommendation].color}`}>
-              {REC_LABEL[analysis.bid_no_bid.recommendation].text}
-            </span>
-            <Badge variant="outline" className="capitalize">{analysis.bid_no_bid.confidence} confidence</Badge>
-          </div>
-          <p className="text-sm whitespace-pre-wrap">{analysis.bid_no_bid.rationale}</p>
-          {analysis.bid_no_bid.key_factors?.length > 0 && (
-            <div>
-              <div className="text-xs font-medium text-muted-foreground mb-1">Key factors</div>
-              <ul className="list-disc pl-5 text-sm space-y-0.5">
-                {analysis.bid_no_bid.key_factors.map((f, i) => <li key={i}>{f}</li>)}
-              </ul>
+    <div className="space-y-6">
+      {/* --- SUMMARY BAND --- */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card className={`${rec.className} border-0`}>
+          <CardContent className="p-4">
+            <div className="briefing-label text-current opacity-80">Recommendation</div>
+            <div className="text-2xl font-bold mt-1">{rec.text}</div>
+            <div className="text-xs opacity-90 mt-1 capitalize">{analysis.bid_no_bid.confidence} confidence</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="briefing-label">Current PWIN</div>
+            <div className={`text-2xl font-bold num mt-1 ${pwinTextColor}`}>
+              {pwinValue != null ? `${pwinValue}%` : (teaming.teamId ? "…" : "—")}
             </div>
-          )}
-        </CardContent>
-      </Card>
+            <div className="text-xs text-muted-foreground mt-1">
+              {teaming.ready && teaming.pwinResult.overAllocated ? "Roster over-allocated" : "From current roster"}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="briefing-label">PTW · as assumed</div>
+            <div className="text-2xl font-bold num mt-1">{fmtMoneyM(ptwAsAssumed)}</div>
+            <div className="text-xs text-muted-foreground mt-1">Recommended TEP</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="briefing-label">Response deadline</div>
+            <div className={`text-2xl font-bold num mt-1 ${cd === "PAST DUE" ? "text-destructive" : "text-foreground"}`}>
+              {cd ?? "—"}
+            </div>
+            <div className="text-xs text-muted-foreground mt-1">
+              {proposal?.response_deadline
+                ? new Date(proposal.response_deadline).toLocaleDateString()
+                : "No deadline set"}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Win Themes */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Win Themes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {analysis.win_themes?.length === 0 ? (
-            <div className="text-xs text-muted-foreground">None proposed.</div>
-          ) : (
-            <ul className="list-disc pl-5 text-sm space-y-1">
-              {analysis.win_themes.map((t, i) => <li key={i}>{t}</li>)}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {/* --- Toolbar --- */}
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground border rounded-md px-3 py-2 bg-card">
+        <span>
+          Last generated {generatedAt ? new Date(generatedAt).toLocaleString() : "—"}
+        </span>
+        {inputsChangedSince && (
+          <span className="inline-flex items-center gap-1 text-warning">
+            <AlertTriangle className="w-3 h-3" /> inputs changed since last run
+          </span>
+        )}
+        <div className="ml-auto flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline" disabled={!!exporting}>
+                {exporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                Export report
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => handleExport("internal")}>
+                Internal capture report (full)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport("partner")}>
+                Partner-facing brief (no internal intel)
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button size="sm" variant="outline" onClick={rerun} disabled={running}>
+            {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+            Re-run analysis
+          </Button>
+        </div>
+      </div>
 
-      {/* Competitor Assessment */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Competitor Assessment</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm whitespace-pre-wrap">{analysis.competitor_assessment || "—"}</p>
-        </CardContent>
-      </Card>
+      {/* --- ASSESSMENT --- */}
+      <section className="space-y-3">
+        <h3 className="briefing-label">Assessment</h3>
+        <div className="grid gap-4 md:grid-cols-2">
+          <Card className="md:col-span-2">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Bid rationale</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-sm whitespace-pre-wrap">{analysis.bid_no_bid.rationale}</p>
+              {analysis.bid_no_bid.key_factors?.length > 0 && (
+                <div>
+                  <div className="briefing-label mb-1">Key factors</div>
+                  <ul className="list-disc pl-5 text-sm space-y-0.5">
+                    {analysis.bid_no_bid.key_factors.map((f, i) => <li key={i}>{f}</li>)}
+                  </ul>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Win themes</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {analysis.win_themes?.length === 0 ? (
+                <div className="text-xs text-muted-foreground">None proposed.</div>
+              ) : (
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  {analysis.win_themes.map((t, i) => <li key={i}>{t}</li>)}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Staffing concerns</CardTitle>
+              <CardDescription>Clearance, labor categories, incumbent-staff retention.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {analysis.staffing_concerns?.length === 0 ? (
+                <div className="text-xs text-muted-foreground">None flagged.</div>
+              ) : (
+                <ul className="list-disc pl-5 text-sm space-y-1">
+                  {analysis.staffing_concerns.map((c, i) => <li key={i}>{c}</li>)}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </section>
 
-      {/* Competitive Positioning Matrix */}
-      <PositioningMatrixCard proposal={proposal} proposalId={proposalId} />
+      {/* --- COMPETITIVE FIELD --- */}
+      <section className="space-y-3">
+        <h3 className="briefing-label">Competitive field</h3>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Competitor assessment</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm whitespace-pre-wrap">{analysis.competitor_assessment || "—"}</p>
+          </CardContent>
+        </Card>
+        <PositioningMatrixCard proposal={proposal} proposalId={proposalId} />
+        <PtwCard proposal={proposal} proposalId={proposalId} />
+      </section>
 
-      {/* Price-to-Win */}
-      <PtwCard proposal={proposal} proposalId={proposalId} />
+      {/* --- EXECUTION --- */}
+      <section className="space-y-3">
+        <h3 className="briefing-label">Execution</h3>
+        <TeamingRecommendationCard proposal={proposal} proposalId={proposalId} teaming={teaming} />
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Next actions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {analysis.next_actions?.length === 0 ? (
+              <div className="text-xs text-muted-foreground">No next actions.</div>
+            ) : (
+              <ul className="space-y-2">
+                {analysis.next_actions.map((a, i) => (
+                  <li key={i} className="border rounded-md p-2">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="text-sm font-medium flex-1">{a.action}</div>
+                      <Badge variant={PRIORITY_VARIANT[a.priority]} className="capitalize shrink-0">{a.priority}</Badge>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs shrink-0"
+                        onClick={async () => {
+                          const res = await addActivityFromAnalysis({
+                            proposalId,
+                            teamId: proposal?.team_id ?? null,
+                            title: a.action,
+                            detail: a.why,
+                          });
+                          if (res.ok) toast.success("Added to activities");
+                          else toast.error(res.error ?? "Failed to add activity");
+                        }}
+                      >
+                        <Plus className="w-3 h-3 mr-1" /> Add to activities
+                      </Button>
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">{a.why}</div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
+      </section>
 
-
-
-
-
-      {/* Teaming Recommendation (computed locally) */}
-      <TeamingRecommendationCard proposal={proposal} proposalId={proposalId} />
-
-      {/* Staffing Concerns */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Staffing Concerns</CardTitle>
-          <CardDescription>Clearance, labor categories, incumbent-staff retention.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {analysis.staffing_concerns?.length === 0 ? (
-            <div className="text-xs text-muted-foreground">None flagged.</div>
-          ) : (
-            <ul className="list-disc pl-5 text-sm space-y-1">
-              {analysis.staffing_concerns.map((c, i) => <li key={i}>{c}</li>)}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Next Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Next Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {analysis.next_actions?.length === 0 ? (
-            <div className="text-xs text-muted-foreground">No next actions.</div>
-          ) : (
-            <ul className="space-y-2">
-              {analysis.next_actions.map((a, i) => (
-                <li key={i} className="border rounded-md p-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm font-medium flex-1">{a.action}</div>
-                    <Badge variant={PRIORITY_VARIANT[a.priority]} className="capitalize shrink-0">{a.priority}</Badge>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-7 text-xs shrink-0"
-                      onClick={async () => {
-                        const res = await addActivityFromAnalysis({
-                          proposalId,
-                          teamId: proposal?.team_id ?? null,
-                          title: a.action,
-                          detail: a.why,
-                        });
-                        if (res.ok) toast.success("Added to activities");
-                        else toast.error(res.error ?? "Failed to add activity");
-                      }}
-                    >
-                      <Plus className="w-3 h-3 mr-1" /> Add to activities
-                    </Button>
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">{a.why}</div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      <SimilarPastPursuitsCard
-        proposalId={proposalId}
-        teamId={proposal?.team_id ?? null}
-        naicsCode={proposal?.naics_code ?? null}
-        agency={proposal?.agency ?? null}
-      />
+      {/* --- HISTORY --- */}
+      <section className="space-y-3">
+        <h3 className="briefing-label">History</h3>
+        <SimilarPastPursuitsCard
+          proposalId={proposalId}
+          teamId={proposal?.team_id ?? null}
+          naicsCode={proposal?.naics_code ?? null}
+          agency={proposal?.agency ?? null}
+        />
+      </section>
     </div>
   );
 }
 
-// ----- Teaming Recommendation: deterministic, reuses existing engines -----
+// ----- Teaming Recommendation: deterministic, reuses the shared hook -----
 
-function TeamingRecommendationCard({ proposal, proposalId }: { proposal: any; proposalId: string }) {
-  const teamId: string | null = proposal?.team_id ?? null;
-
-  const { data: partners = [], isLoading: loadingPartners } = useQuery({
-    queryKey: ["capture-partners", teamId],
-    enabled: !!teamId,
-    queryFn: () => listPartnerCompanies(teamId!),
-  });
-
-  const { data: self } = useQuery({
-    queryKey: ["capture-self", teamId],
-    enabled: !!teamId,
-    queryFn: async () => {
-      const [pd, vehRes, ppRes] = await Promise.all([
-        getOwnCompanyProfileData(teamId!),
-        supabase.from("contract_vehicles").select("vehicle_name").eq("team_id", teamId!).eq("status", "active"),
-        supabase.from("past_performance").select("naics_code, agency, period_of_performance_end, relevance_keywords")
-          .eq("team_id", teamId!).limit(50),
-      ]);
-      const profile = (pd ?? {}) as any;
-      return {
-        company_name: profile.legal_name || "Our Company",
-        certifications: profile.certifications || profile.socioeconomic_certifications || [],
-        naics_codes: profile.naics_codes || [],
-        vehicles: (vehRes.data ?? []).map((v: any) => v.vehicle_name),
-        pastPerf: (ppRes.data ?? []).map((p: any) => ({
-          naics: p.naics_code, agency: p.agency, end: p.period_of_performance_end,
-          keywords: p.relevance_keywords ?? [],
-        })),
-      };
-    },
-  });
-
-  const { data: entries = [] } = useQuery({
-    queryKey: ["capture-entries", proposalId],
-    queryFn: async () => {
-      const { data } = await supabase.from("proposal_teaming")
-        .select("company_id, role, work_share_pct")
-        .eq("proposal_id", proposalId);
-      return (data ?? []) as { company_id: string; role: PwinRole; work_share_pct: number }[];
-    },
-  });
-
-  if (!teamId) {
+function TeamingRecommendationCard({
+  proposal, proposalId, teaming,
+}: {
+  proposal: any;
+  proposalId: string;
+  teaming: ReturnType<typeof useTeamingSummary>;
+}) {
+  if (!teaming.teamId) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" /> Teaming Recommendation
+            <Users className="w-4 h-4 text-primary" /> Teaming recommendation
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="text-xs text-muted-foreground">Save the proposal to a team to compute teaming recommendations.</div>
+          <div className="text-xs text-muted-foreground">Save the opportunity to a team to compute teaming recommendations.</div>
         </CardContent>
       </Card>
     );
   }
 
-  if (loadingPartners || !self) {
+  if (!teaming.ready) {
     return (
       <Card>
-        <CardHeader>
+        <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" /> Teaming Recommendation
+            <Users className="w-4 h-4 text-primary" /> Teaming recommendation
           </CardTitle>
         </CardHeader>
         <CardContent><Skeleton className="h-20 w-full" /></CardContent>
@@ -498,102 +669,19 @@ function TeamingRecommendationCard({ proposal, proposalId }: { proposal: any; pr
     );
   }
 
-  // ---- rankPartnerSuggestions ----
-  const incumbentName: string | null =
-    proposal.customer_intel?.predecessor_contract?.incumbent
-    ?? proposal.market_snapshot?.incumbent?.topRecipient
-    ?? null;
-
-  const suggestCtx: SuggestContext = {
-    engagementType: proposal.engagement_type === "sub" ? "sub" : "prime",
-    opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],
-    opportunityAgency: proposal.agency,
-    setAside: proposal.set_aside,
-    requiredVehicles: proposal.contract_type
-      && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(proposal.contract_type)
-      ? [proposal.contract_type] : [],
-    scopeKeywords: (proposal.targeted_scope_areas ?? "")
-      .split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean),
-    incumbentName,
-    primeContractorName: proposal.prime_contractor_name,
-  };
-  const suggestSelf: SuggestSelf = {
-    certifications: self.certifications,
-    naics_codes: self.naics_codes,
-    contract_vehicles: self.vehicles,
-  };
-  const suggestPartners: SuggestPartner[] = partners.map((p) => ({
-    id: p.id,
-    company_name: p.company_name,
-    certifications: p.certifications ?? [],
-    naics_codes: p.naics_codes ?? [],
-    contract_vehicles: p.contract_vehicles ?? [],
-    capabilities_summary: p.capabilities_summary,
-    past_performance_summary: p.past_performance_summary,
-    notes: p.notes,
-    relationship_status: p.relationship_status,
-  }));
-  const existingPartnerIds = entries.map((e) => e.company_id);
-  const suggestions: PartnerSuggestion[] = rankPartnerSuggestions(
-    suggestCtx, suggestSelf, suggestPartners, existingPartnerIds, { limit: 5 },
-  );
-
-  // ---- calculatePwin from current roster ----
-  const isSelfPrime = proposal.engagement_type !== "sub";
-  const selfMember: PwinTeamMember = {
-    id: "self",
-    name: self.company_name,
-    isSelf: true,
-    role: isSelfPrime ? "prime" : "sub",
-    workShare: isSelfPrime
-      ? Math.max(0, 100 - entries.reduce((s, e) => s + (Number(e.work_share_pct) || 0), 0))
-      : (entries.find((e) => e.role !== "prime")?.work_share_pct ?? 0),
-    active: true,
-    certifications: self.certifications,
-    naicsCodes: self.naics_codes,
-    contractVehicles: self.vehicles,
-    pastPerformance: self.pastPerf,
-    isIncumbent: !!incumbentName && self.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
-  };
-  const entryMap = new Map(entries.map((e) => [e.company_id, e]));
-  const partnerMembers: PwinTeamMember[] = partners.map((p) => {
-    const e = entryMap.get(p.id);
-    return {
-      id: p.id,
-      name: p.company_name,
-      isSelf: false,
-      role: (e?.role ?? "sub") as PwinRole,
-      workShare: e?.work_share_pct ?? 0,
-      active: !!e,
-      certifications: p.certifications ?? [],
-      naicsCodes: p.naics_codes ?? [],
-      contractVehicles: p.contract_vehicles ?? [],
-      pastPerformance: [],
-      isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
-    };
-  });
-  const pwinCtx: PwinContext = {
-    engagementType: isSelfPrime ? "prime" : "sub",
-    opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],
-    opportunityAgency: proposal.agency,
-    setAside: proposal.set_aside,
-    requiredVehicles: suggestCtx.requiredVehicles,
-    scopeKeywords: suggestCtx.scopeKeywords,
-    incumbentName,
-  };
-  const pwinResult = calculatePwin(pwinCtx, [selfMember, ...partnerMembers]);
+  const { pwinResult, suggestions } = teaming;
   const pwinColor = colorFor(pwinResult.pwin);
   const pwinTextColor =
-    pwinColor === "green" ? "text-green-600"
-    : pwinColor === "amber" ? "text-amber-600"
+    pwinColor === "green" ? "text-success"
+    : pwinColor === "amber" ? "text-warning"
     : "text-destructive";
 
   return (
     <Card>
-      <CardHeader className="flex-row items-start justify-between space-y-0">
+      <CardHeader className="flex-row items-start justify-between space-y-0 pb-2">
         <div>
           <CardTitle className="text-base flex items-center gap-2">
-            <Users className="w-4 h-4 text-primary" /> Teaming Recommendation
+            <Users className="w-4 h-4 text-primary" /> Teaming recommendation
           </CardTitle>
           <CardDescription>
             Computed from your roster and current teaming entries — not from the model.
@@ -610,7 +698,7 @@ function TeamingRecommendationCard({ proposal, proposalId }: { proposal: any; pr
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-baseline gap-3">
-          <div className={`text-3xl font-bold tabular-nums ${pwinTextColor}`}>{pwinResult.pwin}</div>
+          <div className={`text-3xl font-bold num ${pwinTextColor}`}>{pwinResult.pwin}</div>
           <div className="text-sm text-muted-foreground">current PWIN</div>
           {pwinResult.overAllocated && (
             <Badge variant="destructive" className="ml-auto">Over-allocated</Badge>
@@ -618,7 +706,7 @@ function TeamingRecommendationCard({ proposal, proposalId }: { proposal: any; pr
         </div>
 
         <div>
-          <div className="text-xs font-medium text-muted-foreground flex items-center gap-1 mb-1">
+          <div className="briefing-label flex items-center gap-1 mb-1">
             <Lightbulb className="w-3 h-3" /> Top suggested partners
           </div>
           {suggestions.length === 0 ? (
@@ -627,8 +715,8 @@ function TeamingRecommendationCard({ proposal, proposalId }: { proposal: any; pr
             <ul className="space-y-1">
               {suggestions.map((s) => (
                 <li key={s.partnerId} className="flex items-center gap-2 text-sm">
-                  <span className={`text-base font-bold tabular-nums w-8 ${
-                    s.fitScore >= 70 ? "text-green-600" : s.fitScore >= 40 ? "text-amber-600" : "text-destructive"
+                  <span className={`text-base font-bold num w-8 ${
+                    s.fitScore >= 70 ? "text-success" : s.fitScore >= 40 ? "text-warning" : "text-destructive"
                   }`}>{s.fitScore}</span>
                   <span className="font-medium truncate">{s.partnerName}</span>
                   <Badge variant="secondary" className="text-[10px]">{s.bestRoleLabel}</Badge>
