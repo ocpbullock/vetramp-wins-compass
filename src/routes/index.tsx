@@ -2,10 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  Plus, ChevronDown, Building2, Star, Users, Swords, Target,
-  ArrowRight, Sparkles, Loader2,
+  Plus, Building2, Star, Users, Swords, Target,
+  ArrowRight, Sparkles, Loader2, Compass,
 } from "lucide-react";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/ui/page-header";
 
 
 import { Button } from "@/components/ui/button";
