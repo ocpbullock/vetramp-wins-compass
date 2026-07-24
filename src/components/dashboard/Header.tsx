@@ -293,6 +293,10 @@ export function Header() {
                 <Shield className="w-4 h-4" /> Admin
               </Link>
             )}
+            <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-2">
+              <ThemeToggle />
+              <span className="text-xs text-[color:var(--header-muted)]">Toggle theme</span>
+            </div>
           </div>
         </nav>
       )}
