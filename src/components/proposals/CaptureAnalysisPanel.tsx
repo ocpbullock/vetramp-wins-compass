@@ -342,6 +342,11 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
         </CardContent>
       </Card>
 
+      {/* Competitive Positioning Matrix */}
+      <PositioningMatrixCard proposal={proposal} proposalId={proposalId} />
+
+
+
       {/* Teaming Recommendation (computed locally) */}
       <TeamingRecommendationCard proposal={proposal} proposalId={proposalId} />
 
