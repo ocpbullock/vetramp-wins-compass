@@ -20,7 +20,7 @@ type Row = {
 };
 
 const OUTCOME_BADGE: Record<Outcome, { label: string; className: string }> = {
-  won: { label: "Won", className: "bg-emerald-600 text-white hover:bg-emerald-600" },
+  won: { label: "Won", className: "bg-success text-success-foreground hover:bg-success" },
   lost: { label: "Lost", className: "bg-destructive text-destructive-foreground hover:bg-destructive" },
   no_bid: { label: "No-bid", className: "bg-muted text-foreground hover:bg-muted" },
 };
