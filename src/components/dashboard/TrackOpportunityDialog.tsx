@@ -46,7 +46,7 @@ export type TrackedOpportunity = {
   updated_at: string;
 };
 
-const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
+// NAICS picker uses the full 2022 catalog via NaicsCombobox.
 
 export function TrackOpportunityDialog({
   open,
