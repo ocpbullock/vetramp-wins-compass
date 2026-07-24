@@ -7,6 +7,27 @@ import { authenticate, assertProposalAccess, authErrorResponse } from "../_share
 
 const SAM_KEY = Deno.env.get("SAM_GOV_API_KEY");
 
+// Only allow attaching the SAM.gov API key to first-party SAM.gov hosts.
+// resourceLinks originates from proposals.opportunity_data (jsonb writable by
+// team members), so any other host is treated as untrusted and refused.
+const SAM_HOST_ALLOWLIST = new Set([
+  "sam.gov",
+  "www.sam.gov",
+  "api.sam.gov",
+  "beta.sam.gov",
+  "api.beta.sam.gov",
+]);
+
+function isAllowedSamUrl(url: string): boolean {
+  try {
+    const u = new URL(url);
+    if (u.protocol !== "https:") return false;
+    return SAM_HOST_ALLOWLIST.has(u.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 function appendKey(url: string) {
   const sep = url.includes("?") ? "&" : "?";
   return `${url}${sep}api_key=${SAM_KEY}`;
