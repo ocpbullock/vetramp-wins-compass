@@ -305,6 +305,15 @@ export function TeamingCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        {entries.length > 0 && (
+          <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1 border-b border-border pb-2">
+            <span className="briefing-label">Outreach pipeline</span>
+            <span>{entries.length} partner{entries.length === 1 ? "" : "s"}</span>
+            {OUTREACH_STATUSES.filter((s) => s.value !== "not_started" && (pipelineCounts[s.value] ?? 0) > 0).map((s) => (
+              <span key={s.value}>· {pipelineCounts[s.value]} {s.label.toLowerCase()}</span>
+            ))}
+          </div>
+        )}
         {entries.length === 0 && (
           <div className="text-sm text-muted-foreground border border-dashed border-border rounded-md p-6 text-center">
             No teaming partners on this bid yet.
@@ -317,10 +326,30 @@ export function TeamingCard({
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <div className="font-medium text-sm">{e.partner?.company_name ?? "Unknown partner"}</div>
-                  <div className="flex flex-wrap gap-1 mt-1">
+                  <div className="flex flex-wrap items-center gap-1 mt-1">
                     <Badge variant={ROLE_VARIANT[e.role]} className="text-[10px]">
                       {ROLES.find((r) => r.value === e.role)?.label}
                     </Badge>
+                    <Select
+                      value={e.outreach_status}
+                      onValueChange={(v) => updateOutreach(e, v as OutreachStatus)}
+                    >
+                      <SelectTrigger
+                        className={`h-6 px-2 text-[10px] uppercase tracking-wide gap-1 border ${outreachChipClass(e.outreach_status)}`}
+                      >
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {OUTREACH_STATUSES.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    {e.outreach_updated_at && (
+                      <span className="text-[10px] text-muted-foreground">
+                        · updated {timeAgo(e.outreach_updated_at)}
+                      </span>
+                    )}
                     {(e.partner?.certifications ?? []).map((c) => (
                       <Badge key={c} variant="outline" className="text-[10px]">{c}</Badge>
                     ))}
@@ -330,6 +359,7 @@ export function TeamingCard({
                   </div>
                 </div>
                 <div className="flex items-center gap-1">
+                  <OutreachNotesPopover entry={e} onSave={(notes) => updateEntry(e.id, { outreach_notes: notes })} />
                   {proposal && e.partner && (
                     <Button
                       variant="ghost" size="sm"
