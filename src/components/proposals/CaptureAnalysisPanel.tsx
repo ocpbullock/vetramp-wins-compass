@@ -32,6 +32,7 @@ import { Plus } from "lucide-react";
 import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
+import { PtwCard } from "./PtwCard";
 
 type CaptureAnalysis = {
   bid_no_bid: {
@@ -223,6 +224,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
         teamingSummary,
         darkHorses: (proposal?.market_snapshot as any)?.darkHorses ?? null,
         positioningMatrix: (proposal as any)?.positioning_matrix ?? null,
+        ptwAnalysis: (proposal as any)?.ptw_analysis ?? null,
       }, { variant });
       toast.success(variant === "internal" ? "Internal capture report downloaded" : "Partner-facing brief downloaded");
     } catch (e: any) {
@@ -344,6 +346,11 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
 
       {/* Competitive Positioning Matrix */}
       <PositioningMatrixCard proposal={proposal} proposalId={proposalId} />
+
+      {/* Price-to-Win */}
+      <PtwCard proposal={proposal} proposalId={proposalId} />
+
+
 
 
 
