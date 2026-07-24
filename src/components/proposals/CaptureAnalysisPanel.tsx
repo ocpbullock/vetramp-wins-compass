@@ -439,37 +439,33 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
             <div className="text-xs opacity-90 mt-1 capitalize">{analysis.bid_no_bid.confidence} confidence</div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="briefing-label">Current PWIN</div>
-            <div className={`text-2xl font-bold num mt-1 ${pwinTextColor}`}>
-              {pwinValue != null ? `${pwinValue}%` : (teaming.teamId ? "…" : "—")}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {teaming.ready && teaming.pwinResult.overAllocated ? "Roster over-allocated" : "From current roster"}
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="briefing-label">PTW · as assumed</div>
-            <div className="text-2xl font-bold num mt-1">{fmtMoneyM(ptwAsAssumed)}</div>
-            <div className="text-xs text-muted-foreground mt-1">Recommended TEP</div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="briefing-label">Response deadline</div>
-            <div className={`text-2xl font-bold num mt-1 ${cd === "PAST DUE" ? "text-destructive" : "text-foreground"}`}>
-              {cd ?? "—"}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              {proposal?.response_deadline
-                ? new Date(proposal.response_deadline).toLocaleDateString()
-                : "No deadline set"}
-            </div>
-          </CardContent>
-        </Card>
+        <MetricCard
+          label="Current PWIN"
+          visual={<PwinDial value={pwinValue} size="sm" />}
+          sub={
+            pwinValue == null
+              ? (teaming.teamId ? "Computing…" : "—")
+              : teaming.ready && teaming.pwinResult.overAllocated
+                ? "Roster over-allocated"
+                : "From current roster"
+          }
+        />
+        <MetricCard
+          label="PTW · as assumed"
+          value={fmtMoneyM(ptwAsAssumed)}
+          tone="money"
+          sub="Recommended TEP"
+        />
+        <MetricCard
+          label="Response deadline"
+          value={cd ?? "—"}
+          tone={cd === "PAST DUE" ? "destructive" : "default"}
+          sub={
+            proposal?.response_deadline
+              ? new Date(proposal.response_deadline).toLocaleDateString()
+              : "No deadline set"
+          }
+        />
       </div>
 
       {/* --- Toolbar --- */}
