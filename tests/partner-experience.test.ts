@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import type { HistoricalAward } from "../src/lib/api";
-import { rankPartnerExperience } from "../src/lib/partner-experience";
+import { rankPartnerExperience, rankDarkHorses } from "../src/lib/partner-experience";
+
 
 function award(over: Partial<HistoricalAward> = {}): HistoricalAward {
   return {
