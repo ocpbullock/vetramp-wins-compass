@@ -240,11 +240,21 @@ export function TrackedAnalyzePanel({
                   <div className="h-48">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={stats.trend}>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                        <XAxis dataKey="year" tick={{ fontSize: 11 }} />
-                        <YAxis tick={{ fontSize: 11 }} tickFormatter={fmtMoney} />
-                        <RTooltip formatter={(v: any) => fmtMoney(Number(v))} />
-                        <Bar dataKey="value" fill="#2563eb" />
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                        <XAxis dataKey="year" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} stroke="var(--border)" />
+                        <YAxis tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} stroke="var(--border)" tickFormatter={fmtMoney} />
+                        <RTooltip
+                          contentStyle={{
+                            background: "var(--card)",
+                            color: "var(--card-foreground)",
+                            border: "1px solid var(--border)",
+                            borderRadius: 6,
+                            fontSize: 12,
+                          }}
+                          cursor={{ fill: "var(--muted)", opacity: 0.4 }}
+                          formatter={(v: any) => fmtMoney(Number(v))}
+                        />
+                        <Bar dataKey="value" fill="var(--chart-1)" />
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
