@@ -195,6 +195,8 @@ export function ContractVehiclesPanel() {
           }}
         />
       )}
+
+      <VehicleRegistrySection teamId={currentTeam.id} canEdit={canEdit} />
     </div>
   );
 }
