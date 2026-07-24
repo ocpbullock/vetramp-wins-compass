@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Users, Target, Search, Handshake, LayoutDashboard } from "lucide-react";
 import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
 type NavItem = {
