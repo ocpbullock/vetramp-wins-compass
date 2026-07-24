@@ -88,6 +88,8 @@ type Row = {
   proposalId?: string;
   oppForPwin: OppForPwin;
   enrichable?: { proposalId: string; hasNoticeId: boolean };
+  watchEnabled?: boolean;
+  unreviewedActivity?: number;
 };
 
 const fmtDate = (d: string | null) =>
