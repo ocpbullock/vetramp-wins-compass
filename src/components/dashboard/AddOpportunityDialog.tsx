@@ -102,7 +102,7 @@ export function AddOpportunityDialog({
     };
     const { data, error } = await supabase
       .from("proposals")
-      .insert(payload)
+      .insert(payload as any)
       .select("id")
       .single();
     if (error || !data) {
