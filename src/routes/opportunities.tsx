@@ -210,6 +210,7 @@ function OpportunitiesPage() {
     }
 
     const activity = activityQ.data ?? {};
+    const teaming = teamingQ.data ?? {};
     for (const p of proposals) {
       out.push({
         key: `p:${p.id}`,
@@ -241,11 +242,12 @@ function OpportunitiesPage() {
           : undefined,
         watchEnabled: Boolean(p.watch_enabled),
         unreviewedActivity: activity[p.id] ?? 0,
+        teamingSummary: teaming[p.id],
       });
     }
 
     return out;
-  }, [trackedQ.data, proposalsQ.data, activityQ.data]);
+  }, [trackedQ.data, proposalsQ.data, activityQ.data, teamingQ.data]);
 
   const grouped = useMemo(() => {
     const m: Record<Stage, Row[]> = {
