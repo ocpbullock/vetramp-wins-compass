@@ -8,6 +8,7 @@ import type { PwinResult } from "@/lib/pwin";
 import type { PartnerSuggestion } from "@/lib/partner-suggest";
 import type { DarkHorseTarget } from "@/lib/partner-experience";
 import type { TeamingTarget } from "@/lib/teaming-targets";
+import { computePtw, type EvalRating, type PtwCompetitor } from "@/lib/ptw";
 
 const FONT_BODY = "Times New Roman";
 const FONT_HEAD = "Arial";
@@ -132,6 +133,20 @@ export type CaptureReportInputs = {
       coverage?: string;
     }>;
   } | null;
+  ptwAnalysis?: {
+    updatedAt?: string;
+    ourRatings?: { technical?: string; staffing?: string };
+    premiumCapPct?: number;
+    undercutPct?: number;
+    competitors?: Array<{
+      name?: string;
+      tepM?: number | null;
+      fte?: number | null;
+      ratingTechnical?: string;
+      ratingStaffing?: string;
+      note?: string;
+    }>;
+  } | null;
 };
 
 export type CaptureReportOptions = {
@@ -144,7 +159,7 @@ export async function exportCaptureReportDocx(
 ) {
   const variant = options.variant ?? "internal";
   const isInternal = variant === "internal";
-  const { proposal, marketSnapshot, captureAnalysis, intelItems, teamingSummary, darkHorses, positioningMatrix } = inputs;
+  const { proposal, marketSnapshot, captureAnalysis, intelItems, teamingSummary, darkHorses, positioningMatrix, ptwAnalysis } = inputs;
 
   const children: (Paragraph | Table)[] = [];
 
@@ -448,6 +463,85 @@ export async function exportCaptureReportDocx(
         ],
       }));
       for (const r of (s.reasons ?? []).slice(0, 4)) children.push(bullet(String(r)));
+    }
+  }
+
+  // ============ 4b. Price-to-Win (internal only) ============
+  if (isInternal) {
+    children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(h1("Price-to-Win Analysis"));
+    const ptw = ptwAnalysis;
+    const comps = Array.isArray(ptw?.competitors) ? ptw!.competitors! : [];
+    if (!ptw || comps.length === 0) {
+      children.push(noteEmpty("No Price-to-Win analysis saved for this opportunity."));
+    } else {
+      const rateLbl: Record<string, string> = {
+        outstanding: "Outstanding", good: "Good", acceptable: "Acceptable", marginal: "Marginal", unknown: "Unknown",
+      };
+      children.push(p(
+        `Our assumed ratings — Technical: ${rateLbl[ptw.ourRatings?.technical ?? "unknown"] ?? "—"}   ·   Staffing: ${rateLbl[ptw.ourRatings?.staffing ?? "unknown"] ?? "—"}   ·   Premium cap: ${(ptw.premiumCapPct ?? 10)}%   ·   Undercut: ${(ptw.undercutPct ?? 1)}%`,
+        { italic: true, color: "555555" },
+      ));
+
+      children.push(h2("Competitor field"));
+      children.push(buildTable(
+        ["Competitor", "TEP ($M)", "FTE", "Technical", "Staffing", "Note"],
+        comps.map((c) => [
+          String(c.name ?? "—"),
+          c.tepM == null ? "—" : `$${Number(c.tepM).toFixed(2)}M`,
+          c.fte == null ? "—" : String(c.fte),
+          rateLbl[String(c.ratingTechnical ?? "unknown")] ?? "—",
+          rateLbl[String(c.ratingStaffing ?? "unknown")] ?? "—",
+          String(c.note ?? ""),
+        ]),
+        [2200, 1200, 800, 1400, 1400, 2360],
+      ));
+
+      // Recompute so the report reflects current logic without trusting stale saves.
+      const compForCalc: PtwCompetitor[] = comps.map((c) => ({
+        name: String(c.name ?? ""),
+        tepM: c.tepM == null ? null : Number(c.tepM),
+        fte: c.fte == null ? null : Number(c.fte),
+        ratingTechnical: (c.ratingTechnical as EvalRating) ?? "unknown",
+        ratingStaffing: (c.ratingStaffing as EvalRating) ?? "unknown",
+        note: c.note,
+      }));
+      const res = computePtw({
+        competitors: compForCalc,
+        ourRatings: {
+          technical: (ptw.ourRatings?.technical as EvalRating) ?? "unknown",
+          staffing: (ptw.ourRatings?.staffing as EvalRating) ?? "unknown",
+        },
+        premiumCapPct: ptw.premiumCapPct ?? 10,
+        undercutPct: ptw.undercutPct ?? 1,
+      });
+
+      children.push(h2("Scenario recommendations"));
+      if (res.scenarios.length === 0) {
+        children.push(noteEmpty("No scenarios could be computed — add priced competitors."));
+      } else {
+        for (const s of res.scenarios) {
+          children.push(new Paragraph({
+            spacing: { before: 120, after: 40 },
+            children: [
+              tr(`${s.label}: `, { bold: true, size: 24 }),
+              tr(`$${s.recommendedTepM.toFixed(2)}M`, { bold: true, size: 26, color: "047857" }),
+            ],
+          }));
+          children.push(p(s.rationale));
+        }
+      }
+
+      if (res.warnings.length) {
+        children.push(h2("Warnings"));
+        for (const w of res.warnings) children.push(bullet(w));
+      }
+      if (ptw.updatedAt) {
+        children.push(new Paragraph({
+          spacing: { before: 80, after: 120 },
+          children: [tr(`PTW analysis updated ${new Date(ptw.updatedAt).toLocaleString()}`, { italic: true, size: 18, color: "6B7280" })],
+        }));
+      }
     }
   }
 
