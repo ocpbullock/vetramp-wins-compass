@@ -383,11 +383,23 @@ ${UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION}`;
           compliance_gaps: gaps,
           parsing_status: "complete",
         };
+        // Detect whether the inputs are ONLY a previous-solicitation baseline.
+        // In that case we tag which fields were filled so the UI can show a
+        // "from previous solicitation — verify" badge.
+        const attTypes = new Set((atts || []).map((a: any) => String(a.file_type || "").toLowerCase()));
+        const currentSolTypes = ["sow", "instructions", "final_solicitation", "draft_solicitation", "rfi", "amendment"];
+        const hasCurrent = currentSolTypes.some((t) => attTypes.has(t));
+        const hasPrevious = attTypes.has("previous_solicitation");
+        const baselineOnly = hasPrevious && !hasCurrent;
+        const baselineFields: string[] = [];
         const fillIfEmpty = (col: string, value: any) => {
           if (value === undefined || value === null || value === "") return;
           const current = (proposal as any)[col];
           const isEmpty = current === null || current === undefined || current === "" || current === 0;
-          if (isEmpty) update[col] = value;
+          if (isEmpty) {
+            update[col] = value;
+            if (baselineOnly) baselineFields.push(col);
+          }
         };
         fillIfEmpty("opportunity_title", cap.opportunity_title);
         fillIfEmpty("agency", cap.agency);
@@ -401,8 +413,13 @@ ${UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION}`;
         fillIfEmpty("clearance_requirement", cap.clearance_requirement);
         if (cap.response_deadline && !proposal.response_deadline) {
           const d = new Date(cap.response_deadline);
-          if (!isNaN(d.getTime())) update.response_deadline = d.toISOString();
+          if (!isNaN(d.getTime())) {
+            update.response_deadline = d.toISOString();
+            if (baselineOnly) baselineFields.push("response_deadline");
+          }
         }
+        (matrix as any).parse_metadata.baseline_source = baselineOnly ? "previous_solicitation" : null;
+        (matrix as any).parse_metadata.baseline_fields = baselineFields;
         const extras: Record<string, any> = {};
         if (cap.incumbent) extras.incumbent_from_sow = cap.incumbent;
         if (cap.place_of_performance) extras.place_of_performance = cap.place_of_performance;

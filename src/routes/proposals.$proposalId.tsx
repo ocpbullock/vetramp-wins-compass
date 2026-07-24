@@ -28,7 +28,7 @@ import { RelevantPastPerformanceCard } from "@/components/proposals/RelevantPast
 import { ComplianceStep } from "@/components/proposals/ComplianceStep";
 import { MilestoneTimeline } from "@/components/proposals/MilestoneTimeline";
 import { SolutionDesignStep } from "@/components/proposals/SolutionDesignStep";
-import { classifyFilename, ATTACHMENT_TYPE_OPTIONS } from "@/lib/attachment-classify";
+import { classifyFilename, ATTACHMENT_TYPE_OPTIONS, acquisitionMaturity } from "@/lib/attachment-classify";
 import { composeAttachmentsText } from "@/lib/attachments-text";
 import { extractTemplateStructure, findActiveTemplate, type TemplateSection } from "@/lib/proposal-template";
 import { DataProvenance } from "@/components/dashboard/DataSourceBadge";
@@ -347,8 +347,9 @@ function ProposalPipeline() {
   async function parseDocuments(opts?: { skipCache?: boolean }) {
     if (!online) { toast.error("You're offline. Reconnect to run AI tasks."); return; }
     if (aiBusy) { toast.error("Another AI task is running — please wait."); return; }
-    const sowAtts = attachments.filter((a) => a.file_type === "sow");
-    if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS document first"); return; }
+    const parseable = ["sow", "instructions", "final_solicitation", "draft_solicitation", "previous_solicitation", "rfi", "amendment"];
+    const sowAtts = attachments.filter((a) => parseable.includes(String(a.file_type)));
+    if (sowAtts.length === 0) { toast.error("Upload a SOW/PWS, RFI, draft, final, or previous solicitation first"); return; }
     setParsing(true); setAiBusy(true);
     setParseProgress("Starting…");
     try {
@@ -1285,9 +1286,31 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
     saveState === "error" ? "Save failed — retry" :
     "";
 
+  const baselineFields: string[] = (proposal?.compliance_matrix as any)?.parse_metadata?.baseline_fields ?? [];
+  const baselineSet = new Set(baselineFields);
+  const BASELINE_LABELS: Record<string, string> = {
+    opportunity_title: "Title", agency: "Agency", solicitation_number: "Solicitation #",
+    naics_code: "NAICS", set_aside: "Set-aside", contract_type: "Contract type",
+    estimated_value: "Estimated value", pop_base_months: "PoP base", pop_option_months: "Option months",
+    clearance_requirement: "Clearance", response_deadline: "Response deadline",
+  };
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div className="lg:col-span-2 space-y-4">
+        {baselineSet.size > 0 && (
+          <div className="rounded-md border border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200 px-3 py-2 text-xs flex items-start gap-2">
+            <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+            <div>
+              <div className="font-medium">Values below were auto-filled from a previous solicitation — verify against new docs.</div>
+              <div className="mt-0.5 flex flex-wrap gap-1">
+                {baselineFields.map((f) => (
+                  <Badge key={f} variant="outline" className="text-[10px] border-amber-500/60 text-amber-800 dark:text-amber-200">{BASELINE_LABELS[f] ?? f}</Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
         <Card className="border-primary/40">
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Pursuit type</CardTitle>
@@ -1545,6 +1568,21 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
               ? "Sub mode: only attach the scope blurb or partner brief if you have one. Full SOW parsing is skipped."
               : "SOW, Section L/M, amendments"}
           </CardDescription>
+          {(() => {
+            const m = acquisitionMaturity(sowAttachments);
+            if (!m.label) return null;
+            const tone =
+              m.stage === "final_out" ? "border-emerald-500/50 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" :
+              m.stage === "draft_out" ? "border-blue-500/50 bg-blue-500/10 text-blue-700 dark:text-blue-300" :
+              m.stage === "market_research" ? "border-amber-500/50 bg-amber-500/10 text-amber-700 dark:text-amber-300" :
+              "border-slate-400/50 bg-slate-500/10 text-slate-700 dark:text-slate-300";
+            return (
+              <div className={`mt-2 rounded-md border px-2 py-1 text-[11px] inline-flex items-center gap-1.5 ${tone}`}>
+                <Circle className="w-2 h-2 fill-current" />
+                <span>Acquisition maturity: {m.label}</span>
+              </div>
+            );
+          })()}
         </CardHeader>
         <CardContent className="space-y-3">
           {proposal.engagement_type !== "sub" && (
