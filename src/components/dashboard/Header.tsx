@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, BookOpen, ChevronDown, Menu, X, Shield, Building2, Briefcase, Check, Users, Target, Search, Handshake, LayoutDashboard } from "lucide-react";
 import { getOpportunityTeamProposal } from "@/lib/opportunity-teams.functions";
+import { ThemeToggle } from "@/components/ThemeToggle";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
 type NavItem = {
@@ -89,16 +90,18 @@ export function Header() {
   const oppTeams = availableTeams.filter((t) => t.team_type === "opportunity");
 
   return (
-    <header className="sticky top-0 z-30 bg-card border-b border-border">
+    <header className="sticky top-0 z-30 bg-[color:var(--header-bg)] text-[color:var(--header-fg)] border-b border-black/20 shadow-sm">
       <div className="max-w-[1400px] mx-auto px-4 min-h-16 py-2 flex items-center gap-3">
         <Link to="/" className="flex items-center shrink-0" aria-label="VetRamp Pursuit home">
-          <img
-            src={logoUrl}
-            alt="VetRamp Pursuit"
-            className="h-10 sm:h-12 md:h-14 w-auto max-w-full object-contain"
-            width={1679}
-            height={322}
-          />
+          <span className="inline-flex items-center rounded-md bg-white/95 px-2 py-1">
+            <img
+              src={logoUrl}
+              alt="VetRamp Pursuit"
+              className="h-8 sm:h-10 md:h-11 w-auto max-w-full object-contain"
+              width={1679}
+              height={322}
+            />
+          </span>
         </Link>
 
         <nav className="hidden md:flex items-center gap-1 overflow-x-auto scrollbar-hide">
@@ -109,11 +112,14 @@ export function Header() {
               className={[
                 "relative px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shrink-0",
                 location.pathname.startsWith("/proposals/")
-                  ? "text-primary"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                  ? "text-[color:var(--header-fg)]"
+                  : "text-[color:var(--header-muted)] hover:text-[color:var(--header-fg)] hover:bg-white/5",
               ].join(" ")}
             >
               Opportunity
+              {location.pathname.startsWith("/proposals/") && (
+                <span className="absolute -bottom-2 left-2 right-2 h-[2px] bg-[color:var(--header-accent)] rounded-full" />
+              )}
             </Link>
           )}
           {NAV.map((item) => {
@@ -128,14 +134,14 @@ export function Header() {
                 className={[
                   "relative px-3 py-2 text-sm font-medium rounded-md transition-colors flex items-center gap-1.5 shrink-0",
                   active
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-accent",
+                    ? "text-[color:var(--header-fg)]"
+                    : "text-[color:var(--header-muted)] hover:text-[color:var(--header-fg)] hover:bg-white/5",
                 ].join(" ")}
               >
                 {Icon && <Icon className="w-4 h-4" />}
                 {item.label}
                 {active && (
-                  <span className="absolute -bottom-2 left-2 right-2 h-[2px] bg-primary rounded-full" />
+                  <span className="absolute -bottom-2 left-2 right-2 h-[2px] bg-[color:var(--header-accent)] rounded-full" />
                 )}
               </Link>
             );
@@ -144,14 +150,20 @@ export function Header() {
 
         <div className="flex-1" />
 
+        <ThemeToggle className="hidden sm:inline-flex" />
+
         {/* Team switcher */}
         {availableTeams.length > 0 && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="gap-1.5 max-w-[220px]">
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 max-w-[220px] bg-white/10 border-white/20 text-[color:var(--header-fg)] hover:bg-white/15 hover:text-[color:var(--header-fg)]"
+              >
                 {isOpp ? <Briefcase className="w-3.5 h-3.5 shrink-0" /> : <Building2 className="w-3.5 h-3.5 shrink-0" />}
                 <span className="truncate">{currentTeam?.name ?? "Select team"}</span>
-                <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-60" />
+                <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-70" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
@@ -190,15 +202,15 @@ export function Header() {
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-accent transition-colors ml-1">
-              <div className="w-9 h-9 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-xs font-semibold">
+            <button className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full hover:bg-white/10 transition-colors ml-1 text-[color:var(--header-fg)]">
+              <div className="w-9 h-9 rounded-full bg-[color:var(--header-accent)] text-[color:var(--brand-brass-foreground)] flex items-center justify-center text-xs font-semibold">
                 {initials}
               </div>
               <div className="hidden sm:block text-left leading-tight">
                 <div className="text-sm font-semibold">{displayName}</div>
-                <div className="text-[11px] text-muted-foreground truncate max-w-[140px]">{currentTeam?.name ?? "No team"}</div>
+                <div className="text-[11px] text-[color:var(--header-muted)] truncate max-w-[140px]">{currentTeam?.name ?? "No team"}</div>
               </div>
-              <ChevronDown className="w-4 h-4 text-muted-foreground hidden sm:block" />
+              <ChevronDown className="w-4 h-4 text-[color:var(--header-muted)] hidden sm:block" />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-56">
@@ -225,7 +237,7 @@ export function Header() {
         <Button
           variant="ghost"
           size="icon"
-          className="md:hidden"
+          className="md:hidden text-[color:var(--header-fg)] hover:bg-white/10 hover:text-[color:var(--header-fg)]"
           aria-label="Toggle navigation"
           onClick={() => setMobileOpen((v) => !v)}
         >
@@ -234,7 +246,7 @@ export function Header() {
       </div>
 
       {mobileOpen && (
-        <nav className="md:hidden border-t border-border bg-card">
+        <nav className="md:hidden border-t border-white/10 bg-[color:var(--header-bg)] text-[color:var(--header-fg)]">
           <div className="max-w-[1400px] mx-auto px-6 py-3 flex flex-col gap-1">
             {isOpp && oppProposalId && (
               <Link
@@ -281,6 +293,10 @@ export function Header() {
                 <Shield className="w-4 h-4" /> Admin
               </Link>
             )}
+            <div className="mt-2 pt-2 border-t border-white/10 flex items-center gap-2">
+              <ThemeToggle />
+              <span className="text-xs text-[color:var(--header-muted)]">Toggle theme</span>
+            </div>
           </div>
         </nav>
       )}

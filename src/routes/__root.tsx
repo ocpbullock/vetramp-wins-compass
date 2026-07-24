@@ -7,6 +7,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import appCss from "../styles.css?url";
+import { themeBootScript } from "@/components/ThemeToggle";
 import { Header } from "@/components/dashboard/Header";
 import { AuthProvider } from "@/lib/auth";
 import { TeamProvider } from "@/lib/team";
@@ -43,7 +44,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head><HeadContent /></head>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeBootScript }} />
+        <HeadContent />
+      </head>
       <body>{children}<Scripts /></body>
     </html>
   );
