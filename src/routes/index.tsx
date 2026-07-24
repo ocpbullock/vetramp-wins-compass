@@ -58,7 +58,7 @@ const SET_ASIDE_OPTIONS = [
   { value: "Total_Small_Business", label: "Total Small Business" },
 ];
 
-const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
+// NAICS_GROUPS kept for cross-component references; NAICS entry uses NaicsCombobox.
 
 // Columns needed by SuggestedPartnersCard's ProposalLite + outreach modal.
 const PROPOSAL_COLUMNS =
