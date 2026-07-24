@@ -222,6 +222,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
         intelItems,
         teamingSummary,
         darkHorses: (proposal?.market_snapshot as any)?.darkHorses ?? null,
+        positioningMatrix: (proposal as any)?.positioning_matrix ?? null,
       }, { variant });
       toast.success(variant === "internal" ? "Internal capture report downloaded" : "Partner-facing brief downloaded");
     } catch (e: any) {
