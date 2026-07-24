@@ -4,19 +4,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-import { ChevronDown, Upload, X, FileText } from "lucide-react";
-import { NAICS_GROUPS } from "@/lib/contracts";
+import { Upload, X, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
 import { toast } from "sonner";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { classifyFilename } from "@/lib/attachment-classify";
-
-const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
+import { NaicsCombobox } from "@/components/NaicsCombobox";
 
 export function AddOpportunityDialog({
   open,
@@ -138,7 +134,7 @@ export function AddOpportunityDialog({
     onCreated(proposalId, { hasDocs: uploaded > 0 });
   };
 
-  const naicsLabel = ALL_NAICS_FLAT.find((c) => c.code === naicsCode);
+  // Removed unused naicsLabel lookup; NaicsCombobox handles labels.
   const dedupedAgencies = Array.from(new Set(agencySuggestions.filter(Boolean))).slice(0, 200);
 
   return (
@@ -189,50 +185,15 @@ export function AddOpportunityDialog({
 
           <div>
             <Label className="text-xs">NAICS Code</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between mt-1 font-normal">
-                    <span className="truncate">
-                      {naicsCode ? (
-                        <>
-                          <span className="font-mono text-xs mr-2">{naicsCode}</span>
-                          <span className="text-muted-foreground text-xs">{naicsLabel?.name}</span>
-                        </>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">Not sure yet — I'll add documents</span>
-                      )}
-                    </span>
-                    <ChevronDown className="w-4 h-4 ml-2 opacity-60" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[380px] max-h-[360px] overflow-y-auto p-3">
-                  <label className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-1 py-1 mb-2 border-b pb-2">
-                    <Checkbox
-                      checked={naicsCode === ""}
-                      onCheckedChange={() => setNaicsCode("")}
-                    />
-                    <span className="text-xs">Not sure yet — I'll add documents</span>
-                  </label>
-                  {NAICS_GROUPS.map((g) => (
-                    <div key={g.label} className="mb-3">
-                      <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">{g.label}</div>
-                      <div className="space-y-1.5">
-                        {g.codes.map((c) => (
-                          <label key={c.code} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-1 py-1">
-                            <Checkbox
-                              checked={naicsCode === c.code}
-                              onCheckedChange={() => setNaicsCode(c.code)}
-                            />
-                            <span className="font-mono text-xs">{c.code}</span>
-                            <span className="text-muted-foreground text-xs">{c.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </PopoverContent>
-              </Popover>
+            <div className="mt-1">
+              <NaicsCombobox
+                value={naicsCode || null}
+                onChange={(c) => setNaicsCode(c ?? "")}
+                placeholder="Not sure yet — I'll add documents"
+              />
+            </div>
           </div>
+
 
 
           <div className="grid grid-cols-2 gap-3">

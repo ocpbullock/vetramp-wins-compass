@@ -16,7 +16,7 @@ export default defineTool({
     "List the signed-in user's federal contracting opportunities (proposals), optionally filtered by capture stage.",
   inputSchema: {
     stage: z
-      .enum(["identified", "qualifying", "pursuing", "proposal", "submitted", "won", "lost", "no_bid"])
+      .enum(["intake", "researching", "analyzing", "pursuing", "proposal", "submitted", "won", "lost", "no_bid"])
       .optional()
       .describe("Filter to opportunities in this capture stage."),
     limit: z.number().int().min(1).max(100).optional().describe("Max rows to return (default 25)."),

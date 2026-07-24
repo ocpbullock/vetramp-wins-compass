@@ -52,6 +52,7 @@ import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursu
 import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
+import { NaicsCombobox } from "@/components/NaicsCombobox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
@@ -1395,7 +1396,14 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             <div><div className="text-xs text-muted-foreground">Notice ID</div><div className="font-mono text-xs">{proposal.notice_id || "—"}</div></div>
             <div className="col-span-2"><div className="text-xs text-muted-foreground">Title</div><div>{proposal.opportunity_title}</div></div>
             <div><div className="text-xs text-muted-foreground">Agency</div><div>{proposal.agency || "—"}</div></div>
-            <div><div className="text-xs text-muted-foreground">NAICS</div><div>{proposal.naics_code || "—"}</div></div>
+            <div>
+              <div className="text-xs text-muted-foreground">NAICS</div>
+              <NaicsCombobox
+                value={proposal.naics_code || null}
+                onChange={(code) => onPatch({ naics_code: code })}
+                placeholder="Select NAICS code"
+              />
+            </div>
             <div><div className="text-xs text-muted-foreground">Set-aside</div><div>{proposal.set_aside || "—"}</div></div>
             <div><div className="text-xs text-muted-foreground">Response deadline</div><div>{proposal.response_deadline?.slice(0, 10) || "—"}</div></div>
             {proposal.opportunity_data?.uiLink && (

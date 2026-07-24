@@ -31,8 +31,9 @@
             "stage": {
               "type": "string",
               "enum": [
-                "identified",
-                "qualifying",
+                "intake",
+                "researching",
+                "analyzing",
                 "pursuing",
                 "proposal",
                 "submitted",

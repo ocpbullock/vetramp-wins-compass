@@ -4,11 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ChevronDown, CheckCircle2, AlertTriangle } from "lucide-react";
-import { NAICS_GROUPS } from "@/lib/contracts";
+import { CheckCircle2, AlertTriangle } from "lucide-react";
+import { NaicsCombobox } from "@/components/NaicsCombobox";
+// NAICS_GROUPS retained for other consumers; NAICS picker now uses the full catalog via NaicsCombobox.
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
@@ -47,7 +46,7 @@ export type TrackedOpportunity = {
   updated_at: string;
 };
 
-const ALL_NAICS_FLAT = NAICS_GROUPS.flatMap((g) => g.codes);
+// NAICS picker uses the full 2022 catalog via NaicsCombobox.
 
 export function TrackOpportunityDialog({
   open,
@@ -140,7 +139,7 @@ export function TrackOpportunityDialog({
     onOpenChange(false);
   };
 
-  const naicsLabel = ALL_NAICS_FLAT.find((c) => c.code === naicsCode);
+  // NAICS label now rendered inside NaicsCombobox trigger.
   const dedupedAgencies = Array.from(new Set(agencySuggestions.filter(Boolean))).slice(0, 200);
 
   return (
@@ -200,36 +199,13 @@ export function TrackOpportunityDialog({
             </div>
             <div>
               <Label className="text-xs">NAICS Code *</Label>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button variant="outline" className="w-full justify-between mt-1 font-normal">
-                    <span className="truncate">
-                      <span className="font-mono text-xs mr-2">{naicsCode}</span>
-                      <span className="text-muted-foreground text-xs">{naicsLabel?.name}</span>
-                    </span>
-                    <ChevronDown className="w-4 h-4 ml-2 opacity-60" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-[380px] max-h-[360px] overflow-y-auto p-3">
-                  {NAICS_GROUPS.map((g) => (
-                    <div key={g.label} className="mb-3">
-                      <div className="text-xs font-semibold text-muted-foreground uppercase mb-1.5">{g.label}</div>
-                      <div className="space-y-1.5">
-                        {g.codes.map((c) => (
-                          <label key={c.code} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-accent rounded px-1 py-1">
-                            <Checkbox
-                              checked={naicsCode === c.code}
-                              onCheckedChange={() => setNaicsCode(c.code)}
-                            />
-                            <span className="font-mono text-xs">{c.code}</span>
-                            <span className="text-muted-foreground text-xs">{c.name}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </PopoverContent>
-              </Popover>
+              <div className="mt-1">
+                <NaicsCombobox
+                  value={naicsCode || null}
+                  onChange={(c) => setNaicsCode(c ?? "")}
+                  placeholder="Select NAICS code"
+                />
+              </div>
             </div>
           </div>
 
