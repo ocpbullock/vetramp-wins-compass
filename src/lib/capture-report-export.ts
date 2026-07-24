@@ -277,6 +277,90 @@ export async function exportCaptureReportDocx(
     ));
   }
 
+  // Competitive Positioning matrix
+  children.push(h2("Competitive Positioning"));
+  const pm = positioningMatrix;
+  const pmRows = Array.isArray(pm?.rows) ? pm!.rows! : [];
+  const pmDims = Array.isArray(pm?.dimensions) && pm!.dimensions!.length ? pm!.dimensions! : [];
+  if (pmRows.length === 0 || pmDims.length === 0) {
+    children.push(noteEmpty("No positioning matrix saved for this opportunity."));
+  } else {
+    const RATING_SHADE: Record<string, { fill: string; label: string; color?: string }> = {
+      strong:   { fill: "D1FAE5", label: "Strong" },
+      moderate: { fill: "FEF3C7", label: "Moderate" },
+      weak:     { fill: "FEE2E2", label: "Weak" },
+      unknown:  { fill: "F3F4F6", label: "—" },
+    };
+    const THREAT_SHADE: Record<string, { fill: string; label: string; color: string }> = {
+      very_high: { fill: "B91C1C", label: "Very High", color: "FFFFFF" },
+      high:      { fill: "DC2626", label: "High", color: "FFFFFF" },
+      medium:    { fill: "F59E0B", label: "Medium", color: "FFFFFF" },
+      low:       { fill: "059669", label: "Low", color: "FFFFFF" },
+    };
+    const tableWidth = 9360;
+    const coverageW = 2400;
+    const companyW = 1800;
+    const threatW = 1000;
+    const dimW = Math.max(700, Math.floor((tableWidth - companyW - threatW - coverageW) / pmDims.length));
+    const widths = [companyW, threatW, ...pmDims.map(() => dimW), coverageW];
+    const total = widths.reduce((s, w) => s + w, 0);
+    // adjust last column to match tableWidth
+    widths[widths.length - 1] = coverageW + (tableWidth - total);
+
+    const mkCell = (text: string, w: number, opts: { bold?: boolean; shade?: string; color?: string; align?: any } = {}) =>
+      new TableCell({
+        borders: allBorders,
+        width: { size: w, type: WidthType.DXA },
+        shading: opts.shade ? { fill: opts.shade, type: ShadingType.CLEAR, color: "auto" } : undefined,
+        margins: { top: 80, bottom: 80, left: 100, right: 100 },
+        children: [new Paragraph({
+          alignment: opts.align,
+          children: [tr(text, { bold: opts.bold, size: 18, color: opts.color })],
+        })],
+      });
+
+    const headerRow = new TableRow({
+      tableHeader: true,
+      children: [
+        mkCell("Company", widths[0], { bold: true, shade: "1F2937", color: "FFFFFF" }),
+        mkCell("Threat", widths[1], { bold: true, shade: "1F2937", color: "FFFFFF", align: AlignmentType.CENTER }),
+        ...pmDims.map((d, i) => mkCell(d, widths[2 + i], { bold: true, shade: "1F2937", color: "FFFFFF", align: AlignmentType.CENTER })),
+        mkCell("Overall Coverage", widths[widths.length - 1], { bold: true, shade: "1F2937", color: "FFFFFF" }),
+      ],
+    });
+
+    const dataRows = pmRows.map((r) => {
+      const threat = THREAT_SHADE[String(r.threat ?? "")] ?? { fill: "9CA3AF", label: String(r.threat ?? "—"), color: "FFFFFF" };
+      const companyLabel = `${r.company ?? "—"}${r.isUs ? "  (Our team)" : ""}`;
+      return new TableRow({
+        children: [
+          mkCell(companyLabel, widths[0], { bold: !!r.isUs, shade: r.isUs ? "EFF6FF" : undefined }),
+          mkCell(threat.label, widths[1], { bold: true, shade: threat.fill, color: threat.color, align: AlignmentType.CENTER }),
+          ...pmDims.map((d, i) => {
+            const val = String(r.ratings?.[d] ?? "unknown");
+            const cfg = RATING_SHADE[val] ?? RATING_SHADE.unknown;
+            return mkCell(cfg.label, widths[2 + i], { shade: cfg.fill, align: AlignmentType.CENTER });
+          }),
+          mkCell(String(r.coverage ?? ""), widths[widths.length - 1]),
+        ],
+      });
+    });
+
+    children.push(new Table({
+      width: { size: tableWidth, type: WidthType.DXA },
+      columnWidths: widths,
+      rows: [headerRow, ...dataRows],
+    }));
+    if (pm?.updatedAt) {
+      children.push(new Paragraph({
+        spacing: { before: 60, after: 120 },
+        children: [tr(`Matrix updated ${new Date(pm.updatedAt).toLocaleString()}`, { italic: true, size: 18, color: "6B7280" })],
+      }));
+    }
+  }
+
+
+
   // Prior primes
   children.push(h2("Prior primes"));
   const primes: TeamingTarget[] = marketSnapshot?.priorPrimes ?? [];
