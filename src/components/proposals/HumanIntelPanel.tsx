@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, Paperclip, Trash2, Pencil, Download, ChevronDown, ChevronUp } from "lucide-react";
+import { Plus, Paperclip, Trash2, Pencil, Download, ChevronDown, ChevronUp, Sparkles, Loader2, X } from "lucide-react";
 
 const INTEL_TYPES = [
   { value: "incumbent_interview", label: "Incumbent interview" },
@@ -47,6 +47,7 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
   const qc = useQueryClient();
   const [filter, setFilter] = useState<"all" | IntelType>("all");
   const [composerOpen, setComposerOpen] = useState(false);
+  const [extractOpen, setExtractOpen] = useState(false);
   const [editing, setEditing] = useState<IntelRow | null>(null);
 
   const { data: items = [], isLoading } = useQuery({
@@ -106,22 +107,27 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
             Proprietary notes from incumbent interviews, partner calls, and customer meetings.
           </CardDescription>
         </div>
-        <Dialog open={composerOpen} onOpenChange={setComposerOpen}>
-          <DialogTrigger asChild>
-            <Button size="sm"><Plus className="h-4 w-4 mr-1" />Add intel</Button>
-          </DialogTrigger>
-          <IntelComposerDialog
-            proposalId={proposalId}
-            teamId={teamId}
-            userId={user?.id ?? null}
-            existing={null}
-            onClose={() => setComposerOpen(false)}
-            onSaved={() => {
-              setComposerOpen(false);
-              qc.invalidateQueries({ queryKey: ["opportunity_intel", proposalId] });
-            }}
-          />
-        </Dialog>
+        <div className="flex flex-wrap gap-2">
+          <Button size="sm" variant="outline" onClick={() => setExtractOpen(true)}>
+            <Sparkles className="h-4 w-4 mr-1" />Extract from transcript
+          </Button>
+          <Dialog open={composerOpen} onOpenChange={setComposerOpen}>
+            <DialogTrigger asChild>
+              <Button size="sm"><Plus className="h-4 w-4 mr-1" />Add intel</Button>
+            </DialogTrigger>
+            <IntelComposerDialog
+              proposalId={proposalId}
+              teamId={teamId}
+              userId={user?.id ?? null}
+              existing={null}
+              onClose={() => setComposerOpen(false)}
+              onSaved={() => {
+                setComposerOpen(false);
+                qc.invalidateQueries({ queryKey: ["opportunity_intel", proposalId] });
+              }}
+            />
+          </Dialog>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex flex-wrap gap-2">
@@ -170,6 +176,18 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
                 setEditing(null);
                 qc.invalidateQueries({ queryKey: ["opportunity_intel", proposalId] });
               }}
+            />
+          </Dialog>
+        )}
+
+        {extractOpen && (
+          <Dialog open onOpenChange={(o) => !o && setExtractOpen(false)}>
+            <ExtractIntelDialog
+              proposalId={proposalId}
+              teamId={teamId}
+              userId={user?.id ?? null}
+              onClose={() => setExtractOpen(false)}
+              onSavedAny={() => qc.invalidateQueries({ queryKey: ["opportunity_intel", proposalId] })}
             />
           </Dialog>
         )}
@@ -411,6 +429,286 @@ function IntelComposerDialog({
         <Button onClick={handleSave} disabled={saving}>
           {saving ? "Saving…" : existing ? "Save changes" : "Add intel"}
         </Button>
+      </DialogFooter>
+    </DialogContent>
+  );
+}
+
+type DraftItem = {
+  intel_type: IntelType;
+  title: string;
+  source_name: string | null;
+  occurred_on: string | null;
+  body: string;
+  confidence_notes: string | null;
+};
+
+function ExtractIntelDialog({
+  proposalId,
+  teamId,
+  userId,
+  onClose,
+  onSavedAny,
+}: {
+  proposalId: string;
+  teamId: string | null;
+  userId: string | null;
+  onClose: () => void;
+  onSavedAny: () => void;
+}) {
+  const [transcript, setTranscript] = useState("");
+  const [context, setContext] = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const [drafts, setDrafts] = useState<DraftItem[] | null>(null);
+  const [savingIdx, setSavingIdx] = useState<number | null>(null);
+  const [savingAll, setSavingAll] = useState(false);
+  const [truncated, setTruncated] = useState(false);
+
+  async function handleFile(f: File | null) {
+    if (!f) return;
+    try {
+      const text = await f.text();
+      setTranscript((prev) => (prev ? prev + "\n\n" : "") + text);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Could not read file");
+    }
+  }
+
+  async function handleExtract() {
+    if (!transcript.trim()) {
+      toast.error("Paste or upload a transcript first");
+      return;
+    }
+    setExtracting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("extract-intel", {
+        body: { proposalId, transcriptText: transcript, context: context.trim() || undefined },
+      });
+      if (error) throw error;
+      const items = (data as any)?.items ?? [];
+      if (!items.length) {
+        toast.error("No intel items could be extracted");
+        return;
+      }
+      setDrafts(items);
+      setTruncated(Boolean((data as any)?.truncated));
+    } catch (e: any) {
+      toast.error(e?.message ?? "Extraction failed");
+    } finally {
+      setExtracting(false);
+    }
+  }
+
+  function updateDraft(i: number, patch: Partial<DraftItem>) {
+    setDrafts((prev) => (prev ? prev.map((d, idx) => (idx === i ? { ...d, ...patch } : d)) : prev));
+  }
+
+  function removeDraft(i: number) {
+    setDrafts((prev) => (prev ? prev.filter((_, idx) => idx !== i) : prev));
+  }
+
+  async function persist(draft: DraftItem) {
+    const { error } = await supabase.from("opportunity_intel").insert({
+      proposal_id: proposalId,
+      team_id: teamId,
+      user_id: userId,
+      intel_type: draft.intel_type,
+      title: draft.title.trim() || null,
+      source_name: draft.source_name?.trim() || null,
+      occurred_on: draft.occurred_on || null,
+      body: draft.body.trim() || null,
+      file_storage_path: null,
+    });
+    if (error) throw error;
+  }
+
+  async function saveOne(i: number) {
+    if (!drafts) return;
+    setSavingIdx(i);
+    try {
+      await persist(drafts[i]);
+      toast.success("Intel saved");
+      removeDraft(i);
+      onSavedAny();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to save");
+    } finally {
+      setSavingIdx(null);
+    }
+  }
+
+  async function saveAll() {
+    if (!drafts?.length) return;
+    setSavingAll(true);
+    try {
+      for (const d of drafts) await persist(d);
+      toast.success(`Saved ${drafts.length} intel item${drafts.length === 1 ? "" : "s"}`);
+      onSavedAny();
+      onClose();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to save all");
+    } finally {
+      setSavingAll(false);
+    }
+  }
+
+  return (
+    <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-[hsl(var(--brass,45_80%_55%))]" />
+          Extract intel from transcript
+        </DialogTitle>
+      </DialogHeader>
+
+      {!drafts ? (
+        <div className="space-y-3">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+            Source
+          </div>
+          <div>
+            <Label className="text-xs">Context hint (optional)</Label>
+            <Input
+              value={context}
+              onChange={(e) => setContext(e.target.value)}
+              placeholder="e.g. interview with incumbent PM"
+            />
+          </div>
+          <div>
+            <Label className="text-xs">Transcript</Label>
+            <Textarea
+              value={transcript}
+              onChange={(e) => setTranscript(e.target.value)}
+              rows={12}
+              placeholder="Paste the raw interview or meeting transcript here..."
+            />
+            <div className="text-xs text-muted-foreground mt-1">
+              {transcript.length.toLocaleString()} chars · max ~100,000 (longer input is truncated)
+            </div>
+          </div>
+          <div>
+            <Label className="text-xs flex items-center gap-1">
+              <Paperclip className="h-3 w-3" /> Or upload a .txt / .md / .vtt file
+            </Label>
+            <Input
+              type="file"
+              accept=".txt,.md,.vtt,text/plain,text/markdown"
+              onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+            />
+            <div className="text-xs text-muted-foreground mt-1">
+              For .docx / .pdf, paste the text into the box above.
+            </div>
+          </div>
+          <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+            AI drafts must be reviewed before saving. Nothing is written to your intel log until you approve each item.
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="text-xs uppercase tracking-wider text-muted-foreground font-semibold">
+              {drafts.length} draft{drafts.length === 1 ? "" : "s"} — review, edit, then save
+            </div>
+            {truncated && (
+              <Badge variant="secondary" className="text-xs">Transcript truncated</Badge>
+            )}
+          </div>
+
+          {drafts.map((d, i) => (
+            <div key={i} className="rounded-md border bg-card p-3 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="grid grid-cols-2 gap-2 flex-1">
+                  <div>
+                    <Label className="text-xs">Type</Label>
+                    <Select value={d.intel_type} onValueChange={(v) => updateDraft(i, { intel_type: v as IntelType })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {INTEL_TYPES.map((t) => (
+                          <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">Date</Label>
+                    <Input
+                      type="date"
+                      value={d.occurred_on ?? ""}
+                      onChange={(e) => updateDraft(i, { occurred_on: e.target.value || null })}
+                    />
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 shrink-0"
+                  onClick={() => removeDraft(i)}
+                  title="Discard draft"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              <div>
+                <Label className="text-xs">Title</Label>
+                <Input value={d.title} onChange={(e) => updateDraft(i, { title: e.target.value })} />
+              </div>
+              <div>
+                <Label className="text-xs">Source</Label>
+                <Input
+                  value={d.source_name ?? ""}
+                  onChange={(e) => updateDraft(i, { source_name: e.target.value || null })}
+                />
+              </div>
+              <div>
+                <Label className="text-xs">Notes</Label>
+                <Textarea
+                  value={d.body}
+                  onChange={(e) => updateDraft(i, { body: e.target.value })}
+                  rows={6}
+                />
+              </div>
+              {d.confidence_notes && (
+                <div className="rounded-sm border border-[hsl(var(--brass,45_80%_55%))]/40 bg-[hsl(var(--brass,45_80%_55%))]/10 p-2 text-xs">
+                  <span className="font-semibold uppercase tracking-wider mr-1">Verify:</span>
+                  {d.confidence_notes}
+                </div>
+              )}
+              <div className="flex justify-end">
+                <Button size="sm" onClick={() => saveOne(i)} disabled={savingIdx === i || savingAll}>
+                  {savingIdx === i ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : null}
+                  Save to intel
+                </Button>
+              </div>
+            </div>
+          ))}
+
+          {drafts.length === 0 && (
+            <div className="rounded-md border border-dashed p-4 text-sm text-muted-foreground text-center">
+              All drafts discarded.
+            </div>
+          )}
+        </div>
+      )}
+
+      <DialogFooter>
+        {!drafts ? (
+          <>
+            <Button variant="outline" onClick={onClose} disabled={extracting}>Cancel</Button>
+            <Button onClick={handleExtract} disabled={extracting || !transcript.trim()}>
+              {extracting ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Extracting…</> : <><Sparkles className="h-3 w-3 mr-1" />Extract</>}
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button variant="outline" onClick={onClose} disabled={savingAll || savingIdx !== null}>Close</Button>
+            <Button variant="outline" onClick={() => setDrafts(null)} disabled={savingAll || savingIdx !== null}>
+              Start over
+            </Button>
+            <Button onClick={saveAll} disabled={savingAll || savingIdx !== null || drafts.length === 0}>
+              {savingAll ? <><Loader2 className="h-3 w-3 mr-1 animate-spin" />Saving…</> : `Save all (${drafts.length})`}
+            </Button>
+          </>
+        )}
       </DialogFooter>
     </DialogContent>
   );
