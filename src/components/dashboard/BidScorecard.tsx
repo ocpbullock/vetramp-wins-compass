@@ -8,7 +8,7 @@ const LABEL: Record<Level, string> = {
 };
 
 function Icon({ level }: { level: Level }) {
-  if (level === "strong") return <CheckCircle2 className="w-4 h-4 text-emerald-500" />;
+  if (level === "strong") return <CheckCircle2 className="w-4 h-4 text-success" />;
   if (level === "moderate") return <AlertTriangle className="w-4 h-4 text-warning" />;
   return <XCircle className="w-4 h-4 text-destructive" />;
 }
