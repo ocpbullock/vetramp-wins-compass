@@ -2283,6 +2283,14 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
         onOutreach={(p) => { setOutreachPartner(p); setOutreachOpen(true); }}
       />
 
+      {proposal.vehicle_registry_id && (
+        <AwardeePoolCard
+          vehicleId={proposal.vehicle_registry_id as string}
+          teamId={teamId}
+        />
+      )}
+
+
       <PartnerResearch
         proposalId={proposalId}
         teamId={teamId}
