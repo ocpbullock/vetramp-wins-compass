@@ -379,6 +379,15 @@ function OpportunitiesPage() {
                           <Badge variant="outline" className="text-[10px] capitalize">
                             {row.statusLabel}
                           </Badge>
+                          {row.unreviewedActivity ? (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] uppercase tracking-wide gap-1 border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_18%,transparent)] text-[color:var(--brand-brass)]"
+                            >
+                              <Radar className="w-3 h-3" />
+                              {row.unreviewedActivity} new SAM activity
+                            </Badge>
+                          ) : null}
                         </div>
                         <div className="text-xs text-muted-foreground mt-1 truncate">
                           <span className="briefing-label mr-1">Agency</span>
