@@ -432,6 +432,13 @@ function OpportunitiesPage() {
                           />
                         )}
                         <PwinChip opp={row.oppForPwin} />
+                        {row.proposalId && (
+                          <WatchToggle
+                            proposalId={row.proposalId}
+                            enabled={row.watchEnabled ?? false}
+                            onChanged={() => qc.invalidateQueries({ queryKey: ["opportunities-page"] })}
+                          />
+                        )}
                         {row.enrichable && (
                           <EnrichButton
                             proposalId={row.enrichable.proposalId}
