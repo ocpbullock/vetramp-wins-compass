@@ -836,6 +836,19 @@ function ProposalPipeline() {
                 </CollapsibleContent>
               </Card>
             </Collapsible>
+            <RecompeteWatchCard
+              proposalId={proposalId}
+              watchEnabled={Boolean((proposal as any).watch_enabled)}
+              lastWatchedAt={(proposal as any).last_watched_at ?? null}
+              onChanged={async () => {
+                const { data: fresh } = await supabase
+                  .from("proposals")
+                  .select("watch_enabled, last_watched_at")
+                  .eq("id", proposalId)
+                  .maybeSingle();
+                if (fresh) setProposal((p: any) => ({ ...p, ...fresh }));
+              }}
+            />
             <SimilarPastPursuitsCard
               proposalId={proposalId}
               teamId={proposal.team_id ?? null}
