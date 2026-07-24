@@ -103,6 +103,131 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
     }
   };
 
+  const handleExport = async (variant: "internal" | "partner") => {
+    setExporting(variant);
+    try {
+      const teamId = proposal?.team_id ?? null;
+      const [intelRes, partnersRes, entriesRes, selfRes] = await Promise.all([
+        supabase
+          .from("opportunity_intel" as any)
+          .select("intel_type, occurred_on, created_at, source, summary, title")
+          .eq("proposal_id", proposalId)
+          .order("occurred_on", { ascending: false, nullsFirst: false })
+          .order("created_at", { ascending: false }),
+        teamId ? listPartnerCompanies(teamId) : Promise.resolve([]),
+        supabase.from("proposal_teaming")
+          .select("company_id, role, work_share_pct")
+          .eq("proposal_id", proposalId),
+        teamId ? getOwnCompanyProfileData(teamId) : Promise.resolve(null),
+      ]);
+      const intelItems = ((intelRes as any)?.data ?? []) as any[];
+      const partners = (partnersRes as any[]) ?? [];
+      const entries = (((entriesRes as any)?.data ?? []) as any[]);
+      const self: any = selfRes ?? null;
+
+      let teamingSummary: any = null;
+      if (self) {
+        const incumbentName: string | null =
+          proposal.customer_intel?.predecessor_contract?.incumbent
+          ?? proposal.market_snapshot?.incumbent?.topRecipient
+          ?? null;
+        const suggestCtx: SuggestContext = {
+          engagementType: proposal.engagement_type === "sub" ? "sub" : "prime",
+          opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],
+          opportunityAgency: proposal.agency,
+          setAside: proposal.set_aside,
+          requiredVehicles: proposal.contract_type
+            && /OASIS|STARS|GWAC|SEWP|CIO-SP|VETS/i.test(proposal.contract_type)
+            ? [proposal.contract_type] : [],
+          scopeKeywords: (proposal.targeted_scope_areas ?? "")
+            .split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean),
+          incumbentName,
+          primeContractorName: proposal.prime_contractor_name,
+        };
+        const suggestSelf: SuggestSelf = {
+          certifications: self.certifications,
+          naics_codes: self.naics_codes,
+          contract_vehicles: self.vehicles,
+        };
+        const suggestPartners: SuggestPartner[] = partners.map((p: any) => ({
+          id: p.id,
+          company_name: p.company_name,
+          certifications: p.certifications ?? [],
+          naics_codes: p.naics_codes ?? [],
+          contract_vehicles: p.contract_vehicles ?? [],
+          capabilities_summary: p.capabilities_summary,
+          past_performance_summary: p.past_performance_summary,
+          notes: p.notes,
+          relationship_status: p.relationship_status,
+        }));
+        const existingPartnerIds = entries.map((e: any) => e.company_id);
+        const suggestions = rankPartnerSuggestions(
+          suggestCtx, suggestSelf, suggestPartners, existingPartnerIds, { limit: 8 },
+        );
+
+        const isSelfPrime = proposal.engagement_type !== "sub";
+        const selfMember: PwinTeamMember = {
+          id: "self",
+          name: self.company_name,
+          isSelf: true,
+          role: isSelfPrime ? "prime" : "sub",
+          workShare: isSelfPrime
+            ? Math.max(0, 100 - entries.reduce((s: number, e: any) => s + (Number(e.work_share_pct) || 0), 0))
+            : (entries.find((e: any) => e.role !== "prime")?.work_share_pct ?? 0),
+          active: true,
+          certifications: self.certifications,
+          naicsCodes: self.naics_codes,
+          contractVehicles: self.vehicles,
+          pastPerformance: self.pastPerf,
+          isIncumbent: !!incumbentName && self.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
+        };
+        const entryMap = new Map(entries.map((e: any) => [e.company_id, e]));
+        const partnerMembers: PwinTeamMember[] = partners.map((p: any) => {
+          const e: any = entryMap.get(p.id);
+          return {
+            id: p.id,
+            name: p.company_name,
+            isSelf: false,
+            role: (e?.role ?? "sub") as PwinRole,
+            workShare: e?.work_share_pct ?? 0,
+            active: !!e,
+            certifications: p.certifications ?? [],
+            naicsCodes: p.naics_codes ?? [],
+            contractVehicles: p.contract_vehicles ?? [],
+            pastPerformance: [],
+            isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
+          };
+        });
+        const pwinResult: PwinResult = calculatePwin({
+          engagementType: isSelfPrime ? "prime" : "sub",
+          opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],
+          opportunityAgency: proposal.agency,
+          setAside: proposal.set_aside,
+          requiredVehicles: suggestCtx.requiredVehicles,
+          scopeKeywords: suggestCtx.scopeKeywords,
+          incumbentName,
+        }, [selfMember, ...partnerMembers]);
+
+        teamingSummary = { pwin: pwinResult, suggestions, ourCompanyName: self.company_name };
+      }
+
+      await exportCaptureReportDocx({
+        proposal,
+        marketSnapshot: proposal?.market_snapshot ?? null,
+        captureAnalysis: analysis,
+        intelItems,
+        teamingSummary,
+        darkHorses: null,
+      }, { variant });
+      toast.success(variant === "internal" ? "Internal capture report downloaded" : "Partner-facing brief downloaded");
+    } catch (e: any) {
+      console.error("[capture-report-export]", e);
+      toast.error(e?.message ?? "Failed to export report");
+    } finally {
+      setExporting(null);
+    }
+  };
+
   if (!analysis) {
     return (
       <Card>
