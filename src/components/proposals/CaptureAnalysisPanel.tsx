@@ -62,6 +62,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   const analysis: CaptureAnalysis | null = (proposal?.capture_analysis as CaptureAnalysis | null) ?? null;
   const generatedAt: string | null = proposal?.capture_analysis_at ?? null;
   const [running, setRunning] = useState(false);
+  const [exporting, setExporting] = useState<"internal" | "partner" | null>(null);
 
   // "Inputs changed" check — newest opportunity_intel timestamp.
   const { data: latestIntelAt } = useQuery({
