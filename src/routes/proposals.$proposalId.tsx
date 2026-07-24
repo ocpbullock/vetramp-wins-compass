@@ -49,6 +49,7 @@ import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
 import { MarketIntelPanel } from "@/components/proposals/MarketIntelPanel";
 import { ActivitiesPanel } from "@/components/proposals/ActivitiesPanel";
 import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursuitsCard";
+import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
 import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
