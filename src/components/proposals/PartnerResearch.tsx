@@ -22,8 +22,8 @@ import {
   companyToPartnerView, type PartnerView as Partner, type Company,
 } from "@/lib/companies";
 import {
-  rankPartnerExperience, rankPartnerExperienceFromTargets,
-  type PartnerExperienceTarget,
+  rankPartnerExperience, rankPartnerExperienceFromTargets, rankDarkHorses,
+  type PartnerExperienceTarget, type DarkHorseTarget,
 } from "@/lib/partner-experience";
 import { companyFromTeamingTarget, type TeamingTarget } from "@/lib/teaming-targets";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
