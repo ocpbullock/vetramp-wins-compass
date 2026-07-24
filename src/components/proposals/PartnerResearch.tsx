@@ -167,6 +167,27 @@ export function PartnerResearch({
     );
   }, [darkHorsesEnabled, dhAwards, naicsInput, agencyInput, opportunitySetAside]);
 
+  // Persist top dark horses into the saved market_snapshot so the Capture Report
+  // can include them without re-running the search.
+  useEffect(() => {
+    if (!proposalId || !darkHorsesEnabled || darkHorses.length === 0) return;
+    const top = darkHorses.slice(0, 12);
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("proposals")
+        .select("market_snapshot")
+        .eq("id", proposalId)
+        .maybeSingle();
+      if (cancelled) return;
+      const prev = (data?.market_snapshot as Record<string, any> | null) ?? {};
+      const next = { ...prev, darkHorses: top };
+      await supabase.from("proposals").update({ market_snapshot: next }).eq("id", proposalId);
+    })();
+    return () => { cancelled = true; };
+  }, [proposalId, darkHorsesEnabled, darkHorses]);
+
+
   // Sync inputs when the parent's opportunity context changes.
   useEffect(() => { setNaicsInput(opportunityNaics ?? ""); }, [opportunityNaics]);
   useEffect(() => { setAgencyInput(opportunityAgency ?? ""); }, [opportunityAgency]);
