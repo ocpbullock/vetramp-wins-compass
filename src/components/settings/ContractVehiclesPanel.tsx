@@ -389,3 +389,379 @@ function VehicleDialog({
     </Dialog>
   );
 }
+
+// ---------------------------------------------------------------------------
+// Vehicle registry section — global seed + team-added catalog with awardees.
+// ---------------------------------------------------------------------------
+
+type RegistryVehicle = Tables<"vehicle_registry">;
+type Awardee = Tables<"vehicle_awardees">;
+
+const REGISTRY_TYPES = [
+  { value: "gwac", label: "GWAC" },
+  { value: "agency_idiq", label: "Agency IDIQ" },
+  { value: "bpa", label: "BPA" },
+  { value: "schedule", label: "GSA Schedule" },
+  { value: "other", label: "Other" },
+] as const;
+
+function VehicleRegistrySection({ teamId, canEdit }: { teamId: string; canEdit: boolean }) {
+  const qc = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  const { data: vehicles = [], isLoading } = useQuery({
+    queryKey: ["vehicle-registry", teamId],
+    staleTime: 30 * 60 * 1000,
+    queryFn: async (): Promise<RegistryVehicle[]> => {
+      const { data, error } = await supabase
+        .from("vehicle_registry")
+        .select("*")
+        .order("vehicle_name");
+      if (error) throw new Error(error.message);
+      return (data ?? []) as RegistryVehicle[];
+    },
+  });
+
+  const filtered = vehicles.filter((v) => {
+    const s = search.trim().toLowerCase();
+    if (!s) return true;
+    return [v.vehicle_name, v.managing_agency, v.vehicle_type, v.description]
+      .filter(Boolean)
+      .some((x) => x!.toLowerCase().includes(s));
+  });
+
+  return (
+    <div className="space-y-3 pt-6 border-t">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <h2 className="font-semibold">Vehicle registry</h2>
+          <p className="text-xs text-muted-foreground">Global seed vehicles plus vehicles your team tracks — with awardee pools.</p>
+        </div>
+        {canEdit && (
+          <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 mr-1" /> Add vehicle</Button>
+        )}
+      </div>
+      <Input placeholder="Search vehicles…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+
+      {isLoading ? (
+        <Card className="p-6 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 inline animate-spin mr-1" /> Loading…</Card>
+      ) : filtered.length === 0 ? (
+        <Card className="p-6 text-sm text-muted-foreground">No vehicles match.</Card>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map((v) => (
+            <RegistryVehicleRow
+              key={v.id}
+              vehicle={v}
+              expanded={expanded === v.id}
+              onToggle={() => setExpanded((cur) => (cur === v.id ? null : v.id))}
+              teamId={teamId}
+              canEditRow={canEdit && v.team_id === teamId}
+              onDeleted={() => qc.invalidateQueries({ queryKey: ["vehicle-registry", teamId] })}
+            />
+          ))}
+        </div>
+      )}
+
+      {addOpen && (
+        <RegistryVehicleDialog
+          open={addOpen}
+          onOpenChange={setAddOpen}
+          teamId={teamId}
+          onSaved={() => {
+            qc.invalidateQueries({ queryKey: ["vehicle-registry", teamId] });
+            setAddOpen(false);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function RegistryVehicleRow({
+  vehicle, expanded, onToggle, teamId, canEditRow, onDeleted,
+}: {
+  vehicle: RegistryVehicle;
+  expanded: boolean;
+  onToggle: () => void;
+  teamId: string;
+  canEditRow: boolean;
+  onDeleted: () => void;
+}) {
+  const qc = useQueryClient();
+  const [addAwardeeOpen, setAddAwardeeOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
+
+  const { data: awardees = [], isLoading } = useQuery({
+    queryKey: ["vehicle-awardees", vehicle.id],
+    enabled: expanded,
+    queryFn: async (): Promise<Awardee[]> => {
+      const { data, error } = await supabase
+        .from("vehicle_awardees")
+        .select("*")
+        .eq("vehicle_id", vehicle.id)
+        .order("company_name");
+      if (error) throw new Error(error.message);
+      return (data ?? []) as Awardee[];
+    },
+  });
+
+  const invalidateAwardees = () => qc.invalidateQueries({ queryKey: ["vehicle-awardees", vehicle.id] });
+
+  const deleteVehicle = async () => {
+    const { error } = await supabase.from("vehicle_registry").delete().eq("id", vehicle.id);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Vehicle removed");
+    onDeleted();
+  };
+
+  const deleteAwardee = async (id: string) => {
+    const { error } = await supabase.from("vehicle_awardees").delete().eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    invalidateAwardees();
+  };
+
+  return (
+    <Card className="p-3">
+      <div className="flex items-start gap-3">
+        <button type="button" onClick={onToggle} className="flex-1 text-left">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-medium">{vehicle.vehicle_name}</span>
+            {vehicle.team_id === null && <Badge variant="outline" className="text-[10px]">global</Badge>}
+            {vehicle.vehicle_type && <Badge variant="secondary" className="text-[10px]">{vehicle.vehicle_type}</Badge>}
+            {vehicle.status && <Badge variant="outline" className="text-[10px]">{vehicle.status}</Badge>}
+          </div>
+          <div className="text-xs text-muted-foreground mt-0.5">
+            {vehicle.managing_agency ?? "—"}
+            {vehicle.url && <> · <a href={vehicle.url} target="_blank" rel="noreferrer" className="text-primary underline" onClick={(e) => e.stopPropagation()}>site</a></>}
+          </div>
+        </button>
+        {canEditRow && (
+          <Button size="sm" variant="ghost" className="text-destructive" onClick={deleteVehicle}>
+            <Trash2 className="w-3.5 h-3.5" />
+          </Button>
+        )}
+      </div>
+      {expanded && (
+        <div className="mt-3 pt-3 border-t space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold text-muted-foreground">Awardees</div>
+            {canEditRow && (
+              <div className="flex gap-1">
+                <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Bulk paste</Button>
+                <Button size="sm" onClick={() => setAddAwardeeOpen(true)}><Plus className="w-3 h-3 mr-1" /> Add awardee</Button>
+              </div>
+            )}
+          </div>
+          {isLoading ? (
+            <div className="text-xs text-muted-foreground"><Loader2 className="w-3 h-3 inline animate-spin mr-1" /> Loading…</div>
+          ) : awardees.length === 0 ? (
+            <div className="text-xs text-muted-foreground py-2">
+              No awardees recorded. {vehicle.team_id === null ? "Global vehicles are read-only from the app — add awardees on team-owned vehicles." : "Use \"Add awardee\" or \"Bulk paste\"."}
+            </div>
+          ) : (
+            <div className="divide-y">
+              {awardees.map((a) => (
+                <div key={a.id} className="flex items-center gap-2 py-1.5 text-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="truncate">{a.company_name}</div>
+                    <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
+                      {a.uei && <span className="font-mono">{a.uei}</span>}
+                      {a.small_business && <Badge variant="outline" className="text-[10px]">SB</Badge>}
+                      {(a.socioeconomic ?? []).map((s) => (
+                        <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                      ))}
+                    </div>
+                  </div>
+                  {canEditRow && (
+                    <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => deleteAwardee(a.id)}>
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </Button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {addAwardeeOpen && (
+            <AddAwardeeDialog
+              vehicleId={vehicle.id}
+              open={addAwardeeOpen}
+              onOpenChange={setAddAwardeeOpen}
+              onSaved={() => { invalidateAwardees(); setAddAwardeeOpen(false); }}
+            />
+          )}
+          {bulkOpen && (
+            <BulkAwardeesDialog
+              vehicleId={vehicle.id}
+              open={bulkOpen}
+              onOpenChange={setBulkOpen}
+              onSaved={() => { invalidateAwardees(); setBulkOpen(false); }}
+            />
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function RegistryVehicleDialog({
+  open, onOpenChange, teamId, onSaved,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  teamId: string;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [type, setType] = useState<string>("gwac");
+  const [agency, setAgency] = useState("");
+  const [url, setUrl] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!name.trim()) { toast.error("Name required"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("vehicle_registry").insert({
+      team_id: teamId,
+      vehicle_name: name.trim(),
+      vehicle_type: type,
+      managing_agency: agency.trim() || null,
+      url: url.trim() || null,
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Vehicle added");
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Add vehicle to registry</DialogTitle></DialogHeader>
+        <div className="space-y-3 py-2">
+          <div>
+            <Label>Name *</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. NAVSEA SeaPort-NxG" />
+          </div>
+          <div>
+            <Label>Type</Label>
+            <Select value={type} onValueChange={setType}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                {REGISTRY_TYPES.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>Managing agency</Label>
+            <Input value={agency} onChange={(e) => setAgency(e.target.value)} placeholder="GSA, NAVSEA…" />
+          </div>
+          <div>
+            <Label>URL</Label>
+            <Input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://…" />
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function AddAwardeeDialog({
+  vehicleId, open, onOpenChange, onSaved,
+}: {
+  vehicleId: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [name, setName] = useState("");
+  const [uei, setUei] = useState("");
+  const [sb, setSb] = useState(false);
+  const [socio, setSocio] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    if (!name.trim()) { toast.error("Company name required"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("vehicle_awardees").insert({
+      vehicle_id: vehicleId,
+      company_name: name.trim(),
+      uei: uei.trim() || null,
+      small_business: sb,
+      socioeconomic: socio.trim() ? socio.split(",").map((s) => s.trim()).filter(Boolean) : null,
+    });
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success("Awardee added");
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader><DialogTitle>Add awardee</DialogTitle></DialogHeader>
+        <div className="space-y-3 py-2">
+          <div><Label>Company name *</Label><Input value={name} onChange={(e) => setName(e.target.value)} /></div>
+          <div><Label>UEI</Label><Input value={uei} onChange={(e) => setUei(e.target.value)} /></div>
+          <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={sb} onChange={(e) => setSb(e.target.checked)} /> Small business</label>
+          <div><Label>Socioeconomic certs (comma-separated)</Label><Input value={socio} onChange={(e) => setSocio(e.target.value)} placeholder="SDVOSB, 8(a), HUBZone" /></div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Save"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function BulkAwardeesDialog({
+  vehicleId, open, onOpenChange, onSaved,
+}: {
+  vehicleId: string;
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [text, setText] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    const rows = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((line) => {
+      const [name, uei] = line.split(",").map((s) => s.trim());
+      return { vehicle_id: vehicleId, company_name: name, uei: uei || null };
+    });
+    if (rows.length === 0) { toast.error("Paste at least one company"); return; }
+    setSaving(true);
+    const { error } = await supabase.from("vehicle_awardees").insert(rows);
+    setSaving(false);
+    if (error) { toast.error(error.message); return; }
+    toast.success(`Added ${rows.length} awardee${rows.length === 1 ? "" : "s"}`);
+    onSaved();
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Bulk add awardees</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-2 py-2">
+          <div className="text-xs text-muted-foreground">One company per line. Optional format: <code>Name, UEI</code>.</div>
+          <Textarea rows={10} value={text} onChange={(e) => setText(e.target.value)} placeholder={"Acme Federal Solutions, ABC123DEF456\nBeta Systems Inc"} />
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button onClick={save} disabled={saving}>{saving ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
