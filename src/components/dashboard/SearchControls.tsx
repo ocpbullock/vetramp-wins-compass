@@ -5,6 +5,8 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ALL_NAICS, DEFAULT_NAICS, IT_ONLY, NAICS_GROUPS } from "@/lib/contracts";
+import { NaicsCombobox } from "@/components/NaicsCombobox";
+import { naicsTitle } from "@/lib/naics-all";
 import { ChevronDown, Search, Info } from "lucide-react";
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { format, subYears } from "date-fns";
