@@ -132,6 +132,20 @@ export type CaptureReportInputs = {
       coverage?: string;
     }>;
   } | null;
+  ptwAnalysis?: {
+    updatedAt?: string;
+    ourRatings?: { technical?: string; staffing?: string };
+    premiumCapPct?: number;
+    undercutPct?: number;
+    competitors?: Array<{
+      name?: string;
+      tepM?: number | null;
+      fte?: number | null;
+      ratingTechnical?: string;
+      ratingStaffing?: string;
+      note?: string;
+    }>;
+  } | null;
 };
 
 export type CaptureReportOptions = {
