@@ -602,6 +602,15 @@ function RegistryVehicleRow({
               onSaved={() => { invalidateAwardees(); setBulkOpen(false); }}
             />
           )}
+          {csvOpen && (
+            <CsvImportAwardeesDialog
+              vehicleId={vehicle.id}
+              existing={awardees}
+              open={csvOpen}
+              onOpenChange={setCsvOpen}
+              onSaved={() => { invalidateAwardees(); setCsvOpen(false); }}
+            />
+          )}
         </div>
       )}
     </Card>
