@@ -2319,10 +2319,23 @@ function TeamHubPanel({
   };
 
   const addSuggestedPartner = async (s: { partnerId: string; partnerName: string }) => {
+    // Optimistic add: temp id in the shared cache, replaced on invalidation.
+    const key = teamingEntriesKey(proposalId);
+    await qc.cancelQueries({ queryKey: key });
+    const snapshot = qc.getQueryData<TeamingEntry[]>(key);
+    const tempId = `temp-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
+    qc.setQueryData<TeamingEntry[]>(key, (old = []) => [
+      ...old,
+      { id: tempId, company_id: s.partnerId, role: "sub", work_share_pct: 15, outreach_status: "not_started" },
+    ]);
     const { error } = await supabase
       .from("proposal_teaming")
       .insert({ proposal_id: proposalId, company_id: s.partnerId, role: "sub", work_share_pct: 15 });
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      if (snapshot) qc.setQueryData(key, snapshot);
+      toast.error(error.message);
+      return;
+    }
     toast.success(`Added ${s.partnerName} to the team`);
     invalidateTeaming();
   };
