@@ -90,6 +90,8 @@ export async function searchUsaspending(input: {
   return data as {
     results: HistoricalAward[];
     page_metadata: { total: number; fetched: number; hasNext: boolean; truncated: boolean };
+    _cached?: boolean;
+    _debug?: { agencyParam?: string | null; fetched?: number; source?: string };
   };
 }
 
