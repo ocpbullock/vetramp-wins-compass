@@ -875,7 +875,11 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="team" className="mt-4">
-            <TeamHubPanel proposal={proposal} proposalId={proposalId} />
+            <TeamHubPanel
+              proposal={proposal}
+              proposalId={proposalId}
+              onProposalPatch={(patch) => setProposal((p: any) => ({ ...(p ?? {}), ...patch }))}
+            />
           </TabsContent>
 
           <TabsContent value="proposal" className="mt-4 space-y-4">
