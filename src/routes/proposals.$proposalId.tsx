@@ -52,6 +52,9 @@ import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursu
 import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
 import { CaptureAnalysisPanel, useTeamingSummary } from "@/components/proposals/CaptureAnalysisPanel";
 import { PwinProbabilityCard } from "@/components/proposals/PwinProbabilityCard";
+import { ProposedTeamCard } from "@/components/proposals/ProposedTeamCard";
+import { MetricCard } from "@/components/MetricCard";
+import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
 import { NaicsCombobox } from "@/components/NaicsCombobox";
@@ -2248,22 +2251,34 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
   const qc = useQueryClient();
   const teamId: string | null = proposal.team_id ?? null;
   const [sandboxOpen, setSandboxOpen] = useState(false);
+  const [sandboxSectionOpen, setSandboxSectionOpen] = useState(false);
   const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
   const teaming = useTeamingSummary(proposal, proposalId);
 
-  const { data: existingPartnerIds = [] } = useQuery({
-    queryKey: ["proposal-teaming", proposalId],
-    queryFn: async (): Promise<string[]> => {
+  // Single canonical read of proposal_teaming rows for this pursuit; every
+  // add/remove/edit path invalidates this key so the scoreboard, Proposed Team
+  // card, and Suggestions list stay in sync.
+  const { data: teamingEntries = [] } = useQuery({
+    queryKey: ["proposed-team-entries", proposalId],
+    queryFn: async () => {
       const { data, error } = await supabase
         .from("proposal_teaming")
-        .select("company_id")
-        .eq("proposal_id", proposalId);
+        .select("id, company_id, role, work_share_pct, outreach_status")
+        .eq("proposal_id", proposalId)
+        .order("created_at");
       if (error) throw new Error(error.message);
-      return (data ?? []).map((r: any) => r.company_id as string);
+      return (data ?? []) as {
+        id: string; company_id: string; role: string;
+        work_share_pct: number | null; outreach_status: string;
+      }[];
     },
   });
+  const existingPartnerIds = useMemo(
+    () => teamingEntries.map((e) => e.company_id),
+    [teamingEntries],
+  );
 
   const sandboxOpportunity = useMemo(
     () => ({
@@ -2281,6 +2296,7 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
   );
 
   const invalidateTeaming = () => {
+    qc.invalidateQueries({ queryKey: ["proposed-team-entries", proposalId] });
     qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
     qc.invalidateQueries({ queryKey: ["capture-entries", proposalId] });
     qc.invalidateQueries({ queryKey: ["pwin-entries", proposalId] });
@@ -2300,18 +2316,25 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
     invalidateTeaming();
   };
 
-  // Track first-seen Team Strength per mount so we can show a delta chip once
-  // the user adds/removes partners or edits work shares in the same session.
+  // Track initial Team Strength and PWIN per mount so we can show session
+  // deltas — both scoreboard tiles read the SAME live values so they can't
+  // drift apart.
   const currentTs = teaming.ready ? teaming.pwinResult.pwin : null;
   const initialTsRef = useRef<number | null>(null);
   useEffect(() => {
-    if (initialTsRef.current == null && currentTs != null) {
-      initialTsRef.current = currentTs;
-    }
+    if (initialTsRef.current == null && currentTs != null) initialTsRef.current = currentTs;
   }, [currentTs]);
   const tsDelta = currentTs != null && initialTsRef.current != null
-    ? currentTs - initialTsRef.current
-    : 0;
+    ? currentTs - initialTsRef.current : 0;
+
+  const [pwinResult, setPwinResult] = useState<PwinProbabilityResult | null>(null);
+  const currentPwin = pwinResult?.likelyPct ?? null;
+  const initialPwinRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (initialPwinRef.current == null && currentPwin != null) initialPwinRef.current = currentPwin;
+  }, [currentPwin]);
+  const pwinDelta = currentPwin != null && initialPwinRef.current != null
+    ? currentPwin - initialPwinRef.current : 0;
 
   if (!teamId) {
     return (
@@ -2324,28 +2347,57 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
     );
   }
 
+  const isSelfPrime = proposal.engagement_type !== "sub";
+  const selfName = teaming.ready ? teaming.self.company_name : "Our Company";
+
+  const deltaChip = (d: number, base: number | null) =>
+    d === 0 || base == null ? null : (
+      <span
+        className={`text-xs font-medium ${d > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}
+      >
+        {d > 0 ? "↑" : "↓"} from {base}
+      </span>
+    );
+
   return (
     <div className="space-y-4">
-      {currentTs != null && (
-        <div className="flex items-center gap-2 text-sm">
-          <span className="briefing-label">Team Strength</span>
-          <span className="font-semibold tabular-nums">{currentTs}</span>
-          {tsDelta !== 0 && (
-            <span
-              className={`text-xs font-medium ${tsDelta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}
-              aria-label={`Team Strength changed by ${tsDelta}`}
-            >
-              {tsDelta > 0 ? "↑" : "↓"} from {initialTsRef.current}
+      {/* Scoreboard strip — pWin + Team Strength driven by the same live state */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <PwinProbabilityCard
+          proposal={proposal}
+          proposalId={proposalId}
+          teamStrength={currentTs}
+          pwinFactors={teaming.ready ? teaming.pwinResult : null}
+          onResult={setPwinResult}
+          compact
+        />
+        <MetricCard
+          label="Team Strength"
+          value={
+            <span className="flex items-baseline gap-2">
+              <span className="tabular-nums">{currentTs ?? "—"}</span>
+              {deltaChip(tsDelta, initialTsRef.current)}
             </span>
-          )}
-        </div>
-      )}
-      <PwinProbabilityCard
-        proposal={proposal}
+          }
+          sub={
+            <span className="flex items-center gap-2">
+              <span>Capability score across NAICS, agency past perf, set-aside fit, and partner signals.</span>
+              {currentPwin != null && deltaChip(pwinDelta, initialPwinRef.current) && (
+                <span className="ml-auto">pWin {deltaChip(pwinDelta, initialPwinRef.current)}</span>
+              )}
+            </span>
+          }
+          tone={currentTs == null ? "default" : currentTs >= 70 ? "success" : currentTs >= 40 ? "warning" : "destructive"}
+        />
+      </div>
+
+      {/* Proposed Team — the team of record. Edits recompute the scoreboard live. */}
+      <ProposedTeamCard
         proposalId={proposalId}
-        teamStrength={currentTs}
-        pwinFactors={teaming.ready ? teaming.pwinResult : null}
-        compact
+        teamId={teamId}
+        selfName={selfName}
+        isSelfPrime={isSelfPrime}
+        opportunityNaics={proposal.naics_code ?? null}
       />
 
       <Card>
@@ -2392,8 +2444,6 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
         />
       )}
 
-
-
       <PartnerResearch
         proposalId={proposalId}
         teamId={teamId}
@@ -2402,19 +2452,36 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
         opportunitySetAside={proposal.set_aside ?? null}
       />
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2"><Swords className="w-4 h-4" /> Teaming Sandbox</CardTitle>
-          <CardDescription>
-            Drop your company and partners into a scenario and watch pWin update live for this opportunity.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Button size="sm" onClick={() => setSandboxOpen(true)} className="gap-1.5">
-            <Swords className="w-3.5 h-3.5" /> Open Teaming Sandbox
-          </Button>
-        </CardContent>
-      </Card>
+      <Collapsible open={sandboxSectionOpen} onOpenChange={setSandboxSectionOpen}>
+        <Card>
+          <CardHeader className="pb-2">
+            <div className="flex items-start justify-between gap-2">
+              <div>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Swords className="w-4 h-4" /> Scenario sandbox (what-if)
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  The Proposed Team above is the team of record. Use the sandbox to compare
+                  hypothetical lineups without touching it.
+                </CardDescription>
+              </div>
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" size="sm" className="gap-1">
+                  <ChevronRight className={`w-4 h-4 transition-transform ${sandboxSectionOpen ? "rotate-90" : ""}`} />
+                  {sandboxSectionOpen ? "Hide" : "Open"}
+                </Button>
+              </CollapsibleTrigger>
+            </div>
+          </CardHeader>
+          <CollapsibleContent>
+            <CardContent>
+              <Button size="sm" onClick={() => setSandboxOpen(true)} className="gap-1.5">
+                <Swords className="w-3.5 h-3.5" /> Launch Teaming Sandbox
+              </Button>
+            </CardContent>
+          </CollapsibleContent>
+        </Card>
+      </Collapsible>
 
       <TeamingSandbox
         open={sandboxOpen}
