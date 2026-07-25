@@ -562,11 +562,11 @@ export function PartnerResearch({
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               <div>
                 <Label className="text-[11px]">NAICS code</Label>
-                <Input
-                  className="h-8 text-xs"
+                <NaicsCombobox
                   value={naicsInput}
-                  onChange={(e) => setNaicsInput(e.target.value)}
-                  placeholder="e.g. 541512"
+                  onChange={(v) => setNaicsInput(Array.isArray(v) ? (v[0] ?? "") : v)}
+                  mode="single"
+                  placeholder="Search NAICS…"
                 />
               </div>
               <div className="md:col-span-2">
