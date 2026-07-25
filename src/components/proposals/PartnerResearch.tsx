@@ -139,7 +139,7 @@ export function PartnerResearch({
   const [dhSearching, setDhSearching] = useState(false);
   const [dhAwards, setDhAwards] = useState<HistoricalAward[] | null>(null);
 
-  const runDarkHorseSearch = async () => {
+  const runDarkHorseSearch = async (opts: { forceRefresh?: boolean } = {}) => {
     const agency = agencyInput.trim();
     if (!agency) { toast.error("Enter an agency to find dark horses."); return; }
     setDhSearching(true);
@@ -150,6 +150,7 @@ export function PartnerResearch({
         startDate: yearsAgoIso(lookbackYears),
         endDate: todayIso(),
         maxResults: 500,
+        forceRefresh: opts.forceRefresh,
       });
       setDhAwards(r.results ?? []);
       toast.success(`Pulled ${r.results?.length ?? 0} agency-scoped awards for dark-horse analysis`);
@@ -159,6 +160,7 @@ export function PartnerResearch({
       setDhSearching(false);
     }
   };
+
 
   const darkHorses: DarkHorseTarget[] = useMemo(() => {
     if (!darkHorsesEnabled || !dhAwards || !naicsInput.trim()) return [];
@@ -224,7 +226,7 @@ export function PartnerResearch({
     return () => { cancelled = true; };
   }, [proposalId]);
 
-  const runExperienceSearch = async () => {
+  const runExperienceSearch = async (opts: { forceRefresh?: boolean } = {}) => {
     if (!naicsInput.trim()) {
       toast.error("Enter a NAICS code to search award history.");
       return;
@@ -237,7 +239,9 @@ export function PartnerResearch({
         startDate: yearsAgoIso(lookbackYears),
         endDate: todayIso(),
         keyword: keyword.trim() || undefined,
+        agency: agencyOnly && agencyInput.trim() ? agencyInput.trim() : undefined,
         maxResults: 300,
+        forceRefresh: opts.forceRefresh,
       });
       setAwards(r.results ?? []);
       setSearchMeta({
@@ -261,6 +265,7 @@ export function PartnerResearch({
       setSearching(false);
     }
   };
+
 
   // ---- Compute ranked candidates ----
   const ranked: PartnerExperienceTarget[] = useMemo(() => {
@@ -565,7 +570,7 @@ export function PartnerResearch({
                 <Switch checked={agencyOnly} onCheckedChange={setAgencyOnly} />
                 Agency only (hard filter)
               </label>
-              <Button size="sm" onClick={runExperienceSearch} disabled={searching}>
+              <Button size="sm" onClick={() => runExperienceSearch({ forceRefresh: loadedFromSnapshot || !!awards })} disabled={searching}>
                 {searching
                   ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                   : (loadedFromSnapshot || awards
@@ -614,6 +619,11 @@ export function PartnerResearch({
                 {searchMeta?._cached && (
                   <div className="text-[11px] text-muted-foreground inline-flex items-center justify-center gap-1">
                     <CheckCircle2 className="w-3 h-3" /> Showing cached data
+                  </div>
+                )}
+                {searchMeta?._cached && agencyInput.trim() && (awards?.length ?? 0) > 0 && ranked.length === 0 && (
+                  <div className="text-[11px] text-amber-700 dark:text-amber-400">
+                    Cached data doesn't cover this agency — press Refresh to fetch agency-specific awards.
                   </div>
                 )}
               </div>
@@ -794,7 +804,7 @@ export function PartnerResearch({
                 {darkHorsesEnabled && (
                   <Button
                     size="sm" variant="outline"
-                    onClick={runDarkHorseSearch}
+                    onClick={() => runDarkHorseSearch({ forceRefresh: !!dhAwards })}
                     disabled={dhSearching || !agencyInput.trim() || !naicsInput.trim()}
                   >
                     {dhSearching
