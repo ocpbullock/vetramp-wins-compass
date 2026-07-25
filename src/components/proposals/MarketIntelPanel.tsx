@@ -106,15 +106,16 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {polling || loading ? (
+          <Button onClick={generate} disabled={loading || !proposal?.naics_code || !proposal?.agency}>
+            {loading
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {progressStep ?? "Generating…"}</>
+              : <><Sparkles className="w-4 h-4 mr-2" /> Generate market snapshot</>}
+          </Button>
+          {!loading && bgActive && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              {polling ? "Generating snapshot in background…" : "Generating…"}
+              Generating snapshot in background…
             </div>
-          ) : (
-            <Button onClick={generate} disabled={!proposal?.naics_code || !proposal?.agency}>
-              <Sparkles className="w-4 h-4 mr-2" /> Generate market snapshot
-            </Button>
           )}
           {(!proposal?.naics_code || !proposal?.agency) && (
             <p className="text-xs text-muted-foreground">
@@ -123,8 +124,9 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
                 : "Agency is required — set it in Opportunity details."}
             </p>
           )}
-          {polling && <Skeleton className="h-24 w-full" />}
+          {(loading || bgActive) && <Skeleton className="h-24 w-full" />}
         </CardContent>
+
       </Card>
     );
   }
