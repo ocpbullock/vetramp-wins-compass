@@ -198,7 +198,7 @@ export function rankDarkHorses(
     const amt = Number(a["Award Amount"]) || 0;
     b.awardCount += 1;
     b.totalValue += amt;
-    const isAgency = agencyLc ? agencyMatches(a, agencyLc) : true;
+    const isAgency = agency ? agencyMatches(a, agency) : true;
     if (isAgency) b.sameAgencyValue += amt;
     const d = a["Start Date"] || null;
     if (d && (!b.latestAwardDate || d > b.latestAwardDate)) {
