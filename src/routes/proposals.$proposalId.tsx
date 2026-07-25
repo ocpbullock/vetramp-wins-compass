@@ -2302,6 +2302,14 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
 
   return (
     <div className="space-y-4">
+      <PwinProbabilityCard
+        proposal={proposal}
+        proposalId={proposalId}
+        teamStrength={teaming.ready ? teaming.pwinResult.pwin : null}
+        pwinFactors={teaming.ready ? teaming.pwinResult : null}
+        compact
+      />
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Team actions</CardTitle>
