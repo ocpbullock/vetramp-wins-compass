@@ -12,6 +12,8 @@ import { upsertCompany } from "@/lib/companies";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import type { TeamingTarget } from "@/lib/teaming-targets";
 import type { CompeteVendor } from "@/lib/api";
+import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
+import { applyCaptureStage } from "@/lib/stage-mutations";
 
 function fmtUsd(n: number) {
   if (!n) return "$0";
