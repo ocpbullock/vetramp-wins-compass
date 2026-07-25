@@ -85,4 +85,55 @@ describe("buildPwinMembers", () => {
     expect(out[1].primeRelationshipStrength).toBe(60);
     expect(out[1].pastPerformance?.length).toBe(1);
   });
+
+  it("sub mode: self share uses selfWorkSharePct, external prime is synthesized as remainder", () => {
+    const out = buildPwinMembers({
+      self: { company_name: "Us" },
+      isSelfPrime: false,
+      partners: [],
+      entries: [],
+      primeContractorName: "Big Prime LLC",
+      selfWorkSharePct: 25,
+    });
+    expect(out[0].workShare).toBe(25);
+    expect(out[0].isSelf).toBe(true);
+    const prime = out.find((m) => m.role === "prime");
+    expect(prime).toBeTruthy();
+    expect(prime!.id).toBe("prime-external");
+    expect(prime!.name).toBe("Big Prime LLC");
+    expect(prime!.workShare).toBe(75);
+  });
+
+  it("sub mode: roster prime gets remainder, no synthetic member added", () => {
+    const out = buildPwinMembers({
+      self: { company_name: "Us" },
+      isSelfPrime: false,
+      partners: [
+        { id: "prime1", company_name: "Big Prime LLC", naics_codes: ["541512"] },
+        { id: "p2", company_name: "Other Sub" },
+      ],
+      entries: [{ company_id: "p2", role: "sub", work_share_pct: 20 }],
+      primeContractorId: "prime1",
+      primeContractorName: "Big Prime LLC",
+      selfWorkSharePct: 30,
+    });
+    expect(out.filter((m) => m.role === "prime").length).toBe(1);
+    const prime = out.find((m) => m.role === "prime")!;
+    expect(prime.id).toBe("prime1");
+    expect(prime.workShare).toBe(50); // 100 - 30 (us) - 20 (other sub)
+    const us = out.find((m) => m.isSelf)!;
+    expect(us.workShare).toBe(30);
+  });
+
+  it("sub mode: defaults selfWorkSharePct to 20 when unset", () => {
+    const out = buildPwinMembers({
+      self: { company_name: "Us" },
+      isSelfPrime: false,
+      partners: [],
+      entries: [],
+      primeContractorName: "P",
+    });
+    expect(out[0].workShare).toBe(20);
+  });
 });
+

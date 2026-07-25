@@ -160,38 +160,97 @@ export function buildPwinMembers(opts: {
   incumbentName?: string | null;
   primeContractorId?: string | null;
   primeContractorName?: string | null;
+  /**
+   * Sub-mode only: our negotiated share under the prime. When undefined in
+   * sub mode we default to 20 so the engine has a plausible number.
+   * Ignored in prime mode (self share is the remainder there).
+   */
+  selfWorkSharePct?: number | null;
 }): PwinTeamMember[] {
-  const { self, isSelfPrime, partners, entries, incumbentName, primeContractorId, primeContractorName } = opts;
+  const {
+    self, isSelfPrime, partners, entries, incumbentName,
+    primeContractorId, primeContractorName, selfWorkSharePct,
+  } = opts;
+
   const entryMap = new Map<string, TeamingEntryLike>();
   for (const e of entries) {
     const key = (e.company_id ?? e.partner_id) as string | undefined;
     if (key) entryMap.set(key, e);
   }
-  const partnerTotalShare = entries.reduce(
-    (s, e) => s + (Number(e.work_share_pct) || 0), 0,
-  );
-  const selfShare = isSelfPrime
-    ? Math.max(0, 100 - partnerTotalShare)
-    : (entries.find((e) => (e.role ?? "sub") !== "prime")?.work_share_pct ?? 0);
-
-  const selfMember = buildSelfPwinMember({
-    self, isSelfPrime, workShare: Number(selfShare) || 0, incumbentName,
-  });
 
   const primeNameLower = (primeContractorName ?? "").toLowerCase();
-  const partnerMembers = partners.map((p) => {
-    const entry = entryMap.get(p.id) ?? null;
-    const isThePrime =
-      !isSelfPrime &&
-      (p.id === primeContractorId ||
-        (primeNameLower && (p.company_name ?? p.name ?? "").toLowerCase() === primeNameLower));
-    return buildPartnerPwinMember(p, {
-      entry,
-      role: isThePrime ? "prime" : ((entry?.role as PwinRole | undefined) ?? "sub"),
-      isPrime: !!isThePrime,
-      incumbentName,
-    });
+  const rosterPrime = !isSelfPrime
+    ? partners.find((p) =>
+        (primeContractorId && p.id === primeContractorId) ||
+        (primeNameLower && (p.company_name ?? p.name ?? "").toLowerCase() === primeNameLower),
+      ) ?? null
+    : null;
+  const rosterPrimeId = rosterPrime?.id ?? null;
+
+  // Sum shares of "other subs" — exclude any entry that represents the prime
+  // itself, so the prime's remainder math stays coherent.
+  const otherSubShare = entries.reduce((s, e) => {
+    const key = (e.company_id ?? e.partner_id) as string | undefined;
+    if (rosterPrimeId && key === rosterPrimeId) return s;
+    return s + (Number(e.work_share_pct) || 0);
+  }, 0);
+
+  let selfShare: number;
+  if (isSelfPrime) {
+    selfShare = Math.max(0, 100 - otherSubShare);
+  } else {
+    const raw = typeof selfWorkSharePct === "number" && Number.isFinite(selfWorkSharePct)
+      ? selfWorkSharePct : 20;
+    selfShare = Math.max(0, Math.min(100, raw));
+  }
+
+  const selfMember = buildSelfPwinMember({
+    self, isSelfPrime, workShare: selfShare, incumbentName,
   });
+
+  const primeRemainder = !isSelfPrime
+    ? Math.max(0, 100 - selfShare - otherSubShare)
+    : 0;
+
+  const partnerMembers: PwinTeamMember[] = [];
+  for (const p of partners) {
+    const entry = entryMap.get(p.id) ?? null;
+    if (rosterPrime && p.id === rosterPrime.id) {
+      partnerMembers.push(buildPartnerPwinMember(p, {
+        entry,
+        role: "prime",
+        workShare: primeRemainder,
+        isPrime: true,
+        incumbentName,
+      }));
+    } else {
+      partnerMembers.push(buildPartnerPwinMember(p, {
+        entry,
+        role: (entry?.role as PwinRole | undefined) ?? "sub",
+        incumbentName,
+      }));
+    }
+  }
+
+  // Sub mode with a named prime that isn't in the roster: add a synthetic
+  // prime so the pWin engine's prime-relationship factor has a prime to find.
+  if (!isSelfPrime && !rosterPrime && primeContractorName) {
+    partnerMembers.push({
+      id: "prime-external",
+      name: primeContractorName,
+      isSelf: false,
+      role: "prime",
+      workShare: primeRemainder,
+      active: true,
+      certifications: [],
+      naicsCodes: [],
+      contractVehicles: [],
+      pastPerformance: [],
+      isIncumbent:
+        !!incumbentName &&
+        primeContractorName.toLowerCase().includes(incumbentName.toLowerCase()),
+    });
+  }
 
   return [selfMember, ...partnerMembers];
 }
