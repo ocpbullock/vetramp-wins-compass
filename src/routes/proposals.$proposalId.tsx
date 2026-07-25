@@ -2404,11 +2404,18 @@ function TeamHubPanel({
             </span>
           }
           sub={
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2 flex-wrap">
               <span>Capability score across NAICS, agency past perf, set-aside fit, and partner signals.</span>
               {currentPwin != null && deltaChip(pwinDelta, initialPwinRef.current) && (
-                <span className="ml-auto">pWin {deltaChip(pwinDelta, initialPwinRef.current)}</span>
+                <span>pWin {deltaChip(pwinDelta, initialPwinRef.current)}</span>
               )}
+              <button
+                type="button"
+                onClick={openSandboxSection}
+                className="ml-auto inline-flex items-center gap-0.5 text-primary hover:underline"
+              >
+                Scenario sandbox →
+              </button>
             </span>
           }
           tone={currentTs == null ? "default" : currentTs >= 70 ? "success" : currentTs >= 40 ? "warning" : "destructive"}
