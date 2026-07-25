@@ -24,6 +24,7 @@ import {
   type RelationshipModel, type ScenarioInsights,
 } from "@/lib/pwin";
 import { listPartnerCompanies, getOwnCompanyProfileData, type PartnerView as Partner } from "@/lib/companies";
+import { buildPwinMembers } from "@/lib/pwin-members";
 
 const ROLES: { value: PwinRole; label: string }[] = [
   { value: "prime", label: "Prime" },
