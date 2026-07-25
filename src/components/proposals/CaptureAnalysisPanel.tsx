@@ -162,12 +162,18 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
   );
 
   const isSelfPrime = proposal.engagement_type !== "sub";
+  const selfWorkSharePct =
+    typeof proposal?.pwin_config?.selfWorkSharePct === "number"
+      ? proposal.pwin_config.selfWorkSharePct : null;
   const members = buildPwinMembers({
     self,
     isSelfPrime,
     partners: partners.map((p: any) => ({ ...p, name: p.company_name })),
     entries,
     incumbentName,
+    primeContractorId: proposal.prime_contractor_id ?? null,
+    primeContractorName: proposal.prime_contractor_name ?? null,
+    selfWorkSharePct,
   });
   const pwinCtx: PwinContext = {
     engagementType: isSelfPrime ? "prime" : "sub",
