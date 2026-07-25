@@ -20,6 +20,7 @@ import { BOARD_STAGES, captureStageToBoard, type BoardStage } from "@/lib/captur
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { kickOffMarketSnapshotById } from "@/lib/market-snapshot";
 
 export const Route = createFileRoute("/opportunities")({
   component: OpportunitiesPage,
@@ -321,6 +322,8 @@ function OpportunitiesPage() {
   async function handleCreated(proposalId: string, opts?: { hasDocs?: boolean }) {
     await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
     setSelectedOpportunityId(proposalId);
+    // Kick off background market snapshot generation (no-op if NAICS/agency missing).
+    void kickOffMarketSnapshotById(proposalId);
     navigate({
       to: "/proposals/$proposalId",
       params: { proposalId },

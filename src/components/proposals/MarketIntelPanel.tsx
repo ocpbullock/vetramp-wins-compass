@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, RefreshCw, Sparkles, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { generateMarketSnapshot, type MarketSnapshot } from "@/lib/market-snapshot";
+import { generateMarketSnapshot, isMarketSnapshotInProgress, type MarketSnapshot } from "@/lib/market-snapshot";
 import { companyFromTeamingTarget } from "@/lib/teaming-targets";
 import { upsertCompany } from "@/lib/companies";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
@@ -27,19 +27,21 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
   );
   const [generatedAt, setGeneratedAt] = useState<string | null>(proposal?.market_snapshot_at ?? null);
   const [loading, setLoading] = useState(false);
-  const [polling, setPolling] = useState(false);
+  const [progressStep, setProgressStep] = useState<string | null>(null);
+  const [bgActive, setBgActive] = useState<boolean>(() => isMarketSnapshotInProgress(proposalId));
   const [vendor, setVendor] = useState<{ recipientId: string | null; name: string | null } | null>(null);
   const [savingPartner, setSavingPartner] = useState<string | null>(null);
 
-  // Poll for background-generated snapshot when none exists yet but inputs known.
+  // Low-frequency poll while a background generation is genuinely in flight
+  // (sessionStorage key set by kickOffMarketSnapshot, younger than 3 min).
   useEffect(() => {
-    if (snapshot || !proposal?.naics_code || !proposal?.agency) return;
-    setPolling(true);
+    if (snapshot) return;
+    if (!isMarketSnapshotInProgress(proposalId)) { setBgActive(false); return; }
+    setBgActive(true);
     let stopped = false;
-    let tries = 0;
     const tick = async () => {
       if (stopped) return;
-      tries += 1;
+      if (!isMarketSnapshotInProgress(proposalId)) { setBgActive(false); return; }
       const { data } = await supabase
         .from("proposals")
         .select("market_snapshot, market_snapshot_at")
@@ -48,27 +50,32 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
       if ((data as any)?.market_snapshot) {
         setSnapshot((data as any).market_snapshot as MarketSnapshot);
         setGeneratedAt((data as any).market_snapshot_at ?? null);
-        setPolling(false);
+        setBgActive(false);
         return;
       }
-      if (tries < 30) setTimeout(tick, 4000);
-      else setPolling(false);
+      if (!stopped) setTimeout(tick, 5000);
     };
-    const t = setTimeout(tick, 3000);
-    return () => { stopped = true; clearTimeout(t); setPolling(false); };
-  }, [proposalId, proposal?.naics_code, proposal?.agency, snapshot]);
+    const t = setTimeout(tick, 5000);
+    return () => { stopped = true; clearTimeout(t); };
+  }, [proposalId, snapshot]);
 
   const generate = async () => {
     setLoading(true);
+    setProgressStep("Starting…");
     try {
-      const snap = await generateMarketSnapshot(proposal);
+      const snap = await generateMarketSnapshot(proposal, { onProgress: (s) => setProgressStep(s) });
       setSnapshot(snap);
       setGeneratedAt(snap.generatedAt);
-      toast.success("Market snapshot generated");
+      if (snap.awardsError) {
+        toast.warning(`Market snapshot generated, but award data was unavailable: ${snap.awardsError}`);
+      } else {
+        toast.success("Market snapshot generated");
+      }
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to generate snapshot");
     } finally {
       setLoading(false);
+      setProgressStep(null);
     }
   };
 
@@ -99,15 +106,16 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {polling || loading ? (
+          <Button onClick={generate} disabled={loading || !proposal?.naics_code || !proposal?.agency}>
+            {loading
+              ? <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> {progressStep ?? "Generating…"}</>
+              : <><Sparkles className="w-4 h-4 mr-2" /> Generate market snapshot</>}
+          </Button>
+          {!loading && bgActive && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="w-4 h-4 animate-spin" />
-              {polling ? "Generating snapshot in background…" : "Generating…"}
+              Generating snapshot in background…
             </div>
-          ) : (
-            <Button onClick={generate} disabled={!proposal?.naics_code || !proposal?.agency}>
-              <Sparkles className="w-4 h-4 mr-2" /> Generate market snapshot
-            </Button>
           )}
           {(!proposal?.naics_code || !proposal?.agency) && (
             <p className="text-xs text-muted-foreground">
@@ -116,8 +124,9 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
                 : "Agency is required — set it in Opportunity details."}
             </p>
           )}
-          {polling && <Skeleton className="h-24 w-full" />}
+          {(loading || bgActive) && <Skeleton className="h-24 w-full" />}
         </CardContent>
+
       </Card>
     );
   }
@@ -148,6 +157,13 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
+          {(snapshot.awardsError || snapshot.historical.fetched === 0) && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+              {snapshot.awardsError
+                ? `No award data returned — ${snapshot.awardsError}. Check NAICS or daily API quota.`
+                : "No award data returned — check NAICS or daily API quota."}
+            </div>
+          )}
           <div className="flex flex-wrap gap-4">
             <div><span className="text-muted-foreground">Total awards:</span> <span className="font-mono">{snapshot.historical.totalAwards.toLocaleString()}</span></div>
             <div><span className="text-muted-foreground">Total value:</span> <span className="font-mono">{fmtUsd(snapshot.historical.totalValue)}</span></div>
