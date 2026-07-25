@@ -831,8 +831,21 @@ export function PartnerResearch({
               )}
 
               {darkHorsesEnabled && dhAwards && darkHorses.length === 0 && !dhSearching && (
-                <div className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                  No adjacent-NAICS performers found for this agency.
+                <div className="rounded-md border border-dashed border-border p-4 text-center text-xs space-y-1">
+                  {(dhMeta?.fetched ?? 0) === 0 ? (
+                    <div className="text-amber-700 dark:text-amber-400">
+                      No awards returned for this agency string — try picking an agency from the suggestions.
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground">
+                      No adjacent-NAICS performers found for this agency.
+                    </div>
+                  )}
+                  {dhMeta && (
+                    <div className="text-[10px] text-muted-foreground">
+                      Query agency: <span className="font-mono">{dhMeta.agencyParam ?? "—"}</span> · {dhMeta.fetched} awards fetched
+                    </div>
+                  )}
                 </div>
               )}
 
