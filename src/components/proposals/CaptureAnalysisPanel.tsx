@@ -74,7 +74,7 @@ function countdown(deadline?: string | null) {
 }
 
 // ---- Shared hook: deterministic teaming summary (PWIN + suggestions) ----
-function useTeamingSummary(proposal: any, proposalId: string) {
+export function useTeamingSummary(proposal: any, proposalId: string) {
   const teamId: string | null = proposal?.team_id ?? null;
 
   const { data: partners = [], isLoading: loadingPartners } = useQuery({
