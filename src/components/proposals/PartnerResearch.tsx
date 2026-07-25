@@ -635,6 +635,11 @@ export function PartnerResearch({
                     Cached data doesn't cover this agency — press Refresh to fetch agency-specific awards.
                   </div>
                 )}
+                {searchMeta?._debug && (
+                  <div className="text-[10px] text-muted-foreground">
+                    Query agency: <span className="font-mono">{searchMeta._debug.agencyParam ?? "—"}</span> · {searchMeta._debug.fetched ?? 0} awards fetched ({searchMeta._debug.source})
+                  </div>
+                )}
               </div>
             )}
 
