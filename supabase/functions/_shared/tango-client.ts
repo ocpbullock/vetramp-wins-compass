@@ -87,6 +87,7 @@ export function searchOpportunities(params: {
 export function searchContracts(params: {
   naics?: string | string[];
   recipient?: string;
+  recipient_name?: string;
   recipient_uei?: string;
   awarding_agency?: string;
   award_date_gte?: string;
