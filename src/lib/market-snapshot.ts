@@ -36,7 +36,28 @@ export type MarketSnapshot = {
   candidatePartners: PartnerExperienceTarget[];
   competitors: CompeteVendor[];
   competitiveIntelError?: string;
+  awardsError?: string;
 };
+
+const SNAP_KEY_PREFIX = "msnap-gen-";
+const SNAP_MAX_AGE_MS = 3 * 60 * 1000;
+
+function markSnapshotStart(id: string) {
+  try { sessionStorage.setItem(SNAP_KEY_PREFIX + id, String(Date.now())); } catch { /* noop */ }
+}
+function clearSnapshotStart(id: string) {
+  try { sessionStorage.removeItem(SNAP_KEY_PREFIX + id); } catch { /* noop */ }
+}
+export function isMarketSnapshotInProgress(id: string): boolean {
+  try {
+    const raw = sessionStorage.getItem(SNAP_KEY_PREFIX + id);
+    if (!raw) return false;
+    const t = Number(raw);
+    if (!Number.isFinite(t)) return false;
+    if (Date.now() - t > SNAP_MAX_AGE_MS) { sessionStorage.removeItem(SNAP_KEY_PREFIX + id); return false; }
+    return true;
+  } catch { return false; }
+}
 
 function samOppFromProposal(p: any): SamOpportunity {
   return {
