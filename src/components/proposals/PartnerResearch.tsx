@@ -570,7 +570,7 @@ export function PartnerResearch({
                 <Switch checked={agencyOnly} onCheckedChange={setAgencyOnly} />
                 Agency only (hard filter)
               </label>
-              <Button size="sm" onClick={runExperienceSearch} disabled={searching}>
+              <Button size="sm" onClick={() => runExperienceSearch({ forceRefresh: loadedFromSnapshot || !!awards })} disabled={searching}>
                 {searching
                   ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                   : (loadedFromSnapshot || awards
