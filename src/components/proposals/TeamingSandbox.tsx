@@ -475,7 +475,7 @@ function PwinDisplay({ result }: { result: PwinResult }) {
   return (
     <div>
       <div className="flex flex-col items-center py-3 border rounded-md">
-        <PwinDial value={result.pwin} size="md" label="Estimated pWin" />
+        <PwinDial value={result.pwin} size="md" label="Team Strength" />
         <div className="text-[11px] text-muted-foreground mt-1">
           Partners {result.totalPartnerShare}% · perspective {result.selfShare}%
         </div>

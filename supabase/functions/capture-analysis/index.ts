@@ -106,7 +106,7 @@ serve(async (req) => {
     if (mode === "positioning_matrix") {
       const existing = (proposal as any).positioning_matrix ?? null;
       const dimensions: string[] = Array.isArray(existing?.dimensions) && existing.dimensions.length
-        ? existing.dimensions.slice(0, 6).map((d: any) => String(d))
+        ? existing.dimensions.slice(0, 8).map((d: any) => String(d))
         : ["Technical Capability", "Workforce & Staffing", "Relevant Past Performance", "Operational Scale"];
 
       // Load our company profile via the team, if available.

@@ -833,7 +833,7 @@ function OpportunityTeamingSummary({
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs text-muted-foreground">Current pWin:</span>
+          <span className="text-xs text-muted-foreground">Team Strength:</span>
           <PwinChip opp={opp} />
         </div>
 

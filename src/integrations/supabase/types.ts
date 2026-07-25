@@ -1040,6 +1040,7 @@ export type Database = {
           prime_contractor_name: string | null
           ptw_analysis: Json | null
           pursuit_type: string
+          pwin_config: Json | null
           readiness_score: number | null
           response_deadline: string | null
           sections: Json | null
@@ -1106,6 +1107,7 @@ export type Database = {
           prime_contractor_name?: string | null
           ptw_analysis?: Json | null
           pursuit_type?: string
+          pwin_config?: Json | null
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null
@@ -1172,6 +1174,7 @@ export type Database = {
           prime_contractor_name?: string | null
           ptw_analysis?: Json | null
           pursuit_type?: string
+          pwin_config?: Json | null
           readiness_score?: number | null
           response_deadline?: string | null
           sections?: Json | null

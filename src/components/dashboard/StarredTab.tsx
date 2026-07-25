@@ -99,7 +99,7 @@ export function StarredTab({
                 <TableHead className="w-[180px]">Actions</TableHead>
                 <TableHead>Title</TableHead>
                 <TableHead>NAICS</TableHead>
-                <TableHead>pWin</TableHead>
+                <TableHead>Team Strength</TableHead>
                 <TableHead>Deadline</TableHead>
                 <TableHead>Posted</TableHead>
                 <TableHead>Set-Aside</TableHead>
