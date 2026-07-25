@@ -11,6 +11,7 @@ import {
 import { matchIncumbent, type IncumbentMatch } from "./incumbents";
 import { deriveTeamingTargets, type TeamingTarget } from "./teaming-targets";
 import { rankPartnerExperience, type PartnerExperienceTarget } from "./partner-experience";
+import { agencyMatchesLoose } from "./agency-match";
 import { userContextFromProposal } from "./user-context";
 
 export type MarketSnapshot = {
