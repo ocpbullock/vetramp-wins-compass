@@ -39,11 +39,13 @@ const STATIC_AGENCIES = [
 ];
 
 export function AgencyCombobox({
-  value, onChange, teamId, placeholder = "Search or paste awarding agency…",
+  value, onChange, teamId = null, agencies: agenciesProp, width, placeholder = "Search or paste awarding agency…",
 }: {
   value: string;
   onChange: (v: string) => void;
-  teamId: string | null;
+  teamId?: string | null;
+  agencies?: string[];
+  width?: string;
   placeholder?: string;
 }) {
   const [open, setOpen] = useState(false);
