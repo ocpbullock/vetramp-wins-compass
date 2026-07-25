@@ -3,6 +3,7 @@
 
 import type { HistoricalAward } from "./api";
 import { deriveTeamingTargets, isSmallBusinessSetAside, type TeamingTarget } from "./teaming-targets";
+import { agencyMatchesLoose } from "./agency-match";
 
 export type PartnerExperienceOpportunity = {
   agency?: string | null;
@@ -31,10 +32,10 @@ function monthsSince(date: string | null, now: Date): number | null {
   return ms / (1000 * 60 * 60 * 24 * 30.4375);
 }
 
-function agencyMatches(award: HistoricalAward, agencyLc: string): boolean {
+function agencyMatches(award: HistoricalAward, agency: string): boolean {
   return (
-    (award["Awarding Agency"] || "").toLowerCase().includes(agencyLc) ||
-    (award["Awarding Sub Agency"] || "").toLowerCase().includes(agencyLc)
+    agencyMatchesLoose(award["Awarding Agency"], agency) ||
+    agencyMatchesLoose(award["Awarding Sub Agency"], agency)
   );
 }
 
