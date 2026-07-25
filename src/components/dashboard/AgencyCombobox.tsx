@@ -113,7 +113,7 @@ export function AgencyCombobox({
           variant="outline"
           role="combobox"
           aria-expanded={open}
-          className="h-8 text-xs w-full justify-between font-normal"
+          className={cn("h-8 text-xs justify-between font-normal", width ?? "w-full")}
         >
           <span className="truncate">{value || placeholder}</span>
           <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
