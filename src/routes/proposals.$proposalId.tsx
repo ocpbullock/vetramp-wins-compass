@@ -2251,6 +2251,7 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
   const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
+  const teaming = useTeamingSummary(proposal, proposalId);
 
   const { data: existingPartnerIds = [] } = useQuery({
     queryKey: ["proposal-teaming", proposalId],
