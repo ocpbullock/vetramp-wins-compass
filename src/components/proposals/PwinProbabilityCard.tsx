@@ -125,7 +125,9 @@ export function PwinProbabilityCard({
         .update({ pwin_config: config as any })
         .eq("id", proposalId);
       if (error) toast.error("Couldn't save PWIN inputs");
-      else qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
+      // Local `config` state is the source of truth; parent proposal row will
+      // pick up the new pwin_config on its next refetch.
+
     }, 700);
     return () => clearTimeout(t);
   }, [config, proposalId, qc]);
