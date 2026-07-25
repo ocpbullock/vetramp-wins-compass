@@ -96,6 +96,7 @@ export function ProposedTeamCard({
   );
 
   const invalidateAll = () => {
+    qc.invalidateQueries({ queryKey: ["proposed-team-entries", proposalId] });
     qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
     qc.invalidateQueries({ queryKey: ["capture-entries", proposalId] });
     qc.invalidateQueries({ queryKey: ["pwin-entries", proposalId] });
