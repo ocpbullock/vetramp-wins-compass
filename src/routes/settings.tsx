@@ -109,9 +109,17 @@ function SettingsPage() {
             <h1 className="text-xl font-bold tracking-tight">Capture Intel</h1>
             <p className="text-xs text-muted-foreground">Company profile, knowledge base, team, partners, and past performance</p>
           </div>
-          <Button variant="outline" size="sm" asChild>
-            <Link to="/"><ArrowLeft className="w-4 h-4 mr-1" /> Back to dashboard</Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            {isAdmin && (
+              <Button variant="outline" size="sm" asChild>
+                <Link to="/diagnostics">Diagnostics</Link>
+              </Button>
+            )}
+            <Button variant="outline" size="sm" asChild>
+              <Link to="/"><ArrowLeft className="w-4 h-4 mr-1" /> Back to dashboard</Link>
+            </Button>
+          </div>
+
         </div>
       </header>
 

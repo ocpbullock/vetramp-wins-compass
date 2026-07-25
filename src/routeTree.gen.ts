@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AcceptInviteRouteImport } from './routes/accept-invite'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as AuthRouteImport } from './routes/auth'
+import { Route as DiagnosticsRouteImport } from './routes/diagnostics'
 import { Route as DiscoverRouteImport } from './routes/discover'
 import { Route as McpRouteImport } from './routes/mcp'
 import { Route as OpportunitiesRouteImport } from './routes/opportunities'
@@ -44,6 +45,11 @@ const AdminRoute = AdminRouteImport.update({
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DiagnosticsRoute = DiagnosticsRouteImport.update({
+  id: '/diagnostics',
+  path: '/diagnostics',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DiscoverRoute = DiscoverRouteImport.update({
@@ -116,6 +122,7 @@ export interface FileRoutesByFullPath {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/discover': typeof DiscoverRoute
   '/mcp': typeof McpRoute
   '/opportunities': typeof OpportunitiesRoute
@@ -134,6 +141,7 @@ export interface FileRoutesByTo {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/discover': typeof DiscoverRoute
   '/mcp': typeof McpRoute
   '/opportunities': typeof OpportunitiesRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/accept-invite': typeof AcceptInviteRoute
   '/admin': typeof AdminRoute
   '/auth': typeof AuthRoute
+  '/diagnostics': typeof DiagnosticsRoute
   '/discover': typeof DiscoverRoute
   '/mcp': typeof McpRoute
   '/opportunities': typeof OpportunitiesRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/diagnostics'
     | '/discover'
     | '/mcp'
     | '/opportunities'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/diagnostics'
     | '/discover'
     | '/mcp'
     | '/opportunities'
@@ -209,6 +220,7 @@ export interface FileRouteTypes {
     | '/accept-invite'
     | '/admin'
     | '/auth'
+    | '/diagnostics'
     | '/discover'
     | '/mcp'
     | '/opportunities'
@@ -228,6 +240,7 @@ export interface RootRouteChildren {
   AcceptInviteRoute: typeof AcceptInviteRoute
   AdminRoute: typeof AdminRoute
   AuthRoute: typeof AuthRoute
+  DiagnosticsRoute: typeof DiagnosticsRoute
   DiscoverRoute: typeof DiscoverRoute
   McpRoute: typeof McpRoute
   OpportunitiesRoute: typeof OpportunitiesRoute
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       path: '/auth'
       fullPath: '/auth'
       preLoaderRoute: typeof AuthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/diagnostics': {
+      id: '/diagnostics'
+      path: '/diagnostics'
+      fullPath: '/diagnostics'
+      preLoaderRoute: typeof DiagnosticsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/discover': {
@@ -364,6 +384,7 @@ const rootRouteChildren: RootRouteChildren = {
   AcceptInviteRoute: AcceptInviteRoute,
   AdminRoute: AdminRoute,
   AuthRoute: AuthRoute,
+  DiagnosticsRoute: DiagnosticsRoute,
   DiscoverRoute: DiscoverRoute,
   McpRoute: McpRoute,
   OpportunitiesRoute: OpportunitiesRoute,
