@@ -189,6 +189,7 @@ export function RecompeteWatchCard({
               <EventRow
                 key={e.id}
                 event={e}
+                proposalId={proposalId}
                 onMarkReviewed={() => markReviewed(e.id)}
                 onEnrich={() => enrichNow(e.id)}
                 enriching={enriching === e.id}
