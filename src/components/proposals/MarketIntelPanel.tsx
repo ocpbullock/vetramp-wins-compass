@@ -157,6 +157,13 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
+          {(snapshot.awardsError || snapshot.historical.fetched === 0) && (
+            <div className="rounded-md border border-destructive/40 bg-destructive/5 p-2 text-xs text-destructive">
+              {snapshot.awardsError
+                ? `No award data returned — ${snapshot.awardsError}. Check NAICS or daily API quota.`
+                : "No award data returned — check NAICS or daily API quota."}
+            </div>
+          )}
           <div className="flex flex-wrap gap-4">
             <div><span className="text-muted-foreground">Total awards:</span> <span className="font-mono">{snapshot.historical.totalAwards.toLocaleString()}</span></div>
             <div><span className="text-muted-foreground">Total value:</span> <span className="font-mono">{fmtUsd(snapshot.historical.totalValue)}</span></div>
