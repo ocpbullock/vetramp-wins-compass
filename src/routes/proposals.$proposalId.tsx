@@ -2355,7 +2355,7 @@ function TeamHubPanel({
     toast.success(`Added ${s.partnerName} to the team`, nextStage ? {
       action: {
         label: `Move to ${nextStage.charAt(0).toUpperCase() + nextStage.slice(1)}`,
-        onClick: async () => { if (await applyCaptureStage(proposalId, nextStage)) { void refreshProposal?.(); } },
+        onClick: () => { void applyCaptureStage(proposalId, nextStage); },
       },
     } : undefined);
     invalidateTeaming();
