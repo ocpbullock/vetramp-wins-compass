@@ -2508,7 +2508,7 @@ function TeamHubPanel({
       />
 
       <Collapsible open={sandboxSectionOpen} onOpenChange={setSandboxSectionOpen}>
-        <Card>
+        <Card ref={sandboxSectionRef}>
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
               <div>
