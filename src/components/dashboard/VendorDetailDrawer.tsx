@@ -3,7 +3,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookmarkPlus, Loader2 } from "lucide-react";
+import { BookmarkPlus, Loader2, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { getVendorProfile } from "@/lib/api";
 import { useTeam } from "@/lib/team";
@@ -29,23 +29,39 @@ export function VendorDetailDrawer({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // When the name-only path returns multiple SAM matches, the user picks one
+  // and we re-run by UEI.
+  const [selectedUei, setSelectedUei] = useState<string | null>(null);
   const { currentTeam, userRole } = useTeam();
   const canSave = !!currentTeam && (userRole === "owner" || userRole === "admin" || userRole === "member");
 
   useEffect(() => {
-    if (!recipientId) { setData(null); setError(null); return; }
-    setLoading(true); setError(null); setData(null);
-    getVendorProfile(recipientId)
+    if (!recipientId && !vendorName) { setData(null); setError(null); setSelectedUei(null); return; }
+    setLoading(true); setError(null); setData(null); setSelectedUei(null);
+    // Pass both signals — the function decides UEI vs name-resolution.
+    getVendorProfile({ recipientId, vendorName })
       .then(setData)
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
-  }, [recipientId]);
+  }, [recipientId, vendorName]);
+
+  const pickCandidate = (uei: string) => {
+    setSelectedUei(uei);
+    setLoading(true); setError(null); setData(null);
+    getVendorProfile({ uei })
+      .then(setData)
+      .catch((e) => setError(e.message ?? "Failed to load"))
+      .finally(() => setLoading(false));
+  };
 
   const saveAsCompany = async () => {
     if (!currentTeam || !data) return;
     setSaving(true);
     try {
-      const draft = companyFromVendorLookup({ ...data, recipientId, recipientName: vendorName }, currentTeam.id);
+      const draft = companyFromVendorLookup(
+        { ...data, recipientId: data?.resolved?.uei ?? recipientId, recipientName: data?.resolved?.legal_name ?? vendorName },
+        currentTeam.id,
+      );
       await upsertCompany(draft);
       toast.success(`Saved ${draft.name} to companies`);
     } catch (e: any) {
@@ -55,13 +71,13 @@ export function VendorDetailDrawer({
     }
   };
 
-  const open = !!recipientId;
+  const open = !!(recipientId || vendorName);
   const sharedNaics = new Set(searchedNaics);
   const overlapNaics: string[] = data?.naicsBreakdown
     ?.filter((n: any) => sharedNaics.has(n.code))
     .map((n: any) => n.code) ?? [];
 
-  const assessment = !data
+  const assessment = !data || data.multipleMatches
     ? ""
     : overlapNaics.length >= 2
     ? "Direct competitor"
@@ -69,29 +85,32 @@ export function VendorDetailDrawer({
     ? "Potential competitor in shared NAICS"
     : "Different market segment — possible teaming partner";
 
+  const resolved = data?.resolved;
+  const warning = data?.summary?.warningFlag;
+
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
       <SheetContent side="right" className="w-[420px] sm:max-w-[420px] overflow-y-auto">
         <SheetHeader>
-          <SheetTitle className="text-base">{vendorName ?? "Vendor"}</SheetTitle>
-          {data?.profile?.location && (
-            <div className="text-xs text-muted-foreground">
-              {[data.profile.location.city_name, data.profile.location.state_code, data.profile.location.country_name].filter(Boolean).join(", ")}
+          <SheetTitle className="text-base">{resolved?.legal_name ?? vendorName ?? "Vendor"}</SheetTitle>
+          {resolved && (
+            <div className="text-[11px] font-mono text-muted-foreground">
+              UEI {resolved.uei}
+              {resolved.city || resolved.state
+                ? <span className="ml-2 font-sans">· {[resolved.city, resolved.state].filter(Boolean).join(", ")}</span>
+                : null}
             </div>
           )}
-          {data?.profile?.uei && (
-            <div className="text-[11px] font-mono text-muted-foreground">UEI {data.profile.uei}</div>
-          )}
-          {data?.profile?.business_types && (
+          {resolved?.business_types?.length ? (
             <div className="flex flex-wrap gap-1 pt-1">
-              {(data.profile.business_types as string[]).slice(0, 6).map((t) => (
+              {(resolved.business_types as string[]).slice(0, 6).map((t) => (
                 <Badge key={t} variant="secondary" className="text-[10px]">{t}</Badge>
               ))}
             </div>
-          )}
+          ) : null}
         </SheetHeader>
 
-        {data && canSave && (
+        {data && !data.multipleMatches && canSave && (
           <div className="mt-3">
             <Button size="sm" variant="outline" onClick={saveAsCompany} disabled={saving}>
               {saving ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <BookmarkPlus className="w-3 h-3 mr-1" />}
@@ -103,11 +122,47 @@ export function VendorDetailDrawer({
         {error && <div className="text-xs text-destructive mt-3">{error}</div>}
         {loading && <div className="space-y-3 mt-4"><Skeleton className="h-20" /><Skeleton className="h-32" /></div>}
 
-        {data && (
+        {data?.multipleMatches && (
+          <div className="mt-4 space-y-2">
+            <div className="text-xs text-muted-foreground">
+              Multiple SAM entities match "{data.query}". Pick one to load its contracts.
+            </div>
+            {(data.candidates ?? []).map((c: any) => (
+              <button
+                key={c.uei}
+                type="button"
+                onClick={() => pickCandidate(c.uei)}
+                className={`w-full text-left p-2 rounded border border-border hover:bg-muted/40 text-xs ${
+                  selectedUei === c.uei ? "ring-1 ring-primary" : ""
+                }`}
+              >
+                <div className="font-medium">{c.legal_name ?? "(no name)"}</div>
+                <div className="font-mono text-[10px] text-muted-foreground">UEI {c.uei}</div>
+                {(c.city || c.state) && (
+                  <div className="text-[10px] text-muted-foreground">{[c.city, c.state].filter(Boolean).join(", ")}</div>
+                )}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {data && !data.multipleMatches && (
           <div className="space-y-4 mt-4 text-xs">
+            {warning === "unusually_large_total" && (
+              <div className="flex items-start gap-2 p-2 rounded border border-amber-500/40 bg-amber-500/10 text-amber-900 dark:text-amber-200">
+                <AlertTriangle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+                <div>Total obligated is unusually large for a single vendor. Verify the resolved identity above matches the company you meant.</div>
+              </div>
+            )}
+            {data.summary?.droppedCount > 0 && (
+              <div className="text-[10px] text-muted-foreground">
+                Dropped {data.summary.droppedCount} contract{data.summary.droppedCount === 1 ? "" : "s"} not attributable to this UEI.
+              </div>
+            )}
+
             <div className="grid grid-cols-3 gap-2">
               <Stat label="Contracts" v={String(data.summary.totalContracts)} />
-              <Stat label="Total $" v={fmtUsd(data.summary.totalValue)} />
+              <Stat label="Obligated to this vendor" v={fmtUsd(data.summary.obligatedTotal ?? data.summary.totalValue)} />
               <Stat label="Active" v={String(data.summary.activeCount)} />
             </div>
 
@@ -120,7 +175,7 @@ export function VendorDetailDrawer({
               {data.naicsBreakdown.slice(0, 6).map((n: any) => (
                 <div key={n.code} className={`flex justify-between py-1 ${sharedNaics.has(n.code) ? "text-primary font-medium" : ""}`}>
                   <span className="font-mono">{n.code}</span>
-                  <span>{n.awards} · {fmtUsd(n.totalValue)}</span>
+                  <span>{n.awards} · {fmtUsd(n.obligatedTotal ?? n.totalValue)}</span>
                 </div>
               ))}
             </Section>
@@ -129,7 +184,7 @@ export function VendorDetailDrawer({
               {data.agencyBreakdown.slice(0, 6).map((a: any) => (
                 <div key={a.name} className="flex justify-between py-1 gap-2">
                   <span className="truncate">{a.name}</span>
-                  <span className="whitespace-nowrap">{a.awards} · {fmtUsd(a.totalValue)}</span>
+                  <span className="whitespace-nowrap">{a.awards} · {fmtUsd(a.obligatedTotal ?? a.totalValue)}</span>
                 </div>
               ))}
             </Section>
@@ -137,7 +192,7 @@ export function VendorDetailDrawer({
             <Section title="Recent Contracts">
               <div className="overflow-x-auto -mx-2">
                 <table className="w-full">
-                  <thead><tr className="text-left opacity-60"><th className="px-2 py-1">PIID</th><th>NAICS</th><th className="text-right px-2">Value</th><th>End</th></tr></thead>
+                  <thead><tr className="text-left opacity-60"><th className="px-2 py-1">PIID</th><th>NAICS</th><th className="text-right px-2">Obligated</th><th>End</th></tr></thead>
                   <tbody>
                     {data.contracts.slice(0, 15).map((c: any, i: number) => (
                       <tr key={i} className="border-t border-border/40">

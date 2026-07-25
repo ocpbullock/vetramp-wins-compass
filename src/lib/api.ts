@@ -190,13 +190,17 @@ export async function getCompetitiveIntel(input: {
   return data as CompetitiveIntel;
 }
 
-export async function getVendorProfile(recipientId: string) {
-  logCall(`vendor-profile ${recipientId.slice(0, 12)}`);
-  const { data, error } = await supabase.functions.invoke("vendor-profile", {
-    body: { recipientId },
-  });
+export async function getVendorProfile(
+  arg: string | { uei?: string | null; recipientId?: string | null; vendorName?: string | null },
+) {
+  const body = typeof arg === "string" ? { recipientId: arg } : arg;
+  const label = (body.uei || body.recipientId || body.vendorName || "vendor").toString().slice(0, 16);
+  logCall(`vendor-profile ${label}`);
+  const { data, error } = await supabase.functions.invoke("vendor-profile", { body });
   if (error) { logErr("vendor-profile", error.message); throw error; }
-  logOk("vendor-profile", `${data?.summary?.totalContracts ?? 0} contracts`);
+  logOk("vendor-profile", data?.multipleMatches
+    ? `${data.candidates?.length ?? 0} candidates`
+    : `${data?.summary?.totalContracts ?? 0} contracts`);
   return data;
 }
 
