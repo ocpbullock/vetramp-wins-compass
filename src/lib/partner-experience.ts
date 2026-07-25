@@ -81,20 +81,23 @@ export function rankPartnerExperience(
 ): PartnerExperienceTarget[] {
   const { hardFilterAgency = false, limit = 40, now = new Date() } = opts;
   const agency = opportunity.agency ?? null;
-  const agencyLc = agency ? agency.toLowerCase() : null;
 
-  const targets = deriveTeamingTargets(awards, {
-    agency: hardFilterAgency ? agency : null,
-    limit,
-  });
+  // deriveTeamingTargets uses a naive substring filter which fails on Tango's
+  // combined "PARENT / SUB (ACRONYM)" agency strings. Pre-filter with the loose
+  // matcher and pass agency=null to bypass the internal filter.
+  const scopedAwards = hardFilterAgency && agency
+    ? awards.filter((a) => agencyMatches(a, agency))
+    : awards;
+
+  const targets = deriveTeamingTargets(scopedAwards, { agency: null, limit });
 
   const ranked = targets.map((t) => {
     let agencyExperience = false;
-    if (agencyLc) {
+    if (agency) {
       agencyExperience = awards.some((a) => {
         const key = (a["Recipient UEI"] || a["Recipient Name"] || "").toUpperCase();
         const tKey = (t.uei || t.name).toUpperCase();
-        return key === tKey && agencyMatches(a, agencyLc);
+        return key === tKey && agencyMatches(a, agency);
       });
     }
     return scoreTarget(t, opportunity, agencyExperience, now);
