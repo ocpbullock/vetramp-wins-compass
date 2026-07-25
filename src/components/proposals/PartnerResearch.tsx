@@ -179,6 +179,11 @@ export function PartnerResearch({
       setDhMeta({
         fetched: r.results?.length ?? 0,
         agencyParam: r._debug?.agencyParam ?? agency,
+        agencyParamUsed: r._debug?.agencyParamUsed ?? null,
+        scopedCount: r._debug?.scopedCount,
+        fallbackUsed: r._debug?.fallbackUsed,
+        fallbackSampled: r._debug?.fallbackSampled,
+        fallbackMatched: r._debug?.fallbackMatched,
       });
       toast.success(`Pulled ${r.results?.length ?? 0} agency-scoped awards for dark-horse analysis`);
     } catch (e: any) {
