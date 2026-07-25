@@ -2507,36 +2507,6 @@ function TeamHubPanel({
         opportunitySetAside={proposal.set_aside ?? null}
       />
 
-      <Collapsible open={sandboxSectionOpen} onOpenChange={setSandboxSectionOpen}>
-        <Card ref={sandboxSectionRef}>
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Swords className="w-4 h-4" /> Scenario sandbox (what-if)
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  The Proposed Team above is the team of record. Use the sandbox to compare
-                  hypothetical lineups without touching it.
-                </CardDescription>
-              </div>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1">
-                  <ChevronRight className={`w-4 h-4 transition-transform ${sandboxSectionOpen ? "rotate-90" : ""}`} />
-                  {sandboxSectionOpen ? "Hide" : "Open"}
-                </Button>
-              </CollapsibleTrigger>
-            </div>
-          </CardHeader>
-          <CollapsibleContent>
-            <CardContent>
-              <Button size="sm" onClick={() => setSandboxOpen(true)} className="gap-1.5">
-                <Swords className="w-3.5 h-3.5" /> Launch Teaming Sandbox
-              </Button>
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
 
       <TeamingSandbox
         open={sandboxOpen}
