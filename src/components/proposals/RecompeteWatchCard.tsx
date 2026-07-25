@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2, RefreshCw, Radar, Sparkles, ChevronDown, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { enrichProposalFromSam } from "@/lib/sam-enrich";
+import { applyCaptureStage } from "@/lib/stage-mutations";
 
 type WatchEvent = {
   id: string;
