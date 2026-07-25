@@ -756,15 +756,25 @@ function ProposalPipeline() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <CaptureStageSelect
-                  proposalId={proposalId}
-                  value={proposal.capture_stage}
-                  size="default"
-                  className="min-w-[140px]"
-                  onChanged={() => { /* router/query layer refetches via realtime/invalidation elsewhere */ }}
-                />
                 <Button onClick={exportDocx} variant="outline" size="sm"><Download className="w-4 h-4 mr-1" />Export .docx</Button>
               </div>
+            </div>
+
+            <div className="pt-2 border-t">
+              <StageStepper
+                proposalId={proposalId}
+                value={proposal.capture_stage}
+                signals={{
+                  hasNaicsAgency: Boolean(proposal.naics_code && proposal.agency),
+                  hasSnapshot: Boolean(proposal.market_snapshot_at),
+                  hasAnalysis: Boolean(proposal.capture_analysis_at),
+                  teamingCount: teamingCountForSignals,
+                  sectionsCount: proposal.sections
+                    ? Object.values(proposal.sections).filter((s: any) => s && typeof s === "object" && s.content).length
+                    : 0,
+                }}
+                onChanged={refreshProposal}
+              />
             </div>
 
             <div className="flex items-center gap-3 pt-2 border-t">
