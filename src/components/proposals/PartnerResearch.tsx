@@ -871,9 +871,13 @@ export function PartnerResearch({
 
               {darkHorsesEnabled && dhAwards && darkHorses.length === 0 && !dhSearching && (
                 <div className="rounded-md border border-dashed border-border p-4 text-center text-xs space-y-1">
-                  {(dhMeta?.fetched ?? 0) === 0 ? (
+                  {(dhMeta?.scopedCount ?? dhMeta?.fetched ?? 0) === 0 && !dhMeta?.fallbackUsed ? (
                     <div className="text-amber-700 dark:text-amber-400">
-                      No awards returned for this agency string — try picking an agency from the suggestions.
+                      Agency-scoped query returned 0 — pick a canonical agency from the suggestions (e.g. "DEFENSE HEALTH AGENCY (DHA)" or "DHA").
+                    </div>
+                  ) : dhMeta?.fallbackUsed && (dhMeta?.fallbackMatched ?? 0) === 0 ? (
+                    <div className="text-amber-700 dark:text-amber-400">
+                      Agency-scoped query returned 0; fallback matched 0 of {dhMeta?.fallbackSampled ?? 0} sampled awards. Try a different agency string.
                     </div>
                   ) : (
                     <div className="text-muted-foreground">
@@ -882,7 +886,13 @@ export function PartnerResearch({
                   )}
                   {dhMeta && (
                     <div className="text-[10px] text-muted-foreground">
-                      Query agency: <span className="font-mono">{dhMeta.agencyParam ?? "—"}</span> · {dhMeta.fetched} awards fetched
+                      Query agency: <span className="font-mono">{dhMeta.agencyParam ?? "—"}</span>
+                      {dhMeta.agencyParamUsed && dhMeta.agencyParamUsed !== dhMeta.agencyParam && (
+                        <> → <span className="font-mono">{dhMeta.agencyParamUsed}</span></>
+                      )}
+                      {" "}· scoped {dhMeta.scopedCount ?? 0}
+                      {dhMeta.fallbackUsed && <> · fallback {dhMeta.fallbackMatched ?? 0}/{dhMeta.fallbackSampled ?? 0}</>}
+                      {" "}· {dhMeta.fetched} shown
                     </div>
                   )}
                 </div>
