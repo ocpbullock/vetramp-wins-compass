@@ -2350,7 +2350,14 @@ function TeamHubPanel({
       toast.error(error.message);
       return;
     }
-    toast.success(`Added ${s.partnerName} to the team`);
+    const wasFirstPartner = (snapshot?.length ?? 0) === 0;
+    const nextStage = wasFirstPartner ? nextCaptureStage(proposal?.capture_stage) : null;
+    toast.success(`Added ${s.partnerName} to the team`, nextStage ? {
+      action: {
+        label: `Move to ${nextStage.charAt(0).toUpperCase() + nextStage.slice(1)}`,
+        onClick: async () => { if (await applyCaptureStage(proposalId, nextStage)) { void refreshProposal?.(); } },
+      },
+    } : undefined);
     invalidateTeaming();
   };
 
