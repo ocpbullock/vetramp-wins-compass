@@ -11,6 +11,7 @@ import {
 import { matchIncumbent, type IncumbentMatch } from "./incumbents";
 import { deriveTeamingTargets, type TeamingTarget } from "./teaming-targets";
 import { rankPartnerExperience, type PartnerExperienceTarget } from "./partner-experience";
+import { agencyMatchesLoose } from "./agency-match";
 import { userContextFromProposal } from "./user-context";
 
 export type MarketSnapshot = {
@@ -149,7 +150,15 @@ export async function generateMarketSnapshot(
 
   // 3) prior primes & candidate partners
   onProgress("Ranking prior primes & partners…");
-  const teamingTargets = deriveTeamingTargets(results, { agency, limit: 40 });
+  // Pre-filter with loose matcher; deriveTeamingTargets' internal substring
+  // filter can't match Tango's "PARENT / SUB (ACRONYM)" format.
+  const agencyScoped = agency
+    ? results.filter((a) =>
+        agencyMatchesLoose(a["Awarding Agency"], agency) ||
+        agencyMatchesLoose(a["Awarding Sub Agency"], agency),
+      )
+    : results;
+  const teamingTargets = deriveTeamingTargets(agencyScoped, { agency: null, limit: 40 });
   const priorPrimes = teamingTargets.filter((t) => t.classification === "prime").slice(0, 15);
   const rankedPartners = rankPartnerExperience(
     results,

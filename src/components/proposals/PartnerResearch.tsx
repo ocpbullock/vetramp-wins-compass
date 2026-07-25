@@ -27,6 +27,7 @@ import {
 } from "@/lib/partner-experience";
 import { companyFromTeamingTarget, type TeamingTarget } from "@/lib/teaming-targets";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
+import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
 
 const SB_TYPES = [
   { value: "SDVOSB", label: "SDVOSB" },
@@ -130,8 +131,10 @@ export function PartnerResearch({
     _cached?: boolean;
     message?: string;
     partial_reason?: string;
+    _debug?: { agencyParam?: string | null; fetched?: number; source?: string };
     page_metadata?: { total: number; fetched: number; hasNext: boolean; truncated: boolean };
   } | null>(null);
+  const [dhMeta, setDhMeta] = useState<{ fetched: number; agencyParam: string | null } | null>(null);
   const [drilldown, setDrilldown] = useState<{ uei: string; name: string } | null>(null);
 
   // ===== DARK HORSES =====
@@ -143,6 +146,7 @@ export function PartnerResearch({
     const agency = agencyInput.trim();
     if (!agency) { toast.error("Enter an agency to find dark horses."); return; }
     setDhSearching(true);
+    setDhMeta(null);
     try {
       const r = await searchUsaspending({
         naicsCodes: [],
@@ -153,6 +157,10 @@ export function PartnerResearch({
         forceRefresh: opts.forceRefresh,
       });
       setDhAwards(r.results ?? []);
+      setDhMeta({
+        fetched: r.results?.length ?? 0,
+        agencyParam: r._debug?.agencyParam ?? agency,
+      });
       toast.success(`Pulled ${r.results?.length ?? 0} agency-scoped awards for dark-horse analysis`);
     } catch (e: any) {
       toast.error(e?.message || "Dark-horse search failed");
@@ -245,9 +253,10 @@ export function PartnerResearch({
       });
       setAwards(r.results ?? []);
       setSearchMeta({
-        _cached: (r as any)._cached,
+        _cached: r._cached,
         message: (r as any).message,
         partial_reason: (r as any).partial_reason,
+        _debug: r._debug,
         page_metadata: r.page_metadata,
       });
       setSnapshotTargets(null);
@@ -538,11 +547,11 @@ export function PartnerResearch({
               </div>
               <div className="md:col-span-2">
                 <Label className="text-[11px]">Agency (boost / hard filter)</Label>
-                <Input
-                  className="h-8 text-xs"
+                <AgencyCombobox
                   value={agencyInput}
-                  onChange={(e) => setAgencyInput(e.target.value)}
-                  placeholder="e.g. Department of Veterans Affairs"
+                  onChange={setAgencyInput}
+                  teamId={teamId}
+                  placeholder="Search agency or paste Tango-style string…"
                 />
               </div>
               <div>
@@ -624,6 +633,11 @@ export function PartnerResearch({
                 {searchMeta?._cached && agencyInput.trim() && (awards?.length ?? 0) > 0 && ranked.length === 0 && (
                   <div className="text-[11px] text-amber-700 dark:text-amber-400">
                     Cached data doesn't cover this agency — press Refresh to fetch agency-specific awards.
+                  </div>
+                )}
+                {searchMeta?._debug && (
+                  <div className="text-[10px] text-muted-foreground">
+                    Query agency: <span className="font-mono">{searchMeta._debug.agencyParam ?? "—"}</span> · {searchMeta._debug.fetched ?? 0} awards fetched ({searchMeta._debug.source})
                   </div>
                 )}
               </div>
@@ -822,8 +836,21 @@ export function PartnerResearch({
               )}
 
               {darkHorsesEnabled && dhAwards && darkHorses.length === 0 && !dhSearching && (
-                <div className="rounded-md border border-dashed border-border p-4 text-center text-xs text-muted-foreground">
-                  No adjacent-NAICS performers found for this agency.
+                <div className="rounded-md border border-dashed border-border p-4 text-center text-xs space-y-1">
+                  {(dhMeta?.fetched ?? 0) === 0 ? (
+                    <div className="text-amber-700 dark:text-amber-400">
+                      No awards returned for this agency string — try picking an agency from the suggestions.
+                    </div>
+                  ) : (
+                    <div className="text-muted-foreground">
+                      No adjacent-NAICS performers found for this agency.
+                    </div>
+                  )}
+                  {dhMeta && (
+                    <div className="text-[10px] text-muted-foreground">
+                      Query agency: <span className="font-mono">{dhMeta.agencyParam ?? "—"}</span> · {dhMeta.fetched} awards fetched
+                    </div>
+                  )}
                 </div>
               )}
 
