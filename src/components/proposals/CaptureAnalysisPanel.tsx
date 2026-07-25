@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -211,12 +211,19 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
 }
 
 export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
-  const qc = useQueryClient();
-  const analysis: CaptureAnalysis | null = (proposal?.capture_analysis as CaptureAnalysis | null) ?? null;
-  const generatedAt: string | null = proposal?.capture_analysis_at ?? null;
+  const [analysis, setAnalysis] = useState<CaptureAnalysis | null>(
+    (proposal?.capture_analysis as CaptureAnalysis | null) ?? null,
+  );
+  const [generatedAt, setGeneratedAt] = useState<string | null>(proposal?.capture_analysis_at ?? null);
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState<"internal" | "partner" | null>(null);
   const [pwinProbability, setPwinProbability] = useState<PwinProbabilityResult | null>(null);
+
+  // Sync local state when the parent-supplied proposal row changes.
+  useEffect(() => {
+    setAnalysis((proposal?.capture_analysis as CaptureAnalysis | null) ?? null);
+    setGeneratedAt(proposal?.capture_analysis_at ?? null);
+  }, [proposal?.capture_analysis, proposal?.capture_analysis_at]);
 
   const teaming = useTeamingSummary(proposal, proposalId);
 
@@ -246,13 +253,17 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   const rerun = async () => {
     setRunning(true);
     try {
-      const { error } = await supabase.functions.invoke("capture-analysis", {
+      const { data, error } = await supabase.functions.invoke("capture-analysis", {
         body: { proposalId, skipCache: true },
       });
       if (error) throw error;
+      const next = (data as any)?.analysis as CaptureAnalysis | undefined;
+      if (!next) throw new Error("No analysis returned");
+      setAnalysis(next);
+      setGeneratedAt(next._fetched_at ?? new Date().toISOString());
       toast.success("Capture analysis updated");
-      await qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
     } catch (e: any) {
+      console.error("[capture-analysis]", e);
       toast.error(e?.message ?? "Failed to run analysis");
     } finally {
       setRunning(false);
@@ -404,10 +415,19 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={rerun} disabled={running}>
-            {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-            Run capture analysis
-          </Button>
+          {running ? (
+            <div className="flex items-start gap-3 rounded-md border bg-muted/40 p-3">
+              <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary shrink-0" />
+              <div className="text-sm">
+                Running capture analysis — synthesizing market snapshot, human intel, and documents (30–60s)…
+              </div>
+            </div>
+          ) : (
+            <Button onClick={rerun} disabled={running}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Run capture analysis
+            </Button>
+          )}
         </CardContent>
       </Card>
     );

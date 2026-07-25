@@ -190,7 +190,9 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
       const merged = normalize({ ...returned, dimensions: returned.dimensions ?? matrix.dimensions });
       setMatrix(merged);
       await persist(merged);
-      await qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
+      // Local `matrix` state already reflects the prefill; parent proposal
+      // row will pick up positioning_matrix on its next refetch.
+
       toast.success("Matrix prefilled — every value is editable");
     } catch (e: any) {
       toast.error(e?.message ?? "Prefill failed");
