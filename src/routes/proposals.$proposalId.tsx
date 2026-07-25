@@ -185,6 +185,18 @@ function ProposalPipeline() {
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
   const [isPartnerView, setIsPartnerView] = useState(false);
 
+  const teamingSignalQ = useQuery({
+    queryKey: teamingEntriesKey(proposalId),
+    queryFn: () => fetchTeamingEntries(proposalId),
+    enabled: !!user && !!proposalId,
+  });
+  const teamingCountForSignals = teamingSignalQ.data?.length ?? 0;
+
+  const refreshProposal = useCallback(async () => {
+    const { data } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
+    if (data) setProposal(data);
+  }, [proposalId]);
+
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
   useEffect(() => {
