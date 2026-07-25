@@ -661,7 +661,17 @@ export function PartnerResearch({
                 )}
                 {searchMeta?._debug && (
                   <div className="text-[10px] text-muted-foreground">
-                    Query agency: <span className="font-mono">{searchMeta._debug.agencyParam ?? "—"}</span> · {searchMeta._debug.fetched ?? 0} awards fetched ({searchMeta._debug.source})
+                    <div>
+                      Query agency: <span className="font-mono">{searchMeta._debug.agencyParam ?? "—"}</span>
+                      {searchMeta._debug.agencyParamUsed && searchMeta._debug.agencyParamUsed !== searchMeta._debug.agencyParam && (
+                        <> → resolved <span className="font-mono">{searchMeta._debug.agencyParamUsed}</span> ({searchMeta._debug.agencyResolverSource ?? "—"})</>
+                      )}
+                      {" "}· scoped {searchMeta._debug.scopedCount ?? 0}
+                      {searchMeta._debug.fallbackUsed && (
+                        <> · fallback matched {searchMeta._debug.fallbackMatched ?? 0} of {searchMeta._debug.fallbackSampled ?? 0}</>
+                      )}
+                      {" "}· {searchMeta._debug.fetched ?? 0} shown ({searchMeta._debug.source})
+                    </div>
                   </div>
                 )}
               </div>
