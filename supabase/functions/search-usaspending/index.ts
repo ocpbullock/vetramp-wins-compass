@@ -86,6 +86,7 @@ Deno.serve(async (req) => {
           results,
           page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: false },
           _cached: true,
+          _debug: { agencyParam: agency ?? null, fetched: results.length, source: "cache" },
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
     }
