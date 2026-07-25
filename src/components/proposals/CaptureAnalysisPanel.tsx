@@ -245,7 +245,13 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       if (!next) throw new Error("No analysis returned");
       setAnalysis(next);
       setGeneratedAt(next._fetched_at ?? new Date().toISOString());
-      toast.success("Capture analysis updated");
+      const next = nextCaptureStage(proposal?.capture_stage);
+      toast.success("Capture analysis updated", next ? {
+        action: {
+          label: `Move to ${CAPTURE_STAGE_LABEL[next]}`,
+          onClick: () => { void applyCaptureStage(proposalId, next); },
+        },
+      } : undefined);
     } catch (e: any) {
       console.error("[capture-analysis]", e);
       toast.error(e?.message ?? "Failed to run analysis");
