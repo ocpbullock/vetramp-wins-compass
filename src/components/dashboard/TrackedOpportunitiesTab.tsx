@@ -312,7 +312,7 @@ export function TrackedOpportunitiesTab({
               <TableHead>Title / Agency</TableHead>
               <TableHead>Vehicle</TableHead>
               <TableHead>NAICS</TableHead>
-              <TableHead>pWin</TableHead>
+              <TableHead>Team Strength</TableHead>
               <TableHead className="text-right">Value</TableHead>
               <TableHead>Deadline</TableHead>
               <TableHead>Status</TableHead>

@@ -33,7 +33,7 @@ function PwinBreakdownDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" />
-            Solo-prime pWin estimate
+            Solo-prime Team Strength
           </DialogTitle>
           <DialogDescription>
             Quick triage score assuming {selfName} primes solo. Open the full Teaming
@@ -111,10 +111,10 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
     return (
       <span
         className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border bg-muted text-muted-foreground"
-        aria-label="pWin loading"
+        aria-label="Team Strength loading"
       >
         <Sparkles className="w-3 h-3" />
-        pWin …
+        Strength …
       </span>
     );
   }
@@ -122,10 +122,10 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
   if (state.kind === "setup") {
     const tip =
       state.reason === "no-team"
-        ? "Select a team to compute pWin."
+        ? "Select a team to compute team strength."
         : state.reason === "no-own-company"
-        ? "Add your own company in Settings to enable pWin scoring."
-        : "Add your company's NAICS, certifications, and capabilities in Settings to enable pWin scoring.";
+        ? "Add your own company in Settings to enable team strength scoring."
+        : "Add your company's NAICS, certifications, and capabilities in Settings to enable team strength scoring.";
     return (
       <TooltipProvider delayDuration={150}>
         <Tooltip>
@@ -134,10 +134,10 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
               type="button"
               onClick={() => navigate({ to: "/settings" })}
               className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] border bg-muted text-muted-foreground hover:bg-muted/70"
-              aria-label="pWin: set up profile to score"
+              aria-label="Team Strength: set up profile to score"
             >
               <SettingsIcon className="w-3 h-3" />
-              pWin · Set up profile
+              Strength · Set up profile
             </button>
           </TooltipTrigger>
           <TooltipContent className="text-xs max-w-xs">{tip}</TooltipContent>
@@ -157,14 +157,14 @@ export function PwinChip({ opp }: { opp: OppForPwin }) {
               type="button"
               onClick={() => setOpen(true)}
               className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border tabular-nums hover:opacity-80 ${tone.bg} ${tone.text}`}
-              aria-label={`pWin ${state.result.pwin}`}
+              aria-label={`Team Strength ${state.result.pwin}`}
             >
               <Sparkles className="w-3 h-3" />
-              pWin {state.result.pwin}
+              Strength {state.result.pwin}
             </button>
           </TooltipTrigger>
           <TooltipContent className="text-xs">
-            Solo-prime pWin · click for breakdown
+            Solo-prime Team Strength · click for breakdown
           </TooltipContent>
         </Tooltip>
       </TooltipProvider>

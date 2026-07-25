@@ -59,7 +59,7 @@ function emptyMatrix(): PositioningMatrix {
 function normalize(m: any | null): PositioningMatrix {
   if (!m || typeof m !== "object") return emptyMatrix();
   const dims: string[] = Array.isArray(m.dimensions) && m.dimensions.length
-    ? (m.dimensions as any[]).slice(0, 6).map((d) => String(d))
+    ? (m.dimensions as any[]).slice(0, 8).map((d) => String(d))
     : [...DEFAULT_DIMENSIONS];
   const rows: MatrixRow[] = Array.isArray(m.rows) ? m.rows.map((r: any) => ({
     company: String(r?.company ?? ""),
@@ -146,7 +146,7 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
   }));
 
   const addDimension = () => setMatrix((m) => {
-    if (m.dimensions.length >= 6) { toast.warning("Maximum 6 dimensions"); return m; }
+    if (m.dimensions.length >= 8) { toast.warning("Maximum 8 dimensions"); return m; }
     const name = `Dimension ${m.dimensions.length + 1}`;
     return {
       ...m,
@@ -249,7 +249,7 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
               <StoplightDot rating={r} size="md" /> {RATING_LABEL[r]}
             </span>
           ))}
-          <span className="ml-auto">{matrix.rows.length} row(s) · {matrix.dimensions.length}/6 dimensions</span>
+          <span className="ml-auto">{matrix.rows.length} row(s) · {matrix.dimensions.length}/8 dimensions</span>
         </div>
 
         {!hasContent ? (
@@ -367,7 +367,7 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
         )}
 
         <div className="flex items-center justify-between pt-1">
-          <Button size="sm" variant="ghost" onClick={addDimension} disabled={matrix.dimensions.length >= 6}>
+          <Button size="sm" variant="ghost" onClick={addDimension} disabled={matrix.dimensions.length >= 8}>
             <Plus className="w-3.5 h-3.5 mr-1" /> Add dimension
           </Button>
           {matrix.updatedAt && (

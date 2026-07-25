@@ -32,9 +32,11 @@ import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
 import { PtwCard } from "./PtwCard";
-import { computePtw } from "@/lib/ptw";
+
 import { PwinDial } from "@/components/PwinDial";
 import { MetricCard } from "@/components/MetricCard";
+import { PwinProbabilityCard } from "./PwinProbabilityCard";
+import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 
 type CaptureAnalysis = {
   bid_no_bid: {
@@ -61,11 +63,6 @@ const PRIORITY_VARIANT: Record<"high" | "medium" | "low", "destructive" | "defau
   high: "destructive", medium: "default", low: "secondary",
 };
 
-function fmtMoneyM(m: number | null | undefined): string {
-  if (m == null || !Number.isFinite(m)) return "—";
-  if (m >= 1000) return `$${(m / 1000).toFixed(1)}B`;
-  return `$${m.toFixed(1)}M`;
-}
 
 function countdown(deadline?: string | null) {
   if (!deadline) return null;
@@ -77,7 +74,7 @@ function countdown(deadline?: string | null) {
 }
 
 // ---- Shared hook: deterministic teaming summary (PWIN + suggestions) ----
-function useTeamingSummary(proposal: any, proposalId: string) {
+export function useTeamingSummary(proposal: any, proposalId: string) {
   const teamId: string | null = proposal?.team_id ?? null;
 
   const { data: partners = [], isLoading: loadingPartners } = useQuery({
@@ -219,6 +216,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   const generatedAt: string | null = proposal?.capture_analysis_at ?? null;
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState<"internal" | "partner" | null>(null);
+  const [pwinProbability, setPwinProbability] = useState<PwinProbabilityResult | null>(null);
 
   const teaming = useTeamingSummary(proposal, proposalId);
 
@@ -382,6 +380,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
         captureAnalysis: analysis,
         intelItems,
         teamingSummary,
+        pwinProbability,
         darkHorses: (proposal?.market_snapshot as any)?.darkHorses ?? null,
         positioningMatrix: (proposal as any)?.positioning_matrix ?? null,
         ptwAnalysis: (proposal as any)?.ptw_analysis ?? null,
@@ -419,16 +418,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   const pwinValue = teaming.ready ? teaming.pwinResult.pwin : null;
 
 
-  // PTW "as assumed" from saved inputs (recompute — logic lives in ptw.ts).
-  let ptwAsAssumed: number | null = null;
-  const ptwInputs = (proposal as any)?.ptw_analysis;
-  if (ptwInputs?.competitors?.length) {
-    try {
-      const ptw = computePtw(ptwInputs);
-      const s = ptw.scenarios.find((x) => x.label === "If rated as assumed");
-      ptwAsAssumed = s?.recommendedTepM ?? null;
-    } catch { /* ignore */ }
-  }
+
 
   const cd = countdown(proposal?.response_deadline);
 
@@ -444,21 +434,27 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           </CardContent>
         </Card>
         <MetricCard
-          label="Current PWIN"
+          label="PWIN (probability)"
+          value={pwinProbability ? `${pwinProbability.likelyPct}%` : "—"}
+          sub={
+            pwinProbability
+              ? pwinProbability.gateFailed
+                ? `Gate failed: ${pwinProbability.gateFailed}`
+                : `Range ${pwinProbability.lowPct}–${pwinProbability.highPct}%`
+              : "Computing…"
+          }
+          tone={pwinProbability?.gateFailed ? "destructive" : "default"}
+        />
+        <MetricCard
+          label="Team Strength"
           visual={<PwinDial value={pwinValue} size="sm" />}
           sub={
             pwinValue == null
               ? (teaming.teamId ? "Computing…" : "—")
               : teaming.ready && teaming.pwinResult.overAllocated
                 ? "Roster over-allocated"
-                : "From current roster"
+                : "Capability score (0–100)"
           }
-        />
-        <MetricCard
-          label="PTW · as assumed"
-          value={fmtMoneyM(ptwAsAssumed)}
-          tone="money"
-          sub="Recommended TEP"
         />
         <MetricCard
           label="Response deadline"
@@ -471,6 +467,15 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           }
         />
       </div>
+
+      {/* --- PWIN PROBABILITY (drivers + editable inputs) --- */}
+      <PwinProbabilityCard
+        proposal={proposal}
+        proposalId={proposalId}
+        teamStrength={pwinValue}
+        pwinFactors={teaming.ready ? teaming.pwinResult : null}
+        onResult={setPwinProbability}
+      />
 
       {/* --- Toolbar --- */}
       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground border rounded-md px-3 py-2 bg-card">
@@ -695,7 +700,7 @@ function TeamingRecommendationCard({
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="flex items-center gap-4">
-          <PwinDial value={pwinResult.pwin} size="sm" label="Current PWIN" />
+          <PwinDial value={pwinResult.pwin} size="sm" label="Team Strength" />
           <div className="text-xs text-muted-foreground">
             {pwinResult.overAllocated ? (
               <Badge variant="destructive">Over-allocated</Badge>

@@ -199,7 +199,7 @@ export function OpportunitiesTab({
                 <SortHead k="agency" label="Agency" />
                 <SortHead k="naics" label="NAICS" />
                 <SortHead k="type" label="Type" />
-                <th>pWin</th>
+                <th>Team Strength</th>
                 <SortHead k="incumbent" label="Incumbent" />
                 <SortHead k="posted" label="Posted" />
                 <SortHead k="deadline" label="Deadline" />

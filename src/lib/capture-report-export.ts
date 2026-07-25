@@ -9,6 +9,7 @@ import type { PartnerSuggestion } from "@/lib/partner-suggest";
 import type { DarkHorseTarget } from "@/lib/partner-experience";
 import type { TeamingTarget } from "@/lib/teaming-targets";
 import { computePtw, type EvalRating, type PtwCompetitor } from "@/lib/ptw";
+import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 
 const FONT_BODY = "Times New Roman";
 const FONT_HEAD = "Arial";
@@ -147,6 +148,7 @@ export type CaptureReportInputs = {
       note?: string;
     }>;
   } | null;
+  pwinProbability?: PwinProbabilityResult | null;
 };
 
 export type CaptureReportOptions = {
@@ -159,7 +161,7 @@ export async function exportCaptureReportDocx(
 ) {
   const variant = options.variant ?? "internal";
   const isInternal = variant === "internal";
-  const { proposal, marketSnapshot, captureAnalysis, intelItems, teamingSummary, darkHorses, positioningMatrix, ptwAnalysis } = inputs;
+  const { proposal, marketSnapshot, captureAnalysis, intelItems, teamingSummary, darkHorses, positioningMatrix, ptwAnalysis, pwinProbability } = inputs;
 
   const children: (Paragraph | Table)[] = [];
 
@@ -434,10 +436,24 @@ export async function exportCaptureReportDocx(
   children.push(new Paragraph({ children: [new PageBreak()] }));
   children.push(h1("Recommended Team"));
   const pwin = teamingSummary?.pwin ?? null;
+  if (pwinProbability) {
+    if (pwinProbability.gateFailed) {
+      children.push(p(
+        `PWIN (probability): ${pwinProbability.likelyPct}% (${pwinProbability.lowPct}–${pwinProbability.highPct}%) — GATE FAILED: ${pwinProbability.gateFailed}`,
+        { bold: true, size: 26, color: "B91C1C" },
+      ));
+    } else {
+      children.push(p(
+        `PWIN (probability): ${pwinProbability.likelyPct}% (${pwinProbability.lowPct}–${pwinProbability.highPct}%)`,
+        { bold: true, size: 28 },
+      ));
+    }
+    for (const d of pwinProbability.drivers) children.push(bullet(d));
+  }
   if (!pwin) {
-    children.push(noteEmpty("PWIN not yet computed for this opportunity."));
+    children.push(noteEmpty("Team Strength not yet computed for this opportunity."));
   } else {
-    children.push(p(`Current PWIN: ${pwin.pwin}`, { bold: true, size: 28 }));
+    children.push(p(`Team Strength: ${pwin.pwin}/100`, { bold: true, size: 26 }));
     if (pwin.overAllocated) {
       children.push(p("⚠ Team is over-allocated on work share.", { color: "B91C1C", italic: true }));
     }

@@ -50,7 +50,8 @@ import { MarketIntelPanel } from "@/components/proposals/MarketIntelPanel";
 import { ActivitiesPanel } from "@/components/proposals/ActivitiesPanel";
 import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursuitsCard";
 import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
-import { CaptureAnalysisPanel } from "@/components/proposals/CaptureAnalysisPanel";
+import { CaptureAnalysisPanel, useTeamingSummary } from "@/components/proposals/CaptureAnalysisPanel";
+import { PwinProbabilityCard } from "@/components/proposals/PwinProbabilityCard";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
 import { NaicsCombobox } from "@/components/NaicsCombobox";
@@ -2250,6 +2251,7 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
   const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
+  const teaming = useTeamingSummary(proposal, proposalId);
 
   const { data: existingPartnerIds = [] } = useQuery({
     queryKey: ["proposal-teaming", proposalId],
@@ -2300,6 +2302,14 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
 
   return (
     <div className="space-y-4">
+      <PwinProbabilityCard
+        proposal={proposal}
+        proposalId={proposalId}
+        teamStrength={teaming.ready ? teaming.pwinResult.pwin : null}
+        pwinFactors={teaming.ready ? teaming.pwinResult : null}
+        compact
+      />
+
       <Card>
         <CardHeader className="pb-2">
           <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Team actions</CardTitle>
