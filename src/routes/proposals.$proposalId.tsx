@@ -2411,10 +2411,10 @@ function TeamHubPanel({
               )}
               <button
                 type="button"
-                onClick={openSandboxSection}
-                className="ml-auto inline-flex items-center gap-0.5 text-primary hover:underline"
+                onClick={() => setSandboxOpen(true)}
+                className="ml-auto inline-flex items-center gap-1 text-primary hover:underline"
               >
-                Scenario sandbox →
+                <Swords className="w-3 h-3" /> Launch sandbox
               </button>
             </span>
           }
