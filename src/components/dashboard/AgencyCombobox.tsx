@@ -82,39 +82,62 @@ export function AgencyCombobox({
     staleTime: 5 * 60 * 1000,
   });
 
-  const suggestions = useMemo(() => {
+  const dataSource = agenciesProp && agenciesProp.length > 0 ? agenciesProp : cachedAgencies;
+  const staticSet = new Set(STATIC_AGENCIES.map((a) => a.toUpperCase()));
+
+  const grouped = useMemo(() => {
+    const query = q.trim();
+    const qn = normalizeAgency(query);
+    const keep = (s: string) => {
+      if (!query) return true;
+      if (s.toLowerCase().includes(query.toLowerCase())) return true;
+      const sn = normalizeAgency(s);
+      return sn.includes(qn) || qn.includes(sn) || agencyMatchesLoose(s, query);
+    };
+    const fromData = Array.from(new Set(dataSource))
+      .filter(keep)
+      .filter((s) => !staticSet.has(s.toUpperCase()))
+      .slice(0, 30);
+    const common = STATIC_AGENCIES.filter(keep).slice(0, 30);
+    return { fromData, common };
+  }, [q, dataSource]);
+
+  const allSuggestions = useMemo(() => {
     const seen = new Set<string>();
     const out: string[] = [];
-    const source = agenciesProp && agenciesProp.length > 0
-      ? [...agenciesProp, ...STATIC_AGENCIES]
-      : [...cachedAgencies, ...STATIC_AGENCIES];
-    for (const a of source) {
+    for (const a of [...dataSource, ...STATIC_AGENCIES]) {
       const key = a.toUpperCase();
       if (!seen.has(key)) { seen.add(key); out.push(a); }
     }
     return out;
-  }, [cachedAgencies, agenciesProp]);
-
-  const filtered = useMemo(() => {
-    const query = q.trim();
-    if (!query) return suggestions.slice(0, 40);
-    const qn = normalizeAgency(query);
-    return suggestions.filter((s) => {
-      if (s.toLowerCase().includes(query.toLowerCase())) return true;
-      const sn = normalizeAgency(s);
-      return sn.includes(qn) || qn.includes(sn) || agencyMatchesLoose(s, query);
-    }).slice(0, 40);
-  }, [q, suggestions]);
+  }, [dataSource]);
 
   // Auto-select closest match when value is present but doesn't match a
   // suggestion verbatim (e.g. proposal.agency is "Defense Health Agency").
   useEffect(() => {
     if (!value) return;
-    if (suggestions.some((s) => s.toUpperCase() === value.toUpperCase())) return;
-    const hit = suggestions.find((s) => agencyMatchesLoose(s, value));
+    if (allSuggestions.some((s) => s.toUpperCase() === value.toUpperCase())) return;
+    const hit = allSuggestions.find((s) => agencyMatchesLoose(s, value));
     if (hit) onChange(hit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggestions.length]);
+  }, [allSuggestions.length]);
+
+  const renderItem = (s: string) => (
+    <CommandItem
+      key={s}
+      value={s}
+      onSelect={() => { onChange(s); setOpen(false); }}
+      className="text-xs"
+    >
+      <Check
+        className={cn(
+          "mr-2 h-3 w-3",
+          value.toUpperCase() === s.toUpperCase() ? "opacity-100" : "opacity-0",
+        )}
+      />
+      {s}
+    </CommandItem>
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -133,7 +156,7 @@ export function AgencyCombobox({
       <PopoverContent className="w-[420px] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Type agency name or acronym…"
+            placeholder="Type agency name or acronym (e.g. DHA)…"
             value={q}
             onValueChange={setQ}
           />
@@ -151,24 +174,16 @@ export function AgencyCombobox({
                 )}
               </div>
             </CommandEmpty>
-            <CommandGroup>
-              {filtered.map((s) => (
-                <CommandItem
-                  key={s}
-                  value={s}
-                  onSelect={() => { onChange(s); setOpen(false); }}
-                  className="text-xs"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-3 w-3",
-                      value.toUpperCase() === s.toUpperCase() ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  {s}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {grouped.fromData.length > 0 && (
+              <CommandGroup heading="From your data">
+                {grouped.fromData.map(renderItem)}
+              </CommandGroup>
+            )}
+            {grouped.common.length > 0 && (
+              <CommandGroup heading="Common agencies">
+                {grouped.common.map(renderItem)}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>
