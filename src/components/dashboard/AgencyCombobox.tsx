@@ -10,31 +10,42 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { agencyMatchesLoose, normalizeAgency } from "@/lib/agency-match";
 
-// Common awarding-agency strings in Tango's "PARENT / SUB (ACRONYM)" format.
+// Canonical sub-tier / department names Tango's `awarding_agency` filter
+// matches reliably. Parent-only strings (e.g. "DEPT OF DEFENSE / ...") match
+// the parent only and return the wrong scope — do NOT list them here.
 const STATIC_AGENCIES = [
-  "DEPT OF DEFENSE / DEFENSE HEALTH AGENCY (DHA)",
-  "DEPT OF DEFENSE / DEPT OF THE ARMY (ARMY)",
-  "DEPT OF DEFENSE / DEPT OF THE NAVY (NAVY)",
-  "DEPT OF DEFENSE / DEPT OF THE AIR FORCE (USAF)",
-  "DEPT OF DEFENSE / DEFENSE INFORMATION SYSTEMS AGENCY (DISA)",
-  "DEPT OF DEFENSE / DEFENSE LOGISTICS AGENCY (DLA)",
-  "DEPT OF DEFENSE / DEFENSE THREAT REDUCTION AGENCY (DTRA)",
-  "DEPT OF DEFENSE / SPECIAL OPERATIONS COMMAND (SOCOM)",
-  "DEPT OF DEFENSE / U.S. CYBER COMMAND (USCYBERCOM)",
+  // DoD sub-tiers
+  "DEFENSE HEALTH AGENCY (DHA)",
+  "DEPT OF THE ARMY",
+  "DEPT OF THE NAVY",
+  "DEPT OF THE AIR FORCE",
+  "DEFENSE INFORMATION SYSTEMS AGENCY (DISA)",
+  "DEFENSE LOGISTICS AGENCY (DLA)",
+  "DEFENSE THREAT REDUCTION AGENCY (DTRA)",
+  "U.S. SPECIAL OPERATIONS COMMAND (USSOCOM)",
+  "U.S. CYBER COMMAND (USCYBERCOM)",
+  "MISSILE DEFENSE AGENCY (MDA)",
+  "DEFENSE ADVANCED RESEARCH PROJECTS AGENCY (DARPA)",
+  // Civilian departments / sub-tiers
   "DEPT OF VETERANS AFFAIRS (VA)",
-  "DEPT OF HOMELAND SECURITY / CYBERSECURITY AND INFRASTRUCTURE SECURITY AGENCY (CISA)",
-  "DEPT OF HOMELAND SECURITY / U.S. CITIZENSHIP AND IMMIGRATION SERVICES (USCIS)",
-  "DEPT OF HOMELAND SECURITY / TRANSPORTATION SECURITY ADMINISTRATION (TSA)",
-  "DEPT OF HOMELAND SECURITY / U.S. COAST GUARD (USCG)",
-  "DEPT OF HOMELAND SECURITY / FEDERAL EMERGENCY MANAGEMENT AGENCY (FEMA)",
+  "CYBERSECURITY AND INFRASTRUCTURE SECURITY AGENCY (CISA)",
+  "U.S. CITIZENSHIP AND IMMIGRATION SERVICES (USCIS)",
+  "TRANSPORTATION SECURITY ADMINISTRATION (TSA)",
+  "U.S. COAST GUARD (USCG)",
+  "FEDERAL EMERGENCY MANAGEMENT AGENCY (FEMA)",
   "GENERAL SERVICES ADMINISTRATION (GSA)",
+  "NATIONAL INSTITUTES OF HEALTH (NIH)",
+  "CENTERS FOR DISEASE CONTROL AND PREVENTION (CDC)",
   "DEPT OF HEALTH AND HUMAN SERVICES (HHS)",
   "SOCIAL SECURITY ADMINISTRATION (SSA)",
   "DEPT OF JUSTICE (DOJ)",
+  "FEDERAL BUREAU OF INVESTIGATION (FBI)",
   "DEPT OF STATE (DOS)",
   "DEPT OF THE TREASURY (TREAS)",
+  "INTERNAL REVENUE SERVICE (IRS)",
   "DEPT OF ENERGY (DOE)",
   "DEPT OF TRANSPORTATION (DOT)",
+  "FEDERAL AVIATION ADMINISTRATION (FAA)",
   "NATIONAL AERONAUTICS AND SPACE ADMINISTRATION (NASA)",
 ];
 
@@ -71,39 +82,62 @@ export function AgencyCombobox({
     staleTime: 5 * 60 * 1000,
   });
 
-  const suggestions = useMemo(() => {
+  const dataSource = agenciesProp && agenciesProp.length > 0 ? agenciesProp : cachedAgencies;
+  const staticSet = new Set(STATIC_AGENCIES.map((a) => a.toUpperCase()));
+
+  const grouped = useMemo(() => {
+    const query = q.trim();
+    const qn = normalizeAgency(query);
+    const keep = (s: string) => {
+      if (!query) return true;
+      if (s.toLowerCase().includes(query.toLowerCase())) return true;
+      const sn = normalizeAgency(s);
+      return sn.includes(qn) || qn.includes(sn) || agencyMatchesLoose(s, query);
+    };
+    const fromData = Array.from(new Set(dataSource))
+      .filter(keep)
+      .filter((s) => !staticSet.has(s.toUpperCase()))
+      .slice(0, 30);
+    const common = STATIC_AGENCIES.filter(keep).slice(0, 30);
+    return { fromData, common };
+  }, [q, dataSource]);
+
+  const allSuggestions = useMemo(() => {
     const seen = new Set<string>();
     const out: string[] = [];
-    const source = agenciesProp && agenciesProp.length > 0
-      ? [...agenciesProp, ...STATIC_AGENCIES]
-      : [...cachedAgencies, ...STATIC_AGENCIES];
-    for (const a of source) {
+    for (const a of [...dataSource, ...STATIC_AGENCIES]) {
       const key = a.toUpperCase();
       if (!seen.has(key)) { seen.add(key); out.push(a); }
     }
     return out;
-  }, [cachedAgencies, agenciesProp]);
-
-  const filtered = useMemo(() => {
-    const query = q.trim();
-    if (!query) return suggestions.slice(0, 40);
-    const qn = normalizeAgency(query);
-    return suggestions.filter((s) => {
-      if (s.toLowerCase().includes(query.toLowerCase())) return true;
-      const sn = normalizeAgency(s);
-      return sn.includes(qn) || qn.includes(sn) || agencyMatchesLoose(s, query);
-    }).slice(0, 40);
-  }, [q, suggestions]);
+  }, [dataSource]);
 
   // Auto-select closest match when value is present but doesn't match a
   // suggestion verbatim (e.g. proposal.agency is "Defense Health Agency").
   useEffect(() => {
     if (!value) return;
-    if (suggestions.some((s) => s.toUpperCase() === value.toUpperCase())) return;
-    const hit = suggestions.find((s) => agencyMatchesLoose(s, value));
+    if (allSuggestions.some((s) => s.toUpperCase() === value.toUpperCase())) return;
+    const hit = allSuggestions.find((s) => agencyMatchesLoose(s, value));
     if (hit) onChange(hit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [suggestions.length]);
+  }, [allSuggestions.length]);
+
+  const renderItem = (s: string) => (
+    <CommandItem
+      key={s}
+      value={s}
+      onSelect={() => { onChange(s); setOpen(false); }}
+      className="text-xs"
+    >
+      <Check
+        className={cn(
+          "mr-2 h-3 w-3",
+          value.toUpperCase() === s.toUpperCase() ? "opacity-100" : "opacity-0",
+        )}
+      />
+      {s}
+    </CommandItem>
+  );
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -122,7 +156,7 @@ export function AgencyCombobox({
       <PopoverContent className="w-[420px] p-0" align="start">
         <Command shouldFilter={false}>
           <CommandInput
-            placeholder="Type agency name or acronym…"
+            placeholder="Type agency name or acronym (e.g. DHA)…"
             value={q}
             onValueChange={setQ}
           />
@@ -140,24 +174,16 @@ export function AgencyCombobox({
                 )}
               </div>
             </CommandEmpty>
-            <CommandGroup>
-              {filtered.map((s) => (
-                <CommandItem
-                  key={s}
-                  value={s}
-                  onSelect={() => { onChange(s); setOpen(false); }}
-                  className="text-xs"
-                >
-                  <Check
-                    className={cn(
-                      "mr-2 h-3 w-3",
-                      value.toUpperCase() === s.toUpperCase() ? "opacity-100" : "opacity-0",
-                    )}
-                  />
-                  {s}
-                </CommandItem>
-              ))}
-            </CommandGroup>
+            {grouped.fromData.length > 0 && (
+              <CommandGroup heading="From your data">
+                {grouped.fromData.map(renderItem)}
+              </CommandGroup>
+            )}
+            {grouped.common.length > 0 && (
+              <CommandGroup heading="Common agencies">
+                {grouped.common.map(renderItem)}
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

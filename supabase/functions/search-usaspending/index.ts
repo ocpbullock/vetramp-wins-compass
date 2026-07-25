@@ -5,8 +5,10 @@ import {
   contractRowToUsaspendingShape,
   checkDailyUsage,
   logUsage,
+  resolveAwardingAgency,
   TangoError,
 } from "../_shared/tango-client.ts";
+import { agencyMatchesLoose } from "../_shared/agency-match.ts";
 import { authenticate, resolveTeamId, authErrorResponse, jsonError } from "../_shared/auth.ts";
 
 const CACHE_TTL_HOURS = 24 * 7; // contracts change less frequently
@@ -112,43 +114,87 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Hit Tango with pagination
-    const all: any[] = [];
-    let page = 1;
-    let cursor: string | null = null;
-    let calls = 0;
-    let hasNext = true;
-    while (hasNext && all.length < maxResults) {
-      const u = await checkDailyUsage(admin, team_id);
-      if (!u.allowed) break;
-      const params: Record<string, unknown> = {
-        page,
-        page_size: PAGE_SIZE,
-        award_date_gte: fromIso,
-        award_date_lte: toIso,
-      };
-      if (cursor) params.cursor = cursor;
-      if (naicsCodes.length) params.naics = naicsCodes;
-      if (keyword) params.search = keyword;
-      if (agency) params.awarding_agency = agency;
-      if (vendorName) params.recipient = vendorName;
+    // ---- Resolve the agency string to a value Tango's awarding_agency
+    // filter reliably matches (canonical sub-tier name, code, or acronym).
+    let agencyResolved: string | null = null;
+    let agencyResolverSource: string | null = null;
+    if (agency) {
       try {
-        const resp = await searchContracts(params as any);
-        calls++;
-        await logUsage(admin, { team_id, endpoint: "/contracts/", params, cached: false, response_status: 200 });
-        const batch = resp.results ?? [];
-        all.push(...batch);
-        cursor = resp.next ? new URL(resp.next).searchParams.get("cursor") : null;
-        hasNext = !!resp.next && batch.length === PAGE_SIZE;
-        page++;
+        const r = await resolveAwardingAgency(agency);
+        agencyResolved = r.resolved || null;
+        agencyResolverSource = r.canonical ? `resolver:${r.canonical.code ?? r.canonical.key}` : "raw";
       } catch (e) {
-        const te = e as TangoError;
-        await logUsage(admin, { team_id, endpoint: "/contracts/", params, cached: false, response_status: te.status });
-        console.error("tango contracts error", te);
-        break;
+        console.warn("agency resolver failed", e);
+        agencyResolved = agency;
+        agencyResolverSource = "raw";
       }
-      // Pace 500ms between calls
-      if (hasNext) await new Promise((r) => setTimeout(r, 500));
+    }
+
+    // Hit Tango with pagination (scoped by agencyResolved when present).
+    const runFetch = async (opts: { withAgency: boolean; maxPages: number; startingPage?: number }) => {
+      const collected: any[] = [];
+      let page = opts.startingPage ?? 1;
+      let cursor: string | null = null;
+      let calls = 0;
+      let hasNext = true;
+      while (hasNext && collected.length < maxResults && page <= (opts.startingPage ?? 1) + opts.maxPages - 1) {
+        const u = await checkDailyUsage(admin, team_id);
+        if (!u.allowed) break;
+        const params: Record<string, unknown> = {
+          page,
+          page_size: PAGE_SIZE,
+          award_date_gte: fromIso,
+          award_date_lte: toIso,
+        };
+        if (cursor) params.cursor = cursor;
+        if (naicsCodes.length) params.naics = naicsCodes;
+        if (keyword) params.search = keyword;
+        if (opts.withAgency && agencyResolved) params.awarding_agency = agencyResolved;
+        if (vendorName) params.recipient = vendorName;
+        try {
+          const resp = await searchContracts(params as any);
+          calls++;
+          await logUsage(admin, { team_id, endpoint: "/contracts/", params, cached: false, response_status: 200 });
+          const batch = resp.results ?? [];
+          collected.push(...batch);
+          cursor = resp.next ? new URL(resp.next).searchParams.get("cursor") : null;
+          hasNext = !!resp.next && batch.length === PAGE_SIZE;
+          page++;
+        } catch (e) {
+          const te = e as TangoError;
+          await logUsage(admin, { team_id, endpoint: "/contracts/", params, cached: false, response_status: te.status });
+          console.error("tango contracts error", te);
+          break;
+        }
+        if (hasNext) await new Promise((r) => setTimeout(r, 500));
+      }
+      return { collected, calls };
+    };
+
+    // Primary pass: agency-scoped when we have one.
+    const primary = await runFetch({ withAgency: !!agencyResolved, maxPages: 5 });
+    let all = primary.collected;
+    let calls = primary.calls;
+    let fallbackUsed = false;
+    let fallbackSampled = 0;
+
+    // Fallback: agency-scoped returned zero → sample NAICS-wide and loose-match.
+    if (agency && all.length === 0) {
+      fallbackUsed = true;
+      const fb = await runFetch({ withAgency: false, maxPages: 3 });
+      calls += fb.calls;
+      fallbackSampled = fb.collected.length;
+      const matcher = (row: any) => {
+        const combined = [
+          row?.awarding_agency, row?.["Awarding Agency"],
+          row?.awarding_sub_agency, row?.["Awarding Sub Agency"],
+          row?.awarding_sub_tier_agency_name,
+          row?.awarding_office?.agency_name,
+          row?.awarding_office?.department_name,
+        ].filter(Boolean).join(" | ");
+        return agencyMatchesLoose(combined, agency);
+      };
+      all = fb.collected.filter(matcher);
     }
 
     // Dedupe
@@ -175,7 +221,17 @@ Deno.serve(async (req) => {
       page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: results.length >= maxResults },
       _cached: false,
       calls,
-      _debug: { agencyParam: agency ?? null, fetched: results.length, source: "live" },
+      _debug: {
+        agencyParam: agency ?? null,
+        agencyParamUsed: agencyResolved,
+        agencyResolverSource,
+        scopedCount: primary.collected.length,
+        fallbackUsed,
+        fallbackSampled,
+        fallbackMatched: fallbackUsed ? results.length : 0,
+        fetched: results.length,
+        source: fallbackUsed ? "live+fallback" : "live",
+      },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("search-usaspending (tango) error:", e);

@@ -91,7 +91,17 @@ export async function searchUsaspending(input: {
     results: HistoricalAward[];
     page_metadata: { total: number; fetched: number; hasNext: boolean; truncated: boolean };
     _cached?: boolean;
-    _debug?: { agencyParam?: string | null; fetched?: number; source?: string };
+    _debug?: {
+      agencyParam?: string | null;
+      agencyParamUsed?: string | null;
+      agencyResolverSource?: string | null;
+      scopedCount?: number;
+      fallbackUsed?: boolean;
+      fallbackSampled?: number;
+      fallbackMatched?: number;
+      fetched?: number;
+      source?: string;
+    };
   };
 }
 

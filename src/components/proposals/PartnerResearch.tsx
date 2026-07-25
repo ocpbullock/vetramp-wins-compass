@@ -28,6 +28,7 @@ import {
 import { companyFromTeamingTarget, type TeamingTarget } from "@/lib/teaming-targets";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
+import { NaicsCombobox } from "@/components/NaicsCombobox";
 
 const SB_TYPES = [
   { value: "SDVOSB", label: "SDVOSB" },
@@ -131,10 +132,28 @@ export function PartnerResearch({
     _cached?: boolean;
     message?: string;
     partial_reason?: string;
-    _debug?: { agencyParam?: string | null; fetched?: number; source?: string };
+    _debug?: {
+      agencyParam?: string | null;
+      agencyParamUsed?: string | null;
+      agencyResolverSource?: string | null;
+      scopedCount?: number;
+      fallbackUsed?: boolean;
+      fallbackSampled?: number;
+      fallbackMatched?: number;
+      fetched?: number;
+      source?: string;
+    };
     page_metadata?: { total: number; fetched: number; hasNext: boolean; truncated: boolean };
   } | null>(null);
-  const [dhMeta, setDhMeta] = useState<{ fetched: number; agencyParam: string | null } | null>(null);
+  const [dhMeta, setDhMeta] = useState<{
+    fetched: number;
+    agencyParam: string | null;
+    agencyParamUsed?: string | null;
+    scopedCount?: number;
+    fallbackUsed?: boolean;
+    fallbackSampled?: number;
+    fallbackMatched?: number;
+  } | null>(null);
   const [drilldown, setDrilldown] = useState<{ uei: string; name: string } | null>(null);
 
   // ===== DARK HORSES =====
@@ -160,6 +179,11 @@ export function PartnerResearch({
       setDhMeta({
         fetched: r.results?.length ?? 0,
         agencyParam: r._debug?.agencyParam ?? agency,
+        agencyParamUsed: r._debug?.agencyParamUsed ?? null,
+        scopedCount: r._debug?.scopedCount,
+        fallbackUsed: r._debug?.fallbackUsed,
+        fallbackSampled: r._debug?.fallbackSampled,
+        fallbackMatched: r._debug?.fallbackMatched,
       });
       toast.success(`Pulled ${r.results?.length ?? 0} agency-scoped awards for dark-horse analysis`);
     } catch (e: any) {
@@ -538,11 +562,11 @@ export function PartnerResearch({
             <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
               <div>
                 <Label className="text-[11px]">NAICS code</Label>
-                <Input
-                  className="h-8 text-xs"
+                <NaicsCombobox
                   value={naicsInput}
-                  onChange={(e) => setNaicsInput(e.target.value)}
-                  placeholder="e.g. 541512"
+                  onChange={(v) => setNaicsInput(Array.isArray(v) ? (v[0] ?? "") : v)}
+                  mode="single"
+                  placeholder="Search NAICS…"
                 />
               </div>
               <div className="md:col-span-2">
@@ -637,7 +661,17 @@ export function PartnerResearch({
                 )}
                 {searchMeta?._debug && (
                   <div className="text-[10px] text-muted-foreground">
-                    Query agency: <span className="font-mono">{searchMeta._debug.agencyParam ?? "—"}</span> · {searchMeta._debug.fetched ?? 0} awards fetched ({searchMeta._debug.source})
+                    <div>
+                      Query agency: <span className="font-mono">{searchMeta._debug.agencyParam ?? "—"}</span>
+                      {searchMeta._debug.agencyParamUsed && searchMeta._debug.agencyParamUsed !== searchMeta._debug.agencyParam && (
+                        <> → resolved <span className="font-mono">{searchMeta._debug.agencyParamUsed}</span> ({searchMeta._debug.agencyResolverSource ?? "—"})</>
+                      )}
+                      {" "}· scoped {searchMeta._debug.scopedCount ?? 0}
+                      {searchMeta._debug.fallbackUsed && (
+                        <> · fallback matched {searchMeta._debug.fallbackMatched ?? 0} of {searchMeta._debug.fallbackSampled ?? 0}</>
+                      )}
+                      {" "}· {searchMeta._debug.fetched ?? 0} shown ({searchMeta._debug.source})
+                    </div>
                   </div>
                 )}
               </div>
@@ -837,9 +871,13 @@ export function PartnerResearch({
 
               {darkHorsesEnabled && dhAwards && darkHorses.length === 0 && !dhSearching && (
                 <div className="rounded-md border border-dashed border-border p-4 text-center text-xs space-y-1">
-                  {(dhMeta?.fetched ?? 0) === 0 ? (
+                  {(dhMeta?.scopedCount ?? dhMeta?.fetched ?? 0) === 0 && !dhMeta?.fallbackUsed ? (
                     <div className="text-amber-700 dark:text-amber-400">
-                      No awards returned for this agency string — try picking an agency from the suggestions.
+                      Agency-scoped query returned 0 — pick a canonical agency from the suggestions (e.g. "DEFENSE HEALTH AGENCY (DHA)" or "DHA").
+                    </div>
+                  ) : dhMeta?.fallbackUsed && (dhMeta?.fallbackMatched ?? 0) === 0 ? (
+                    <div className="text-amber-700 dark:text-amber-400">
+                      Agency-scoped query returned 0; fallback matched 0 of {dhMeta?.fallbackSampled ?? 0} sampled awards. Try a different agency string.
                     </div>
                   ) : (
                     <div className="text-muted-foreground">
@@ -848,7 +886,13 @@ export function PartnerResearch({
                   )}
                   {dhMeta && (
                     <div className="text-[10px] text-muted-foreground">
-                      Query agency: <span className="font-mono">{dhMeta.agencyParam ?? "—"}</span> · {dhMeta.fetched} awards fetched
+                      Query agency: <span className="font-mono">{dhMeta.agencyParam ?? "—"}</span>
+                      {dhMeta.agencyParamUsed && dhMeta.agencyParamUsed !== dhMeta.agencyParam && (
+                        <> → <span className="font-mono">{dhMeta.agencyParamUsed}</span></>
+                      )}
+                      {" "}· scoped {dhMeta.scopedCount ?? 0}
+                      {dhMeta.fallbackUsed && <> · fallback {dhMeta.fallbackMatched ?? 0}/{dhMeta.fallbackSampled ?? 0}</>}
+                      {" "}· {dhMeta.fetched} shown
                     </div>
                   )}
                 </div>

@@ -125,6 +125,64 @@ export function searchEntities(params: {
   });
 }
 
+// ---------- Agency / organization resolution ----------
+
+export type TangoOrganization = {
+  key: string;
+  code: string | null;
+  name: string;
+  abbreviation: string | null;
+  type: string | null;
+  level: number | null;
+};
+
+export function listOrganizations(params: {
+  search?: string;
+  type?: string; // e.g. "SUBTIER" | "DEPARTMENT" | "AGENCY"
+  level?: number;
+  parent?: string;
+  limit?: number;
+} = {}) {
+  const { limit, ...rest } = params;
+  return tangoFetch<TangoResponse<TangoOrganization>>("/api/organizations/", { ...rest, limit });
+}
+
+/**
+ * Resolve a user-supplied agency string to a value the Tango `awarding_agency`
+ * filter reliably matches. Empirically:
+ *   - Full names like "Defense Health Agency" → 0 results (name-match fails).
+ *   - Combined "PARENT / SUB (ACRONYM)" strings → matches PARENT only.
+ *   - Sub-tier canonical name "DEFENSE HEALTH AGENCY (DHA)" → works.
+ *   - Acronym "DHA" → works.
+ *   - Sub-tier code (e.g. "97DH") → works.
+ * We ask /api/organizations/ for the closest SUBTIER/AGENCY-level org and
+ * return its canonical name (preferred) or code.
+ */
+export async function resolveAwardingAgency(
+  query: string,
+): Promise<{ resolved: string; canonical: TangoOrganization | null; source: "resolver" | "raw" }> {
+  const q = (query ?? "").trim();
+  if (!q) return { resolved: "", canonical: null, source: "raw" };
+  // Extract "(ACRONYM)" if user pasted a Tango-style combined string.
+  const acronymMatch = q.match(/\(([A-Z0-9._-]{2,10})\)/);
+  const acronym = acronymMatch?.[1];
+  // Strip parent prefix like "DEPT OF DEFENSE / " to give the resolver a chance.
+  const stripped = q.replace(/^.*\/\s*/, "").replace(/\s*\([^)]*\)\s*$/, "").trim();
+  const attempts = [acronym, stripped, q].filter((v): v is string => !!v && v.length >= 2);
+  for (const term of attempts) {
+    try {
+      const { results } = await listOrganizations({ search: term, type: "SUBTIER", limit: 5 });
+      const hit = results?.find((o) => (o.level ?? 99) <= 2) ?? results?.[0];
+      if (hit) {
+        // Prefer canonical name (includes "(ACRONYM)"); Tango's awarding_agency
+        // filter matches on it exactly and returns the correct scope.
+        return { resolved: hit.name || hit.code || term, canonical: hit, source: "resolver" };
+      }
+    } catch (_) { /* keep trying next term */ }
+  }
+  return { resolved: q, canonical: null, source: "raw" };
+}
+
 export function searchSubawards(params: {
   prime_uei?: string;
   sub_uei?: string;
