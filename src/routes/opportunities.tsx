@@ -20,6 +20,7 @@ import { BOARD_STAGES, captureStageToBoard, type BoardStage } from "@/lib/captur
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
+import { kickOffMarketSnapshotById } from "@/lib/market-snapshot";
 
 export const Route = createFileRoute("/opportunities")({
   component: OpportunitiesPage,
