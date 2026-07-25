@@ -198,11 +198,18 @@ export type PartnerView = {
   naics_codes: string[];
   capabilities_summary: string | null;
   past_performance_summary: string | null;
+  /** Raw past_performance jsonb — passed through so pWin can score partner
+   *  experience on NAICS/agency/recency the same way it scores the self member. */
+  past_performance: PastPerfEntry[];
   contract_vehicles: string[];
   relationship_status: "active" | "prospective" | "inactive";
   relationship_strength: number | null;
   worked_together_before: boolean;
   is_existing_partner: boolean;
+  /** Partnership signals surfaced in the pWin partner-fit factor. */
+  has_nda: boolean;
+  has_teaming_agreement: boolean;
+  prior_contract_together: boolean;
   notes: string | null;
 };
 
@@ -223,11 +230,15 @@ export function companyToPartnerView(c: Company): PartnerView {
     naics_codes: c.naics_codes ?? [],
     capabilities_summary: c.capabilities_narrative,
     past_performance_summary: ppSummary,
+    past_performance: (c.past_performance ?? []) as PastPerfEntry[],
     contract_vehicles: c.contract_vehicles ?? [],
     relationship_status: c.relationship_status,
     relationship_strength: c.relationship_strength,
-    worked_together_before: c.worked_together_before,
-    is_existing_partner: c.is_existing_partner,
+    worked_together_before: !!c.worked_together_before,
+    is_existing_partner: !!c.is_existing_partner,
+    has_nda: !!c.has_nda,
+    has_teaming_agreement: !!c.has_teaming_agreement,
+    prior_contract_together: !!c.prior_contract_together,
     notes: c.notes,
   };
 }
