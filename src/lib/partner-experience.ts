@@ -152,11 +152,11 @@ export function rankDarkHorses(
   const oppNaics = (opportunity.naics_code || "").trim();
   if (!oppNaics) return [];
   const oppPrefix = oppNaics.slice(0, NAICS_PREFIX_LEN);
-  const agencyLc = opportunity.agency ? opportunity.agency.toLowerCase() : null;
+  const agency = opportunity.agency ?? null;
 
-  // Agency-scope hard filter when an agency is provided.
-  const scoped = agencyLc
-    ? awards.filter((a) => agencyMatches(a, agencyLc))
+  // Agency-scope hard filter when an agency is provided (loose matcher).
+  const scoped = agency
+    ? awards.filter((a) => agencyMatches(a, agency))
     : awards;
 
   type Bucket = {
