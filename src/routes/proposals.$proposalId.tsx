@@ -2251,7 +2251,15 @@ function PlaceholderHubPanel({ title, description }: { title: string; descriptio
   );
 }
 
-function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+function TeamHubPanel({
+  proposal,
+  proposalId,
+  onProposalPatch,
+}: {
+  proposal: any;
+  proposalId: string;
+  onProposalPatch?: (patch: Record<string, unknown>) => void;
+}) {
   const qc = useQueryClient();
   const teamId: string | null = proposal.team_id ?? null;
   const [sandboxOpen, setSandboxOpen] = useState(false);
@@ -2260,24 +2268,23 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
   const teaming = useTeamingSummary(proposal, proposalId);
+  const sandboxSectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Single canonical read of proposal_teaming rows for this pursuit; every
-  // add/remove/edit path invalidates this key so the scoreboard, Proposed Team
-  // card, and Suggestions list stay in sync.
+  const openSandboxSection = useCallback(() => {
+    setSandboxSectionOpen(true);
+    // Re-seeding is inherent: the sandbox reads the current proposed team
+    // when it mounts / opens. Just scroll it into view.
+    requestAnimationFrame(() => {
+      sandboxSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
+
+  // Single canonical read of proposal_teaming rows — same key & fetcher as
+  // ProposedTeamCard and useTeamingSummary so all three share one cache entry.
   const { data: teamingEntries = [] } = useQuery({
-    queryKey: ["proposed-team-entries", proposalId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("proposal_teaming")
-        .select("id, company_id, role, work_share_pct, outreach_status")
-        .eq("proposal_id", proposalId)
-        .order("created_at");
-      if (error) throw new Error(error.message);
-      return (data ?? []) as {
-        id: string; company_id: string; role: string;
-        work_share_pct: number | null; outreach_status: string;
-      }[];
-    },
+    queryKey: teamingEntriesKey(proposalId),
+    queryFn: () => fetchTeamingEntries(proposalId),
+    refetchOnWindowFocus: false,
   });
   const existingPartnerIds = useMemo(
     () => teamingEntries.map((e) => e.company_id),
