@@ -29,7 +29,7 @@ Deno.serve(async (req) => {
     const admin = ctx.admin;
 
     const body = await req.json();
-    const { naicsCodes = [], startDate, endDate, keyword, agency, vendorName, maxResults = MAX_RESULTS, teamId } = body;
+    const { naicsCodes = [], startDate, endDate, keyword, agency, vendorName, maxResults = MAX_RESULTS, teamId, forceRefresh = false } = body;
 
     let team_id: string | null;
     try { team_id = await resolveTeamId(ctx, teamId ?? null); }
@@ -39,30 +39,57 @@ Deno.serve(async (req) => {
     const fromIso = fmt(startDate);
     const toIso = fmt(endDate);
 
+    const AGENCY_MIN_CACHE_ROWS = 10;
 
-    // Cache check
-    const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 3600 * 1000).toISOString();
-    let q = admin
-      .from("tango_cached_contracts")
-      .select("*")
-      .eq("team_id", team_id)
-      .gte("fetched_at", cutoff);
-    if (naicsCodes.length) q = q.in("naics_code", naicsCodes);
-    if (startDate) q = q.gte("award_date", new Date(fromIso).toISOString());
-    if (endDate) q = q.lte("award_date", new Date(toIso + "T23:59:59Z").toISOString());
-    if (agency) q = q.ilike("agency", `%${agency}%`);
-    if (vendorName) q = q.ilike("vendor_name", `%${vendorName}%`);
+    // Cache check (skipped when forceRefresh)
+    if (!forceRefresh) {
+      const cutoff = new Date(Date.now() - CACHE_TTL_HOURS * 3600 * 1000).toISOString();
+      let q = admin
+        .from("tango_cached_contracts")
+        .select("*")
+        .eq("team_id", team_id)
+        .gte("fetched_at", cutoff);
+      if (naicsCodes.length) q = q.in("naics_code", naicsCodes);
+      if (startDate) q = q.gte("award_date", new Date(fromIso).toISOString());
+      if (endDate) q = q.lte("award_date", new Date(toIso + "T23:59:59Z").toISOString());
+      if (agency) q = q.ilike("agency", `%${agency}%`);
+      if (vendorName) q = q.ilike("vendor_name", `%${vendorName}%`);
 
-    const { data: cachedRows } = await q.limit(maxResults);
-    if (cachedRows && cachedRows.length > 0) {
-      await logUsage(admin, { team_id, endpoint: "/contracts/", params: body, cached: true, response_status: 200 });
-      const results = cachedRows.map(contractRowToUsaspendingShape);
-      return new Response(JSON.stringify({
-        results,
-        page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: false },
-        _cached: true,
-      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      const { data: cachedRows } = await q.limit(maxResults);
+      let usable = cachedRows ?? [];
+
+      // Agency-aware in-memory filter to catch rows whose sub-agency lives in raw_data
+      // (older cached rows may not have sub-agency in the top-level `agency` column).
+      if (agency && usable.length) {
+        const needle = agency.toLowerCase();
+        usable = usable.filter((row: any) => {
+          const top = String(row.agency ?? "").toLowerCase();
+          const raw = row.raw_data ?? {};
+          const candidates = [
+            top,
+            String(raw?.["Awarding Sub Agency"] ?? "").toLowerCase(),
+            String(raw?.awarding_sub_agency ?? "").toLowerCase(),
+            String(raw?.awarding_sub_tier_agency_name ?? "").toLowerCase(),
+            String(raw?.awarding_office?.agency_name ?? "").toLowerCase(),
+            String(raw?.awarding_office?.department_name ?? "").toLowerCase(),
+          ];
+          return candidates.some((c) => c && c.includes(needle));
+        });
+      }
+
+      // Only serve the cache when it has meaningful coverage for the query.
+      const enoughCoverage = agency ? usable.length >= AGENCY_MIN_CACHE_ROWS : usable.length > 0;
+      if (enoughCoverage) {
+        await logUsage(admin, { team_id, endpoint: "/contracts/", params: body, cached: true, response_status: 200 });
+        const results = usable.map(contractRowToUsaspendingShape);
+        return new Response(JSON.stringify({
+          results,
+          page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: false },
+          _cached: true,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
+
 
     // Daily quota
     const usage = await checkDailyUsage(admin, team_id);
