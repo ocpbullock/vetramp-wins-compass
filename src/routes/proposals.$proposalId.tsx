@@ -52,6 +52,9 @@ import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursu
 import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
 import { CaptureAnalysisPanel, useTeamingSummary } from "@/components/proposals/CaptureAnalysisPanel";
 import { PwinProbabilityCard } from "@/components/proposals/PwinProbabilityCard";
+import { ProposedTeamCard } from "@/components/proposals/ProposedTeamCard";
+import { MetricCard } from "@/components/MetricCard";
+import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
 import { NaicsCombobox } from "@/components/NaicsCombobox";
