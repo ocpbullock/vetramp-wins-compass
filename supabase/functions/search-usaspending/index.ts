@@ -5,8 +5,10 @@ import {
   contractRowToUsaspendingShape,
   checkDailyUsage,
   logUsage,
+  resolveAwardingAgency,
   TangoError,
 } from "../_shared/tango-client.ts";
+import { agencyMatchesLoose } from "../_shared/agency-match.ts";
 import { authenticate, resolveTeamId, authErrorResponse, jsonError } from "../_shared/auth.ts";
 
 const CACHE_TTL_HOURS = 24 * 7; // contracts change less frequently
