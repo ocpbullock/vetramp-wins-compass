@@ -103,7 +103,11 @@ function summarizeHistorical(results: HistoricalAward[]) {
  * Run all market data pulls for an opportunity and assemble a snapshot.
  * Saves to proposals.market_snapshot + market_snapshot_at.
  */
-export async function generateMarketSnapshot(proposal: any): Promise<MarketSnapshot> {
+export async function generateMarketSnapshot(
+  proposal: any,
+  opts?: { onProgress?: (step: string) => void },
+): Promise<MarketSnapshot> {
+  const onProgress = opts?.onProgress ?? (() => {});
   const naicsCodes = proposal.naics_code ? [String(proposal.naics_code)] : [];
   const agency = proposal.agency ?? null;
   const keyword = proposal.opportunity_title ?? null;
@@ -112,8 +116,10 @@ export async function generateMarketSnapshot(proposal: any): Promise<MarketSnaps
   const startDate = new Date(Date.now() - 5 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
   // 1) historical awards
+  onProgress("Pulling award history…");
   let results: HistoricalAward[] = [];
   let pageMeta: any = { total: 0, fetched: 0, hasNext: false, truncated: false };
+  let awardsError: string | undefined;
   if (naicsCodes.length > 0) {
     try {
       const r = await searchUsaspending({
@@ -125,14 +131,15 @@ export async function generateMarketSnapshot(proposal: any): Promise<MarketSnaps
       });
       results = r.results ?? [];
       pageMeta = r.page_metadata ?? pageMeta;
-    } catch (e) {
-      // continue with empty awards
+    } catch (e: any) {
+      awardsError = e?.message ?? "Award history request failed";
     }
   }
 
   const historicalSummary = summarizeHistorical(results);
 
-  // 2) incumbent (run only if we have something to match against)
+  // 2) incumbent
+  onProgress("Identifying incumbent…");
   let incumbent: IncumbentMatch | null = null;
   if (results.length > 0) {
     try {
@@ -141,10 +148,9 @@ export async function generateMarketSnapshot(proposal: any): Promise<MarketSnaps
   }
 
   // 3) prior primes & candidate partners
+  onProgress("Ranking prior primes & partners…");
   const teamingTargets = deriveTeamingTargets(results, { agency, limit: 40 });
   const priorPrimes = teamingTargets.filter((t) => t.classification === "prime").slice(0, 15);
-  // Rank candidate partners by relevance to this opportunity using the same
-  // helper as the research panel, so both surfaces order candidates identically.
   const rankedPartners = rankPartnerExperience(
     results,
     { agency, set_aside: proposal.set_aside ?? null },
@@ -155,6 +161,7 @@ export async function generateMarketSnapshot(proposal: any): Promise<MarketSnaps
     .slice(0, 25);
 
   // 4) competitive intel
+  onProgress("Analyzing competitors…");
   let competitors: CompeteVendor[] = [];
   let competitiveIntelError: string | undefined;
   if (proposal.team_id && proposal.naics_code && agency) {
@@ -193,8 +200,10 @@ export async function generateMarketSnapshot(proposal: any): Promise<MarketSnaps
     candidatePartners,
     competitors,
     competitiveIntelError,
+    awardsError,
   };
 
+  onProgress("Saving snapshot…");
   await supabase
     .from("proposals")
     .update({
@@ -209,7 +218,26 @@ export async function generateMarketSnapshot(proposal: any): Promise<MarketSnaps
 /** Fire-and-forget background generation (used after creating a proposal). */
 export function kickOffMarketSnapshot(proposal: any): void {
   if (!proposal?.id || !proposal?.naics_code || !proposal?.agency) return;
-  void generateMarketSnapshot(proposal).catch(() => {
-    // best-effort; UI can regenerate manually
-  });
+  markSnapshotStart(proposal.id);
+  void generateMarketSnapshot(proposal)
+    .then(() => { clearSnapshotStart(proposal.id); })
+    .catch((e) => {
+      clearSnapshotStart(proposal.id);
+      // eslint-disable-next-line no-console
+      console.error("[market-snapshot] background generation failed", e);
+      try { toast.error(`Market snapshot failed: ${e?.message ?? "unknown error"}`); } catch { /* noop */ }
+    });
 }
+
+/** Look up the proposal by id, then kick off background generation. */
+export async function kickOffMarketSnapshotById(proposalId: string): Promise<void> {
+  if (!proposalId) return;
+  const { data, error } = await supabase
+    .from("proposals")
+    .select("*")
+    .eq("id", proposalId)
+    .maybeSingle();
+  if (error || !data) return;
+  kickOffMarketSnapshot(data);
+}
+
