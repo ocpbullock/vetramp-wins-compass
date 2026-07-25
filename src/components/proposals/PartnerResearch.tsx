@@ -139,7 +139,7 @@ export function PartnerResearch({
   const [dhSearching, setDhSearching] = useState(false);
   const [dhAwards, setDhAwards] = useState<HistoricalAward[] | null>(null);
 
-  const runDarkHorseSearch = async () => {
+  const runDarkHorseSearch = async (opts: { forceRefresh?: boolean } = {}) => {
     const agency = agencyInput.trim();
     if (!agency) { toast.error("Enter an agency to find dark horses."); return; }
     setDhSearching(true);
@@ -150,6 +150,7 @@ export function PartnerResearch({
         startDate: yearsAgoIso(lookbackYears),
         endDate: todayIso(),
         maxResults: 500,
+        forceRefresh: opts.forceRefresh,
       });
       setDhAwards(r.results ?? []);
       toast.success(`Pulled ${r.results?.length ?? 0} agency-scoped awards for dark-horse analysis`);
@@ -159,6 +160,7 @@ export function PartnerResearch({
       setDhSearching(false);
     }
   };
+
 
   const darkHorses: DarkHorseTarget[] = useMemo(() => {
     if (!darkHorsesEnabled || !dhAwards || !naicsInput.trim()) return [];
