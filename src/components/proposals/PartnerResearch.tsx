@@ -621,6 +621,11 @@ export function PartnerResearch({
                     <CheckCircle2 className="w-3 h-3" /> Showing cached data
                   </div>
                 )}
+                {searchMeta?._cached && agencyInput.trim() && (awards?.length ?? 0) > 0 && ranked.length === 0 && (
+                  <div className="text-[11px] text-amber-700 dark:text-amber-400">
+                    Cached data doesn't cover this agency — press Refresh to fetch agency-specific awards.
+                  </div>
+                )}
               </div>
             )}
 
