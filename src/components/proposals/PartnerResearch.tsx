@@ -253,9 +253,10 @@ export function PartnerResearch({
       });
       setAwards(r.results ?? []);
       setSearchMeta({
-        _cached: (r as any)._cached,
+        _cached: r._cached,
         message: (r as any).message,
         partial_reason: (r as any).partial_reason,
+        _debug: r._debug,
         page_metadata: r.page_metadata,
       });
       setSnapshotTargets(null);
