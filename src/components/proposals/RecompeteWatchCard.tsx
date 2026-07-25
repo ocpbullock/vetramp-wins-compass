@@ -222,18 +222,23 @@ export function RecompeteWatchCard({
 
 function EventRow({
   event,
+  proposalId,
   onMarkReviewed,
   onEnrich,
   enriching,
   readOnly,
 }: {
   event: WatchEvent;
+  proposalId?: string;
   onMarkReviewed?: () => void;
   onEnrich?: () => void;
   enriching?: boolean;
   readOnly?: boolean;
 }) {
   const showEnrich = !readOnly && (event.event_type === "new_notice" || event.event_type === "attachment_update");
+  const hint = (event.maturity_hint ?? "").toLowerCase();
+  const isFinalSolicitation = /final[_ ]?solicitation|final rfp|solicitation released/.test(hint);
+  const canAdvance = !readOnly && proposalId && isFinalSolicitation;
   return (
     <div className="rounded-md border border-border p-3 space-y-1.5">
       <div className="flex items-center gap-2 flex-wrap">
@@ -253,11 +258,27 @@ function EventRow({
         <div className="text-xs font-medium text-[color:var(--brand-brass)]">{event.maturity_hint}</div>
       )}
       {!readOnly && (
-        <div className="flex items-center gap-2 pt-1">
+        <div className="flex items-center gap-2 pt-1 flex-wrap">
           {showEnrich && (
             <Button size="sm" variant="outline" onClick={onEnrich} disabled={enriching} className="gap-1.5 h-7 text-xs">
               {enriching ? <Loader2 className="w-3 h-3 animate-spin" /> : <Sparkles className="w-3 h-3" />}
               Enrich from SAM
+            </Button>
+          )}
+          {canAdvance && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                if (await applyCaptureStage(proposalId!, "proposal")) {
+                  toast.success("Moved to Proposal stage");
+                  onMarkReviewed?.();
+                }
+              }}
+              className="h-7 text-xs gap-1.5 border-[color:var(--brand-brass)]/50 text-[color:var(--brand-brass)]"
+            >
+              <Sparkles className="w-3 h-3" />
+              Move to Proposal stage
             </Button>
           )}
           <Button size="sm" variant="ghost" onClick={onMarkReviewed} className="h-7 text-xs">
