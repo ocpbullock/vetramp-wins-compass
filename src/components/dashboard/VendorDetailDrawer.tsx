@@ -154,11 +154,15 @@ export function VendorDetailDrawer({
                 <div>Total obligated is unusually large for a single vendor. Verify the resolved identity above matches the company you meant.</div>
               </div>
             )}
-            {data.summary?.droppedCount > 0 && (
-              <div className="text-[10px] text-muted-foreground">
-                Dropped {data.summary.droppedCount} contract{data.summary.droppedCount === 1 ? "" : "s"} not attributable to this UEI.
+            {data.summary?.noAwards ? (
+              <div className="p-2 rounded border border-border bg-muted/30 text-muted-foreground">
+                No federal prime awards found for this UEI in the last 5 years.
               </div>
-            )}
+            ) : (data.summary?.droppedCount > 0 && (
+              <div className="text-[10px] text-muted-foreground">
+                Filtered out {data.summary.droppedCount} contract{data.summary.droppedCount === 1 ? "" : "s"} that didn't match this UEI or legal name.
+              </div>
+            ))}
 
             <div className="grid grid-cols-3 gap-2">
               <Stat label="Contracts" v={String(data.summary.totalContracts)} />
