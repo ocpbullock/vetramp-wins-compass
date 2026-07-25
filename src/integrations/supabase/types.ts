@@ -392,6 +392,53 @@ export type Database = {
           },
         ]
       }
+      diagnostics_runs: {
+        Row: {
+          created_at: string
+          failed: number
+          id: string
+          passed: number
+          ran_at: string
+          ran_by: string | null
+          results: Json
+          team_id: string | null
+          total: number
+          warned: number
+        }
+        Insert: {
+          created_at?: string
+          failed?: number
+          id?: string
+          passed?: number
+          ran_at?: string
+          ran_by?: string | null
+          results?: Json
+          team_id?: string | null
+          total?: number
+          warned?: number
+        }
+        Update: {
+          created_at?: string
+          failed?: number
+          id?: string
+          passed?: number
+          ran_at?: string
+          ran_by?: string | null
+          results?: Json
+          team_id?: string | null
+          total?: number
+          warned?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "diagnostics_runs_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           category: string
