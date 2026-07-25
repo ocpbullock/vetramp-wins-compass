@@ -547,11 +547,11 @@ export function PartnerResearch({
               </div>
               <div className="md:col-span-2">
                 <Label className="text-[11px]">Agency (boost / hard filter)</Label>
-                <Input
-                  className="h-8 text-xs"
+                <AgencyCombobox
                   value={agencyInput}
-                  onChange={(e) => setAgencyInput(e.target.value)}
-                  placeholder="e.g. Department of Veterans Affairs"
+                  onChange={setAgencyInput}
+                  teamId={teamId}
+                  placeholder="Search agency or paste Tango-style string…"
                 />
               </div>
               <div>
