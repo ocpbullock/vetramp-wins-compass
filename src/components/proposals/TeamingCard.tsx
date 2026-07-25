@@ -158,7 +158,9 @@ export function TeamingCard({
       proposal_id: proposalId,
       company_id: partner.id,
       role: overrides?.role ?? "sub",
-      work_share_pct: overrides?.workShare ?? null,
+      // Default 15% workshare so partner-fit factors have signal immediately;
+      // users can tune it inline per row below.
+      work_share_pct: overrides?.workShare ?? 15,
       naics_contribution: overlap,
     });
     if (error) { toast.error(error.message); return; }
@@ -166,7 +168,7 @@ export function TeamingCard({
     setPicker(false);
     setSearch("");
     refetch();
-    qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
+    invalidateTeaming();
   };
 
   const addSuggested = async (s: PartnerSuggestion) => {
@@ -178,10 +180,22 @@ export function TeamingCard({
     await addPartner(p, { role, workShare: midShare });
   };
 
+  const invalidateTeaming = () => {
+    qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
+    qc.invalidateQueries({ queryKey: ["capture-entries", proposalId] });
+    qc.invalidateQueries({ queryKey: ["pwin-entries", proposalId] });
+    if (teamId) {
+      qc.invalidateQueries({ queryKey: ["capture-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["pwin-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["suggest-partners", teamId] });
+    }
+  };
+
   const updateEntry = async (id: string, patch: Partial<Pick<TeamingEntry, "role" | "work_share_pct" | "outreach_notes">>) => {
     const { error } = await supabase.from("proposal_teaming").update(patch).eq("id", id);
     if (error) { toast.error(error.message); return; }
     refetch();
+    invalidateTeaming();
   };
 
   const updateOutreach = async (entry: TeamingEntry, status: OutreachStatus) => {
@@ -200,12 +214,14 @@ export function TeamingCard({
     }
     refetch();
     qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
+    invalidateTeaming();
   };
 
   const removeEntry = async (id: string) => {
     const { error } = await supabase.from("proposal_teaming").delete().eq("id", id);
     if (error) { toast.error(error.message); return; }
     refetch();
+    invalidateTeaming();
   };
 
   const pipelineCounts = useMemo(() => {
