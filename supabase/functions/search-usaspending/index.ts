@@ -175,6 +175,7 @@ Deno.serve(async (req) => {
       page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: results.length >= maxResults },
       _cached: false,
       calls,
+      _debug: { agencyParam: agency ?? null, fetched: results.length, source: "live" },
     }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
   } catch (e: any) {
     console.error("search-usaspending (tango) error:", e);
