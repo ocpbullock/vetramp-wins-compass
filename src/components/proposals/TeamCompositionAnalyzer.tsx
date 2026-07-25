@@ -221,51 +221,25 @@ export function TeamCompositionAnalyzer({
 
 
     const isSelfPrime = engagementType === "prime";
-    const selfMember: PwinTeamMember = {
-      id: "self",
-      name: self.profile.company_name,
-      isSelf: true,
-      role: isSelfPrime ? "prime" : "sub",
-      workShare: 0,
-      active: true,
-      certifications: self.profile.certifications,
-      naicsCodes: self.profile.naics_codes,
-      contractVehicles: self.vehicles,
-      pastPerformance: self.pastPerf,
-      isIncumbent: !!incumbentName && self.profile.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
-    };
-
-    const entryMap = new Map(entriesData.map((e) => [e.partner_id, e]));
-    const primeNameLower = (primeContractorName ?? "").toLowerCase();
-
-    const partnerMembers: PwinTeamMember[] = partnersData.map((p) => {
-      const e = entryMap.get(p.id);
-      const isThePrime = !isSelfPrime
-        && (p.id === primeContractorId
-          || (primeNameLower && p.company_name.toLowerCase() === primeNameLower));
-      const defaultRole: PwinRole = isThePrime ? "prime" : (e?.role ?? "sub");
-      return {
-        id: p.id,
-        name: p.company_name,
-        isSelf: false,
-        role: defaultRole,
-        workShare: e?.work_share_pct ?? 0,
-        active: !!e || !!isThePrime,
-        certifications: p.certifications ?? [],
-        naicsCodes: p.naics_codes ?? [],
-        contractVehicles: (p as any).contract_vehicles ?? [],
-        pastPerformance: [],
-        isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
-        workedWithIncumbent: false,
-        primeRelationshipStrength: isThePrime ? 50 : 0,
-        isEstablishedPartner: !!(p as any).is_existing_partner,
-        priorContractTogether: !!(p as any).worked_together_before,
-        hasNda: !!(p as any).has_nda,
-        hasTeamingAgreement: !!(p as any).has_teaming_agreement,
-      };
+    const built = buildPwinMembers({
+      self: {
+        company_name: self.profile.company_name,
+        certifications: self.profile.certifications,
+        naics_codes: self.profile.naics_codes,
+        vehicles: self.vehicles,
+        pastPerf: self.pastPerf,
+      },
+      isSelfPrime,
+      partners: partnersData.map((p) => ({ ...(p as any), name: p.company_name })),
+      entries: entriesData.map((e) => ({
+        company_id: e.partner_id, role: e.role, work_share_pct: e.work_share_pct ?? 0,
+      })),
+      incumbentName,
+      primeContractorId,
+      primeContractorName,
     });
-
-    setMembers([selfMember, ...partnerMembers]);
+    // Analyzer draft: self starts at 0 workShare (user allocates via sliders).
+    built[0] = { ...built[0], workShare: 0 };
   }, [
     open,
     proposalId,
