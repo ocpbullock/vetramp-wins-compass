@@ -2398,7 +2398,25 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
         selfName={selfName}
         isSelfPrime={isSelfPrime}
         opportunityNaics={proposal.naics_code ?? null}
+        primeContractorId={proposal.prime_contractor_id ?? null}
+        primeContractorName={proposal.prime_contractor_name ?? null}
+        selfWorkSharePct={
+          typeof proposal?.pwin_config?.selfWorkSharePct === "number"
+            ? proposal.pwin_config.selfWorkSharePct
+            : null
+        }
+        onSelfShareChange={async (pct) => {
+          const nextConfig = { ...(proposal.pwin_config ?? {}), selfWorkSharePct: pct };
+          const { error } = await supabase
+            .from("proposals")
+            .update({ pwin_config: nextConfig } as any)
+            .eq("id", proposalId);
+          if (error) { toast.error(error.message); return; }
+          qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
+          invalidateTeaming();
+        }}
       />
+
 
       <Card>
         <CardHeader className="pb-2">
