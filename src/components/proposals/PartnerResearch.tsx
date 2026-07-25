@@ -799,7 +799,7 @@ export function PartnerResearch({
                 {darkHorsesEnabled && (
                   <Button
                     size="sm" variant="outline"
-                    onClick={runDarkHorseSearch}
+                    onClick={() => runDarkHorseSearch({ forceRefresh: !!dhAwards })}
                     disabled={dhSearching || !agencyInput.trim() || !naicsInput.trim()}
                   >
                     {dhSearching
