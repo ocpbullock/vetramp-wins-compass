@@ -226,7 +226,7 @@ export function PartnerResearch({
     return () => { cancelled = true; };
   }, [proposalId]);
 
-  const runExperienceSearch = async () => {
+  const runExperienceSearch = async (opts: { forceRefresh?: boolean } = {}) => {
     if (!naicsInput.trim()) {
       toast.error("Enter a NAICS code to search award history.");
       return;
@@ -239,7 +239,9 @@ export function PartnerResearch({
         startDate: yearsAgoIso(lookbackYears),
         endDate: todayIso(),
         keyword: keyword.trim() || undefined,
+        agency: agencyOnly && agencyInput.trim() ? agencyInput.trim() : undefined,
         maxResults: 300,
+        forceRefresh: opts.forceRefresh,
       });
       setAwards(r.results ?? []);
       setSearchMeta({
@@ -263,6 +265,7 @@ export function PartnerResearch({
       setSearching(false);
     }
   };
+
 
   // ---- Compute ranked candidates ----
   const ranked: PartnerExperienceTarget[] = useMemo(() => {
