@@ -2263,21 +2263,10 @@ function TeamHubPanel({
   const qc = useQueryClient();
   const teamId: string | null = proposal.team_id ?? null;
   const [sandboxOpen, setSandboxOpen] = useState(false);
-  const [sandboxSectionOpen, setSandboxSectionOpen] = useState(false);
   const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
   const teaming = useTeamingSummary(proposal, proposalId);
-  const sandboxSectionRef = useRef<HTMLDivElement | null>(null);
-
-  const openSandboxSection = useCallback(() => {
-    setSandboxSectionOpen(true);
-    // Re-seeding is inherent: the sandbox reads the current proposed team
-    // when it mounts / opens. Just scroll it into view.
-    requestAnimationFrame(() => {
-      sandboxSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }, []);
 
   // Single canonical read of proposal_teaming rows — same key & fetcher as
   // ProposedTeamCard and useTeamingSummary so all three share one cache entry.
@@ -2411,10 +2400,10 @@ function TeamHubPanel({
               )}
               <button
                 type="button"
-                onClick={openSandboxSection}
-                className="ml-auto inline-flex items-center gap-0.5 text-primary hover:underline"
+                onClick={() => setSandboxOpen(true)}
+                className="ml-auto inline-flex items-center gap-1 text-primary hover:underline"
               >
-                Scenario sandbox →
+                <Swords className="w-3 h-3" /> Launch sandbox
               </button>
             </span>
           }
@@ -2507,36 +2496,6 @@ function TeamHubPanel({
         opportunitySetAside={proposal.set_aside ?? null}
       />
 
-      <Collapsible open={sandboxSectionOpen} onOpenChange={setSandboxSectionOpen}>
-        <Card ref={sandboxSectionRef}>
-          <CardHeader className="pb-2">
-            <div className="flex items-start justify-between gap-2">
-              <div>
-                <CardTitle className="text-base flex items-center gap-2">
-                  <Swords className="w-4 h-4" /> Scenario sandbox (what-if)
-                </CardTitle>
-                <CardDescription className="text-xs">
-                  The Proposed Team above is the team of record. Use the sandbox to compare
-                  hypothetical lineups without touching it.
-                </CardDescription>
-              </div>
-              <CollapsibleTrigger asChild>
-                <Button variant="ghost" size="sm" className="gap-1">
-                  <ChevronRight className={`w-4 h-4 transition-transform ${sandboxSectionOpen ? "rotate-90" : ""}`} />
-                  {sandboxSectionOpen ? "Hide" : "Open"}
-                </Button>
-              </CollapsibleTrigger>
-            </div>
-          </CardHeader>
-          <CollapsibleContent>
-            <CardContent>
-              <Button size="sm" onClick={() => setSandboxOpen(true)} className="gap-1.5">
-                <Swords className="w-3.5 h-3.5" /> Launch Teaming Sandbox
-              </Button>
-            </CardContent>
-          </CollapsibleContent>
-        </Card>
-      </Collapsible>
 
       <TeamingSandbox
         open={sandboxOpen}
