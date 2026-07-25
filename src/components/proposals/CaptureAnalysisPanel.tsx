@@ -415,10 +415,19 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={rerun} disabled={running}>
-            {running ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Sparkles className="w-4 h-4 mr-2" />}
-            Run capture analysis
-          </Button>
+          {running ? (
+            <div className="flex items-start gap-3 rounded-md border bg-muted/40 p-3">
+              <Loader2 className="w-4 h-4 mt-0.5 animate-spin text-primary shrink-0" />
+              <div className="text-sm">
+                Running capture analysis — synthesizing market snapshot, human intel, and documents (30–60s)…
+              </div>
+            </div>
+          ) : (
+            <Button onClick={rerun} disabled={running}>
+              <Sparkles className="w-4 h-4 mr-2" />
+              Run capture analysis
+            </Button>
+          )}
         </CardContent>
       </Card>
     );
