@@ -146,6 +146,7 @@ export function PartnerResearch({
     const agency = agencyInput.trim();
     if (!agency) { toast.error("Enter an agency to find dark horses."); return; }
     setDhSearching(true);
+    setDhMeta(null);
     try {
       const r = await searchUsaspending({
         naicsCodes: [],
@@ -156,6 +157,10 @@ export function PartnerResearch({
         forceRefresh: opts.forceRefresh,
       });
       setDhAwards(r.results ?? []);
+      setDhMeta({
+        fetched: r.results?.length ?? 0,
+        agencyParam: r._debug?.agencyParam ?? agency,
+      });
       toast.success(`Pulled ${r.results?.length ?? 0} agency-scoped awards for dark-horse analysis`);
     } catch (e: any) {
       toast.error(e?.message || "Dark-horse search failed");
