@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,9 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import {
-  HoverCard, HoverCardContent, HoverCardTrigger,
-} from "@/components/ui/hover-card";
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { AlertTriangle, Handshake, Info, Link2, Trash2, Users, X } from "lucide-react";
 import { listPartnerCompanies, type PartnerView } from "@/lib/companies";
 import type { PwinRole } from "@/lib/pwin";
@@ -48,12 +46,36 @@ function outreachChipClass(s: OutreachStatus): string {
   }
 }
 
-type Entry = {
+export type TeamingEntry = {
   id: string;
   company_id: string;
   role: PwinRole;
   work_share_pct: number | null;
   outreach_status: OutreachStatus;
+};
+
+// ---------------------------------------------------------------------------
+// Single source of truth: one query per proposal for proposal_teaming rows.
+// ProposedTeamCard, TeamHubPanel's suggested-partners exclusion list, and
+// useTeamingSummary in CaptureAnalysisPanel all share this key so optimistic
+// mutations flow to every consumer at once.
+// ---------------------------------------------------------------------------
+export const teamingEntriesKey = (proposalId: string) =>
+  ["capture-entries", proposalId] as const;
+
+export async function fetchTeamingEntries(proposalId: string): Promise<TeamingEntry[]> {
+  const { data, error } = await supabase
+    .from("proposal_teaming")
+    .select("id, company_id, role, work_share_pct, outreach_status")
+    .eq("proposal_id", proposalId)
+    .order("created_at");
+  if (error) throw new Error(error.message);
+  return (data ?? []) as TeamingEntry[];
+}
+
+const clampShare = (v: number): number => {
+  if (!Number.isFinite(v)) return 0;
+  return Math.max(0, Math.min(100, Math.round(v)));
 };
 
 export function ProposedTeamCard({
@@ -80,24 +102,19 @@ export function ProposedTeamCard({
   onLinkPrime?: () => void;
 }) {
   const qc = useQueryClient();
+  const ENTRIES_KEY = teamingEntriesKey(proposalId);
 
   const { data: entries = [] } = useQuery({
-    queryKey: ["proposed-team-entries", proposalId],
-    queryFn: async (): Promise<Entry[]> => {
-      const { data, error } = await supabase
-        .from("proposal_teaming")
-        .select("id, company_id, role, work_share_pct, outreach_status")
-        .eq("proposal_id", proposalId)
-        .order("created_at");
-      if (error) throw new Error(error.message);
-      return (data ?? []) as Entry[];
-    },
+    queryKey: ENTRIES_KEY,
+    queryFn: () => fetchTeamingEntries(proposalId),
+    refetchOnWindowFocus: false,
   });
 
   const { data: partners = [] } = useQuery({
     queryKey: ["capture-partners", teamId],
     enabled: !!teamId,
     queryFn: () => listPartnerCompanies(teamId),
+    refetchOnWindowFocus: false,
   });
 
   const partnerById = useMemo(
@@ -118,46 +135,150 @@ export function ProposedTeamCard({
     return null;
   }, [isSelfPrime, primeContractorId, primeContractorName, partnerById, partners]);
 
-  const invalidateAll = () => {
-    qc.invalidateQueries({ queryKey: ["proposed-team-entries", proposalId] });
+  // Invalidate sibling caches (roster/suggestion lists). The authoritative
+  // entries cache is already kept fresh via optimistic setQueryData.
+  const invalidateSiblings = useCallback(() => {
     qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
-    qc.invalidateQueries({ queryKey: ["capture-entries", proposalId] });
     qc.invalidateQueries({ queryKey: ["pwin-entries", proposalId] });
-    qc.invalidateQueries({ queryKey: ["capture-partners", teamId] });
-    qc.invalidateQueries({ queryKey: ["pwin-partners", teamId] });
-    qc.invalidateQueries({ queryKey: ["suggest-partners", teamId] });
-    qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
-  };
-
-  const patchEntry = async (id: string, patch: Partial<Entry>) => {
-    const { error } = await supabase.from("proposal_teaming").update(patch as any).eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    invalidateAll();
-  };
-
-  const updateOutreach = async (e: Entry, status: OutreachStatus) => {
-    const { error } = await supabase
-      .from("proposal_teaming")
-      .update({ outreach_status: status } as any)
-      .eq("id", e.id);
-    if (error) { toast.error(error.message); return; }
-    if ((status === "nda_signed" || status === "ta_signed") && e.company_id) {
-      const patch: { has_nda: boolean; has_teaming_agreement?: boolean } = { has_nda: true };
-      if (status === "ta_signed") patch.has_teaming_agreement = true;
-      await supabase.from("companies").update(patch).eq("id", e.company_id);
+    qc.invalidateQueries({ queryKey: ["proposed-team-entries", proposalId] });
+    if (teamId) {
+      qc.invalidateQueries({ queryKey: ["capture-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["pwin-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["suggest-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["teaming-partners", teamId] });
     }
-    invalidateAll();
-  };
+  }, [qc, proposalId, teamId]);
 
-  const removeEntry = async (id: string) => {
-    const { error } = await supabase.from("proposal_teaming").delete().eq("id", id);
-    if (error) { toast.error(error.message); return; }
-    toast.success("Partner removed");
-    invalidateAll();
-  };
+  // Serialize writes per-row so overlapping edits land in order.
+  const chainMapRef = useRef<Map<string, Promise<unknown>>>(new Map());
+  const enqueuePerRow = useCallback(<T,>(id: string, fn: () => Promise<T>): Promise<T> => {
+    const prev = chainMapRef.current.get(id) ?? Promise.resolve();
+    const next = prev.catch(() => undefined).then(fn);
+    chainMapRef.current.set(id, next);
+    return next;
+  }, []);
 
-  // Exclude the prime's proposal_teaming row (if any) from the sub list —
-  // it's rendered as the dedicated Prime row above.
+  // ---- Mutations with proper optimistic + rollback + single settle ---------
+
+  type PatchArgs = { id: string; patch: Partial<TeamingEntry> };
+  const patchMutation = useMutation({
+    mutationFn: async ({ id, patch }: PatchArgs) => {
+      const { error } = await supabase
+        .from("proposal_teaming")
+        .update(patch as never)
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onMutate: async ({ id, patch }) => {
+      await qc.cancelQueries({ queryKey: ENTRIES_KEY });
+      const snapshot = qc.getQueryData<TeamingEntry[]>(ENTRIES_KEY);
+      qc.setQueryData<TeamingEntry[]>(ENTRIES_KEY, (old = []) =>
+        old.map((e) => (e.id === id ? { ...e, ...patch } as TeamingEntry : e)),
+      );
+      return { snapshot };
+    },
+    onError: (err, _v, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(ENTRIES_KEY, ctx.snapshot);
+      toast.error((err as Error).message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ENTRIES_KEY });
+      invalidateSiblings();
+    },
+  });
+
+  const outreachMutation = useMutation({
+    mutationFn: async ({ id, companyId, status }: { id: string; companyId: string; status: OutreachStatus }) => {
+      const { error } = await supabase
+        .from("proposal_teaming")
+        .update({ outreach_status: status } as never)
+        .eq("id", id);
+      if (error) throw new Error(error.message);
+      if ((status === "nda_signed" || status === "ta_signed") && companyId) {
+        const p: { has_nda: boolean; has_teaming_agreement?: boolean } = { has_nda: true };
+        if (status === "ta_signed") p.has_teaming_agreement = true;
+        await supabase.from("companies").update(p).eq("id", companyId);
+      }
+    },
+    onMutate: async ({ id, status }) => {
+      await qc.cancelQueries({ queryKey: ENTRIES_KEY });
+      const snapshot = qc.getQueryData<TeamingEntry[]>(ENTRIES_KEY);
+      qc.setQueryData<TeamingEntry[]>(ENTRIES_KEY, (old = []) =>
+        old.map((e) => (e.id === id ? { ...e, outreach_status: status } : e)),
+      );
+      return { snapshot };
+    },
+    onError: (err, _v, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(ENTRIES_KEY, ctx.snapshot);
+      toast.error((err as Error).message);
+    },
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ENTRIES_KEY });
+      invalidateSiblings();
+    },
+  });
+
+  const removeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("proposal_teaming").delete().eq("id", id);
+      if (error) throw new Error(error.message);
+    },
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ENTRIES_KEY });
+      const snapshot = qc.getQueryData<TeamingEntry[]>(ENTRIES_KEY);
+      qc.setQueryData<TeamingEntry[]>(ENTRIES_KEY, (old = []) => old.filter((e) => e.id !== id));
+      chainMapRef.current.delete(id);
+      return { snapshot };
+    },
+    onError: (err, _v, ctx) => {
+      if (ctx?.snapshot) qc.setQueryData(ENTRIES_KEY, ctx.snapshot);
+      toast.error((err as Error).message);
+    },
+    onSuccess: () => toast.success("Partner removed"),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: ENTRIES_KEY });
+      invalidateSiblings();
+    },
+  });
+
+  // Immediate optimistic share update (fired on every keystroke).
+  const setShareOptimistic = useCallback(
+    (id: string, value: number) => {
+      const n = clampShare(value);
+      qc.cancelQueries({ queryKey: ENTRIES_KEY });
+      qc.setQueryData<TeamingEntry[]>(ENTRIES_KEY, (old = []) =>
+        old.map((e) => (e.id === id ? { ...e, work_share_pct: n } : e)),
+      );
+    },
+    [qc, ENTRIES_KEY],
+  );
+
+  // Debounced DB write, serialized per-row. Trailing call always uses the
+  // latest value at fire time (read from cache), so bursts collapse safely.
+  const commitShare = useCallback(
+    (id: string) =>
+      enqueuePerRow(id, async () => {
+        const latest = qc.getQueryData<TeamingEntry[]>(ENTRIES_KEY);
+        const row = latest?.find((e) => e.id === id);
+        if (!row) return;
+        const n = clampShare(row.work_share_pct ?? 0);
+        const { error } = await supabase
+          .from("proposal_teaming")
+          .update({ work_share_pct: n } as never)
+          .eq("id", id);
+        if (error) throw new Error(error.message);
+      })
+        .catch((err) => {
+          toast.error((err as Error).message);
+          qc.invalidateQueries({ queryKey: ENTRIES_KEY });
+        })
+        .finally(() => {
+          invalidateSiblings();
+        }),
+    [enqueuePerRow, qc, ENTRIES_KEY, invalidateSiblings],
+  );
+
+  // -------- Derived numbers all read from the same live cache -------------
   const primeEntryCompanyId = rosterPrime?.id ?? null;
   const subEntries = entries.filter((e) => e.company_id !== primeEntryCompanyId);
 
@@ -168,7 +289,7 @@ export function ProposedTeamCard({
 
   const selfShareResolved = isSelfPrime
     ? Math.max(0, 100 - otherSubShare)
-    : Math.max(0, Math.min(100, typeof selfWorkSharePct === "number" ? selfWorkSharePct : 20));
+    : clampShare(typeof selfWorkSharePct === "number" ? selfWorkSharePct : 20);
 
   const primeRemainder = !isSelfPrime
     ? Math.max(0, 100 - selfShareResolved - otherSubShare)
@@ -177,7 +298,8 @@ export function ProposedTeamCard({
   const total = selfShareResolved + otherSubShare + primeRemainder;
   const over = total > 100;
 
-  const memberCount = 1 + subEntries.length + (!isSelfPrime && (rosterPrime || primeContractorName) ? 1 : 0);
+  const memberCount =
+    1 + subEntries.length + (!isSelfPrime && (rosterPrime || primeContractorName) ? 1 : 0);
 
   return (
     <Card>
@@ -198,7 +320,6 @@ export function ProposedTeamCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        {/* Sub mode: the PRIME row (from proposal.prime_contractor_*) */}
         {!isSelfPrime && (rosterPrime || primeContractorName) && (
           <div className="flex items-center gap-2 rounded-md border border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_10%,transparent)] px-2 py-1.5">
             <Badge
@@ -235,7 +356,6 @@ export function ProposedTeamCard({
           </div>
         )}
 
-        {/* Self row */}
         <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
           <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
             {isSelfPrime ? "Us" : "Sub (us)"}
@@ -257,7 +377,7 @@ export function ProposedTeamCard({
           ) : (
             <SelfShareEditor
               value={selfShareResolved}
-              onCommit={(n) => onSelfShareChange?.(n)}
+              onCommit={(n) => onSelfShareChange?.(clampShare(n))}
             />
           )}
           <div className="w-6" />
@@ -279,15 +399,17 @@ export function ProposedTeamCard({
               entry={e}
               partner={p ?? null}
               opportunityNaics={opportunityNaics}
-              onRoleChange={(r) => patchEntry(e.id, { role: r })}
-              onShareChange={(v) => patchEntry(e.id, { work_share_pct: v })}
-              onOutreachChange={(s) => updateOutreach(e, s)}
-              onRemove={() => removeEntry(e.id)}
+              onRoleChange={(r) => patchMutation.mutate({ id: e.id, patch: { role: r } })}
+              onShareType={(n) => setShareOptimistic(e.id, n)}
+              onShareCommit={() => commitShare(e.id)}
+              onOutreachChange={(s) =>
+                outreachMutation.mutate({ id: e.id, companyId: e.company_id, status: s })
+              }
+              onRemove={() => removeMutation.mutate(e.id)}
             />
           );
         })}
 
-        {/* Total share bar */}
         <div className="pt-1">
           <div className="flex items-center justify-between text-[11px] mb-1">
             <span className="text-muted-foreground">Total work share</span>
@@ -314,9 +436,12 @@ export function ProposedTeamCard({
 
 function SelfShareEditor({ value, onCommit }: { value: number; onCommit: (n: number) => void }) {
   const [local, setLocal] = useState<string>(String(value));
-  useEffect(() => { setLocal(String(value)); }, [value]);
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!focusedRef.current) setLocal(String(value));
+  }, [value]);
   const commit = () => {
-    const n = Math.max(0, Math.min(100, Number(local) || 0));
+    const n = clampShare(Number(local) || 0);
     if (n !== value) onCommit(n);
     setLocal(String(n));
   };
@@ -325,8 +450,9 @@ function SelfShareEditor({ value, onCommit }: { value: number; onCommit: (n: num
       <Input
         type="number" min={0} max={100}
         value={local}
+        onFocus={() => { focusedRef.current = true; }}
         onChange={(e) => setLocal(e.target.value)}
-        onBlur={commit}
+        onBlur={() => { focusedRef.current = false; commit(); }}
         onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
         className="h-7 w-14 text-xs tabular-nums"
         aria-label="Our work share percent"
@@ -342,19 +468,33 @@ function ProposedRow({
   partner,
   opportunityNaics,
   onRoleChange,
-  onShareChange,
+  onShareType,
+  onShareCommit,
   onOutreachChange,
   onRemove,
 }: {
-  entry: Entry;
+  entry: TeamingEntry;
   partner: PartnerView | null;
   opportunityNaics: string | null;
   onRoleChange: (r: PwinRole) => void;
-  onShareChange: (v: number) => void;
+  onShareType: (n: number) => void;
+  onShareCommit: () => void;
   onOutreachChange: (s: OutreachStatus) => void;
   onRemove: () => void;
 }) {
-  const [share, setShare] = useState<string>(String(entry.work_share_pct ?? 0));
+  // Local text buffer allows typing "" or partial values without the cache
+  // yanking the caret. Optimistic cache updates fire on every keystroke via
+  // onShareType; the debounced DB commit fires 400ms after the last edit.
+  const [text, setText] = useState<string>(String(entry.work_share_pct ?? 0));
+  const focusedRef = useRef(false);
+  useEffect(() => {
+    if (!focusedRef.current) setText(String(entry.work_share_pct ?? 0));
+  }, [entry.work_share_pct]);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => () => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+  }, []);
 
   const naicsHit = !!(opportunityNaics && partner?.naics_codes?.includes(opportunityNaics));
   const ppCount = Array.isArray(partner?.past_performance) ? partner!.past_performance.length : 0;
@@ -372,10 +512,25 @@ function ProposedRow({
     reasons.push(`Certs: ${partner.certifications.slice(0, 3).join(", ")}`);
   }
 
-  const commitShare = () => {
-    const n = Math.max(0, Math.min(100, Number(share) || 0));
-    if (n !== (entry.work_share_pct ?? 0)) onShareChange(n);
-    setShare(String(n));
+  const handleType = (v: string) => {
+    setText(v);
+    const n = clampShare(Number(v) || 0);
+    onShareType(n);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      debounceRef.current = null;
+      onShareCommit();
+    }, 400);
+  };
+
+  const handleBlur = () => {
+    focusedRef.current = false;
+    const n = clampShare(Number(text) || 0);
+    setText(String(n));
+    onShareType(n);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = null;
+    onShareCommit();
   };
 
   return (
@@ -423,9 +578,10 @@ function ProposedRow({
       <div className="flex items-center gap-1">
         <Input
           type="number" min={0} max={100}
-          value={share}
-          onChange={(e) => setShare(e.target.value)}
-          onBlur={commitShare}
+          value={text}
+          onFocus={() => { focusedRef.current = true; }}
+          onChange={(e) => handleType(e.target.value)}
+          onBlur={handleBlur}
           onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
           className="h-7 w-14 text-xs tabular-nums"
           aria-label="Work share percent"

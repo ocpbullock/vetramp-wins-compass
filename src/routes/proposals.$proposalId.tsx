@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useOpportunityContext } from "@/lib/opportunity-context";
 import { ChevronRight, Workflow } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mergeServerProposal } from "@/lib/intake-merge";
 import { userContextFromProposal, USER_CONTEXT_LABELS } from "@/lib/user-context";
 import { getOwnCompanyProfileData } from "@/lib/companies";
@@ -52,7 +52,7 @@ import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursu
 import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
 import { CaptureAnalysisPanel, useTeamingSummary } from "@/components/proposals/CaptureAnalysisPanel";
 import { PwinProbabilityCard } from "@/components/proposals/PwinProbabilityCard";
-import { ProposedTeamCard } from "@/components/proposals/ProposedTeamCard";
+import { ProposedTeamCard, teamingEntriesKey, fetchTeamingEntries, type TeamingEntry } from "@/components/proposals/ProposedTeamCard";
 import { MetricCard } from "@/components/MetricCard";
 import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
@@ -875,7 +875,11 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="team" className="mt-4">
-            <TeamHubPanel proposal={proposal} proposalId={proposalId} />
+            <TeamHubPanel
+              proposal={proposal}
+              proposalId={proposalId}
+              onProposalPatch={(patch) => setProposal((p: any) => ({ ...(p ?? {}), ...patch }))}
+            />
           </TabsContent>
 
           <TabsContent value="proposal" className="mt-4 space-y-4">
@@ -2247,7 +2251,15 @@ function PlaceholderHubPanel({ title, description }: { title: string; descriptio
   );
 }
 
-function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+function TeamHubPanel({
+  proposal,
+  proposalId,
+  onProposalPatch,
+}: {
+  proposal: any;
+  proposalId: string;
+  onProposalPatch?: (patch: Record<string, unknown>) => void;
+}) {
   const qc = useQueryClient();
   const teamId: string | null = proposal.team_id ?? null;
   const [sandboxOpen, setSandboxOpen] = useState(false);
@@ -2256,27 +2268,26 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
   const teaming = useTeamingSummary(proposal, proposalId);
+  const sandboxSectionRef = useRef<HTMLDivElement | null>(null);
 
-  // Single canonical read of proposal_teaming rows for this pursuit; every
-  // add/remove/edit path invalidates this key so the scoreboard, Proposed Team
-  // card, and Suggestions list stay in sync.
+  const openSandboxSection = useCallback(() => {
+    setSandboxSectionOpen(true);
+    // Re-seeding is inherent: the sandbox reads the current proposed team
+    // when it mounts / opens. Just scroll it into view.
+    requestAnimationFrame(() => {
+      sandboxSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
+
+  // Single canonical read of proposal_teaming rows — same key & fetcher as
+  // ProposedTeamCard and useTeamingSummary so all three share one cache entry.
   const { data: teamingEntries = [] } = useQuery({
-    queryKey: ["proposed-team-entries", proposalId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("proposal_teaming")
-        .select("id, company_id, role, work_share_pct, outreach_status")
-        .eq("proposal_id", proposalId)
-        .order("created_at");
-      if (error) throw new Error(error.message);
-      return (data ?? []) as {
-        id: string; company_id: string; role: string;
-        work_share_pct: number | null; outreach_status: string;
-      }[];
-    },
+    queryKey: teamingEntriesKey(proposalId),
+    queryFn: () => fetchTeamingEntries(proposalId),
+    refetchOnWindowFocus: false,
   });
   const existingPartnerIds = useMemo(
-    () => teamingEntries.map((e) => e.company_id),
+    () => teamingEntries.map((e: TeamingEntry) => e.company_id),
     [teamingEntries],
   );
 
@@ -2308,10 +2319,23 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
   };
 
   const addSuggestedPartner = async (s: { partnerId: string; partnerName: string }) => {
+    // Optimistic add: temp id in the shared cache, replaced on invalidation.
+    const key = teamingEntriesKey(proposalId);
+    await qc.cancelQueries({ queryKey: key });
+    const snapshot = qc.getQueryData<TeamingEntry[]>(key);
+    const tempId = `temp-${crypto.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
+    qc.setQueryData<TeamingEntry[]>(key, (old = []) => [
+      ...old,
+      { id: tempId, company_id: s.partnerId, role: "sub", work_share_pct: 15, outreach_status: "not_started" },
+    ]);
     const { error } = await supabase
       .from("proposal_teaming")
       .insert({ proposal_id: proposalId, company_id: s.partnerId, role: "sub", work_share_pct: 15 });
-    if (error) { toast.error(error.message); return; }
+    if (error) {
+      if (snapshot) qc.setQueryData(key, snapshot);
+      toast.error(error.message);
+      return;
+    }
     toast.success(`Added ${s.partnerName} to the team`);
     invalidateTeaming();
   };
@@ -2380,11 +2404,18 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
             </span>
           }
           sub={
-            <span className="flex items-center gap-2">
+            <span className="flex items-center gap-2 flex-wrap">
               <span>Capability score across NAICS, agency past perf, set-aside fit, and partner signals.</span>
               {currentPwin != null && deltaChip(pwinDelta, initialPwinRef.current) && (
-                <span className="ml-auto">pWin {deltaChip(pwinDelta, initialPwinRef.current)}</span>
+                <span>pWin {deltaChip(pwinDelta, initialPwinRef.current)}</span>
               )}
+              <button
+                type="button"
+                onClick={openSandboxSection}
+                className="ml-auto inline-flex items-center gap-0.5 text-primary hover:underline"
+              >
+                Scenario sandbox →
+              </button>
             </span>
           }
           tone={currentTs == null ? "default" : currentTs >= 70 ? "success" : currentTs >= 40 ? "warning" : "destructive"}
@@ -2406,13 +2437,19 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
             : null
         }
         onSelfShareChange={async (pct) => {
-          const nextConfig = { ...(proposal.pwin_config ?? {}), selfWorkSharePct: pct };
+          const prevConfig = proposal.pwin_config ?? {};
+          const nextConfig = { ...prevConfig, selfWorkSharePct: pct };
+          // Optimistic local update so scoreboard + remainder move immediately.
+          onProposalPatch?.({ pwin_config: nextConfig });
           const { error } = await supabase
             .from("proposals")
             .update({ pwin_config: nextConfig } as any)
             .eq("id", proposalId);
-          if (error) { toast.error(error.message); return; }
-          qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
+          if (error) {
+            onProposalPatch?.({ pwin_config: prevConfig });
+            toast.error(error.message);
+            return;
+          }
           invalidateTeaming();
         }}
       />
@@ -2471,7 +2508,7 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
       />
 
       <Collapsible open={sandboxSectionOpen} onOpenChange={setSandboxSectionOpen}>
-        <Card>
+        <Card ref={sandboxSectionRef}>
           <CardHeader className="pb-2">
             <div className="flex items-start justify-between gap-2">
               <div>
