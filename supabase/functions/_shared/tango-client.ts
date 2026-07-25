@@ -189,11 +189,13 @@ export function mapContractRow(team_id: string, c: any) {
   const awardingOffice = c?.awarding_office ?? {};
   const fundingOffice = c?.funding_office ?? {};
   const recipient = c?.recipient ?? {};
+  const dept = pick(c, ["awarding_agency", "Awarding Agency", "agency"]) ?? awardingOffice.department_name;
+  const subAgency = pick(c, ["awarding_sub_agency", "Awarding Sub Agency", "awarding_sub_tier_agency_name"]) ?? awardingOffice.agency_name;
   return {
     team_id,
     tango_id: String(pick(c, ["id", "tango_id", "key", "generated_internal_id", "Award ID"]) ?? crypto.randomUUID()),
     piid: pick(c, ["piid", "Award ID"]),
-    agency: pick(c, ["awarding_agency", "Awarding Agency", "agency"]) ?? [awardingOffice.department_name, awardingOffice.agency_name].filter(Boolean).join(" / "),
+    agency: [dept, subAgency].filter(Boolean).join(" / ") || dept || null,
     vendor_name: pick(c, ["recipient_name", "Recipient Name", "vendor_name"]) ?? recipient.display_name,
     vendor_uei: pick(c, ["recipient_uei", "Recipient UEI", "vendor_uei", "uei"]) ?? recipient.uei,
     vendor_duns: pick(c, ["recipient_duns", "vendor_duns", "duns"]),
