@@ -33,6 +33,8 @@ import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
 import { PtwCard } from "./PtwCard";
+import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
+import { applyCaptureStage } from "@/lib/stage-mutations";
 
 import { PwinDial } from "@/components/PwinDial";
 import { MetricCard } from "@/components/MetricCard";
