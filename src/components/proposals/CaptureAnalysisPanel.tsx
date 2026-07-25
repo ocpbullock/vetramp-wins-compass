@@ -112,10 +112,14 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
     queryKey: ["capture-entries", proposalId],
     queryFn: async () => {
       const { data } = await supabase.from("proposal_teaming")
-        .select("company_id, role, work_share_pct")
+        .select("id, company_id, role, work_share_pct, outreach_status")
         .eq("proposal_id", proposalId);
-      return (data ?? []) as { company_id: string; role: PwinRole; work_share_pct: number }[];
+      return (data ?? []) as {
+        id: string; company_id: string; role: PwinRole;
+        work_share_pct: number; outreach_status: string;
+      }[];
     },
+    refetchOnWindowFocus: false,
   });
 
   if (!teamId || loadingPartners || !self) {
