@@ -33,6 +33,8 @@ import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
 import { PtwCard } from "./PtwCard";
+import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
+import { applyCaptureStage } from "@/lib/stage-mutations";
 
 import { PwinDial } from "@/components/PwinDial";
 import { MetricCard } from "@/components/MetricCard";
@@ -239,11 +241,17 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
         body: { proposalId, skipCache: true },
       });
       if (error) throw error;
-      const next = (data as any)?.analysis as CaptureAnalysis | undefined;
-      if (!next) throw new Error("No analysis returned");
-      setAnalysis(next);
-      setGeneratedAt(next._fetched_at ?? new Date().toISOString());
-      toast.success("Capture analysis updated");
+      const nextAnalysis = (data as any)?.analysis as CaptureAnalysis | undefined;
+      if (!nextAnalysis) throw new Error("No analysis returned");
+      setAnalysis(nextAnalysis);
+      setGeneratedAt(nextAnalysis._fetched_at ?? new Date().toISOString());
+      const nextStage = nextCaptureStage(proposal?.capture_stage);
+      toast.success("Capture analysis updated", nextStage ? {
+        action: {
+          label: `Move to ${CAPTURE_STAGE_LABEL[nextStage]}`,
+          onClick: () => { void applyCaptureStage(proposalId, nextStage); },
+        },
+      } : undefined);
     } catch (e: any) {
       console.error("[capture-analysis]", e);
       toast.error(e?.message ?? "Failed to run analysis");

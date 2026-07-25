@@ -12,6 +12,8 @@ import { upsertCompany } from "@/lib/companies";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import type { TeamingTarget } from "@/lib/teaming-targets";
 import type { CompeteVendor } from "@/lib/api";
+import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
+import { applyCaptureStage } from "@/lib/stage-mutations";
 
 function fmtUsd(n: number) {
   if (!n) return "$0";
@@ -69,7 +71,13 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
       if (snap.awardsError) {
         toast.warning(`Market snapshot generated, but award data was unavailable: ${snap.awardsError}`);
       } else {
-        toast.success("Market snapshot generated");
+        const next = nextCaptureStage(proposal?.capture_stage);
+        toast.success("Market snapshot generated", next ? {
+          action: {
+            label: `Move to ${CAPTURE_STAGE_LABEL[next]}`,
+            onClick: () => { void applyCaptureStage(proposalId, next); },
+          },
+        } : undefined);
       }
     } catch (e: any) {
       toast.error(e?.message ?? "Failed to generate snapshot");

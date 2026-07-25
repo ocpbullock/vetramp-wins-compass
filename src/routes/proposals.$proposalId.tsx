@@ -40,6 +40,9 @@ import { OfflineBanner, useOnline } from "@/components/OfflineBanner";
 import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/api-errors";
 import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
+import { StageStepper } from "@/components/proposals/StageStepper";
+import { isStageSatisfied, nextCaptureStage, type StageSignals } from "@/lib/capture-stage";
+import { applyCaptureStage } from "@/lib/stage-mutations";
 import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
 import { PartnerResearch } from "@/components/proposals/PartnerResearch";
@@ -181,6 +184,18 @@ function ProposalPipeline() {
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
   const [isPartnerView, setIsPartnerView] = useState(false);
+
+  const teamingSignalQ = useQuery({
+    queryKey: teamingEntriesKey(proposalId),
+    queryFn: () => fetchTeamingEntries(proposalId),
+    enabled: !!user && !!proposalId,
+  });
+  const teamingCountForSignals = teamingSignalQ.data?.length ?? 0;
+
+  const refreshProposal = useCallback(async () => {
+    const { data } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
+    if (data) setProposal(data);
+  }, [proposalId]);
 
   useEffect(() => { if (!authLoading && !user) navigate({ to: "/auth" }); }, [authLoading, user, navigate]);
 
@@ -741,15 +756,25 @@ function ProposalPipeline() {
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <CaptureStageSelect
-                  proposalId={proposalId}
-                  value={proposal.capture_stage}
-                  size="default"
-                  className="min-w-[140px]"
-                  onChanged={() => { /* router/query layer refetches via realtime/invalidation elsewhere */ }}
-                />
                 <Button onClick={exportDocx} variant="outline" size="sm"><Download className="w-4 h-4 mr-1" />Export .docx</Button>
               </div>
+            </div>
+
+            <div className="pt-2 border-t">
+              <StageStepper
+                proposalId={proposalId}
+                value={proposal.capture_stage}
+                signals={{
+                  hasNaicsAgency: Boolean(proposal.naics_code && proposal.agency),
+                  hasSnapshot: Boolean(proposal.market_snapshot_at),
+                  hasAnalysis: Boolean(proposal.capture_analysis_at),
+                  teamingCount: teamingCountForSignals,
+                  sectionsCount: proposal.sections
+                    ? Object.values(proposal.sections).filter((s: any) => s && typeof s === "object" && s.content).length
+                    : 0,
+                }}
+                onChanged={refreshProposal}
+              />
             </div>
 
             <div className="flex items-center gap-3 pt-2 border-t">
@@ -2325,7 +2350,14 @@ function TeamHubPanel({
       toast.error(error.message);
       return;
     }
-    toast.success(`Added ${s.partnerName} to the team`);
+    const wasFirstPartner = (snapshot?.length ?? 0) === 0;
+    const nextStage = wasFirstPartner ? nextCaptureStage(proposal?.capture_stage) : null;
+    toast.success(`Added ${s.partnerName} to the team`, nextStage ? {
+      action: {
+        label: `Move to ${nextStage.charAt(0).toUpperCase() + nextStage.slice(1)}`,
+        onClick: () => { void applyCaptureStage(proposalId, nextStage); },
+      },
+    } : undefined);
     invalidateTeaming();
   };
 

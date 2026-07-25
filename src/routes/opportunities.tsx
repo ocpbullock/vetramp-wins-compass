@@ -5,7 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Plus, ExternalLink, Workflow, Sparkles, Loader2, Radar } from "lucide-react";
+import { Plus, ExternalLink, Workflow, Sparkles, Loader2, Radar, CircleDot } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { useTeam } from "@/lib/team";
@@ -16,7 +16,17 @@ import { PwinChip } from "@/components/dashboard/PwinChip";
 import type { OppForPwin } from "@/lib/pwin-solo";
 import { canEnrichFromSam, enrichProposalFromSam } from "@/lib/sam-enrich";
 import { toast } from "sonner";
-import { BOARD_STAGES, captureStageToBoard, type BoardStage } from "@/lib/capture-stage";
+import {
+  STEPPER_STAGES,
+  STEPPER_STAGE_LABEL,
+  STEPPER_STAGE_TONE,
+  STEPPER_STAGE_COUNT_TONE,
+  captureStageToStepper,
+  trackedStatusToStepper,
+  isStageSatisfied,
+  type StepperStage,
+  type StageSignals,
+} from "@/lib/capture-stage";
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -41,37 +51,11 @@ type ProposalRow = {
   solicitation_number: string | null;
   notice_id: string | null;
   watch_enabled: boolean | null;
+  market_snapshot_at: string | null;
+  capture_analysis_at: string | null;
+  sections: Record<string, { content?: string | null }> | null;
+  outcome: string | null;
 };
-
-type Stage = BoardStage;
-const STAGES = BOARD_STAGES;
-
-const STAGE_TONE: Record<Stage, string> = {
-  Watching: "bg-muted text-muted-foreground border-border",
-  Capturing: "bg-primary/15 text-primary border-primary/30",
-  Proposal:
-    "border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_18%,transparent)] text-[color:var(--brand-brass)]",
-  Submitted: "bg-warning/15 text-warning border-warning/30",
-  "Won/Lost": "bg-success/15 text-success border-success/30",
-};
-
-const STAGE_COUNT_TONE: Record<Stage, string> = {
-  Watching: "bg-muted text-muted-foreground",
-  Capturing: "bg-primary text-primary-foreground",
-  Proposal:
-    "bg-[color:var(--brand-brass)] text-[color:var(--brand-brass-foreground)]",
-  Submitted: "bg-warning text-warning-foreground",
-  "Won/Lost": "bg-success text-success-foreground",
-};
-
-
-function trackedStage(status: string): Stage {
-  if (status === "Watching" || status === "No-Bid") return "Watching";
-  if (status === "Preparing") return "Capturing";
-  if (status === "Submitted") return "Submitted";
-  if (status === "Won" || status === "Lost") return "Won/Lost";
-  return "Watching";
-}
 
 type Row = {
   key: string;
@@ -82,9 +66,11 @@ type Row = {
   setAside: string | null;
   deadline: string | null;
   updatedAt: string;
-  stage: Stage;
+  stage: StepperStage;
   statusLabel: string;
   captureStage?: string | null;
+  outcome?: string | null;
+  ready?: boolean;
   trackedId?: string;
   proposalId?: string;
   oppForPwin: OppForPwin;
@@ -96,6 +82,18 @@ type Row = {
 
 const fmtDate = (d: string | null) =>
   d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
+
+const OUTCOME_TONE: Record<string, string> = {
+  won: "bg-success/15 text-success border-success/30",
+  lost: "bg-destructive/15 text-destructive border-destructive/30",
+  no_bid: "bg-muted text-muted-foreground border-border",
+};
+
+const OUTCOME_LABEL: Record<string, string> = {
+  won: "Won",
+  lost: "Lost",
+  no_bid: "No-bid",
+};
 
 function OpportunitiesPage() {
   const { user } = useAuth();
@@ -126,10 +124,10 @@ function OpportunitiesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposals")
-        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id,watch_enabled")
+        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id,watch_enabled,market_snapshot_at,capture_analysis_at,sections,outcome")
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
-      return (data ?? []) as ProposalRow[];
+      return (data ?? []) as unknown as ProposalRow[];
     },
   });
 
@@ -175,8 +173,6 @@ function OpportunitiesPage() {
     const tracked = trackedQ.data ?? [];
     const proposals = proposalsQ.data ?? [];
 
-    // Build map of tracked-id -> proposal (so we can hide tracked rows that
-    // were promoted to a proposal, and route their "Open" action through it).
     const proposalByTrackedId = new Map<string, ProposalRow>();
     for (const p of proposals) {
       if (p.opportunity_source === "tracked" && p.opportunity_source_id) {
@@ -187,7 +183,7 @@ function OpportunitiesPage() {
     const out: Row[] = [];
 
     for (const t of tracked) {
-      if (proposalByTrackedId.has(t.id)) continue; // proposal row will represent it
+      if (proposalByTrackedId.has(t.id)) continue;
       out.push({
         key: `t:${t.id}`,
         kind: "tracked",
@@ -197,7 +193,7 @@ function OpportunitiesPage() {
         setAside: null,
         deadline: t.response_deadline,
         updatedAt: t.updated_at,
-        stage: trackedStage(t.status),
+        stage: trackedStatusToStepper(t.status),
         statusLabel: t.status,
         trackedId: t.id,
         oppForPwin: {
@@ -213,6 +209,17 @@ function OpportunitiesPage() {
     const activity = activityQ.data ?? {};
     const teaming = teamingQ.data ?? {};
     for (const p of proposals) {
+      const teamingCount = teaming[p.id]?.total ?? 0;
+      const sectionsCount = p.sections
+        ? Object.values(p.sections).filter((s) => s && typeof s === "object" && (s as any).content).length
+        : 0;
+      const signals: StageSignals = {
+        hasNaicsAgency: Boolean(p.naics_code && p.agency),
+        hasSnapshot: Boolean(p.market_snapshot_at),
+        hasAnalysis: Boolean(p.capture_analysis_at),
+        teamingCount,
+        sectionsCount,
+      };
       out.push({
         key: `p:${p.id}`,
         kind: "proposal",
@@ -222,9 +229,11 @@ function OpportunitiesPage() {
         setAside: p.set_aside,
         deadline: p.response_deadline,
         updatedAt: p.updated_at,
-        stage: captureStageToBoard(p.capture_stage),
+        stage: captureStageToStepper(p.capture_stage),
         statusLabel: p.capture_stage ?? p.status ?? "intake",
         captureStage: p.capture_stage,
+        outcome: p.outcome,
+        ready: isStageSatisfied(p.capture_stage, signals),
         proposalId: p.id,
         trackedId: p.opportunity_source === "tracked" ? p.opportunity_source_id ?? undefined : undefined,
         oppForPwin: {
@@ -251,8 +260,8 @@ function OpportunitiesPage() {
   }, [trackedQ.data, proposalsQ.data, activityQ.data, teamingQ.data]);
 
   const grouped = useMemo(() => {
-    const m: Record<Stage, Row[]> = {
-      Watching: [], Capturing: [], Proposal: [], Submitted: [], "Won/Lost": [],
+    const m: Record<StepperStage, Row[]> = {
+      intake: [], researching: [], analyzing: [], pursuing: [], proposal: [], submitted: [], closed: [],
     };
     for (const r of rows) m[r.stage].push(r);
     return m;
@@ -322,7 +331,6 @@ function OpportunitiesPage() {
   async function handleCreated(proposalId: string, opts?: { hasDocs?: boolean }) {
     await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
     setSelectedOpportunityId(proposalId);
-    // Kick off background market snapshot generation (no-op if NAICS/agency missing).
     void kickOffMarketSnapshotById(proposalId);
     navigate({
       to: "/proposals/$proposalId",
@@ -330,8 +338,6 @@ function OpportunitiesPage() {
       search: opts?.hasDocs ? { parseDocs: 1 as const } : {},
     });
   }
-
-
 
   const total = rows.length;
   const hasData = trackedQ.data !== undefined && proposalsQ.data !== undefined;
@@ -344,7 +350,7 @@ function OpportunitiesPage() {
         title="Pursuit Pipeline"
         description={
           <>
-            All opportunities — tracked and active — grouped by stage.{" "}
+            All opportunities grouped by capture stage.{" "}
             {loading ? "Loading…" : `${total} item${total === 1 ? "" : "s"}.`}
           </>
         }
@@ -363,16 +369,16 @@ function OpportunitiesPage() {
         </div>
       ) : (
       <div className="space-y-6">
-        {STAGES.map((stage) => {
+        {STEPPER_STAGES.map((stage) => {
           const items = grouped[stage];
           return (
             <section key={stage} className="space-y-2">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className={STAGE_TONE[stage]}>
-                  {stage}
+                <Badge variant="outline" className={STEPPER_STAGE_TONE[stage]}>
+                  {STEPPER_STAGE_LABEL[stage]}
                 </Badge>
                 <span
-                  className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${STAGE_COUNT_TONE[stage]}`}
+                  className={`inline-flex min-w-[1.5rem] items-center justify-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${STEPPER_STAGE_COUNT_TONE[stage]}`}
                 >
                   {items.length}
                 </span>
@@ -406,6 +412,21 @@ function OpportunitiesPage() {
                           <Badge variant="outline" className="text-[10px] capitalize">
                             {row.statusLabel}
                           </Badge>
+                          {row.stage === "closed" && row.outcome && OUTCOME_LABEL[row.outcome] && (
+                            <Badge variant="outline" className={`text-[10px] ${OUTCOME_TONE[row.outcome] ?? ""}`}>
+                              {OUTCOME_LABEL[row.outcome]}
+                            </Badge>
+                          )}
+                          {row.ready && row.stage !== "closed" && row.stage !== "submitted" && (
+                            <Badge
+                              variant="outline"
+                              className="text-[10px] uppercase tracking-wide gap-1 border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_18%,transparent)] text-[color:var(--brand-brass)]"
+                              title="This stage's completion signal is satisfied — ready to advance"
+                            >
+                              <CircleDot className="w-3 h-3" />
+                              Ready
+                            </Badge>
+                          )}
                           {row.unreviewedActivity ? (
                             <Badge
                               variant="outline"
@@ -496,7 +517,6 @@ function OpportunitiesPage() {
       </div>
       )}
 
-
       <AddOpportunityDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
@@ -561,5 +581,3 @@ function WatchToggle({
     </label>
   );
 }
-
-
