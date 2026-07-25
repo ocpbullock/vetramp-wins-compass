@@ -72,7 +72,7 @@ export function ProposedTeamCard({
   const qc = useQueryClient();
 
   const { data: entries = [] } = useQuery({
-    queryKey: ["proposal-teaming", proposalId],
+    queryKey: ["proposed-team-entries", proposalId],
     queryFn: async (): Promise<Entry[]> => {
       const { data, error } = await supabase
         .from("proposal_teaming")
