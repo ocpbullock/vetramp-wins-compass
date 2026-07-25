@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useOpportunityContext } from "@/lib/opportunity-context";
 import { ChevronRight, Workflow } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { mergeServerProposal } from "@/lib/intake-merge";
 import { userContextFromProposal, USER_CONTEXT_LABELS } from "@/lib/user-context";
 import { getOwnCompanyProfileData } from "@/lib/companies";
