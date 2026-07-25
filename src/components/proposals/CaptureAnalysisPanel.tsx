@@ -162,41 +162,12 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
   );
 
   const isSelfPrime = proposal.engagement_type !== "sub";
-  const selfMember: PwinTeamMember = {
-    id: "self",
-    name: self.company_name,
-    isSelf: true,
-    role: isSelfPrime ? "prime" : "sub",
-    workShare: isSelfPrime
-      ? Math.max(0, 100 - entries.reduce((s, e) => s + (Number(e.work_share_pct) || 0), 0))
-      : (entries.find((e) => e.role !== "prime")?.work_share_pct ?? 0),
-    active: true,
-    certifications: self.certifications,
-    naicsCodes: self.naics_codes,
-    contractVehicles: self.vehicles,
-    pastPerformance: self.pastPerf,
-    isIncumbent: !!incumbentName && self.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
-  };
-  const entryMap = new Map(entries.map((e) => [e.company_id, e]));
-  const partnerMembers: PwinTeamMember[] = partners.map((p: any) => {
-    const e = entryMap.get(p.id);
-    return {
-      id: p.id,
-      name: p.company_name,
-      isSelf: false,
-      role: (e?.role ?? "sub") as PwinRole,
-      workShare: e?.work_share_pct ?? 0,
-      active: !!e,
-      certifications: p.certifications ?? [],
-      naicsCodes: p.naics_codes ?? [],
-      contractVehicles: p.contract_vehicles ?? [],
-      pastPerformance: [],
-      isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
-      isEstablishedPartner: !!p.is_existing_partner,
-      priorContractTogether: !!p.worked_together_before,
-      hasNda: !!p.has_nda,
-      hasTeamingAgreement: !!p.has_teaming_agreement,
-    };
+  const members = buildPwinMembers({
+    self,
+    isSelfPrime,
+    partners: partners.map((p: any) => ({ ...p, name: p.company_name })),
+    entries,
+    incumbentName,
   });
   const pwinCtx: PwinContext = {
     engagementType: isSelfPrime ? "prime" : "sub",
@@ -207,7 +178,7 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
     scopeKeywords: suggestCtx.scopeKeywords,
     incumbentName,
   };
-  const pwinResult = calculatePwin(pwinCtx, [selfMember, ...partnerMembers]);
+  const pwinResult = calculatePwin(pwinCtx, members);
   return { ready: true as const, teamId, self, partners, entries, suggestions, pwinResult };
 }
 
