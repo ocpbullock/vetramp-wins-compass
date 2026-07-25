@@ -131,8 +131,10 @@ export function PartnerResearch({
     _cached?: boolean;
     message?: string;
     partial_reason?: string;
+    _debug?: { agencyParam?: string | null; fetched?: number; source?: string };
     page_metadata?: { total: number; fetched: number; hasNext: boolean; truncated: boolean };
   } | null>(null);
+  const [dhMeta, setDhMeta] = useState<{ fetched: number; agencyParam: string | null } | null>(null);
   const [drilldown, setDrilldown] = useState<{ uei: string; name: string } | null>(null);
 
   // ===== DARK HORSES =====
