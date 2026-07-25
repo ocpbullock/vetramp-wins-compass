@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import {
   HoverCard, HoverCardContent, HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { AlertTriangle, Handshake, Info, Trash2, Users, X } from "lucide-react";
+import { AlertTriangle, Handshake, Info, Link2, Trash2, Users, X } from "lucide-react";
 import { listPartnerCompanies, type PartnerView } from "@/lib/companies";
 import type { PwinRole } from "@/lib/pwin";
 
@@ -62,12 +62,22 @@ export function ProposedTeamCard({
   selfName,
   isSelfPrime,
   opportunityNaics,
+  primeContractorId,
+  primeContractorName,
+  selfWorkSharePct,
+  onSelfShareChange,
+  onLinkPrime,
 }: {
   proposalId: string;
   teamId: string;
   selfName: string;
   isSelfPrime: boolean;
   opportunityNaics: string | null;
+  primeContractorId?: string | null;
+  primeContractorName?: string | null;
+  selfWorkSharePct?: number | null;
+  onSelfShareChange?: (pct: number) => void;
+  onLinkPrime?: () => void;
 }) {
   const qc = useQueryClient();
 
@@ -94,6 +104,19 @@ export function ProposedTeamCard({
     () => new Map(partners.map((p) => [p.id, p])),
     [partners],
   );
+
+  const rosterPrime: PartnerView | null = useMemo(() => {
+    if (isSelfPrime) return null;
+    if (primeContractorId) {
+      const byId = partnerById.get(primeContractorId);
+      if (byId) return byId;
+    }
+    if (primeContractorName) {
+      const lower = primeContractorName.toLowerCase();
+      return partners.find((p) => (p.company_name ?? "").toLowerCase() === lower) ?? null;
+    }
+    return null;
+  }, [isSelfPrime, primeContractorId, primeContractorName, partnerById, partners]);
 
   const invalidateAll = () => {
     qc.invalidateQueries({ queryKey: ["proposed-team-entries", proposalId] });
@@ -133,13 +156,28 @@ export function ProposedTeamCard({
     invalidateAll();
   };
 
-  const partnerShare = entries.reduce(
+  // Exclude the prime's proposal_teaming row (if any) from the sub list —
+  // it's rendered as the dedicated Prime row above.
+  const primeEntryCompanyId = rosterPrime?.id ?? null;
+  const subEntries = entries.filter((e) => e.company_id !== primeEntryCompanyId);
+
+  const otherSubShare = subEntries.reduce(
     (s, e) => s + (Number(e.work_share_pct) || 0),
     0,
   );
-  const selfShare = isSelfPrime ? Math.max(0, 100 - partnerShare) : 0;
-  const total = selfShare + partnerShare;
+
+  const selfShareResolved = isSelfPrime
+    ? Math.max(0, 100 - otherSubShare)
+    : Math.max(0, Math.min(100, typeof selfWorkSharePct === "number" ? selfWorkSharePct : 20));
+
+  const primeRemainder = !isSelfPrime
+    ? Math.max(0, 100 - selfShareResolved - otherSubShare)
+    : 0;
+
+  const total = selfShareResolved + otherSubShare + primeRemainder;
   const over = total > 100;
+
+  const memberCount = 1 + subEntries.length + (!isSelfPrime && (rosterPrime || primeContractorName) ? 1 : 0);
 
   return (
     <Card>
@@ -155,30 +193,85 @@ export function ProposedTeamCard({
             </CardDescription>
           </div>
           <div className="text-xs text-muted-foreground text-right shrink-0">
-            <div className="tabular-nums">{entries.length + 1} member{entries.length === 0 ? "" : "s"}</div>
+            <div className="tabular-nums">{memberCount} member{memberCount === 1 ? "" : "s"}</div>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        {/* Self row */}
-        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
-          <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">Us</Badge>
-          <div className="text-sm font-medium truncate flex-1">{selfName}</div>
-          <span className="text-[10px] text-muted-foreground uppercase">
-            {isSelfPrime ? "Prime" : "Sub"}
-          </span>
-          <span className="text-xs tabular-nums w-16 text-right">{selfShare}%</span>
-          <div className="w-[92px]" />
-          <div className="w-6" />
-        </div>
-
-        {entries.length === 0 && (
-          <div className="text-xs text-muted-foreground border border-dashed border-border rounded-md p-4 text-center">
-            No partners yet — add from suggestions below.
+        {/* Sub mode: the PRIME row (from proposal.prime_contractor_*) */}
+        {!isSelfPrime && (rosterPrime || primeContractorName) && (
+          <div className="flex items-center gap-2 rounded-md border border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_10%,transparent)] px-2 py-1.5">
+            <Badge
+              variant="outline"
+              className="text-[10px] px-1.5 py-0 h-4 border-[color:var(--brand-brass)]/50 text-[color:var(--brand-brass)]"
+            >
+              Prime
+            </Badge>
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium truncate">
+                {rosterPrime?.company_name ?? primeContractorName}
+              </div>
+              {!rosterPrime && (
+                <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
+                  Not in roster — link or add for scoring detail
+                  {onLinkPrime && (
+                    <button
+                      type="button"
+                      onClick={onLinkPrime}
+                      className="inline-flex items-center gap-0.5 text-primary hover:underline"
+                    >
+                      <Link2 className="w-3 h-3" /> Link
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+            <span className="text-[10px] text-muted-foreground uppercase">Leads bid</span>
+            <span className="text-xs tabular-nums w-16 text-right" title="Remainder = 100% − our share − other subs">
+              {primeRemainder}%
+            </span>
+            <div className="w-[110px]" />
+            <div className="w-6" />
           </div>
         )}
 
-        {entries.map((e) => {
+        {/* Self row */}
+        <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
+          <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
+            {isSelfPrime ? "Us" : "Sub (us)"}
+          </Badge>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm font-medium truncate">{selfName}</div>
+            {!isSelfPrime && (
+              <div className="text-[10px] text-muted-foreground mt-0.5">Our share under the prime</div>
+            )}
+          </div>
+          <span className="text-[10px] text-muted-foreground uppercase">
+            {isSelfPrime ? "Prime" : "Sub"}
+          </span>
+          {isSelfPrime ? (
+            <>
+              <span className="text-xs tabular-nums w-16 text-right">{selfShareResolved}%</span>
+              <div className="w-[110px]" />
+            </>
+          ) : (
+            <SelfShareEditor
+              value={selfShareResolved}
+              onCommit={(n) => onSelfShareChange?.(n)}
+            />
+          )}
+          <div className="w-6" />
+        </div>
+
+        {subEntries.length === 0 && (
+          <div className="text-xs text-muted-foreground border border-dashed border-border rounded-md p-4 text-center">
+            {isSelfPrime
+              ? "No partners yet — add from suggestions below."
+              : "No fellow subs yet — add from suggestions below."}
+          </div>
+        )}
+
+        {subEntries.map((e) => {
           const p = partnerById.get(e.company_id);
           return (
             <ProposedRow
@@ -216,6 +309,31 @@ export function ProposedTeamCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+function SelfShareEditor({ value, onCommit }: { value: number; onCommit: (n: number) => void }) {
+  const [local, setLocal] = useState<string>(String(value));
+  useEffect(() => { setLocal(String(value)); }, [value]);
+  const commit = () => {
+    const n = Math.max(0, Math.min(100, Number(local) || 0));
+    if (n !== value) onCommit(n);
+    setLocal(String(n));
+  };
+  return (
+    <div className="flex items-center gap-1">
+      <Input
+        type="number" min={0} max={100}
+        value={local}
+        onChange={(e) => setLocal(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") (e.target as HTMLInputElement).blur(); }}
+        className="h-7 w-14 text-xs tabular-nums"
+        aria-label="Our work share percent"
+      />
+      <span className="text-[10px] text-muted-foreground">%</span>
+      <div className="w-[92px]" />
+    </div>
   );
 }
 
