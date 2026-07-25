@@ -104,11 +104,13 @@ export function PartnerResearch({
       : [];
     const { error } = await supabase.from("proposal_teaming").insert({
       proposal_id: proposalId, company_id: partner.id, role: "sub",
-      work_share_pct: null, naics_contribution: overlap,
+      work_share_pct: 15, naics_contribution: overlap,
     });
     if (error) { toast.error(error.message); return; }
     toast.success(`Added ${partner.company_name} to this proposal`);
     qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
+    qc.invalidateQueries({ queryKey: ["capture-entries", proposalId] });
+    qc.invalidateQueries({ queryKey: ["pwin-entries", proposalId] });
   };
 
   // ===== EXPERIENCE MODE STATE =====
