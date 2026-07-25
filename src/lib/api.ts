@@ -75,6 +75,7 @@ export async function searchUsaspending(input: {
   keyword?: string;
   agency?: string;
   maxResults?: number;
+  forceRefresh?: boolean;
 }) {
   logCall(`USAspending awards (up to ${input.maxResults ?? 1000})`);
   const { data, error } = await supabase.functions.invoke("search-usaspending", { body: input });
