@@ -27,6 +27,7 @@ import {
 } from "@/lib/partner-experience";
 import { companyFromTeamingTarget, type TeamingTarget } from "@/lib/teaming-targets";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
+import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
 
 const SB_TYPES = [
   { value: "SDVOSB", label: "SDVOSB" },
