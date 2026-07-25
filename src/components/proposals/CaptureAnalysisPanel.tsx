@@ -308,41 +308,12 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
         );
 
         const isSelfPrime = proposal.engagement_type !== "sub";
-        const selfMember: PwinTeamMember = {
-          id: "self",
-          name: self.company_name,
-          isSelf: true,
-          role: isSelfPrime ? "prime" : "sub",
-          workShare: isSelfPrime
-            ? Math.max(0, 100 - entries.reduce((s: number, e: any) => s + (Number(e.work_share_pct) || 0), 0))
-            : (entries.find((e: any) => e.role !== "prime")?.work_share_pct ?? 0),
-          active: true,
-          certifications: self.certifications,
-          naicsCodes: self.naics_codes,
-          contractVehicles: self.vehicles,
-          pastPerformance: self.pastPerf,
-          isIncumbent: !!incumbentName && self.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
-        };
-        const entryMap = new Map(entries.map((e: any) => [e.company_id, e]));
-        const partnerMembers: PwinTeamMember[] = partners.map((p: any) => {
-          const e: any = entryMap.get(p.id);
-          return {
-            id: p.id,
-            name: p.company_name,
-            isSelf: false,
-            role: (e?.role ?? "sub") as PwinRole,
-            workShare: e?.work_share_pct ?? 0,
-            active: !!e,
-            certifications: p.certifications ?? [],
-            naicsCodes: p.naics_codes ?? [],
-            contractVehicles: p.contract_vehicles ?? [],
-            pastPerformance: [],
-            isIncumbent: !!incumbentName && p.company_name.toLowerCase().includes(incumbentName.toLowerCase()),
-            isEstablishedPartner: !!p.is_existing_partner,
-            priorContractTogether: !!p.worked_together_before,
-            hasNda: !!p.has_nda,
-            hasTeamingAgreement: !!p.has_teaming_agreement,
-          };
+        const members = buildPwinMembers({
+          self,
+          isSelfPrime,
+          partners: partners.map((p: any) => ({ ...p, name: p.company_name })),
+          entries,
+          incumbentName,
         });
         const pwinResult: PwinResult = calculatePwin({
           engagementType: isSelfPrime ? "prime" : "sub",
@@ -352,7 +323,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           requiredVehicles: suggestCtx.requiredVehicles,
           scopeKeywords: suggestCtx.scopeKeywords,
           incumbentName,
-        }, [selfMember, ...partnerMembers]);
+        }, members);
 
         teamingSummary = { pwin: pwinResult, suggestions, ourCompanyName: self.company_name };
       }
