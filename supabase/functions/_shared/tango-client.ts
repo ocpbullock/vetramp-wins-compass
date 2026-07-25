@@ -268,7 +268,11 @@ export function contractRowToUsaspendingShape(row: any): any {
     "Recipient UEI": row.vendor_uei,
     "Award Amount": row.obligated_amount,
     "Awarding Agency": row.agency,
-    "Awarding Sub Agency": row.raw_data?.["Awarding Sub Agency"] ?? null,
+    "Awarding Sub Agency": row.raw_data?.["Awarding Sub Agency"]
+      ?? row.raw_data?.awarding_sub_agency
+      ?? row.raw_data?.awarding_sub_tier_agency_name
+      ?? row.raw_data?.awarding_office?.agency_name
+      ?? null,
     "Start Date": row.period_of_performance_start ?? row.award_date,
     "End Date": row.period_of_performance_end,
     NAICS: row.naics_code,
