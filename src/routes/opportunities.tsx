@@ -322,6 +322,8 @@ function OpportunitiesPage() {
   async function handleCreated(proposalId: string, opts?: { hasDocs?: boolean }) {
     await qc.invalidateQueries({ queryKey: ["opportunities-page"] });
     setSelectedOpportunityId(proposalId);
+    // Kick off background market snapshot generation (no-op if NAICS/agency missing).
+    void kickOffMarketSnapshotById(proposalId);
     navigate({
       to: "/proposals/$proposalId",
       params: { proposalId },
