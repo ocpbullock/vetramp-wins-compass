@@ -25,6 +25,7 @@ import {
   type PwinTeamMember,
   type PwinRole,
 } from "@/lib/pwin";
+import { buildPwinMembers } from "@/lib/pwin-members";
 import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies";
 import { addActivityFromAnalysis } from "./ActivitiesPanel";
 import { Plus } from "lucide-react";
