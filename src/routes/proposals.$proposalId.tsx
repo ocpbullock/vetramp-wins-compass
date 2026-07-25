@@ -2280,14 +2280,38 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
     [proposal],
   );
 
+  const invalidateTeaming = () => {
+    qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
+    qc.invalidateQueries({ queryKey: ["capture-entries", proposalId] });
+    qc.invalidateQueries({ queryKey: ["pwin-entries", proposalId] });
+    if (teamId) {
+      qc.invalidateQueries({ queryKey: ["capture-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["pwin-partners", teamId] });
+      qc.invalidateQueries({ queryKey: ["suggest-partners", teamId] });
+    }
+  };
+
   const addSuggestedPartner = async (s: { partnerId: string; partnerName: string }) => {
     const { error } = await supabase
       .from("proposal_teaming")
-      .insert({ proposal_id: proposalId, company_id: s.partnerId, role: "sub", work_share_pct: null });
+      .insert({ proposal_id: proposalId, company_id: s.partnerId, role: "sub", work_share_pct: 15 });
     if (error) { toast.error(error.message); return; }
     toast.success(`Added ${s.partnerName} to the team`);
-    qc.invalidateQueries({ queryKey: ["proposal-teaming", proposalId] });
+    invalidateTeaming();
   };
+
+  // Track first-seen Team Strength per mount so we can show a delta chip once
+  // the user adds/removes partners or edits work shares in the same session.
+  const currentTs = teaming.ready ? teaming.pwinResult.pwin : null;
+  const initialTsRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (initialTsRef.current == null && currentTs != null) {
+      initialTsRef.current = currentTs;
+    }
+  }, [currentTs]);
+  const tsDelta = currentTs != null && initialTsRef.current != null
+    ? currentTs - initialTsRef.current
+    : 0;
 
   if (!teamId) {
     return (
@@ -2302,10 +2326,24 @@ function TeamHubPanel({ proposal, proposalId }: { proposal: any; proposalId: str
 
   return (
     <div className="space-y-4">
+      {currentTs != null && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="briefing-label">Team Strength</span>
+          <span className="font-semibold tabular-nums">{currentTs}</span>
+          {tsDelta !== 0 && (
+            <span
+              className={`text-xs font-medium ${tsDelta > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-destructive"}`}
+              aria-label={`Team Strength changed by ${tsDelta}`}
+            >
+              {tsDelta > 0 ? "↑" : "↓"} from {initialTsRef.current}
+            </span>
+          )}
+        </div>
+      )}
       <PwinProbabilityCard
         proposal={proposal}
         proposalId={proposalId}
-        teamStrength={teaming.ready ? teaming.pwinResult.pwin : null}
+        teamStrength={currentTs}
         pwinFactors={teaming.ready ? teaming.pwinResult : null}
         compact
       />

@@ -50,35 +50,33 @@ const ROLES: { value: PwinRole; label: string }[] = [
   { value: "jv_partner", label: "JV Partner" },
 ];
 
+import { buildPartnerPwinMember, buildSelfPwinMember } from "@/lib/pwin-members";
+
 type SandboxMember = PwinTeamMember & { companyId: string };
 
 function memberFromCompany(c: Company, opts: { isSelf: boolean; role: PwinRole; share: number }): SandboxMember {
-  return {
-    companyId: c.id,
-    id: c.id,
-    name: c.name,
-    isSelf: opts.isSelf,
-    role: opts.role,
-    workShare: opts.share,
-    active: true,
-    certifications: c.certifications ?? [],
-    naicsCodes: c.naics_codes ?? [],
-    contractVehicles: c.contract_vehicles ?? [],
-    pastPerformance: (c.past_performance ?? []).map((pp: any) => ({
-      naics: pp?.naics ?? null,
-      agency: pp?.customer ?? pp?.agency ?? null,
-      end: pp?.end ?? null,
-      keywords: pp?.keywords ?? [],
-    })),
-    workedWithIncumbent: !!c.worked_together_before,
-    primeRelationshipStrength: c.relationship_strength ?? 0,
-    // Established-partnership signals that show up explicitly in the pWin
-    // partner-fit factor breakdown.
-    isEstablishedPartner: !!c.is_existing_partner,
-    priorContractTogether: !!(c as any).prior_contract_together || !!c.worked_together_before,
-    hasNda: !!(c as any).has_nda,
-    hasTeamingAgreement: !!(c as any).has_teaming_agreement,
-  };
+  const base = opts.isSelf
+    ? buildSelfPwinMember({
+        self: {
+          company_name: c.name,
+          certifications: c.certifications ?? [],
+          naics_codes: c.naics_codes ?? [],
+          vehicles: c.contract_vehicles ?? [],
+          pastPerf: (c.past_performance ?? []).map((pp: any) => ({
+            naics: pp?.naics ?? null,
+            agency: pp?.customer ?? pp?.agency ?? null,
+            end: pp?.end ?? null,
+            keywords: pp?.keywords ?? [],
+          })),
+        },
+        isSelfPrime: opts.role === "prime",
+        workShare: opts.share,
+      })
+    : buildPartnerPwinMember(
+        { ...(c as any), name: c.name },
+        { role: opts.role, workShare: opts.share, isPrime: opts.role === "prime" },
+      );
+  return { ...base, id: c.id, role: opts.role, companyId: c.id };
 }
 
 export function TeamingSandbox({
