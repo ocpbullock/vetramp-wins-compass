@@ -53,7 +53,7 @@ export function AgencyCombobox({
 
   const { data: cachedAgencies = [] } = useQuery({
     queryKey: ["cached-agencies", teamId],
-    enabled: !!teamId,
+    enabled: !!teamId && !agenciesProp,
     queryFn: async () => {
       const { data } = await supabase
         .from("tango_cached_contracts")
@@ -74,12 +74,15 @@ export function AgencyCombobox({
   const suggestions = useMemo(() => {
     const seen = new Set<string>();
     const out: string[] = [];
-    for (const a of [...cachedAgencies, ...STATIC_AGENCIES]) {
+    const source = agenciesProp && agenciesProp.length > 0
+      ? [...agenciesProp, ...STATIC_AGENCIES]
+      : [...cachedAgencies, ...STATIC_AGENCIES];
+    for (const a of source) {
       const key = a.toUpperCase();
       if (!seen.has(key)) { seen.add(key); out.push(a); }
     }
     return out;
-  }, [cachedAgencies]);
+  }, [cachedAgencies, agenciesProp]);
 
   const filtered = useMemo(() => {
     const query = q.trim();
