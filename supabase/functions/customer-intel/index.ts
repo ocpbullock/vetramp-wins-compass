@@ -5,11 +5,8 @@ import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } 
 import { normalizeUserContext, appliedFacts, renderUserContextPrompt } from "../_shared/user-context.ts";
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 import { loadOpportunityIntelBlock, PROPRIETARY_INTEL_SYSTEM_INSTRUCTION } from "../_shared/opportunity-intel.ts";
+import { buildCorsHeaders } from "../_shared/cors.ts";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-};
 
 const SCHEMA = {
   type: "object",
