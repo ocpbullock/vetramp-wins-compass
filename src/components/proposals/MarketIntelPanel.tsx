@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, RefreshCw, Sparkles, UserPlus } from "lucide-react";
 import { toast } from "sonner";
-import { generateMarketSnapshot, type MarketSnapshot } from "@/lib/market-snapshot";
+import { generateMarketSnapshot, isMarketSnapshotInProgress, type MarketSnapshot } from "@/lib/market-snapshot";
 import { companyFromTeamingTarget } from "@/lib/teaming-targets";
 import { upsertCompany } from "@/lib/companies";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
