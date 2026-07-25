@@ -161,7 +161,7 @@ export async function exportCaptureReportDocx(
 ) {
   const variant = options.variant ?? "internal";
   const isInternal = variant === "internal";
-  const { proposal, marketSnapshot, captureAnalysis, intelItems, teamingSummary, darkHorses, positioningMatrix, ptwAnalysis } = inputs;
+  const { proposal, marketSnapshot, captureAnalysis, intelItems, teamingSummary, darkHorses, positioningMatrix, ptwAnalysis, pwinProbability } = inputs;
 
   const children: (Paragraph | Table)[] = [];
 
