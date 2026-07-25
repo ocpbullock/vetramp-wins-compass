@@ -2437,13 +2437,19 @@ function TeamHubPanel({
             : null
         }
         onSelfShareChange={async (pct) => {
-          const nextConfig = { ...(proposal.pwin_config ?? {}), selfWorkSharePct: pct };
+          const prevConfig = proposal.pwin_config ?? {};
+          const nextConfig = { ...prevConfig, selfWorkSharePct: pct };
+          // Optimistic local update so scoreboard + remainder move immediately.
+          onProposalPatch?.({ pwin_config: nextConfig });
           const { error } = await supabase
             .from("proposals")
             .update({ pwin_config: nextConfig } as any)
             .eq("id", proposalId);
-          if (error) { toast.error(error.message); return; }
-          qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
+          if (error) {
+            onProposalPatch?.({ pwin_config: prevConfig });
+            toast.error(error.message);
+            return;
+          }
           invalidateTeaming();
         }}
       />
