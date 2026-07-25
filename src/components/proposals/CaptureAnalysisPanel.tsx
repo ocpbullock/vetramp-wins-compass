@@ -211,12 +211,19 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
 }
 
 export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
-  const qc = useQueryClient();
-  const analysis: CaptureAnalysis | null = (proposal?.capture_analysis as CaptureAnalysis | null) ?? null;
-  const generatedAt: string | null = proposal?.capture_analysis_at ?? null;
+  const [analysis, setAnalysis] = useState<CaptureAnalysis | null>(
+    (proposal?.capture_analysis as CaptureAnalysis | null) ?? null,
+  );
+  const [generatedAt, setGeneratedAt] = useState<string | null>(proposal?.capture_analysis_at ?? null);
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState<"internal" | "partner" | null>(null);
   const [pwinProbability, setPwinProbability] = useState<PwinProbabilityResult | null>(null);
+
+  // Sync local state when the parent-supplied proposal row changes.
+  useEffect(() => {
+    setAnalysis((proposal?.capture_analysis as CaptureAnalysis | null) ?? null);
+    setGeneratedAt(proposal?.capture_analysis_at ?? null);
+  }, [proposal?.capture_analysis, proposal?.capture_analysis_at]);
 
   const teaming = useTeamingSummary(proposal, proposalId);
 
@@ -246,13 +253,17 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   const rerun = async () => {
     setRunning(true);
     try {
-      const { error } = await supabase.functions.invoke("capture-analysis", {
+      const { data, error } = await supabase.functions.invoke("capture-analysis", {
         body: { proposalId, skipCache: true },
       });
       if (error) throw error;
+      const next = (data as any)?.analysis as CaptureAnalysis | undefined;
+      if (!next) throw new Error("No analysis returned");
+      setAnalysis(next);
+      setGeneratedAt(next._fetched_at ?? new Date().toISOString());
       toast.success("Capture analysis updated");
-      await qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
     } catch (e: any) {
+      console.error("[capture-analysis]", e);
       toast.error(e?.message ?? "Failed to run analysis");
     } finally {
       setRunning(false);
