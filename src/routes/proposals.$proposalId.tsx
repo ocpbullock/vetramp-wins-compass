@@ -2287,7 +2287,7 @@ function TeamHubPanel({
     refetchOnWindowFocus: false,
   });
   const existingPartnerIds = useMemo(
-    () => teamingEntries.map((e) => e.company_id),
+    () => teamingEntries.map((e: TeamingEntry) => e.company_id),
     [teamingEntries],
   );
 
