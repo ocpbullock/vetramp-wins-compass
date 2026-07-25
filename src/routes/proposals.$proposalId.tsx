@@ -2263,21 +2263,10 @@ function TeamHubPanel({
   const qc = useQueryClient();
   const teamId: string | null = proposal.team_id ?? null;
   const [sandboxOpen, setSandboxOpen] = useState(false);
-  const [sandboxSectionOpen, setSandboxSectionOpen] = useState(false);
   const [oppTeamDialogOpen, setOppTeamDialogOpen] = useState(false);
   const [outreachOpen, setOutreachOpen] = useState(false);
   const [outreachPartner, setOutreachPartner] = useState<OutreachPartnerInput | null>(null);
   const teaming = useTeamingSummary(proposal, proposalId);
-  const sandboxSectionRef = useRef<HTMLDivElement | null>(null);
-
-  const openSandboxSection = useCallback(() => {
-    setSandboxSectionOpen(true);
-    // Re-seeding is inherent: the sandbox reads the current proposed team
-    // when it mounts / opens. Just scroll it into view.
-    requestAnimationFrame(() => {
-      sandboxSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }, []);
 
   // Single canonical read of proposal_teaming rows — same key & fetcher as
   // ProposedTeamCard and useTeamingSummary so all three share one cache entry.
