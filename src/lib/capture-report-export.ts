@@ -148,6 +148,7 @@ export type CaptureReportInputs = {
       note?: string;
     }>;
   } | null;
+  pwinProbability?: PwinProbabilityResult | null;
 };
 
 export type CaptureReportOptions = {
