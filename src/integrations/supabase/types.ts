@@ -2113,7 +2113,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      diagnostics_stale_schema_scan: {
+        Args: never
+        Returns: {
+          function_name: string
+          needle: string
+          schema_name: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "member"
