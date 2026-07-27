@@ -41,6 +41,7 @@ import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/ap
 import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 import { StageStepper } from "@/components/proposals/StageStepper";
+import { PursuitRail } from "@/components/proposals/PursuitRail";
 import { isStageSatisfied, nextCaptureStage, type StageSignals } from "@/lib/capture-stage";
 import { applyCaptureStage } from "@/lib/stage-mutations";
 import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
