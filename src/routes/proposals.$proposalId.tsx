@@ -2399,6 +2399,7 @@ function TeamHubPanel({
     ? currentTs - initialTsRef.current : 0;
 
   const [pwinResult, setPwinResult] = useState<PwinProbabilityResult | null>(null);
+  useEffect(() => { onPwinProbability?.(pwinResult); }, [pwinResult, onPwinProbability]);
   const currentPwin = pwinResult?.likelyPct ?? null;
   const initialPwinRef = useRef<number | null>(null);
   useEffect(() => {
