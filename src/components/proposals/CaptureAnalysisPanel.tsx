@@ -695,56 +695,6 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
 
 // ---------- Local UI helpers (visual-only) ----------
 
-function usePersistedBool(key: string, initial: boolean): [boolean, (b: boolean) => void] {
-  const [value, setValue] = useState<boolean>(() => {
-    if (typeof window === "undefined") return initial;
-    try {
-      const raw = window.localStorage.getItem(key);
-      if (raw === "1") return true;
-      if (raw === "0") return false;
-    } catch { /* ignore */ }
-    return initial;
-  });
-  const set = (b: boolean) => {
-    setValue(b);
-    try { window.localStorage.setItem(key, b ? "1" : "0"); } catch { /* ignore */ }
-  };
-  return [value, set];
-}
-
-function CollapsibleSection({
-  id, title, summary, defaultOpen = false, children,
-}: {
-  id: string;
-  title: string;
-  summary: string;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = usePersistedBool(`ca:${id}:open`, defaultOpen);
-  return (
-    <section id={id} className="scroll-mt-32 border-t pt-4 first:border-t-0 first:pt-0">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 text-left group"
-        aria-expanded={open}
-        aria-controls={`${id}-body`}
-      >
-        <ChevronRight
-          className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none ${open ? "rotate-90" : ""}`}
-        />
-        <span className="briefing-label group-hover:text-foreground">{title}</span>
-        <span className="text-xs text-muted-foreground ml-2 truncate">{summary}</span>
-      </button>
-      {open && (
-        <div id={`${id}-body`} className="pt-3 space-y-4">
-          {children}
-        </div>
-      )}
-    </section>
-  );
-}
 
 function EditToggleWrapper({
   storageKey, readLabel, editLabel, children,
