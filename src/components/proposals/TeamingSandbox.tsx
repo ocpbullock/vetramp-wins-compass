@@ -144,6 +144,39 @@ export function TeamingSandbox({
     setMembers(seed);
   }, [open, companies, ownCompany, members.length, addCompanyIdOnOpen]);
 
+  // Re-seed from the current Proposed Team every time the sandbox is opened.
+  // Falls back to a lone self-prime seed when no seed is provided.
+  const reseedFromProposed = () => {
+    if (!companies || companies.length === 0) return;
+    const seed: SandboxMember[] = [];
+    if (seedFromProposed && seedFromProposed.length > 0) {
+      for (const s of seedFromProposed) {
+        const c = companies.find((cc) => cc.id === s.companyId);
+        if (!c) continue;
+        seed.push(memberFromCompany(c, { isSelf: s.isSelf, role: s.role, share: s.workShare }));
+      }
+      const self = seed.find((m) => m.isSelf) ?? seed[0];
+      if (self) setPerspectiveId(self.companyId);
+    }
+    if (seed.length === 0) {
+      const initial = ownCompany ?? companies[0];
+      setPerspectiveId(initial.id);
+      seed.push(memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 }));
+      if (addCompanyIdOnOpen && addCompanyIdOnOpen !== initial.id) {
+        const extra = companies.find((c) => c.id === addCompanyIdOnOpen);
+        if (extra) seed.push(memberFromCompany(extra, { isSelf: false, role: "sub", share: 20 }));
+      }
+    }
+    setMembers(seed);
+  };
+
+  // Seed on open + whenever companies finish loading for an already-open dialog.
+  useEffect(() => {
+    if (!open || !companies) return;
+    reseedFromProposed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, companies]);
+
   // Reset when dialog closes
   useEffect(() => {
     if (open) return;
