@@ -127,22 +127,6 @@ export function TeamingSandbox({
   const [scenarioName, setScenarioName] = useState("");
   const [previewScenarios, setPreviewScenarios] = useState<any[]>([]);
 
-  // First-time seed: when companies load, default perspective to own company
-  // (or first available) and seed a single self member. Subsequent renders
-  // don't overwrite the user's edits.
-  useEffect(() => {
-    if (!open) return;
-    if (!companies || companies.length === 0 || members.length > 0) return;
-    const initial = ownCompany ?? companies[0];
-    setPerspectiveId(initial.id);
-    const seed = [memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 })];
-    // If caller asked us to preload a teaming-target company, add it as a sub.
-    if (addCompanyIdOnOpen && addCompanyIdOnOpen !== initial.id) {
-      const extra = companies.find((c) => c.id === addCompanyIdOnOpen);
-      if (extra) seed.push(memberFromCompany(extra, { isSelf: false, role: "sub", share: 20 }));
-    }
-    setMembers(seed);
-  }, [open, companies, ownCompany, members.length, addCompanyIdOnOpen]);
 
   // Re-seed from the current Proposed Team every time the sandbox is opened.
   // Falls back to a lone self-prime seed when no seed is provided.
