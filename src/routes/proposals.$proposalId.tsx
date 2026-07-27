@@ -2302,7 +2302,9 @@ function TeamHubPanel({
     refetchOnWindowFocus: false,
   });
   const existingPartnerIds = useMemo(
-    () => teamingEntries.map((e: TeamingEntry) => e.company_id),
+    () => (teamingEntries as TeamingEntry[])
+      .filter((e): e is TeamingEntry => !!e && !!e.company_id)
+      .map((e) => e.company_id),
     [teamingEntries],
   );
 
