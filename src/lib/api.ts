@@ -131,6 +131,26 @@ export async function getAwardDetail(generatedInternalId: string) {
   return data;
 }
 
+export async function researchVendor(input: {
+  name?: string | null;
+  uei?: string | null;
+  knownContracts?: Array<{ piid?: string; naics?: string; agency?: string; amount?: number; end?: string }>;
+}) {
+  const { data, error } = await supabase.functions.invoke("vendor-research", { body: input });
+  if (error) throw error;
+  return data as { research: VendorResearch };
+}
+
+export type VendorResearch = {
+  overview: string;
+  focus_areas: string[];
+  notable_wins: { what: string; customer: string; year: string; source_url: string | null }[];
+  size_posture: string;
+  teaming_angle: string;
+  confidence_notes: string;
+  _fetched_at?: string;
+};
+
 export type CompeteVendor = {
   recipientId: string | null;
   name: string;

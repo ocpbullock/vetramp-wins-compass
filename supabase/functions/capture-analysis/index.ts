@@ -35,8 +35,32 @@ const SCHEMA = {
         required: ["action", "why", "priority"],
       },
     },
+    team_strategy: {
+      type: "object",
+      description: "Recommended teaming strategy for pursuing this opportunity.",
+      properties: {
+        recommended_model: {
+          type: "string",
+          enum: ["prime_with_subs", "sub_to_prime", "joint_venture", "mentor_protege", "niche_sub"],
+        },
+        model_rationale: { type: "string" },
+        partner_archetypes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              archetype: { type: "string", description: "e.g. 'SDVOSB prime with SATCOM past performance', 'Large integrator holding SEWP V'." },
+              why: { type: "string" },
+              example_signal: { type: "string", description: "Concrete signal from market_snapshot or intel that supports this archetype." },
+            },
+            required: ["archetype", "why", "example_signal"],
+          },
+        },
+      },
+      required: ["recommended_model", "model_rationale", "partner_archetypes"],
+    },
   },
-  required: ["bid_no_bid", "win_themes", "competitor_assessment", "staffing_concerns", "next_actions"],
+  required: ["bid_no_bid", "win_themes", "competitor_assessment", "staffing_concerns", "next_actions", "team_strategy"],
 };
 
 serve(async (req) => {
@@ -273,7 +297,7 @@ Return the matrix. Include ${ourCompany ? "one row for our team plus " : ""}up t
     }
 
     const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + PROPRIETARY_INTEL_SYSTEM_INSTRUCTION + "\n\n" +
-      `You are a senior federal capture manager producing a Capture Analysis for an opportunity. Produce a sober bid/no-bid recommendation, win themes, a synthesized competitor assessment, staffing concerns (clearance, labor categories, incumbent staff retention), and a short prioritized next-actions list. Be specific. When proprietary human intelligence conflicts with public/market_snapshot signals, defer to the proprietary intel and call out the discrepancy. Never fabricate facts.`;
+      `You are a senior federal capture manager producing a Capture Analysis for an opportunity. Produce a sober bid/no-bid recommendation, win themes, a synthesized competitor assessment, staffing concerns (clearance, labor categories, incumbent staff retention), a short prioritized next-actions list, and a recommended team_strategy. For team_strategy: pick recommended_model from {prime_with_subs, sub_to_prime, joint_venture, mentor_protege, niche_sub} based on set-aside eligibility, our size/certifications vs the competitive field, the incumbent situation, and any proprietary intel; give a concrete model_rationale; list 2–5 partner_archetypes describing the type of partner to recruit (not specific companies unless supported by market signal), each with a why and an example_signal grounded in the provided data. Be specific. When proprietary human intelligence conflicts with public/market_snapshot signals, defer to the proprietary intel and call out the discrepancy. Never fabricate facts.`;
 
     const opportunitySummary = {
       title: proposal.opportunity_title,

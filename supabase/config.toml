@@ -48,3 +48,6 @@ verify_jwt = true
 [functions.diagnostics-meta]
 verify_jwt = true
 
+[functions.vendor-research]
+verify_jwt = true
+

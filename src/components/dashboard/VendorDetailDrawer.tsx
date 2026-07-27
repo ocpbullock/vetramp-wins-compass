@@ -3,11 +3,18 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sh
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { BookmarkPlus, Loader2, AlertTriangle } from "lucide-react";
+import { BookmarkPlus, Loader2, AlertTriangle, ExternalLink, Sparkles, Info } from "lucide-react";
 import { toast } from "sonner";
 import { getVendorProfile } from "@/lib/api";
+import { researchVendor, type VendorResearch } from "@/lib/api";
 import { useTeam } from "@/lib/team";
 import { companyFromVendorLookup, upsertCompany } from "@/lib/companies";
+
+// Session-only cache: keyed by UEI when present, else normalized name. Cleared on reload.
+const researchCache = new Map<string, VendorResearch>();
+const cacheKeyFor = (uei?: string | null, name?: string | null) =>
+  (uei && uei.trim()) ? `uei:${uei.trim().toUpperCase()}`
+  : (name && name.trim()) ? `name:${name.trim().toLowerCase()}` : "";
 
 function fmtUsd(n?: number | null) {
   if (!n) return "—";
@@ -32,18 +39,47 @@ export function VendorDetailDrawer({
   // When the name-only path returns multiple SAM matches, the user picks one
   // and we re-run by UEI.
   const [selectedUei, setSelectedUei] = useState<string | null>(null);
+  const [research, setResearch] = useState<VendorResearch | null>(null);
+  const [researching, setResearching] = useState(false);
   const { currentTeam, userRole } = useTeam();
   const canSave = !!currentTeam && (userRole === "owner" || userRole === "admin" || userRole === "member");
 
   useEffect(() => {
-    if (!recipientId && !vendorName) { setData(null); setError(null); setSelectedUei(null); return; }
-    setLoading(true); setError(null); setData(null); setSelectedUei(null);
+    if (!recipientId && !vendorName) { setData(null); setError(null); setSelectedUei(null); setResearch(null); return; }
+    setLoading(true); setError(null); setData(null); setSelectedUei(null); setResearch(null);
     // Pass both signals — the function decides UEI vs name-resolution.
     getVendorProfile({ recipientId, vendorName })
       .then(setData)
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
   }, [recipientId, vendorName]);
+
+  // Hydrate cached AI research once the drawer knows the resolved identity.
+  useEffect(() => {
+    const key = cacheKeyFor(data?.resolved?.uei, data?.resolved?.legal_name ?? vendorName);
+    if (key && researchCache.has(key)) setResearch(researchCache.get(key)!);
+  }, [data?.resolved?.uei, data?.resolved?.legal_name, vendorName]);
+
+  const runResearch = async () => {
+    const displayName = data?.resolved?.legal_name ?? vendorName ?? null;
+    const ueiVal = data?.resolved?.uei ?? null;
+    if (!displayName && !ueiVal) { toast.error("No vendor identity to research."); return; }
+    setResearching(true);
+    try {
+      const knownContracts = (data?.contracts ?? []).slice(0, 5).map((c: any) => ({
+        piid: c["Award ID"], naics: c.NAICS, agency: c["Awarding Agency"] ?? c["Awarding Sub Agency"],
+        amount: Number(c["Award Amount"]) || undefined, end: c["End Date"]?.slice(0, 10),
+      }));
+      const { research: r } = await researchVendor({ name: displayName, uei: ueiVal, knownContracts });
+      setResearch(r);
+      const key = cacheKeyFor(ueiVal, displayName);
+      if (key) researchCache.set(key, r);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Research failed");
+    } finally {
+      setResearching(false);
+    }
+  };
 
   const pickCandidate = (uei: string) => {
     setSelectedUei(uei);
@@ -118,6 +154,22 @@ export function VendorDetailDrawer({
             </Button>
           </div>
         )}
+
+        {(data?.resolved || vendorName) && !data?.multipleMatches && (
+          <VerifyExternally
+            uei={data?.resolved?.uei ?? null}
+            name={data?.resolved?.legal_name ?? vendorName ?? null}
+          />
+        )}
+
+        {data && !data.multipleMatches && (
+          <AiResearchBlock
+            research={research}
+            researching={researching}
+            onRun={runResearch}
+          />
+        )}
+
 
         {error && <div className="text-xs text-destructive mt-3">{error}</div>}
         {loading && <div className="space-y-3 mt-4"><Skeleton className="h-20" /><Skeleton className="h-32" /></div>}
@@ -231,6 +283,122 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     <div>
       <div className="text-[10px] uppercase opacity-60 mb-1">{title}</div>
       <div>{children}</div>
+    </div>
+  );
+}
+
+function VerifyExternally({ uei, name }: { uei: string | null; name: string | null }) {
+  const samUrl = uei ? `https://sam.gov/entity/${encodeURIComponent(uei)}/coreData` : null;
+  const usaUrl = uei
+    ? `https://www.usaspending.gov/recipient/${encodeURIComponent(uei)}-C/latest`
+    : name
+    ? `https://www.usaspending.gov/search/?filters=%7B%22keywords%22%3A%5B%22${encodeURIComponent(name)}%22%5D%7D`
+    : null;
+  const newsUrl = name
+    ? `https://www.google.com/search?tbm=nws&q=${encodeURIComponent(`"${name}" contract award`)}`
+    : null;
+  const items: { href: string; label: string }[] = [];
+  if (samUrl) items.push({ href: samUrl, label: "SAM.gov entity" });
+  if (usaUrl) items.push({ href: usaUrl, label: "USAspending recipient" });
+  if (newsUrl) items.push({ href: newsUrl, label: "Google News: contract awards" });
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-4 border border-border rounded-md p-2.5">
+      <div className="text-[10px] uppercase opacity-60 mb-1.5">Verify externally</div>
+      <div className="flex flex-col gap-1">
+        {items.map((it) => (
+          <a
+            key={it.href}
+            href={it.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+          >
+            {it.label} <ExternalLink className="w-3 h-3" />
+          </a>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AiResearchBlock({
+  research, researching, onRun,
+}: {
+  research: VendorResearch | null;
+  researching: boolean;
+  onRun: () => void;
+}) {
+  return (
+    <div className="mt-4 border border-border rounded-md p-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[10px] uppercase opacity-60">AI research (verify before relying)</div>
+        <Button size="sm" variant="outline" onClick={onRun} disabled={researching} className="h-7 text-xs">
+          {researching ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <Sparkles className="w-3 h-3 mr-1" />}
+          {research ? "Re-run" : "AI research this vendor"}
+        </Button>
+      </div>
+      <div className="mt-1.5 flex items-start gap-1.5 text-[10px] text-warning">
+        <Info className="w-3 h-3 mt-0.5 shrink-0" />
+        <span>Model-generated. May contain errors or omissions — verify each claim against SAM/USAspending/news before acting on it.</span>
+      </div>
+      {research && (
+        <div className="mt-3 space-y-2.5 text-xs">
+          <div>
+            <div className="text-[10px] uppercase opacity-60 mb-0.5">Overview</div>
+            <p className="whitespace-pre-wrap">{research.overview}</p>
+          </div>
+          {research.focus_areas?.length > 0 && (
+            <div>
+              <div className="text-[10px] uppercase opacity-60 mb-1">Focus areas</div>
+              <div className="flex flex-wrap gap-1">
+                {research.focus_areas.map((f, i) => (
+                  <Badge key={i} variant="secondary" className="text-[10px]">{f}</Badge>
+                ))}
+              </div>
+            </div>
+          )}
+          {research.notable_wins?.length > 0 && (
+            <div>
+              <div className="text-[10px] uppercase opacity-60 mb-1">Notable wins</div>
+              <ul className="space-y-1">
+                {research.notable_wins.map((w, i) => (
+                  <li key={i} className="border border-border/60 rounded p-1.5">
+                    <div className="font-medium">{w.what}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {w.customer}{w.year ? ` · ${w.year}` : ""}
+                    </div>
+                    {w.source_url && (
+                      <a
+                        href={w.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[10px] text-primary hover:underline inline-flex items-center gap-0.5"
+                      >
+                        source <ExternalLink className="w-2.5 h-2.5" />
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          <div className="grid grid-cols-1 gap-2">
+            <div>
+              <div className="text-[10px] uppercase opacity-60">Size / set-aside posture</div>
+              <div>{research.size_posture}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase opacity-60">Teaming angle</div>
+              <div>{research.teaming_angle}</div>
+            </div>
+            <div>
+              <div className="text-[10px] uppercase opacity-60">Confidence notes</div>
+              <div className="text-muted-foreground italic">{research.confidence_notes}</div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

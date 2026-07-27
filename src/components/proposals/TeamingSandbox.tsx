@@ -79,8 +79,22 @@ function memberFromCompany(c: Company, opts: { isSelf: boolean; role: PwinRole; 
   return { ...base, id: c.id, role: opts.role, companyId: c.id };
 }
 
+export type SandboxSeedMember = {
+  companyId: string;
+  role: PwinRole;
+  workShare: number;
+  isSelf: boolean;
+};
+
+export type SandboxSuggestion = {
+  companyId: string;
+  name: string;
+  reason?: string;
+};
+
 export function TeamingSandbox({
   open, onOpenChange, parent, opportunity, addCompanyIdOnOpen,
+  seedFromProposed, suggestions,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
@@ -88,6 +102,10 @@ export function TeamingSandbox({
   opportunity: SandboxOpportunityContext;
   /** If set, this company id is added to the sandbox team when companies finish loading. */
   addCompanyIdOnOpen?: string | null;
+  /** Team of record: sandbox re-seeds from this each time it opens. */
+  seedFromProposed?: SandboxSeedMember[];
+  /** Top suggested partners for one-click add. */
+  suggestions?: SandboxSuggestion[];
 }) {
   const qc = useQueryClient();
   const teamId = parent.teamId;
@@ -109,22 +127,48 @@ export function TeamingSandbox({
   const [scenarioName, setScenarioName] = useState("");
   const [previewScenarios, setPreviewScenarios] = useState<any[]>([]);
 
-  // First-time seed: when companies load, default perspective to own company
-  // (or first available) and seed a single self member. Subsequent renders
-  // don't overwrite the user's edits.
-  useEffect(() => {
-    if (!open) return;
-    if (!companies || companies.length === 0 || members.length > 0) return;
-    const initial = ownCompany ?? companies[0];
-    setPerspectiveId(initial.id);
-    const seed = [memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 })];
-    // If caller asked us to preload a teaming-target company, add it as a sub.
-    if (addCompanyIdOnOpen && addCompanyIdOnOpen !== initial.id) {
-      const extra = companies.find((c) => c.id === addCompanyIdOnOpen);
-      if (extra) seed.push(memberFromCompany(extra, { isSelf: false, role: "sub", share: 20 }));
+
+  // Re-seed from the current Proposed Team every time the sandbox is opened.
+  // Ensures a self/perspective member is always present (defaults to the
+  // is_own_company row when the caller doesn't include one).
+  const reseedFromProposed = () => {
+    if (!companies || companies.length === 0) return;
+    const seed: SandboxMember[] = [];
+    if (seedFromProposed && seedFromProposed.length > 0) {
+      for (const s of seedFromProposed) {
+        const c = companies.find((cc) => cc.id === s.companyId);
+        if (!c) continue;
+        seed.push(memberFromCompany(c, { isSelf: s.isSelf, role: s.role, share: s.workShare }));
+      }
     }
+    // Guarantee a perspective/self member.
+    if (!seed.some((m) => m.isSelf)) {
+      const initial = ownCompany ?? companies[0];
+      if (initial && !seed.some((m) => m.companyId === initial.id)) {
+        seed.unshift(memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 - seed.reduce((s, m) => s + m.workShare, 0) }));
+      } else if (seed.length > 0) {
+        seed[0] = { ...seed[0], isSelf: true };
+      }
+    }
+    if (seed.length === 0) {
+      const initial = ownCompany ?? companies[0];
+      seed.push(memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 }));
+      if (addCompanyIdOnOpen && addCompanyIdOnOpen !== initial.id) {
+        const extra = companies.find((c) => c.id === addCompanyIdOnOpen);
+        if (extra) seed.push(memberFromCompany(extra, { isSelf: false, role: "sub", share: 20 }));
+      }
+    }
+    const self = seed.find((m) => m.isSelf) ?? seed[0];
+    if (self) setPerspectiveId(self.companyId);
     setMembers(seed);
-  }, [open, companies, ownCompany, members.length, addCompanyIdOnOpen]);
+  };
+
+  // Seed on open + whenever companies finish loading for an already-open dialog.
+  useEffect(() => {
+    if (!open || !companies) return;
+    reseedFromProposed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, companies]);
 
   // Reset when dialog closes
   useEffect(() => {
@@ -275,7 +319,7 @@ export function TeamingSandbox({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-6xl max-h-[92vh] overflow-hidden p-0">
+      <DialogContent className="max-w-6xl max-h-[92vh] flex flex-col overflow-hidden p-0">
         <DialogHeader className="px-6 pt-5 pb-3 border-b">
           <DialogTitle className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-primary" /> Teaming Sandbox
@@ -288,6 +332,11 @@ export function TeamingSandbox({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="px-6 pt-3 text-[11px] text-muted-foreground bg-muted/40 border-b py-2">
+          <strong className="text-foreground">What-if modeling.</strong> Your Proposed Team above is the team of record — use the sandbox to test alternative lineups without changing it. Changes here are never saved to the pursuit.
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto">
         <Tabs defaultValue="builder" className="px-6 pt-3">
           <TabsList>
             <TabsTrigger value="builder">Builder</TabsTrigger>
@@ -295,6 +344,7 @@ export function TeamingSandbox({
           </TabsList>
 
           <TabsContent value="builder" className="mt-0">
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
               <div>
                 <Label className="text-xs">Relationship model</Label>
@@ -328,7 +378,7 @@ export function TeamingSandbox({
                   placeholder="Search companies, NAICS, certs…"
                   className="h-8 text-sm mt-1"
                 />
-                <ScrollArea className="h-[44vh] mt-2 border rounded-md">
+                <ScrollArea className="h-[52vh] mt-2 border rounded-md">
                   <div className="p-2 space-y-1">
                     {filteredCompanies.length === 0 && (
                       <div className="text-xs text-muted-foreground py-4 text-center">No more matching companies.</div>
@@ -360,8 +410,19 @@ export function TeamingSandbox({
 
               {/* MIDDLE: Candidate team */}
               <div className="lg:col-span-1">
-                <Label className="text-xs">Candidate team ({members.length})</Label>
-                <ScrollArea className="h-[48vh] mt-1 pr-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Candidate team ({members.length})</Label>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 text-[11px] px-2"
+                    onClick={reseedFromProposed}
+                    title="Reset the sandbox to the current Proposed Team"
+                  >
+                    Re-seed from proposed team
+                  </Button>
+                </div>
+                <div className="mt-1 pr-1 max-h-[52vh] overflow-y-auto">
                   <RadioGroup value={perspectiveId ?? ""} onValueChange={setPerspective} className="space-y-2">
                     {members.length === 0 && (
                       <div className="text-xs text-muted-foreground border border-dashed rounded p-4 text-center">
@@ -426,8 +487,37 @@ export function TeamingSandbox({
                       </div>
                     ))}
                   </RadioGroup>
-                </ScrollArea>
+                </div>
+
+                {suggestions && suggestions.length > 0 && (
+                  <div className="mt-3 border-t pt-2">
+                    <div className="text-[10px] uppercase text-muted-foreground mb-1">
+                      Add from suggestions (sandbox only)
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {suggestions
+                        .filter((s) => !members.some((m) => m.companyId === s.companyId))
+                        .slice(0, 8)
+                        .map((s) => (
+                          <button
+                            key={s.companyId}
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/5 text-primary text-[11px] px-2 py-0.5 hover:bg-primary/10"
+                            onClick={() => {
+                              const c = companies?.find((cc) => cc.id === s.companyId);
+                              if (c) addCompany(c);
+                            }}
+                            title={s.reason ?? undefined}
+                          >
+                            <Plus className="w-3 h-3" />
+                            {s.name}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
 
               {/* RIGHT: pWin */}
               <div className="lg:col-span-1">
@@ -464,6 +554,7 @@ export function TeamingSandbox({
             </ScrollArea>
           </TabsContent>
         </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );
