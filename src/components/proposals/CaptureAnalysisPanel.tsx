@@ -30,6 +30,7 @@ import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies"
 import { addActivityFromAnalysis } from "./ActivitiesPanel";
 import { Plus } from "lucide-react";
 import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
+import { CollapsibleSection, usePersistedBool } from "@/components/CollapsibleSection";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
 import { PtwCard } from "./PtwCard";
