@@ -76,6 +76,13 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
   const [seedDraft, setSeedDraft] = useState<CompanyDraft | null>(null);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [textQuery, setTextQuery] = useState("");
+  const [certFilter, setCertFilter] = useState<string>("__any");
+  const [naicsFilter, setNaicsFilter] = useState<string>("");
+  const [vehicleFilter, setVehicleFilter] = useState<string>("__any");
+  const [statusFilter, setStatusFilter] = useState<string>("__any");
+  const [sortKey, setSortKey] = useState<"name" | "recent" | "status">("name");
+
 
   // Open prefilled dialog when an initialDraft is provided from a parent (e.g. vendor lookup).
   useEffect(() => {
@@ -110,13 +117,70 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
   });
   const orgName = parentTeam?.name ?? "the parent organization";
 
+  const distinctCerts = useMemo(() => {
+    const s = new Set<string>();
+    (data ?? []).forEach((c) => c.certifications.forEach((v) => v && s.add(v)));
+    return Array.from(s).sort();
+  }, [data]);
+
+  const distinctVehicles = useMemo(() => {
+    const s = new Set<string>();
+    (data ?? []).forEach((c) => c.contract_vehicles.forEach((v) => v && s.add(v)));
+    return Array.from(s).sort();
+  }, [data]);
+
   const filtered = useMemo(() => {
-    if (!data) return [];
-    if (filter === "own") return data.filter((c) => c.is_own_company);
-    if (filter === "partner") return data.filter((c) => c.is_existing_partner && !c.is_own_company);
-    if (filter === "other") return data.filter((c) => !c.is_existing_partner && !c.is_own_company);
-    return data;
-  }, [data, filter]);
+    let list = data ?? [];
+    if (filter === "own") list = list.filter((c) => c.is_own_company);
+    else if (filter === "partner") list = list.filter((c) => c.is_existing_partner && !c.is_own_company);
+    else if (filter === "other") list = list.filter((c) => !c.is_existing_partner && !c.is_own_company);
+
+    const q = textQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((c) => {
+        return (
+          c.name.toLowerCase().includes(q) ||
+          (c.capabilities_narrative ?? "").toLowerCase().includes(q) ||
+          (c.notes ?? "").toLowerCase().includes(q)
+        );
+      });
+    }
+    if (certFilter !== "__any") {
+      list = list.filter((c) => c.certifications.includes(certFilter));
+    }
+    if (naicsFilter) {
+      list = list.filter((c) => c.naics_codes.includes(naicsFilter));
+    }
+    if (vehicleFilter !== "__any") {
+      list = list.filter((c) => c.contract_vehicles.includes(vehicleFilter));
+    }
+    if (statusFilter !== "__any") {
+      list = list.filter((c) => c.relationship_status === statusFilter);
+    }
+
+    if (sortKey === "recent") {
+      list = [...list].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+    } else if (sortKey === "status") {
+      const rank = { active: 0, prospective: 1, inactive: 2 } as const;
+      list = [...list].sort((a, b) => {
+        const r = (rank[a.relationship_status] ?? 3) - (rank[b.relationship_status] ?? 3);
+        return r !== 0 ? r : a.name.localeCompare(b.name);
+      });
+    } else {
+      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return list;
+  }, [data, filter, textQuery, certFilter, naicsFilter, vehicleFilter, statusFilter, sortKey]);
+
+  const totalCount = data?.length ?? 0;
+  const filtersActive =
+    !!textQuery.trim() || certFilter !== "__any" || !!naicsFilter ||
+    vehicleFilter !== "__any" || statusFilter !== "__any" || filter !== "all";
+  const resetFilters = () => {
+    setTextQuery(""); setCertFilter("__any"); setNaicsFilter("");
+    setVehicleFilter("__any"); setStatusFilter("__any"); setFilter("all");
+  };
+
 
   const deleteMut = useMutation({
     mutationFn: deleteCompany,
