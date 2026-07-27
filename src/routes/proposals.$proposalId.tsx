@@ -41,6 +41,7 @@ import { friendlyError, friendlyFromError, friendlyFromResponse } from "@/lib/ap
 import { validateProposal, validateComplianceMatrix, type ValidationIssue } from "@/lib/proposal-validate";
 import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 import { StageStepper } from "@/components/proposals/StageStepper";
+import { PursuitRail } from "@/components/proposals/PursuitRail";
 import { isStageSatisfied, nextCaptureStage, type StageSignals } from "@/lib/capture-stage";
 import { applyCaptureStage } from "@/lib/stage-mutations";
 import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
@@ -185,6 +186,7 @@ function ProposalPipeline() {
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
   const [isPartnerView, setIsPartnerView] = useState(false);
+  const [pwinProbability, setPwinProbability] = useState<PwinProbabilityResult | null>(null);
 
   const teamingSignalQ = useQuery({
     queryKey: teamingEntriesKey(proposalId),
@@ -192,6 +194,10 @@ function ProposalPipeline() {
     enabled: !!user && !!proposalId,
   });
   const teamingCountForSignals = teamingSignalQ.data?.length ?? 0;
+
+  // Shared with PursuitRail so both scoreboard and rail read the SAME live value.
+  const teamingLive = useTeamingSummary(proposal ?? { team_id: null }, proposalId);
+  const teamStrength = teamingLive.ready ? teamingLive.pwinResult.pwin : null;
 
   const refreshProposal = useCallback(async () => {
     const { data } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
@@ -682,6 +688,15 @@ function ProposalPipeline() {
   if (loading || !proposal) return <div className="min-h-screen bg-background"><div className="p-8 text-muted-foreground">Loading opportunity…</div></div>;
 
   const cd = countdown(proposal.response_deadline);
+  const stageSignals: StageSignals = {
+    hasNaicsAgency: Boolean(proposal.naics_code && proposal.agency),
+    hasSnapshot: Boolean(proposal.market_snapshot_at),
+    hasAnalysis: Boolean(proposal.capture_analysis_at),
+    teamingCount: teamingCountForSignals,
+    sectionsCount: proposal.sections
+      ? Object.values(proposal.sections).filter((s: any) => s && typeof s === "object" && s.content).length
+      : 0,
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -765,15 +780,7 @@ function ProposalPipeline() {
               <StageStepper
                 proposalId={proposalId}
                 value={proposal.capture_stage}
-                signals={{
-                  hasNaicsAgency: Boolean(proposal.naics_code && proposal.agency),
-                  hasSnapshot: Boolean(proposal.market_snapshot_at),
-                  hasAnalysis: Boolean(proposal.capture_analysis_at),
-                  teamingCount: teamingCountForSignals,
-                  sectionsCount: proposal.sections
-                    ? Object.values(proposal.sections).filter((s: any) => s && typeof s === "object" && s.content).length
-                    : 0,
-                }}
+                signals={stageSignals}
                 onChanged={refreshProposal}
               />
             </div>
@@ -792,7 +799,8 @@ function ProposalPipeline() {
 
         <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
 
-        <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)}>
+        <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_280px] xl:gap-6 xl:items-start">
+        <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)} className="min-w-0">
           <div className="overflow-x-auto -mx-1 px-1 border-b border-border">
             <TabsList className="w-max bg-transparent p-0 h-auto rounded-none gap-1">
               {([
@@ -897,7 +905,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="capture_analysis" className="mt-4">
-            <CaptureAnalysisPanel proposal={proposal} proposalId={proposalId} />
+            <CaptureAnalysisPanel proposal={proposal} proposalId={proposalId} onPwinProbability={setPwinProbability} />
           </TabsContent>
 
           <TabsContent value="team" className="mt-4">
@@ -905,6 +913,7 @@ function ProposalPipeline() {
               proposal={proposal}
               proposalId={proposalId}
               onProposalPatch={(patch) => setProposal((p: any) => ({ ...(p ?? {}), ...patch }))}
+              onPwinProbability={setPwinProbability}
             />
           </TabsContent>
 
@@ -1010,6 +1019,18 @@ function ProposalPipeline() {
             <ActivitiesPanel proposalId={proposalId} teamId={proposal.team_id ?? null} />
           </TabsContent>
         </Tabs>
+        <aside className="hidden xl:block sticky top-4 self-start">
+          <PursuitRail
+            proposal={proposal}
+            proposalId={proposalId}
+            signals={stageSignals}
+            teamStrength={teamStrength}
+            pwinProbability={pwinProbability}
+            onNavigateTab={(t) => setHubTab(t as HubTab)}
+            onRefreshProposal={refreshProposal}
+          />
+        </aside>
+        </div>
       </div>
       {isPartnerView && (
         <footer className="mt-8 border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
@@ -2281,10 +2302,12 @@ function TeamHubPanel({
   proposal,
   proposalId,
   onProposalPatch,
+  onPwinProbability,
 }: {
   proposal: any;
   proposalId: string;
   onProposalPatch?: (patch: Record<string, unknown>) => void;
+  onPwinProbability?: (r: PwinProbabilityResult | null) => void;
 }) {
   const qc = useQueryClient();
   const teamId: string | null = proposal.team_id ?? null;
@@ -2376,6 +2399,7 @@ function TeamHubPanel({
     ? currentTs - initialTsRef.current : 0;
 
   const [pwinResult, setPwinResult] = useState<PwinProbabilityResult | null>(null);
+  useEffect(() => { onPwinProbability?.(pwinResult); }, [pwinResult, onPwinProbability]);
   const currentPwin = pwinResult?.likelyPct ?? null;
   const initialPwinRef = useRef<number | null>(null);
   useEffect(() => {

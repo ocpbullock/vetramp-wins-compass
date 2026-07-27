@@ -30,6 +30,7 @@ import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies"
 import { addActivityFromAnalysis } from "./ActivitiesPanel";
 import { Plus } from "lucide-react";
 import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
+import { CollapsibleSection, usePersistedBool } from "@/components/CollapsibleSection";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
 import { PtwCard } from "./PtwCard";
@@ -209,7 +210,7 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
   return { ready: true as const, teamId, self, partners, entries, suggestions, pwinResult };
 }
 
-export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }: { proposal: any; proposalId: string; onPwinProbability?: (r: PwinProbabilityResult | null) => void }) {
   const [analysis, setAnalysis] = useState<CaptureAnalysis | null>(
     (proposal?.capture_analysis as CaptureAnalysis | null) ?? null,
   );
@@ -217,6 +218,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState<"internal" | "partner" | null>(null);
   const [pwinProbability, setPwinProbability] = useState<PwinProbabilityResult | null>(null);
+  useEffect(() => { onPwinProbability?.(pwinProbability); }, [pwinProbability, onPwinProbability]);
 
   // Sync local state when the parent-supplied proposal row changes.
   useEffect(() => {
@@ -557,7 +559,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       />
 
       {/* --- ASSESSMENT --- */}
-      <CollapsibleSection id="sec-assessment" title="Assessment" summary={assessmentSummary} defaultOpen>
+      <CollapsibleSection id="sec-assessment" storageKey="ca:sec-assessment:open" title="Assessment" summary={assessmentSummary} defaultOpen>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
           <Card className="md:col-span-2">
             <CardHeader className="pb-2">
@@ -608,7 +610,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       </CollapsibleSection>
 
       {/* --- TEAM STRATEGY --- */}
-      <CollapsibleSection id="sec-strategy" title="Team strategy" summary={strategySummary} defaultOpen>
+      <CollapsibleSection id="sec-strategy" storageKey="ca:sec-strategy:open" title="Team strategy" summary={strategySummary} defaultOpen>
         <RecommendedTeamStrategyCard
           proposalId={proposalId}
           analysis={analysis}
@@ -617,7 +619,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       </CollapsibleSection>
 
       {/* --- COMPETITIVE FIELD --- */}
-      <CollapsibleSection id="sec-competitive" title="Competitive field" summary={competitiveSummary}>
+      <CollapsibleSection id="sec-competitive" storageKey="ca:sec-competitive:open" title="Competitive field" summary={competitiveSummary}>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Competitor assessment</CardTitle>
@@ -635,7 +637,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       </CollapsibleSection>
 
       {/* --- EXECUTION --- */}
-      <CollapsibleSection id="sec-execution" title="Execution" summary={executionSummary}>
+      <CollapsibleSection id="sec-execution" storageKey="ca:sec-execution:open" title="Execution" summary={executionSummary}>
         <div className="grid gap-4 xl:grid-cols-2">
           <TeamingRecommendationCard proposal={proposal} proposalId={proposalId} teaming={teaming} />
           <Card>
@@ -681,7 +683,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       </CollapsibleSection>
 
       {/* --- HISTORY --- */}
-      <CollapsibleSection id="sec-history" title="History" summary={historySummary}>
+      <CollapsibleSection id="sec-history" storageKey="ca:sec-history:open" title="History" summary={historySummary}>
         <SimilarPastPursuitsCard
           proposalId={proposalId}
           teamId={proposal?.team_id ?? null}
@@ -695,56 +697,6 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
 
 // ---------- Local UI helpers (visual-only) ----------
 
-function usePersistedBool(key: string, initial: boolean): [boolean, (b: boolean) => void] {
-  const [value, setValue] = useState<boolean>(() => {
-    if (typeof window === "undefined") return initial;
-    try {
-      const raw = window.localStorage.getItem(key);
-      if (raw === "1") return true;
-      if (raw === "0") return false;
-    } catch { /* ignore */ }
-    return initial;
-  });
-  const set = (b: boolean) => {
-    setValue(b);
-    try { window.localStorage.setItem(key, b ? "1" : "0"); } catch { /* ignore */ }
-  };
-  return [value, set];
-}
-
-function CollapsibleSection({
-  id, title, summary, defaultOpen = false, children,
-}: {
-  id: string;
-  title: string;
-  summary: string;
-  defaultOpen?: boolean;
-  children: ReactNode;
-}) {
-  const [open, setOpen] = usePersistedBool(`ca:${id}:open`, defaultOpen);
-  return (
-    <section id={id} className="scroll-mt-32 border-t pt-4 first:border-t-0 first:pt-0">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        className="w-full flex items-center gap-2 text-left group"
-        aria-expanded={open}
-        aria-controls={`${id}-body`}
-      >
-        <ChevronRight
-          className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none ${open ? "rotate-90" : ""}`}
-        />
-        <span className="briefing-label group-hover:text-foreground">{title}</span>
-        <span className="text-xs text-muted-foreground ml-2 truncate">{summary}</span>
-      </button>
-      {open && (
-        <div id={`${id}-body`} className="pt-3 space-y-4">
-          {children}
-        </div>
-      )}
-    </section>
-  );
-}
 
 function EditToggleWrapper({
   storageKey, readLabel, editLabel, children,
