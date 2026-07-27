@@ -401,8 +401,19 @@ export function TeamingSandbox({
 
               {/* MIDDLE: Candidate team */}
               <div className="lg:col-span-1">
-                <Label className="text-xs">Candidate team ({members.length})</Label>
-                <ScrollArea className="h-[48vh] mt-1 pr-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs">Candidate team ({members.length})</Label>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 text-[11px] px-2"
+                    onClick={reseedFromProposed}
+                    title="Reset the sandbox to the current Proposed Team"
+                  >
+                    Re-seed from proposed team
+                  </Button>
+                </div>
+                <div className="mt-1 pr-1 max-h-[52vh] overflow-y-auto">
                   <RadioGroup value={perspectiveId ?? ""} onValueChange={setPerspective} className="space-y-2">
                     {members.length === 0 && (
                       <div className="text-xs text-muted-foreground border border-dashed rounded p-4 text-center">
@@ -467,8 +478,37 @@ export function TeamingSandbox({
                       </div>
                     ))}
                   </RadioGroup>
-                </ScrollArea>
+                </div>
+
+                {suggestions && suggestions.length > 0 && (
+                  <div className="mt-3 border-t pt-2">
+                    <div className="text-[10px] uppercase text-muted-foreground mb-1">
+                      Add from suggestions (sandbox only)
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      {suggestions
+                        .filter((s) => !members.some((m) => m.companyId === s.companyId))
+                        .slice(0, 8)
+                        .map((s) => (
+                          <button
+                            key={s.companyId}
+                            type="button"
+                            className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/5 text-primary text-[11px] px-2 py-0.5 hover:bg-primary/10"
+                            onClick={() => {
+                              const c = companies?.find((cc) => cc.id === s.companyId);
+                              if (c) addCompany(c);
+                            }}
+                            title={s.reason ?? undefined}
+                          >
+                            <Plus className="w-3 h-3" />
+                            {s.name}
+                          </button>
+                        ))}
+                    </div>
+                  </div>
+                )}
               </div>
+
 
               {/* RIGHT: pWin */}
               <div className="lg:col-span-1">
