@@ -403,11 +403,10 @@ export function PartnerResearch({
     if (partner) await addToProposal(partner);
   };
 
-  // ===== Roster suggestions (carried over from previous behavior) =====
-  const suggested = useMemo(() => {
-    if (!opportunityNaics) return [];
-    return partners.filter((p) => p.naics_codes?.includes(opportunityNaics));
-  }, [partners, opportunityNaics]);
+  // Roster suggestions live in the Team tab's "Suggested from roster" card;
+  // this research surface is purely about discovering NEW vendors.
+
+
 
   // ---- Add a ranked vendor (TeamingTarget) to roster as a partner company ----
   const [verifyingKey, setVerifyingKey] = useState<string | null>(null);
@@ -504,48 +503,8 @@ export function PartnerResearch({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Suggested from roster */}
-        {hasProposal && suggested.length > 0 && (
-          <div>
-            <div className="text-xs font-semibold mb-2">
-              From your roster
-              {opportunityNaics && (
-                <span className="text-muted-foreground font-normal"> · NAICS {opportunityNaics}</span>
-              )}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-              {suggested.map((p) => (
-                <div key={p.id} className="border border-border rounded p-2 space-y-1.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="text-sm font-medium">{p.company_name}</div>
-                    <Button
-                      size="sm" variant="outline"
-                      disabled={onProposal(p.id)}
-                      onClick={() => addToProposal(p)}
-                    >
-                      <Plus className="w-3 h-3 mr-1" />{onProposal(p.id) ? "Added" : "Add to team"}
-                    </Button>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {(p.certifications ?? []).slice(0, 6).map((c) =>
-                      <Badge key={c} variant="outline" className="text-[10px]">{c}</Badge>)}
-                    {(p.naics_codes ?? []).slice(0, 8).map((n) => (
-                      <Badge
-                        key={n}
-                        variant={n === opportunityNaics ? "secondary" : "outline"}
-                        className="text-[10px] font-mono"
-                      >
-                        {n}{n === opportunityNaics ? " ✓" : ""}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         <Tabs defaultValue="experience" className="w-full">
+
           <TabsList>
             <TabsTrigger value="experience">
               <Sparkles className="w-3.5 h-3.5 mr-1.5" />

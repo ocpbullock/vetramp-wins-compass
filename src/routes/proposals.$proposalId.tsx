@@ -2526,24 +2526,13 @@ function TeamHubPanel({
         onOutreach={(p) => { setOutreachPartner(p); setOutreachOpen(true); }}
       />
 
-      {proposal.vehicle_registry_id && (
-        <AwardeePoolCard
-          vehicleId={proposal.vehicle_registry_id as string}
-          vehicleName={(proposal.opportunity_data as any)?.contract_vehicle ?? "Selected vehicle"}
-          teamId={teamId ?? ""}
-          existingCompanyKeys={new Set(existingPartnerIds)}
-          proposal={proposal}
-          onProposalRefresh={() => qc.invalidateQueries({ queryKey: ["proposal", proposalId] })}
-        />
-      )}
-
-      <PartnerResearch
-        proposalId={proposalId}
+      <FindPartnersCard
+        proposal={proposal}
         teamId={teamId}
-        opportunityNaics={proposal.naics_code ?? null}
-        opportunityAgency={proposal.agency ?? null}
-        opportunitySetAside={proposal.set_aside ?? null}
+        existingPartnerIds={existingPartnerIds}
+        onProposalRefresh={() => qc.invalidateQueries({ queryKey: ["proposal", proposalId] })}
       />
+
 
 
       <TeamingSandbox
