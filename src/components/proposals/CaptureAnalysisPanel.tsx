@@ -146,10 +146,8 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
     return { ready: false as const, teamId };
   }
 
-  const incumbentName: string | null =
-    proposal.customer_intel?.predecessor_contract?.incumbent
-    ?? proposal.market_snapshot?.incumbent?.topRecipient
-    ?? null;
+  const incumbentName: string | null = getEffectiveIncumbent(proposal).name;
+
 
   const suggestCtx: SuggestContext = {
     engagementType: proposal.engagement_type === "sub" ? "sub" : "prime",
