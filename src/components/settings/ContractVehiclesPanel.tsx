@@ -597,13 +597,14 @@ function registryStatusBadgeClass(status: string | null | undefined): string {
 }
 
 function RegistryVehicleRow({
-  vehicle, expanded, onToggle, teamId, canEditRow, onDeleted,
+  vehicle, expanded, onToggle, teamId, canEditRow, held = false, onDeleted,
 }: {
   vehicle: RegistryVehicle;
   expanded: boolean;
   onToggle: () => void;
   teamId: string;
   canEditRow: boolean;
+  held?: boolean;
   onDeleted: () => void;
 }) {
   const qc = useQueryClient();
