@@ -476,7 +476,7 @@ function CompanyDialog({
         certifications: csvSplit(form.certifications),
         set_asides: csvSplit(form.set_asides),
         naics_codes: csvSplit(form.naics_codes),
-        contract_vehicles: csvSplit(form.contract_vehicles),
+        contract_vehicles: form.contract_vehicles,
         capabilities_narrative: form.capabilities_narrative.trim() || null,
         past_performance: form.past_performance.filter((e) => e.title || e.summary),
         is_own_company: form.is_own_company,
@@ -531,7 +531,15 @@ function CompanyDialog({
           <Field label="Certifications (comma-separated)" value={form.certifications} onChange={(v) => update({ certifications: v })} />
           <Field label="Set-asides (comma-separated)" value={form.set_asides} onChange={(v) => update({ set_asides: v })} />
           <Field label="NAICS codes (comma-separated)" value={form.naics_codes} onChange={(v) => update({ naics_codes: v })} />
-          <Field label="Contract vehicles (comma-separated)" value={form.contract_vehicles} onChange={(v) => update({ contract_vehicles: v })} />
+          <div>
+            <Label>Contract vehicles</Label>
+            <VehiclesCombobox
+              value={form.contract_vehicles}
+              onChange={(v) => update({ contract_vehicles: v })}
+              placeholder="Select contract vehicles or type a custom name…"
+            />
+          </div>
+
 
           <div>
             <Label>Capabilities narrative</Label>
