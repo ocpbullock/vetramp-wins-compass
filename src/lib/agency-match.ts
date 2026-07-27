@@ -49,3 +49,48 @@ export function agencyMatchesLoose(
   for (const t of bt) if (at.has(t)) overlap++;
   return overlap >= 2;
 }
+
+/**
+ * SAM.gov and legacy sources sometimes store agency as a dotted/slashed path
+ * like "DEPT OF DEFENSE.DEFENSE HEALTH AGENCY.…" or "DoD > DHA". The Tango
+ * partner-search combobox uses canonical sub-tier strings ("DEFENSE HEALTH
+ * AGENCY (DHA)") — direct string comparison fails.
+ *
+ * canonicalizeAgencyName splits on path separators, takes the most specific
+ * segment, cleans it, and if a suggestion vocabulary is provided fuzzy-matches
+ * it to the canonical form so downstream searches hit.
+ */
+export function canonicalizeAgencyName(
+  raw: string | null | undefined,
+  suggestions?: readonly string[],
+): { canonical: string; display: string; matched: boolean } {
+  const s = (raw ?? "").toString().trim();
+  if (!s) return { canonical: "", display: "", matched: false };
+
+  // Split on path separators (., /, >, |, \) and take the deepest non-empty
+  // segment as the sub-tier candidate.
+  const parts = s
+    .split(/[\.\/>\|\\]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  let seg = parts.length > 0 ? parts[parts.length - 1] : s;
+
+  // Strip trailing bare codes like " - 123" or " (0000)" numeric-only groups,
+  // and collapse whitespace.
+  seg = seg
+    .replace(/\s*[-–—]\s*\d[\d\s-]*$/g, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  if (!seg) return { canonical: s, display: s, matched: false };
+
+  if (suggestions && suggestions.length > 0) {
+    const exact = suggestions.find((x) => x.toUpperCase() === seg.toUpperCase());
+    if (exact) return { canonical: exact, display: exact, matched: true };
+    const loose = suggestions.find((x) => agencyMatchesLoose(x, seg));
+    if (loose) return { canonical: loose, display: loose, matched: true };
+  }
+
+  return { canonical: seg, display: seg, matched: false };
+}
+
