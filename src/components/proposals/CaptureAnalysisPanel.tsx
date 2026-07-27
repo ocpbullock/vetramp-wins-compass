@@ -218,6 +218,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
   const [running, setRunning] = useState(false);
   const [exporting, setExporting] = useState<"internal" | "partner" | null>(null);
   const [pwinProbability, setPwinProbability] = useState<PwinProbabilityResult | null>(null);
+  useEffect(() => { onPwinProbability?.(pwinProbability); }, [pwinProbability, onPwinProbability]);
 
   // Sync local state when the parent-supplied proposal row changes.
   useEffect(() => {
