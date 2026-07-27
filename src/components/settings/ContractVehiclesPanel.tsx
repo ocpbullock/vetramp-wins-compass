@@ -1379,3 +1379,53 @@ function AiResearchAwardeesDialog({
     </Dialog>
   );
 }
+
+// ---------------- Announcement Search Menu ----------------
+
+function AnnouncementSearchMenu({ vehicleName }: { vehicleName: string }) {
+  const q = encodeURIComponent(vehicleName);
+  const items: { label: string; url: string }[] = [
+    {
+      label: "Google News — award",
+      url: `https://news.google.com/search?q=${encodeURIComponent(`"${vehicleName}" award`)}`,
+    },
+    {
+      label: "Google — awarded (PR wires)",
+      url: `https://www.google.com/search?q=${encodeURIComponent(
+        `"awarded" "${vehicleName}" (site:prnewswire.com OR site:businesswire.com OR site:globenewswire.com)`,
+      )}`,
+    },
+    {
+      label: "Google — awardees / contract holders",
+      url: `https://www.google.com/search?q=${encodeURIComponent(`"${vehicleName}" (awardees OR "contract holders" OR "seat on")`)}`,
+    },
+    {
+      label: "SAM.gov search",
+      url: `https://sam.gov/search/?keywords=${q}&index=opp`,
+    },
+    {
+      label: "GSA eLibrary search",
+      url: `https://www.gsaelibrary.gsa.gov/ElibMain/searchResults.do?searchCriteria=${q}&scheduleNumber=&executeQuery=YES`,
+    },
+  ];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Search className="w-3 h-3 mr-1" /> Search announcements
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuLabel className="text-xs">Manual awardee hunt — opens in new tab</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {items.map((it) => (
+          <DropdownMenuItem key={it.label} asChild>
+            <a href={it.url} target="_blank" rel="noreferrer" className="cursor-pointer">
+              <ExternalLink className="w-3 h-3 mr-2" /> {it.label}
+            </a>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
