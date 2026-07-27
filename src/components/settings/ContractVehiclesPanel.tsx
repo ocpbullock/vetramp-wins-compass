@@ -682,7 +682,7 @@ function RegistryVehicleRow({
               <div className="flex gap-1 flex-wrap">
                 <AnnouncementSearchMenu vehicleName={vehicle.vehicle_name} />
                 <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>AI research awardees</Button>
-                <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV</Button>
+                <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV / Excel</Button>
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Bulk paste</Button>
                 <Button size="sm" onClick={() => setAddAwardeeOpen(true)}><Plus className="w-3 h-3 mr-1" /> Add awardee</Button>
               </div>
@@ -692,7 +692,7 @@ function RegistryVehicleRow({
             <div className="text-xs text-muted-foreground"><Loader2 className="w-3 h-3 inline animate-spin mr-1" /> Loading…</div>
           ) : awardees.length === 0 ? (
             <div className="text-xs text-muted-foreground py-2">
-              No awardees recorded. Use "Add awardee", "Bulk paste", CSV, or "AI research awardees".
+              No awardees recorded. Use "Add awardee", "Bulk paste", CSV/Excel, or "AI research awardees".
             </div>
           ) : (
             <div className="divide-y">
@@ -990,6 +990,31 @@ function CsvImportAwardeesDialog({
 
   const onFile = async (file: File) => {
     setFileName(file.name);
+    const lower = file.name.toLowerCase();
+    const isExcel = lower.endsWith(".xlsx") || lower.endsWith(".xls") || lower.endsWith(".xlsm") || lower.endsWith(".ods");
+    if (isExcel) {
+      try {
+        const XLSX = await import("xlsx");
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array" });
+        const firstSheet = wb.Sheets[wb.SheetNames[0]];
+        if (!firstSheet) { toast.error("Workbook has no sheets"); return; }
+        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: "", raw: false });
+        if (!json.length) { toast.error("Sheet is empty"); return; }
+        const hdrs = Object.keys(json[0]).filter(Boolean);
+        const stringRows = json.map((r) => {
+          const out: Record<string, string> = {};
+          for (const k of hdrs) out[k] = String(r[k] ?? "").trim();
+          return out;
+        });
+        setHeaders(hdrs);
+        setRows(stringRows);
+        setMapping(guessMapping(hdrs));
+      } catch (err) {
+        toast.error(`Parse failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      return;
+    }
     const Papa = (await import("papaparse")).default;
     Papa.parse<Record<string, string>>(file, {
       header: true,
@@ -1064,14 +1089,14 @@ function CsvImportAwardeesDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Import awardees from CSV</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Import awardees from CSV or Excel</DialogTitle></DialogHeader>
         <div className="space-y-3 py-2">
           {!rows ? (
             <div className="space-y-2">
-              <Label>CSV file</Label>
+              <Label>CSV or Excel file</Label>
               <Input
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,text/csv,.xlsx,.xls,.xlsm,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) onFile(f);
