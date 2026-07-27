@@ -59,14 +59,17 @@ export function VehiclePicker({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
 
+  const [showExpired, setShowExpired] = useState(false);
   const selected = useMemo(() => vehicles.find((v) => v.id === vehicleId) ?? null, [vehicles, vehicleId]);
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return vehicles.slice(0, 40);
-    return vehicles.filter((v) =>
-      [v.vehicle_name, v.managing_agency, v.vehicle_type].filter(Boolean).some((x) => x!.toLowerCase().includes(s)),
-    ).slice(0, 40);
-  }, [vehicles, q]);
+    const base = vehicles.filter((v) => {
+      if (!showExpired && (v.status ?? "").toLowerCase() === "expired") return false;
+      if (!s) return true;
+      return [v.vehicle_name, v.managing_agency, v.vehicle_type].filter(Boolean).some((x) => x!.toLowerCase().includes(s));
+    });
+    return base.slice(0, 60);
+  }, [vehicles, q, showExpired]);
 
   const setStatus = (next: string) => {
     if (next !== "identified") {
