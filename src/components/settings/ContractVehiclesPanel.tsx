@@ -1135,3 +1135,225 @@ function CsvImportAwardeesDialog({
     </Dialog>
   );
 }
+
+// ---------------- AI Research Awardees ----------------
+
+type ResearchCandidate = {
+  company_name: string;
+  uei: string | null;
+  small_business: boolean | null;
+  socioeconomic: string[];
+  confidence: "high" | "medium" | "low";
+  note: string | null;
+};
+
+type ResearchResult = {
+  summary: string;
+  source_urls: string[];
+  candidates: ResearchCandidate[];
+};
+
+function confidenceBadge(c: string) {
+  if (c === "high") return "bg-success text-success-foreground";
+  if (c === "medium") return "bg-warning text-warning-foreground";
+  return "bg-muted text-muted-foreground";
+}
+
+function AiResearchAwardeesDialog({
+  vehicle, teamId, existing, open, onOpenChange, onSaved,
+}: {
+  vehicle: RegistryVehicle;
+  teamId: string;
+  existing: Awardee[];
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<ResearchResult | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  const run = async () => {
+    setLoading(true);
+    setResult(null);
+    setSelected(new Set());
+    try {
+      const { data, error } = await supabase.functions.invoke("vehicle-awardee-research", {
+        body: {
+          vehicleName: vehicle.vehicle_name,
+          managingAgency: vehicle.managing_agency,
+          vehicleType: vehicle.vehicle_type,
+        },
+      });
+      if (error) throw new Error(error.message);
+      const r = (data as any)?.research as ResearchResult | undefined;
+      if (!r) throw new Error("No research returned");
+      setResult(r);
+      // Pre-select high-confidence not-already-present.
+      const existingUei = new Set(existing.map((a) => (a.uei ?? "").toUpperCase()).filter(Boolean));
+      const existingName = new Set(existing.map((a) => a.company_name.trim().toLowerCase()));
+      const preselect = new Set<number>();
+      r.candidates.forEach((c, i) => {
+        const uei = (c.uei ?? "").toUpperCase();
+        const name = c.company_name.trim().toLowerCase();
+        const dup = (uei && existingUei.has(uei)) || existingName.has(name);
+        if (!dup && c.confidence === "high") preselect.add(i);
+      });
+      setSelected(preselect);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Research failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggle = (i: number) => {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(i)) n.delete(i); else n.add(i);
+      return n;
+    });
+  };
+
+  const saveSelected = async () => {
+    if (!result || selected.size === 0) return;
+    setSaving(true);
+    try {
+      const existingUei = new Set(existing.map((a) => (a.uei ?? "").toUpperCase()).filter(Boolean));
+      const existingName = new Set(existing.map((a) => a.company_name.trim().toLowerCase()));
+      const rows: TablesInsert<"vehicle_awardees">[] = [];
+      let skipped = 0;
+      for (const i of selected) {
+        const c = result.candidates[i];
+        if (!c) continue;
+        const uei = (c.uei ?? "").toUpperCase();
+        const name = c.company_name.trim().toLowerCase();
+        if ((uei && existingUei.has(uei)) || existingName.has(name)) { skipped++; continue; }
+        rows.push({
+          vehicle_id: vehicle.id,
+          team_id: teamId,
+          company_name: c.company_name.trim(),
+          uei: c.uei ?? null,
+          small_business: c.small_business ?? null,
+          socioeconomic: c.socioeconomic?.length ? c.socioeconomic : null,
+        });
+      }
+      if (rows.length === 0) {
+        toast.info("Nothing new to add");
+        setSaving(false);
+        return;
+      }
+      const { error } = await supabase.from("vehicle_awardees").insert(rows);
+      if (error) throw new Error(error.message);
+      toast.success(`Added ${rows.length} awardee${rows.length === 1 ? "" : "s"}${skipped ? ` · skipped ${skipped} duplicate${skipped === 1 ? "" : "s"}` : ""}`);
+      onSaved();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>AI research awardees — {vehicle.vehicle_name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">
+            AI-drafted — verify against official sources before relying. Nothing saves until you select candidates and click Add.
+          </div>
+          {!result && !loading && (
+            <div className="text-sm text-muted-foreground">
+              Ask the AI to draft an awardee list for this vehicle based on public sources and model knowledge.
+              <div className="mt-2">
+                <Button onClick={run}>Run research</Button>
+              </div>
+            </div>
+          )}
+          {loading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="w-4 h-4 animate-spin" /> Researching…
+            </div>
+          )}
+          {result && (
+            <>
+              <div>
+                <div className="briefing-label text-xs mb-1">Summary</div>
+                <div className="text-sm">{result.summary}</div>
+              </div>
+              {result.source_urls?.length > 0 && (
+                <div>
+                  <div className="briefing-label text-xs mb-1">Sources</div>
+                  <ul className="text-xs space-y-0.5">
+                    {result.source_urls.map((u) => (
+                      <li key={u}>
+                        <a href={u} target="_blank" rel="noreferrer" className="text-primary underline inline-flex items-center gap-1">
+                          <ExternalLink className="w-3 h-3" /> {u}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <div className="briefing-label text-xs mb-1">Candidates ({result.candidates.length}) — {selected.size} selected</div>
+                <div className="max-h-96 overflow-y-auto divide-y border rounded">
+                  {result.candidates.map((c, i) => {
+                    const uei = (c.uei ?? "").toUpperCase();
+                    const name = c.company_name.trim().toLowerCase();
+                    const dup = existing.some((a) =>
+                      (uei && (a.uei ?? "").toUpperCase() === uei) ||
+                      a.company_name.trim().toLowerCase() === name,
+                    );
+                    return (
+                      <label key={i} className={`flex items-start gap-2 p-2 text-sm cursor-pointer ${dup ? "opacity-60" : ""}`}>
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={selected.has(i)}
+                          onChange={() => toggle(i)}
+                          disabled={dup}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium flex items-center gap-1.5 flex-wrap">
+                            {c.company_name}
+                            <Badge className={`text-[10px] ${confidenceBadge(c.confidence)}`} variant="outline">
+                              {c.confidence}
+                            </Badge>
+                            {dup && <Badge variant="outline" className="text-[10px]">already present</Badge>}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
+                            {c.uei && <span className="font-mono">{c.uei}</span>}
+                            {c.small_business && <Badge variant="outline" className="text-[10px]">SB</Badge>}
+                            {(c.socioeconomic ?? []).map((s) => (
+                              <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                            ))}
+                          </div>
+                          {c.note && <div className="text-[11px] text-muted-foreground mt-0.5 italic">{c.note}</div>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          {result && (
+            <>
+              <Button variant="outline" onClick={run} disabled={loading}>Re-run</Button>
+              <Button onClick={saveSelected} disabled={saving || selected.size === 0}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : `Add ${selected.size} selected`}
+              </Button>
+            </>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
