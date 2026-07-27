@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Download, ShieldCheck, AlertTriangle, ChevronDown, ChevronRight, Search, CheckCircle2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTeam, type TeamMember } from "@/lib/team";
+import { OCIScreeningCard, type OciAnswers } from "@/components/proposals/OCIScreeningCard";
 
 type ReqStatus = "not_started" | "in_progress" | "drafted" | "reviewed" | "final";
 
