@@ -210,7 +210,7 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
   return { ready: true as const, teamId, self, partners, entries, suggestions, pwinResult };
 }
 
-export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }: { proposal: any; proposalId: string; onPwinProbability?: (r: PwinProbabilityResult | null) => void }) {
   const [analysis, setAnalysis] = useState<CaptureAnalysis | null>(
     (proposal?.capture_analysis as CaptureAnalysis | null) ?? null,
   );
