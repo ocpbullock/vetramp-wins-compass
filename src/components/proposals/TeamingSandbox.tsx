@@ -323,6 +323,11 @@ export function TeamingSandbox({
           </DialogDescription>
         </DialogHeader>
 
+        <div className="px-6 pt-3 text-[11px] text-muted-foreground bg-muted/40 border-b py-2">
+          <strong className="text-foreground">What-if modeling.</strong> Your Proposed Team above is the team of record — use the sandbox to test alternative lineups without changing it. Changes here are never saved to the pursuit.
+        </div>
+
+        <div className="flex-1 min-h-0 overflow-y-auto">
         <Tabs defaultValue="builder" className="px-6 pt-3">
           <TabsList>
             <TabsTrigger value="builder">Builder</TabsTrigger>
@@ -330,6 +335,7 @@ export function TeamingSandbox({
           </TabsList>
 
           <TabsContent value="builder" className="mt-0">
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-4">
               <div>
                 <Label className="text-xs">Relationship model</Label>
