@@ -770,15 +770,7 @@ function ProposalPipeline() {
               <StageStepper
                 proposalId={proposalId}
                 value={proposal.capture_stage}
-                signals={{
-                  hasNaicsAgency: Boolean(proposal.naics_code && proposal.agency),
-                  hasSnapshot: Boolean(proposal.market_snapshot_at),
-                  hasAnalysis: Boolean(proposal.capture_analysis_at),
-                  teamingCount: teamingCountForSignals,
-                  sectionsCount: proposal.sections
-                    ? Object.values(proposal.sections).filter((s: any) => s && typeof s === "object" && s.content).length
-                    : 0,
-                }}
+                signals={stageSignals}
                 onChanged={refreshProposal}
               />
             </div>
