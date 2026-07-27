@@ -798,7 +798,8 @@ function ProposalPipeline() {
 
         <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
 
-        <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)}>
+        <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_280px] xl:gap-6 xl:items-start">
+        <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)} className="min-w-0">
           <div className="overflow-x-auto -mx-1 px-1 border-b border-border">
             <TabsList className="w-max bg-transparent p-0 h-auto rounded-none gap-1">
               {([
