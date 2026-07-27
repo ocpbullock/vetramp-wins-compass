@@ -2302,10 +2302,12 @@ function TeamHubPanel({
   proposal,
   proposalId,
   onProposalPatch,
+  onPwinProbability,
 }: {
   proposal: any;
   proposalId: string;
   onProposalPatch?: (patch: Record<string, unknown>) => void;
+  onPwinProbability?: (r: PwinProbabilityResult | null) => void;
 }) {
   const qc = useQueryClient();
   const teamId: string | null = proposal.team_id ?? null;
