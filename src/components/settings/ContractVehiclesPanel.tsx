@@ -649,7 +649,8 @@ function RegistryVehicleRow({
             <span className="font-medium">{vehicle.vehicle_name}</span>
             {vehicle.team_id === null && <Badge variant="outline" className="text-[10px]">global</Badge>}
             {vehicle.vehicle_type && <Badge variant="secondary" className="text-[10px]">{vehicle.vehicle_type}</Badge>}
-            {vehicle.status && <Badge variant="outline" className="text-[10px]">{vehicle.status}</Badge>}
+            {vehicle.status && <Badge className={`text-[10px] ${registryStatusBadgeClass(vehicle.status)}`} variant="outline">{vehicle.status}</Badge>}
+            {held && <Badge className="text-[10px] bg-primary/10 text-primary border-primary/30" variant="outline">Our team holds</Badge>}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">
             {vehicle.managing_agency ?? "—"}
