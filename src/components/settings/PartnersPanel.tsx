@@ -17,7 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Pencil, Trash2, Building2, Star } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Building2, Star, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   type Company,
@@ -27,6 +27,9 @@ import {
   upsertCompany,
   deleteCompany,
 } from "@/lib/companies";
+import { VehiclesCombobox } from "@/components/settings/VehiclesCombobox";
+import { NaicsCombobox } from "@/components/NaicsCombobox";
+
 
 // Back-compat: existing code imports `Partner` (legacy teaming_partners row shape) from this module.
 export type Partner = {
