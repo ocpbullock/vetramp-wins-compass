@@ -674,7 +674,7 @@ function initialForm(c: Company | null, seed: CompanyDraft | null) {
     certifications: ((c?.certifications ?? seed?.certifications ?? []) as string[]).join(", "),
     set_asides: ((c?.set_asides ?? seed?.set_asides ?? []) as string[]).join(", "),
     naics_codes: ((c?.naics_codes ?? seed?.naics_codes ?? []) as string[]).join(", "),
-    contract_vehicles: ((c?.contract_vehicles ?? seed?.contract_vehicles ?? []) as string[]).join(", "),
+    contract_vehicles: ((c?.contract_vehicles ?? seed?.contract_vehicles ?? []) as string[]),
     capabilities_narrative: (c?.capabilities_narrative ?? seed?.capabilities_narrative ?? "") as string,
     past_performance: (c?.past_performance ?? seed?.past_performance ?? []) as PastPerfEntry[],
     is_own_company: !!(c?.is_own_company ?? seed?.is_own_company),
