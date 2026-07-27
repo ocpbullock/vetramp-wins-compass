@@ -244,7 +244,13 @@ export function PwinProbabilityCard({
             {/* Incumbent */}
             <div className="space-y-2 rounded-md border p-2">
               <div className="flex items-center justify-between">
-                <Label className="text-xs">Incumbent present{incumbentSeedName ? ` (${incumbentSeedName})` : ""}</Label>
+                <Label className="text-xs flex items-center gap-1.5 flex-wrap">
+                  Incumbent present{incumbentSeedName ? ` (${incumbentSeedName})` : ""}
+                  {incumbentSeedName && incumbentSourceBadge(incumbentEff.source) && (
+                    <Badge variant="outline" className="text-[9px] font-normal">{incumbentSourceBadge(incumbentEff.source)}</Badge>
+                  )}
+                </Label>
+
                 <Switch
                   checked={config.incumbent.present}
                   onCheckedChange={(v) => setConfig((c) => ({ ...c, incumbent: { ...c.incumbent, present: v } }))}
