@@ -1025,6 +1025,7 @@ function CsvImportAwardeesDialog({
       }
       toInsert.push({
         vehicle_id: vehicleId,
+        team_id: teamId,
         company_name: m.company_name,
         uei: m.uei,
         small_business: m.small_business,
