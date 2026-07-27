@@ -14,6 +14,8 @@ import type { TeamingTarget } from "@/lib/teaming-targets";
 import type { CompeteVendor } from "@/lib/api";
 import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
 import { applyCaptureStage } from "@/lib/stage-mutations";
+import { getEffectiveIncumbent, incumbentSourceBadge } from "@/lib/incumbent-source";
+
 
 function fmtUsd(n: number) {
   if (!n) return "$0";
