@@ -1153,6 +1153,7 @@ type ResearchCandidate = {
   socioeconomic: string[];
   confidence: "high" | "medium" | "low";
   note: string | null;
+  announcement_url?: string | null;
 };
 
 type ResearchResult = {
