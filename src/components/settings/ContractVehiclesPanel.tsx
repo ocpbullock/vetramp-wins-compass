@@ -962,9 +962,10 @@ function parseSocio(v: unknown): string[] | null {
 }
 
 function CsvImportAwardeesDialog({
-  vehicleId, existing, open, onOpenChange, onSaved,
+  vehicleId, teamId, existing, open, onOpenChange, onSaved,
 }: {
   vehicleId: string;
+  teamId: string;
   existing: Awardee[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
