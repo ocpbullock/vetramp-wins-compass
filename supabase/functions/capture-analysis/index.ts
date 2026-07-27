@@ -35,8 +35,32 @@ const SCHEMA = {
         required: ["action", "why", "priority"],
       },
     },
+    team_strategy: {
+      type: "object",
+      description: "Recommended teaming strategy for pursuing this opportunity.",
+      properties: {
+        recommended_model: {
+          type: "string",
+          enum: ["prime_with_subs", "sub_to_prime", "joint_venture", "mentor_protege", "niche_sub"],
+        },
+        model_rationale: { type: "string" },
+        partner_archetypes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              archetype: { type: "string", description: "e.g. 'SDVOSB prime with SATCOM past performance', 'Large integrator holding SEWP V'." },
+              why: { type: "string" },
+              example_signal: { type: "string", description: "Concrete signal from market_snapshot or intel that supports this archetype." },
+            },
+            required: ["archetype", "why", "example_signal"],
+          },
+        },
+      },
+      required: ["recommended_model", "model_rationale", "partner_archetypes"],
+    },
   },
-  required: ["bid_no_bid", "win_themes", "competitor_assessment", "staffing_concerns", "next_actions"],
+  required: ["bid_no_bid", "win_themes", "competitor_assessment", "staffing_concerns", "next_actions", "team_strategy"],
 };
 
 serve(async (req) => {
