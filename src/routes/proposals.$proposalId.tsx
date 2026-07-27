@@ -185,6 +185,7 @@ function ProposalPipeline() {
   const [sectionGen, setSectionGen] = useState<Record<string, boolean>>({});
   const [dataIssues, setDataIssues] = useState<ValidationIssue[]>([]);
   const [isPartnerView, setIsPartnerView] = useState(false);
+  const [pwinProbability, setPwinProbability] = useState<PwinProbabilityResult | null>(null);
 
   const teamingSignalQ = useQuery({
     queryKey: teamingEntriesKey(proposalId),
@@ -192,6 +193,10 @@ function ProposalPipeline() {
     enabled: !!user && !!proposalId,
   });
   const teamingCountForSignals = teamingSignalQ.data?.length ?? 0;
+
+  // Shared with PursuitRail so both scoreboard and rail read the SAME live value.
+  const teamingLive = useTeamingSummary(proposal ?? { team_id: null }, proposalId);
+  const teamStrength = teamingLive.ready ? teamingLive.pwinResult.pwin : null;
 
   const refreshProposal = useCallback(async () => {
     const { data } = await supabase.from("proposals").select("*").eq("id", proposalId).maybeSingle();
