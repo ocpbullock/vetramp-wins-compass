@@ -2227,8 +2227,9 @@ function OpportunitySummaryCard({ proposal }: { proposal: any }) {
     identified: "Identified vehicle",
     new_vehicle_expected: "New vehicle expected",
   };
-  const vehicleDisplay = proposal.contract_vehicle
-    ? proposal.contract_vehicle
+  const vehicleNameFromData = (proposal.opportunity_data as any)?.contract_vehicle ?? null;
+  const vehicleDisplay = vehicleNameFromData
+    ? vehicleNameFromData
     : vehicleStatusLabel[proposal.vehicle_status as string] ?? "—";
   const items: { label: string; value: React.ReactNode }[] = [
     { label: "Title", value: proposal.opportunity_title || "—" },
@@ -2243,7 +2244,15 @@ function OpportunitySummaryCard({ proposal }: { proposal: any }) {
   ];
 
   const saveVehicle = async (patch: { vehicle_status: string; vehicle_registry_id: string | null; contract_vehicle: string | null }) => {
-    const { error } = await supabase.from("proposals").update(patch as any).eq("id", proposal.id);
+    const { contract_vehicle, ...cols } = patch;
+    const nextOppData = {
+      ...((proposal.opportunity_data as any) ?? {}),
+      contract_vehicle,
+    };
+    const { error } = await supabase
+      .from("proposals")
+      .update({ ...cols, opportunity_data: nextOppData } as any)
+      .eq("id", proposal.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Vehicle updated");
     qc.invalidateQueries({ queryKey: ["proposal", proposal.id] });
