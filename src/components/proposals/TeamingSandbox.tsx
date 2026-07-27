@@ -79,8 +79,22 @@ function memberFromCompany(c: Company, opts: { isSelf: boolean; role: PwinRole; 
   return { ...base, id: c.id, role: opts.role, companyId: c.id };
 }
 
+export type SandboxSeedMember = {
+  companyId: string;
+  role: PwinRole;
+  workShare: number;
+  isSelf: boolean;
+};
+
+export type SandboxSuggestion = {
+  companyId: string;
+  name: string;
+  reason?: string;
+};
+
 export function TeamingSandbox({
   open, onOpenChange, parent, opportunity, addCompanyIdOnOpen,
+  seedFromProposed, suggestions,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
@@ -88,6 +102,10 @@ export function TeamingSandbox({
   opportunity: SandboxOpportunityContext;
   /** If set, this company id is added to the sandbox team when companies finish loading. */
   addCompanyIdOnOpen?: string | null;
+  /** Team of record: sandbox re-seeds from this each time it opens. */
+  seedFromProposed?: SandboxSeedMember[];
+  /** Top suggested partners for one-click add. */
+  suggestions?: SandboxSuggestion[];
 }) {
   const qc = useQueryClient();
   const teamId = parent.teamId;
