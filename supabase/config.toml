@@ -51,3 +51,6 @@ verify_jwt = true
 [functions.vendor-research]
 verify_jwt = true
 
+[functions.vehicle-awardee-research]
+verify_jwt = true
+

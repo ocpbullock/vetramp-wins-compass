@@ -2544,6 +2544,8 @@ function TeamHubPanel({
           vehicleName={proposal.contract_vehicle ?? "Selected vehicle"}
           teamId={teamId ?? ""}
           existingCompanyKeys={new Set(existingPartnerIds)}
+          proposal={proposal}
+          onProposalRefresh={() => qc.invalidateQueries({ queryKey: ["proposal", proposalId] })}
         />
       )}
 

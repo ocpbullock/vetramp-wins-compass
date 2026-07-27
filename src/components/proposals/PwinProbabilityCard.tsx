@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -86,6 +86,29 @@ export function PwinProbabilityCard({
     },
     gateOverrides: saved.gateOverrides ?? {},
   }));
+
+  const vehicleRegistryId: string | null = proposal?.vehicle_registry_id ?? null;
+  const { data: vehicleAwardeeCount = 0 } = useQuery({
+    queryKey: ["vehicle-awardees-count", vehicleRegistryId],
+    enabled: !!vehicleRegistryId,
+    staleTime: 15 * 60 * 1000,
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("vehicle_awardees")
+        .select("id", { count: "exact", head: true })
+        .eq("vehicle_id", vehicleRegistryId!);
+      if (error) return 0;
+      return count ?? 0;
+    },
+  });
+
+  const seedFromVehiclePool = () => {
+    if (!vehicleAwardeeCount) return;
+    const max = Math.min(30, vehicleAwardeeCount);
+    const min = Math.max(2, Math.min(max, Math.ceil(vehicleAwardeeCount * 0.3)));
+    setConfig((c) => ({ ...c, field: { min, max } }));
+    toast.success(`Field seeded from ${vehicleAwardeeCount} vehicle awardees`);
+  };
 
   const [open, setOpen] = useState(false);
 
@@ -206,6 +229,15 @@ export function PwinProbabilityCard({
                 <div className="text-[10px] text-muted-foreground mt-1">
                   Seeded from positioning matrix — {matrixSeed} medium+ threat row(s).
                 </div>
+              )}
+              {vehicleAwardeeCount > 0 && (
+                <Button
+                  variant="outline" size="sm"
+                  className="h-6 text-[11px] mt-1"
+                  onClick={seedFromVehiclePool}
+                >
+                  Seed field from vehicle pool ({vehicleAwardeeCount} awardees)
+                </Button>
               )}
             </div>
 
