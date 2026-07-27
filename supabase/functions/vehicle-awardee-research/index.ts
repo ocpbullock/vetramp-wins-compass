@@ -11,7 +11,7 @@ import { buildCorsHeaders } from "../_shared/cors.ts";
 const SCHEMA = {
   type: "object",
   properties: {
-    summary: { type: "string", description: "1–3 sentence summary of the vehicle awardee landscape. Note uncertainty." },
+    summary: { type: "string", description: "1–3 sentence summary of the vehicle awardee landscape. Note uncertainty AND state explicitly whether you had live web search available on this call (you do NOT — the Lovable AI gateway used here does not expose a web_search / google_search tool, so results are drawn from model knowledge only)." },
     source_urls: {
       type: "array",
       items: { type: "string" },
@@ -28,8 +28,9 @@ const SCHEMA = {
           socioeconomic: { type: "array", items: { type: "string" } },
           confidence: { type: "string", enum: ["high", "medium", "low"] },
           note: { type: ["string", "null"] },
+          announcement_url: { type: ["string", "null"], description: "Direct URL to a public award announcement (press release, agency page, news article) supporting this candidate. Only include when you specifically know a real URL; otherwise null. Never fabricate URLs." },
         },
-        required: ["company_name", "uei", "small_business", "socioeconomic", "confidence", "note"],
+        required: ["company_name", "uei", "small_business", "socioeconomic", "confidence", "note", "announcement_url"],
       },
       description: "List ONLY companies you have specific basis to believe hold this vehicle. Never pad. Grade confidence honestly.",
     },
