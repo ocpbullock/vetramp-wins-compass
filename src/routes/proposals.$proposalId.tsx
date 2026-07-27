@@ -2534,7 +2534,29 @@ function TeamHubPanel({
         onOpenChange={setSandboxOpen}
         parent={{ kind: "proposal", proposalId, teamId }}
         opportunity={sandboxOpportunity}
+        seedFromProposed={[
+          // Perspective/self (best-effort: pass our own company id if we can find it in the entries).
+          ...(teaming.ready && teaming.self?.id
+            ? [{ companyId: teaming.self.id, role: (isSelfPrime ? "prime" : "sub") as any, workShare: isSelfPrime ? 100 - teamingEntries.reduce((s: number, e: TeamingEntry) => s + (Number(e.work_share_pct) || 0), 0) : Number((proposal.pwin_config as any)?.selfWorkSharePct ?? 20), isSelf: true }]
+            : []),
+          ...teamingEntries.map((e: TeamingEntry) => ({
+            companyId: e.company_id,
+            role: ((e.role as any) ?? "sub") as any,
+            workShare: Number(e.work_share_pct) || 0,
+            isSelf: false,
+          })),
+        ]}
+        suggestions={
+          teaming.ready
+            ? teaming.suggestions.slice(0, 8).map((s: any) => ({
+                companyId: s.company.id,
+                name: s.company.name ?? s.company.company_name ?? "Partner",
+                reason: s.reasons?.[0],
+              }))
+            : []
+        }
       />
+
 
       <CreateOpportunityTeamDialog
         open={oppTeamDialogOpen}
