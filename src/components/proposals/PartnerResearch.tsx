@@ -29,6 +29,8 @@ import { companyFromTeamingTarget, type TeamingTarget } from "@/lib/teaming-targ
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
 import { NaicsCombobox } from "@/components/NaicsCombobox";
+import { canonicalizeAgencyName } from "@/lib/agency-match";
+
 
 const SB_TYPES = [
   { value: "SDVOSB", label: "SDVOSB" },
