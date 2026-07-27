@@ -19,6 +19,8 @@ import {
   type PwinProbabilityResult,
 } from "@/lib/pwin-probability";
 import type { PwinResult, FactorKey } from "@/lib/pwin";
+import { getEffectiveIncumbent, incumbentSourceBadge } from "@/lib/incumbent-source";
+
 
 type PwinConfig = {
   field: { min: number; max: number };
