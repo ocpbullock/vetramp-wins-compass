@@ -401,7 +401,7 @@ export type Database = {
           ran_at: string
           ran_by: string | null
           results: Json
-          team_id: string | null
+          team_id: string
           total: number
           warned: number
         }
@@ -413,7 +413,7 @@ export type Database = {
           ran_at?: string
           ran_by?: string | null
           results?: Json
-          team_id?: string | null
+          team_id: string
           total?: number
           warned?: number
         }
@@ -425,7 +425,7 @@ export type Database = {
           ran_at?: string
           ran_by?: string | null
           results?: Json
-          team_id?: string | null
+          team_id?: string
           total?: number
           warned?: number
         }
