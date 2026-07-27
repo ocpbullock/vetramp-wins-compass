@@ -41,6 +41,12 @@ import { MetricCard } from "@/components/MetricCard";
 import { PwinProbabilityCard } from "./PwinProbabilityCard";
 import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 
+type TeamStrategy = {
+  recommended_model: "prime_with_subs" | "sub_to_prime" | "joint_venture" | "mentor_protege" | "niche_sub";
+  model_rationale: string;
+  partner_archetypes: { archetype: string; why: string; example_signal: string }[];
+};
+
 type CaptureAnalysis = {
   bid_no_bid: {
     recommendation: "bid" | "no_bid" | "lean_bid" | "lean_no_bid";
@@ -52,7 +58,16 @@ type CaptureAnalysis = {
   competitor_assessment: string;
   staffing_concerns: string[];
   next_actions: { action: string; why: string; priority: "high" | "medium" | "low" }[];
+  team_strategy?: TeamStrategy;
   _fetched_at?: string;
+};
+
+const MODEL_LABEL: Record<TeamStrategy["recommended_model"], string> = {
+  prime_with_subs: "Prime with subs",
+  sub_to_prime: "Sub to a named prime",
+  joint_venture: "Joint venture",
+  mentor_protege: "Mentor-protégé",
+  niche_sub: "Niche sub on a larger team",
 };
 
 const REC_LABEL: Record<CaptureAnalysis["bid_no_bid"]["recommendation"], { text: string; className: string }> = {
