@@ -903,7 +903,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="capture_analysis" className="mt-4">
-            <CaptureAnalysisPanel proposal={proposal} proposalId={proposalId} />
+            <CaptureAnalysisPanel proposal={proposal} proposalId={proposalId} onPwinProbability={setPwinProbability} />
           </TabsContent>
 
           <TabsContent value="team" className="mt-4">
@@ -911,6 +911,7 @@ function ProposalPipeline() {
               proposal={proposal}
               proposalId={proposalId}
               onProposalPatch={(patch) => setProposal((p: any) => ({ ...(p ?? {}), ...patch }))}
+              onPwinProbability={setPwinProbability}
             />
           </TabsContent>
 
