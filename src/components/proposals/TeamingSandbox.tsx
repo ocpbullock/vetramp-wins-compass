@@ -129,7 +129,8 @@ export function TeamingSandbox({
 
 
   // Re-seed from the current Proposed Team every time the sandbox is opened.
-  // Falls back to a lone self-prime seed when no seed is provided.
+  // Ensures a self/perspective member is always present (defaults to the
+  // is_own_company row when the caller doesn't include one).
   const reseedFromProposed = () => {
     if (!companies || companies.length === 0) return;
     const seed: SandboxMember[] = [];
@@ -139,18 +140,26 @@ export function TeamingSandbox({
         if (!c) continue;
         seed.push(memberFromCompany(c, { isSelf: s.isSelf, role: s.role, share: s.workShare }));
       }
-      const self = seed.find((m) => m.isSelf) ?? seed[0];
-      if (self) setPerspectiveId(self.companyId);
+    }
+    // Guarantee a perspective/self member.
+    if (!seed.some((m) => m.isSelf)) {
+      const initial = ownCompany ?? companies[0];
+      if (initial && !seed.some((m) => m.companyId === initial.id)) {
+        seed.unshift(memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 - seed.reduce((s, m) => s + m.workShare, 0) }));
+      } else if (seed.length > 0) {
+        seed[0] = { ...seed[0], isSelf: true };
+      }
     }
     if (seed.length === 0) {
       const initial = ownCompany ?? companies[0];
-      setPerspectiveId(initial.id);
       seed.push(memberFromCompany(initial, { isSelf: true, role: "prime", share: 100 }));
       if (addCompanyIdOnOpen && addCompanyIdOnOpen !== initial.id) {
         const extra = companies.find((c) => c.id === addCompanyIdOnOpen);
         if (extra) seed.push(memberFromCompany(extra, { isSelf: false, role: "sub", share: 20 }));
       }
     }
+    const self = seed.find((m) => m.isSelf) ?? seed[0];
+    if (self) setPerspectiveId(self.companyId);
     setMembers(seed);
   };
 
