@@ -909,7 +909,7 @@ function StrategyRosterAssessment({
     },
   });
   const isSelfPrime = teaming.ready
-    ? teaming.pwinResult.factors.length > 0 // no direct engagement flag; infer from context
+    ? (teaming.pwinResult?.factors ?? []).length > 0 // no direct engagement flag; infer from context
       ? true
       : true
     : true;

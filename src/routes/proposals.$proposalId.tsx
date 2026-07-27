@@ -55,6 +55,7 @@ import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursu
 import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
 import { CaptureAnalysisPanel, useTeamingSummary } from "@/components/proposals/CaptureAnalysisPanel";
 import { PwinProbabilityCard } from "@/components/proposals/PwinProbabilityCard";
+import type { PartnerSuggestion } from "@/lib/partner-suggest";
 import { ProposedTeamCard, teamingEntriesKey, fetchTeamingEntries, type TeamingEntry } from "@/components/proposals/ProposedTeamCard";
 import { MetricCard } from "@/components/MetricCard";
 import type { PwinProbabilityResult } from "@/lib/pwin-probability";
@@ -2542,11 +2543,14 @@ function TeamHubPanel({
         }))}
         suggestions={
           teaming.ready
-            ? teaming.suggestions.slice(0, 8).map((s: any) => ({
-                companyId: s.company.id,
-                name: s.company.name ?? s.company.company_name ?? "Partner",
-                reason: s.reasons?.[0],
-              }))
+            ? teaming.suggestions
+                .filter((s: PartnerSuggestion) => s?.partnerId)
+                .slice(0, 8)
+                .map((s: PartnerSuggestion) => ({
+                  companyId: s.partnerId,
+                  name: s.partnerName ?? "Partner",
+                  reason: s.reasons?.[0],
+                }))
             : []
         }
       />
