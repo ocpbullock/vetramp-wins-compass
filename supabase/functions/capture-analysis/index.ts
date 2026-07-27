@@ -150,8 +150,15 @@ serve(async (req) => {
       const seedCompanies = new Set<string>();
       const inc = marketSnapshot?.incumbent?.topRecipient;
       if (inc) seedCompanies.add(String(inc));
+      // Fallback to user-declared incumbent from the Overview tab when the
+      // snapshot didn't identify one (or in addition to it).
+      const intelInc = (proposal as any)?.customer_intel?.predecessor_contract?.incumbent;
+      if (intelInc) seedCompanies.add(String(intelInc));
+      const knownInc = (proposal as any)?.known_incumbent;
+      if (knownInc && String(knownInc).trim()) seedCompanies.add(String(knownInc).trim());
       const comps = Array.isArray(marketSnapshot?.competitors) ? marketSnapshot.competitors : [];
       for (const c of comps.slice(0, 8)) if (c?.name) seedCompanies.add(String(c.name));
+
 
       // Exclude current teaming partners (resolve company_id -> companies.name).
       try {
