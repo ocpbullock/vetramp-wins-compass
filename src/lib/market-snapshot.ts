@@ -110,7 +110,7 @@ export async function generateMarketSnapshot(
 ): Promise<MarketSnapshot> {
   const onProgress = opts?.onProgress ?? (() => {});
   const naicsCodes = proposal.naics_code ? [String(proposal.naics_code)] : [];
-  const agency = proposal.agency ?? null;
+  const agency = canonicalizeAgencyName(proposal.agency).canonical || (proposal.agency ?? null);
   const keyword = proposal.opportunity_title ?? null;
 
   const endDate = new Date().toISOString().slice(0, 10);
