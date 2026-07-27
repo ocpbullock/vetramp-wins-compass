@@ -11,7 +11,7 @@ import { buildCorsHeaders } from "../_shared/cors.ts";
 const SCHEMA = {
   type: "object",
   properties: {
-    summary: { type: "string", description: "1–3 sentence summary of the vehicle awardee landscape. Note uncertainty." },
+    summary: { type: "string", description: "1–3 sentence summary of the vehicle awardee landscape. Note uncertainty AND state explicitly whether you had live web search available on this call (you do NOT — the Lovable AI gateway used here does not expose a web_search / google_search tool, so results are drawn from model knowledge only)." },
     source_urls: {
       type: "array",
       items: { type: "string" },
@@ -28,8 +28,9 @@ const SCHEMA = {
           socioeconomic: { type: "array", items: { type: "string" } },
           confidence: { type: "string", enum: ["high", "medium", "low"] },
           note: { type: ["string", "null"] },
+          announcement_url: { type: ["string", "null"], description: "Direct URL to a public award announcement (press release, agency page, news article) supporting this candidate. Only include when you specifically know a real URL; otherwise null. Never fabricate URLs." },
         },
-        required: ["company_name", "uei", "small_business", "socioeconomic", "confidence", "note"],
+        required: ["company_name", "uei", "small_business", "socioeconomic", "confidence", "note", "announcement_url"],
       },
       description: "List ONLY companies you have specific basis to believe hold this vehicle. Never pad. Grade confidence honestly.",
     },
@@ -57,11 +58,16 @@ serve(async (req) => {
     }
 
     const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" +
-      `You are a senior federal contracts analyst helping to draft an awardee list for a specific contract vehicle. Rules:
-- List ONLY companies you have specific basis to believe hold this vehicle. If you are unsure, do NOT include them.
+      `You are a senior federal contracts analyst helping to draft an awardee list for a specific contract vehicle.
+
+IMPORTANT — Tooling: You do NOT have live web search / browsing on this call. The Lovable AI gateway used here does not expose a web_search or google_search tool for this model. Work strictly from your training knowledge of public award announcements, agency vehicle pages, GSA eLibrary listings, and press releases. Say this explicitly in your summary so the human reviewer knows to verify.
+
+Rules:
+- List ONLY companies you have specific basis to believe hold this vehicle (typically because you recall a public award announcement such as "<company> awarded seat on <vehicleName>", agency contractor listings, or GSA eLibrary entries). If you are unsure, do NOT include them.
 - Never pad or invent. It is better to return 3 confident candidates than 30 speculative ones.
 - Grade confidence honestly per candidate.
 - Include UEI only if you specifically know it. Otherwise return null. Same for small_business flag.
+- announcement_url: include the URL of the specific award announcement / press release / agency page that supports the candidate ONLY when you specifically know a real URL. Never fabricate URLs — return null when unsure.
 - Cite official sources in source_urls where possible (agency vehicle page, GSA eLibrary, press releases).
 - The USER MUST verify every candidate against official sources before saving. Say this in your summary.`;
 

@@ -14,7 +14,15 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, ExternalLink, Search, Link2 } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 import { toast } from "sonner";
 import type { Tables, TablesInsert } from "@/integrations/supabase/types";
 
@@ -672,6 +680,7 @@ function RegistryVehicleRow({
             <div className="text-xs font-semibold text-muted-foreground">Awardees ({awardees.length})</div>
             {canManageAwardees && (
               <div className="flex gap-1 flex-wrap">
+                <AnnouncementSearchMenu vehicleName={vehicle.vehicle_name} />
                 <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>AI research awardees</Button>
                 <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV</Button>
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Bulk paste</Button>
@@ -1145,6 +1154,7 @@ type ResearchCandidate = {
   socioeconomic: string[];
   confidence: "high" | "medium" | "low";
   note: string | null;
+  announcement_url?: string | null;
 };
 
 type ResearchResult = {
@@ -1323,6 +1333,18 @@ function AiResearchAwardeesDialog({
                             <Badge className={`text-[10px] ${confidenceBadge(c.confidence)}`} variant="outline">
                               {c.confidence}
                             </Badge>
+                            {c.announcement_url && (
+                              <a
+                                href={c.announcement_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={`Announcement: ${c.announcement_url}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-primary hover:text-primary/80 inline-flex items-center"
+                              >
+                                <Link2 className="w-3 h-3" />
+                              </a>
+                            )}
                             {dup && <Badge variant="outline" className="text-[10px]">already present</Badge>}
                           </div>
                           <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
@@ -1355,5 +1377,55 @@ function AiResearchAwardeesDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+// ---------------- Announcement Search Menu ----------------
+
+function AnnouncementSearchMenu({ vehicleName }: { vehicleName: string }) {
+  const q = encodeURIComponent(vehicleName);
+  const items: { label: string; url: string }[] = [
+    {
+      label: "Google News — award",
+      url: `https://news.google.com/search?q=${encodeURIComponent(`"${vehicleName}" award`)}`,
+    },
+    {
+      label: "Google — awarded (PR wires)",
+      url: `https://www.google.com/search?q=${encodeURIComponent(
+        `"awarded" "${vehicleName}" (site:prnewswire.com OR site:businesswire.com OR site:globenewswire.com)`,
+      )}`,
+    },
+    {
+      label: "Google — awardees / contract holders",
+      url: `https://www.google.com/search?q=${encodeURIComponent(`"${vehicleName}" (awardees OR "contract holders" OR "seat on")`)}`,
+    },
+    {
+      label: "SAM.gov search",
+      url: `https://sam.gov/search/?keywords=${q}&index=opp`,
+    },
+    {
+      label: "GSA eLibrary search",
+      url: `https://www.gsaelibrary.gsa.gov/ElibMain/searchResults.do?searchCriteria=${q}&scheduleNumber=&executeQuery=YES`,
+    },
+  ];
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button size="sm" variant="outline">
+          <Search className="w-3 h-3 mr-1" /> Search announcements
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-72">
+        <DropdownMenuLabel className="text-xs">Manual awardee hunt — opens in new tab</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {items.map((it) => (
+          <DropdownMenuItem key={it.label} asChild>
+            <a href={it.url} target="_blank" rel="noreferrer" className="cursor-pointer">
+              <ExternalLink className="w-3 h-3 mr-2" /> {it.label}
+            </a>
+          </DropdownMenuItem>
+        ))}
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
