@@ -68,11 +68,9 @@ export function PwinProbabilityCard({
     return n >= 2 ? n : null;
   }, [proposal?.positioning_matrix]);
 
-  const incumbentSeedName: string | null =
-    proposal?.customer_intel?.predecessor_contract?.incumbent
-    ?? proposal?.market_snapshot?.incumbent?.topRecipient
-    ?? proposal?.known_incumbent
-    ?? null;
+  const incumbentEff = getEffectiveIncumbent(proposal);
+  const incumbentSeedName: string | null = incumbentEff.name;
+
 
   const [config, setConfig] = useState<PwinConfig>(() => ({
     field: {
