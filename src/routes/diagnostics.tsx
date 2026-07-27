@@ -89,6 +89,10 @@ function DiagnosticsPage() {
 
   async function handleRun() {
     if (running) return;
+    if (!teamId) {
+      toast.error("Join or create a team before running diagnostics.");
+      return;
+    }
     setRunning(true);
     setResults(DIAGNOSTICS_CHECKS.map((c) => ({ ...c, status: "pending" as const })));
     try {
@@ -101,7 +105,7 @@ function DiagnosticsPage() {
       });
       const s = summarize(collected);
       const { error } = await supabase.from("diagnostics_runs").insert({
-        team_id: teamId ?? null,
+        team_id: teamId,
         ran_by: user?.id ?? null,
         total: s.total,
         passed: s.passed,
@@ -109,6 +113,7 @@ function DiagnosticsPage() {
         failed: s.failed,
         results: collected as any,
       });
+
       if (error) toast.error(`Saved locally, but history write failed: ${error.message}`);
       else toast.success(`Ran ${s.total} checks — ${s.passed} pass · ${s.warned} warn · ${s.failed} fail`);
       qc.invalidateQueries({ queryKey: ["diagnostics-history"] });
