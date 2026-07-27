@@ -677,6 +677,27 @@ function RegistryVehicleRow({
             {vehicle.vehicle_type && <Badge variant="secondary" className="text-[10px]">{vehicle.vehicle_type}</Badge>}
             {vehicle.status && <Badge className={`text-[10px] ${registryStatusBadgeClass(vehicle.status)}`} variant="outline">{vehicle.status}</Badge>}
             {held && <Badge className="text-[10px] bg-primary/10 text-primary border-primary/30" variant="outline">Our team holds</Badge>}
+            {predecessorName && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onLineageClick?.(predecessorName); }}
+                className="text-[10px] rounded border border-border px-1.5 py-0.5 hover:bg-accent"
+                title="Filter registry to predecessor"
+              >
+                Supersedes: {predecessorName}
+              </button>
+            )}
+            {successorName && (
+              <button
+                type="button"
+                onClick={(e) => { e.stopPropagation(); onLineageClick?.(successorName); }}
+                className="text-[10px] rounded border border-warning/50 bg-warning/10 px-1.5 py-0.5 hover:bg-warning/20"
+                title="Filter registry to successor"
+              >
+                Successor: {successorName}
+              </button>
+            )}
+
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">
             {vehicle.managing_agency ?? "—"}
