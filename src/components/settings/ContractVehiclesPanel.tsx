@@ -682,7 +682,7 @@ function RegistryVehicleRow({
               <div className="flex gap-1 flex-wrap">
                 <AnnouncementSearchMenu vehicleName={vehicle.vehicle_name} />
                 <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>AI research awardees</Button>
-                <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV</Button>
+                <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV / Excel</Button>
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Bulk paste</Button>
                 <Button size="sm" onClick={() => setAddAwardeeOpen(true)}><Plus className="w-3 h-3 mr-1" /> Add awardee</Button>
               </div>
