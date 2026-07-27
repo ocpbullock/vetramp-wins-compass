@@ -1018,6 +1018,18 @@ function ProposalPipeline() {
             <ActivitiesPanel proposalId={proposalId} teamId={proposal.team_id ?? null} />
           </TabsContent>
         </Tabs>
+        <aside className="hidden xl:block sticky top-4 self-start">
+          <PursuitRail
+            proposal={proposal}
+            proposalId={proposalId}
+            signals={stageSignals}
+            teamStrength={teamStrength}
+            pwinProbability={pwinProbability}
+            onNavigateTab={(t) => setHubTab(t as HubTab)}
+            onRefreshProposal={refreshProposal}
+          />
+        </aside>
+        </div>
       </div>
       {isPartnerView && (
         <footer className="mt-8 border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
