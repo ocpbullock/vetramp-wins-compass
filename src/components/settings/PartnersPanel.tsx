@@ -17,7 +17,7 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { Loader2, Plus, Pencil, Trash2, Building2, Star } from "lucide-react";
+import { Loader2, Plus, Pencil, Trash2, Building2, Star, Search, X } from "lucide-react";
 import { toast } from "sonner";
 import {
   type Company,
@@ -27,6 +27,9 @@ import {
   upsertCompany,
   deleteCompany,
 } from "@/lib/companies";
+import { VehiclesCombobox } from "@/components/settings/VehiclesCombobox";
+import { NaicsCombobox } from "@/components/NaicsCombobox";
+
 
 // Back-compat: existing code imports `Partner` (legacy teaming_partners row shape) from this module.
 export type Partner = {
@@ -73,6 +76,13 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
   const [seedDraft, setSeedDraft] = useState<CompanyDraft | null>(null);
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
+  const [textQuery, setTextQuery] = useState("");
+  const [certFilter, setCertFilter] = useState<string>("__any");
+  const [naicsFilter, setNaicsFilter] = useState<string>("");
+  const [vehicleFilter, setVehicleFilter] = useState<string>("__any");
+  const [statusFilter, setStatusFilter] = useState<string>("__any");
+  const [sortKey, setSortKey] = useState<"name" | "recent" | "status">("name");
+
 
   // Open prefilled dialog when an initialDraft is provided from a parent (e.g. vendor lookup).
   useEffect(() => {
@@ -107,13 +117,70 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
   });
   const orgName = parentTeam?.name ?? "the parent organization";
 
+  const distinctCerts = useMemo(() => {
+    const s = new Set<string>();
+    (data ?? []).forEach((c) => c.certifications.forEach((v) => v && s.add(v)));
+    return Array.from(s).sort();
+  }, [data]);
+
+  const distinctVehicles = useMemo(() => {
+    const s = new Set<string>();
+    (data ?? []).forEach((c) => c.contract_vehicles.forEach((v) => v && s.add(v)));
+    return Array.from(s).sort();
+  }, [data]);
+
   const filtered = useMemo(() => {
-    if (!data) return [];
-    if (filter === "own") return data.filter((c) => c.is_own_company);
-    if (filter === "partner") return data.filter((c) => c.is_existing_partner && !c.is_own_company);
-    if (filter === "other") return data.filter((c) => !c.is_existing_partner && !c.is_own_company);
-    return data;
-  }, [data, filter]);
+    let list = data ?? [];
+    if (filter === "own") list = list.filter((c) => c.is_own_company);
+    else if (filter === "partner") list = list.filter((c) => c.is_existing_partner && !c.is_own_company);
+    else if (filter === "other") list = list.filter((c) => !c.is_existing_partner && !c.is_own_company);
+
+    const q = textQuery.trim().toLowerCase();
+    if (q) {
+      list = list.filter((c) => {
+        return (
+          c.name.toLowerCase().includes(q) ||
+          (c.capabilities_narrative ?? "").toLowerCase().includes(q) ||
+          (c.notes ?? "").toLowerCase().includes(q)
+        );
+      });
+    }
+    if (certFilter !== "__any") {
+      list = list.filter((c) => c.certifications.includes(certFilter));
+    }
+    if (naicsFilter) {
+      list = list.filter((c) => c.naics_codes.includes(naicsFilter));
+    }
+    if (vehicleFilter !== "__any") {
+      list = list.filter((c) => c.contract_vehicles.includes(vehicleFilter));
+    }
+    if (statusFilter !== "__any") {
+      list = list.filter((c) => c.relationship_status === statusFilter);
+    }
+
+    if (sortKey === "recent") {
+      list = [...list].sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
+    } else if (sortKey === "status") {
+      const rank = { active: 0, prospective: 1, inactive: 2 } as const;
+      list = [...list].sort((a, b) => {
+        const r = (rank[a.relationship_status] ?? 3) - (rank[b.relationship_status] ?? 3);
+        return r !== 0 ? r : a.name.localeCompare(b.name);
+      });
+    } else {
+      list = [...list].sort((a, b) => a.name.localeCompare(b.name));
+    }
+    return list;
+  }, [data, filter, textQuery, certFilter, naicsFilter, vehicleFilter, statusFilter, sortKey]);
+
+  const totalCount = data?.length ?? 0;
+  const filtersActive =
+    !!textQuery.trim() || certFilter !== "__any" || !!naicsFilter ||
+    vehicleFilter !== "__any" || statusFilter !== "__any" || filter !== "all";
+  const resetFilters = () => {
+    setTextQuery(""); setCertFilter("__any"); setNaicsFilter("");
+    setVehicleFilter("__any"); setStatusFilter("__any"); setFilter("all");
+  };
+
 
   const deleteMut = useMutation({
     mutationFn: deleteCompany,
@@ -173,13 +240,84 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
       )}
 
 
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap">
         {(["all", "own", "partner", "other"] as Filter[]).map((f) => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
             {f === "all" ? "All" : f === "own" ? "Own" : f === "partner" ? "Partners" : "Other"}
           </Button>
         ))}
       </div>
+
+      {/* Roster toolbar: search, filters, sort */}
+      <div className="rounded-md border bg-muted/20 p-3 space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
+          <div className="md:col-span-2 relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              className="h-8 text-xs pl-7"
+              placeholder="Search name, capabilities, notes…"
+              value={textQuery}
+              onChange={(e) => setTextQuery(e.target.value)}
+            />
+          </div>
+          <Select value={certFilter} onValueChange={setCertFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Certification" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any">Any certification</SelectItem>
+              {distinctCerts.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div>
+            <NaicsCombobox
+              value={naicsFilter || null}
+              onChange={(v) => setNaicsFilter(typeof v === "string" ? v : (v ?? ""))}
+              mode="single"
+              placeholder="Any NAICS"
+              allowClear
+            />
+          </div>
+          <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any">Any vehicle</SelectItem>
+              {distinctVehicles.map((v) => (
+                <SelectItem key={v} value={v}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Relationship" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any">Any relationship</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="prospective">Prospective</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Sort by</span>
+          <Select value={sortKey} onValueChange={(v) => setSortKey(v as typeof sortKey)}>
+            <SelectTrigger className="h-8 text-xs w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Name (A–Z)</SelectItem>
+              <SelectItem value="recent">Recently added</SelectItem>
+              <SelectItem value="status">Relationship status</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground ml-auto tabular-nums">
+            {filtered.length} of {totalCount}
+          </span>
+          {filtersActive && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetFilters}>
+              <X className="w-3 h-3 mr-1" /> Reset
+            </Button>
+          )}
+        </div>
+      </div>
+
 
       <Card>
         <div className="overflow-x-auto">
@@ -338,7 +476,7 @@ function CompanyDialog({
         certifications: csvSplit(form.certifications),
         set_asides: csvSplit(form.set_asides),
         naics_codes: csvSplit(form.naics_codes),
-        contract_vehicles: csvSplit(form.contract_vehicles),
+        contract_vehicles: form.contract_vehicles,
         capabilities_narrative: form.capabilities_narrative.trim() || null,
         past_performance: form.past_performance.filter((e) => e.title || e.summary),
         is_own_company: form.is_own_company,
@@ -393,7 +531,15 @@ function CompanyDialog({
           <Field label="Certifications (comma-separated)" value={form.certifications} onChange={(v) => update({ certifications: v })} />
           <Field label="Set-asides (comma-separated)" value={form.set_asides} onChange={(v) => update({ set_asides: v })} />
           <Field label="NAICS codes (comma-separated)" value={form.naics_codes} onChange={(v) => update({ naics_codes: v })} />
-          <Field label="Contract vehicles (comma-separated)" value={form.contract_vehicles} onChange={(v) => update({ contract_vehicles: v })} />
+          <div>
+            <Label>Contract vehicles</Label>
+            <VehiclesCombobox
+              value={form.contract_vehicles}
+              onChange={(v) => update({ contract_vehicles: v })}
+              placeholder="Select contract vehicles or type a custom name…"
+            />
+          </div>
+
 
           <div>
             <Label>Capabilities narrative</Label>
@@ -528,7 +674,7 @@ function initialForm(c: Company | null, seed: CompanyDraft | null) {
     certifications: ((c?.certifications ?? seed?.certifications ?? []) as string[]).join(", "),
     set_asides: ((c?.set_asides ?? seed?.set_asides ?? []) as string[]).join(", "),
     naics_codes: ((c?.naics_codes ?? seed?.naics_codes ?? []) as string[]).join(", "),
-    contract_vehicles: ((c?.contract_vehicles ?? seed?.contract_vehicles ?? []) as string[]).join(", "),
+    contract_vehicles: ((c?.contract_vehicles ?? seed?.contract_vehicles ?? []) as string[]),
     capabilities_narrative: (c?.capabilities_narrative ?? seed?.capabilities_narrative ?? "") as string,
     past_performance: (c?.past_performance ?? seed?.past_performance ?? []) as PastPerfEntry[],
     is_own_company: !!(c?.is_own_company ?? seed?.is_own_company),

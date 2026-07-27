@@ -46,7 +46,9 @@ import { isStageSatisfied, nextCaptureStage, type StageSignals } from "@/lib/cap
 import { applyCaptureStage } from "@/lib/stage-mutations";
 import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
-import { PartnerResearch } from "@/components/proposals/PartnerResearch";
+import { FindPartnersCard } from "@/components/proposals/FindPartnersCard";
+
+
 import { TeamingOutreachModal, type OutreachPartnerInput } from "@/components/proposals/TeamingOutreachModal";
 import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
 import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
@@ -61,7 +63,7 @@ import { ProposedTeamCard, teamingEntriesKey, fetchTeamingEntries, type TeamingE
 import { MetricCard } from "@/components/MetricCard";
 import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
-import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
+
 import { NaicsCombobox } from "@/components/NaicsCombobox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
@@ -2526,24 +2528,13 @@ function TeamHubPanel({
         onOutreach={(p) => { setOutreachPartner(p); setOutreachOpen(true); }}
       />
 
-      {proposal.vehicle_registry_id && (
-        <AwardeePoolCard
-          vehicleId={proposal.vehicle_registry_id as string}
-          vehicleName={(proposal.opportunity_data as any)?.contract_vehicle ?? "Selected vehicle"}
-          teamId={teamId ?? ""}
-          existingCompanyKeys={new Set(existingPartnerIds)}
-          proposal={proposal}
-          onProposalRefresh={() => qc.invalidateQueries({ queryKey: ["proposal", proposalId] })}
-        />
-      )}
-
-      <PartnerResearch
-        proposalId={proposalId}
+      <FindPartnersCard
+        proposal={proposal}
         teamId={teamId}
-        opportunityNaics={proposal.naics_code ?? null}
-        opportunityAgency={proposal.agency ?? null}
-        opportunitySetAside={proposal.set_aside ?? null}
+        existingPartnerIds={existingPartnerIds}
+        onProposalRefresh={() => qc.invalidateQueries({ queryKey: ["proposal", proposalId] })}
       />
+
 
 
       <TeamingSandbox
