@@ -17,7 +17,9 @@ export type VehicleRegistryRow = {
   managing_agency: string | null;
   url: string | null;
   status: string | null;
+  predecessor_id: string | null;
 };
+
 
 export const VEHICLE_STATUS_OPTIONS: { value: string; label: string; hint?: string }[] = [
   { value: "unknown", label: "Unknown" },
