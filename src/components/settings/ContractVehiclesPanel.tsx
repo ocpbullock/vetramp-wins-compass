@@ -990,6 +990,31 @@ function CsvImportAwardeesDialog({
 
   const onFile = async (file: File) => {
     setFileName(file.name);
+    const lower = file.name.toLowerCase();
+    const isExcel = lower.endsWith(".xlsx") || lower.endsWith(".xls") || lower.endsWith(".xlsm") || lower.endsWith(".ods");
+    if (isExcel) {
+      try {
+        const XLSX = await import("xlsx");
+        const buf = await file.arrayBuffer();
+        const wb = XLSX.read(buf, { type: "array" });
+        const firstSheet = wb.Sheets[wb.SheetNames[0]];
+        if (!firstSheet) { toast.error("Workbook has no sheets"); return; }
+        const json = XLSX.utils.sheet_to_json<Record<string, unknown>>(firstSheet, { defval: "", raw: false });
+        if (!json.length) { toast.error("Sheet is empty"); return; }
+        const hdrs = Object.keys(json[0]).filter(Boolean);
+        const stringRows = json.map((r) => {
+          const out: Record<string, string> = {};
+          for (const k of hdrs) out[k] = String(r[k] ?? "").trim();
+          return out;
+        });
+        setHeaders(hdrs);
+        setRows(stringRows);
+        setMapping(guessMapping(hdrs));
+      } catch (err) {
+        toast.error(`Parse failed: ${err instanceof Error ? err.message : String(err)}`);
+      }
+      return;
+    }
     const Papa = (await import("papaparse")).default;
     Papa.parse<Record<string, string>>(file, {
       header: true,
