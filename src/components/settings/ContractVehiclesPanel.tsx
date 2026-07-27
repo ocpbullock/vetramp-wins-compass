@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useTeam } from "@/lib/team";
@@ -407,9 +407,21 @@ const REGISTRY_TYPES = [
 
 function VehicleRegistrySection({ teamId, canEdit }: { teamId: string; canEdit: boolean }) {
   const qc = useQueryClient();
+  const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState<string | null>(null);
+  const [agencyFilter, setAgencyFilter] = useState<string>("__all__");
+  const [showExpired, setShowExpired] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "agency" | "recent">("name");
   const [addOpen, setAddOpen] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [visibleCount, setVisibleCount] = useState(50);
+
+  // Debounce search input.
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput), 200);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   const { data: vehicles = [], isLoading } = useQuery({
     queryKey: ["vehicle-registry", teamId],
@@ -424,17 +436,52 @@ function VehicleRegistrySection({ teamId, canEdit }: { teamId: string; canEdit: 
     },
   });
 
-  const filtered = vehicles.filter((v) => {
-    const s = search.trim().toLowerCase();
-    if (!s) return true;
-    return [v.vehicle_name, v.managing_agency, v.vehicle_type, v.description]
-      .filter(Boolean)
-      .some((x) => x!.toLowerCase().includes(s));
+  // Held vehicles (for "our team holds" indicator).
+  const { data: heldNames = new Set<string>() } = useQuery({
+    queryKey: ["contract-vehicles-names", teamId],
+    enabled: !!teamId,
+    staleTime: 30 * 60 * 1000,
+    queryFn: async (): Promise<Set<string>> => {
+      const { data, error } = await supabase
+        .from("contract_vehicles")
+        .select("vehicle_name")
+        .eq("team_id", teamId);
+      if (error) throw new Error(error.message);
+      return new Set((data ?? []).map((r) => (r.vehicle_name || "").trim().toLowerCase()));
+    },
   });
+
+  const agencyOptions = Array.from(
+    new Set(vehicles.map((v) => (v.managing_agency ?? "").trim()).filter(Boolean)),
+  ).sort();
+
+  const filtered = vehicles
+    .filter((v) => {
+      if (!showExpired && (v.status ?? "").toLowerCase() === "expired") return false;
+      if (typeFilter && v.vehicle_type !== typeFilter) return false;
+      if (agencyFilter !== "__all__" && (v.managing_agency ?? "") !== agencyFilter) return false;
+      const s = search.trim().toLowerCase();
+      if (!s) return true;
+      return [v.vehicle_name, v.managing_agency, v.vehicle_type, v.description]
+        .filter(Boolean)
+        .some((x) => x!.toLowerCase().includes(s));
+    })
+    .sort((a, b) => {
+      if (sortBy === "agency") {
+        return (a.managing_agency ?? "").localeCompare(b.managing_agency ?? "")
+          || a.vehicle_name.localeCompare(b.vehicle_name);
+      }
+      if (sortBy === "recent") {
+        return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      }
+      return a.vehicle_name.localeCompare(b.vehicle_name);
+    });
+
+  const visible = filtered.slice(0, visibleCount);
 
   return (
     <div className="space-y-3 pt-6 border-t">
-      <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <div>
           <h2 className="font-semibold">Vehicle registry</h2>
           <p className="text-xs text-muted-foreground">Global seed vehicles plus vehicles your team tracks — with awardee pools.</p>
@@ -443,26 +490,87 @@ function VehicleRegistrySection({ teamId, canEdit }: { teamId: string; canEdit: 
           <Button size="sm" onClick={() => setAddOpen(true)}><Plus className="w-4 h-4 mr-1" /> Add vehicle</Button>
         )}
       </div>
-      <Input placeholder="Search vehicles…" value={search} onChange={(e) => setSearch(e.target.value)} className="max-w-sm" />
+
+      <div className="flex flex-wrap items-center gap-2">
+        <Input
+          placeholder="Search name, agency, description…"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          className="max-w-xs h-9"
+        />
+        <div className="flex flex-wrap gap-1">
+          <Button
+            type="button"
+            size="sm"
+            variant={typeFilter === null ? "default" : "outline"}
+            onClick={() => setTypeFilter(null)}
+          >
+            All types
+          </Button>
+          {REGISTRY_TYPES.map((t) => (
+            <Button
+              key={t.value}
+              type="button"
+              size="sm"
+              variant={typeFilter === t.value ? "default" : "outline"}
+              onClick={() => setTypeFilter(t.value)}
+            >
+              {t.label}
+            </Button>
+          ))}
+        </div>
+        <Select value={agencyFilter} onValueChange={setAgencyFilter}>
+          <SelectTrigger className="h-9 w-[200px]"><SelectValue placeholder="Any agency" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="__all__">Any managing agency</SelectItem>
+            {agencyOptions.map((a) => <SelectItem key={a} value={a}>{a}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+          <SelectTrigger className="h-9 w-[180px]"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="name">Sort: Name A–Z</SelectItem>
+            <SelectItem value="agency">Sort: Managing agency</SelectItem>
+            <SelectItem value="recent">Sort: Recently added</SelectItem>
+          </SelectContent>
+        </Select>
+        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <input type="checkbox" checked={showExpired} onChange={(e) => setShowExpired(e.target.checked)} />
+          Show expired
+        </label>
+        <div className="ml-auto text-xs text-muted-foreground">
+          {filtered.length} vehicle{filtered.length === 1 ? "" : "s"}
+        </div>
+      </div>
 
       {isLoading ? (
         <Card className="p-6 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 inline animate-spin mr-1" /> Loading…</Card>
       ) : filtered.length === 0 ? (
         <Card className="p-6 text-sm text-muted-foreground">No vehicles match.</Card>
       ) : (
-        <div className="space-y-2">
-          {filtered.map((v) => (
-            <RegistryVehicleRow
-              key={v.id}
-              vehicle={v}
-              expanded={expanded === v.id}
-              onToggle={() => setExpanded((cur) => (cur === v.id ? null : v.id))}
-              teamId={teamId}
-              canEditRow={canEdit && v.team_id === teamId}
-              onDeleted={() => qc.invalidateQueries({ queryKey: ["vehicle-registry", teamId] })}
-            />
-          ))}
-        </div>
+        <>
+          <div className="space-y-2">
+            {visible.map((v) => (
+              <RegistryVehicleRow
+                key={v.id}
+                vehicle={v}
+                expanded={expanded === v.id}
+                onToggle={() => setExpanded((cur) => (cur === v.id ? null : v.id))}
+                teamId={teamId}
+                canEditRow={canEdit && v.team_id === teamId}
+                held={heldNames.has(v.vehicle_name.trim().toLowerCase())}
+                onDeleted={() => qc.invalidateQueries({ queryKey: ["vehicle-registry", teamId] })}
+              />
+            ))}
+          </div>
+          {filtered.length > visible.length && (
+            <div className="flex justify-center pt-2">
+              <Button variant="outline" size="sm" onClick={() => setVisibleCount((c) => c + 50)}>
+                Show more ({filtered.length - visible.length} remaining)
+              </Button>
+            </div>
+          )}
+        </>
       )}
 
       {addOpen && (
@@ -480,14 +588,23 @@ function VehicleRegistrySection({ teamId, canEdit }: { teamId: string; canEdit: 
   );
 }
 
+function registryStatusBadgeClass(status: string | null | undefined): string {
+  const s = (status ?? "").toLowerCase();
+  if (s === "active") return "bg-success text-success-foreground";
+  if (s === "upcoming") return "bg-accent text-accent-foreground";
+  if (s === "expired") return "bg-muted text-muted-foreground";
+  return "bg-muted text-muted-foreground";
+}
+
 function RegistryVehicleRow({
-  vehicle, expanded, onToggle, teamId, canEditRow, onDeleted,
+  vehicle, expanded, onToggle, teamId, canEditRow, held = false, onDeleted,
 }: {
   vehicle: RegistryVehicle;
   expanded: boolean;
   onToggle: () => void;
   teamId: string;
   canEditRow: boolean;
+  held?: boolean;
   onDeleted: () => void;
 }) {
   const qc = useQueryClient();
@@ -532,7 +649,8 @@ function RegistryVehicleRow({
             <span className="font-medium">{vehicle.vehicle_name}</span>
             {vehicle.team_id === null && <Badge variant="outline" className="text-[10px]">global</Badge>}
             {vehicle.vehicle_type && <Badge variant="secondary" className="text-[10px]">{vehicle.vehicle_type}</Badge>}
-            {vehicle.status && <Badge variant="outline" className="text-[10px]">{vehicle.status}</Badge>}
+            {vehicle.status && <Badge className={`text-[10px] ${registryStatusBadgeClass(vehicle.status)}`} variant="outline">{vehicle.status}</Badge>}
+            {held && <Badge className="text-[10px] bg-primary/10 text-primary border-primary/30" variant="outline">Our team holds</Badge>}
           </div>
           <div className="text-xs text-muted-foreground mt-0.5">
             {vehicle.managing_agency ?? "—"}

@@ -59,14 +59,17 @@ export function VehiclePicker({
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
 
+  const [showExpired, setShowExpired] = useState(false);
   const selected = useMemo(() => vehicles.find((v) => v.id === vehicleId) ?? null, [vehicles, vehicleId]);
   const filtered = useMemo(() => {
     const s = q.trim().toLowerCase();
-    if (!s) return vehicles.slice(0, 40);
-    return vehicles.filter((v) =>
-      [v.vehicle_name, v.managing_agency, v.vehicle_type].filter(Boolean).some((x) => x!.toLowerCase().includes(s)),
-    ).slice(0, 40);
-  }, [vehicles, q]);
+    const base = vehicles.filter((v) => {
+      if (!showExpired && (v.status ?? "").toLowerCase() === "expired") return false;
+      if (!s) return true;
+      return [v.vehicle_name, v.managing_agency, v.vehicle_type].filter(Boolean).some((x) => x!.toLowerCase().includes(s));
+    });
+    return base.slice(0, 60);
+  }, [vehicles, q, showExpired]);
 
   const setStatus = (next: string) => {
     if (next !== "identified") {
@@ -116,6 +119,10 @@ export function VehiclePicker({
                 <Search className="w-3.5 h-3.5 text-muted-foreground" />
                 <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search vehicles…" className="h-8 text-sm" />
               </div>
+              <label className="flex items-center gap-1.5 px-1 pb-2 text-[11px] text-muted-foreground">
+                <input type="checkbox" checked={showExpired} onChange={(e) => setShowExpired(e.target.checked)} />
+                Show expired
+              </label>
               <div className="max-h-72 overflow-y-auto">
                 {filtered.length === 0 ? (
                   <div className="text-xs text-muted-foreground py-4 text-center">No matches.</div>
@@ -126,10 +133,11 @@ export function VehiclePicker({
                     onClick={() => pickVehicle(v)}
                     className="w-full text-left px-2 py-1.5 rounded hover:bg-accent"
                   >
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-medium">{v.vehicle_name}</span>
                       {v.team_id === null && <Badge variant="outline" className="text-[10px]">global</Badge>}
                       {v.vehicle_type && <Badge variant="secondary" className="text-[10px]">{v.vehicle_type}</Badge>}
+                      {v.status && <Badge variant="outline" className="text-[10px]">{v.status}</Badge>}
                     </div>
                     {v.managing_agency && <div className="text-[11px] text-muted-foreground">{v.managing_agency}</div>}
                   </button>
