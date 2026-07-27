@@ -558,19 +558,29 @@ function VehicleRegistrySection({ teamId, canEdit }: { teamId: string; canEdit: 
       ) : (
         <>
           <div className="space-y-2">
-            {visible.map((v) => (
-              <RegistryVehicleRow
-                key={v.id}
-                vehicle={v}
-                expanded={expanded === v.id}
-                onToggle={() => setExpanded((cur) => (cur === v.id ? null : v.id))}
-                teamId={teamId}
-                canEditVehicle={canEdit && v.team_id === teamId}
-                canManageAwardees={canEdit}
-                held={heldNames.has(v.vehicle_name.trim().toLowerCase())}
-                onDeleted={() => qc.invalidateQueries({ queryKey: ["vehicle-registry", teamId] })}
-              />
-            ))}
+            {visible.map((v) => {
+              const predecessor = v.predecessor_id
+                ? vehicles.find((x) => x.id === v.predecessor_id) ?? null
+                : null;
+              const successor = vehicles.find((x) => x.predecessor_id === v.id) ?? null;
+              return (
+                <RegistryVehicleRow
+                  key={v.id}
+                  vehicle={v}
+                  expanded={expanded === v.id}
+                  onToggle={() => setExpanded((cur) => (cur === v.id ? null : v.id))}
+                  teamId={teamId}
+                  canEditVehicle={canEdit && v.team_id === teamId}
+                  canManageAwardees={canEdit}
+                  held={heldNames.has(v.vehicle_name.trim().toLowerCase())}
+                  predecessorName={predecessor?.vehicle_name ?? null}
+                  successorName={successor?.vehicle_name ?? null}
+                  onLineageClick={(name) => setSearchInput(name)}
+                  onDeleted={() => qc.invalidateQueries({ queryKey: ["vehicle-registry", teamId] })}
+                />
+              );
+            })}
+
           </div>
           {filtered.length > visible.length && (
             <div className="flex justify-center pt-2">
