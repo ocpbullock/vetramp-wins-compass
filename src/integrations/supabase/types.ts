@@ -2041,6 +2041,7 @@ export type Database = {
           id: string
           small_business: boolean | null
           socioeconomic: string[] | null
+          team_id: string | null
           uei: string | null
           vehicle_id: string
         }
@@ -2050,6 +2051,7 @@ export type Database = {
           id?: string
           small_business?: boolean | null
           socioeconomic?: string[] | null
+          team_id?: string | null
           uei?: string | null
           vehicle_id: string
         }
@@ -2059,10 +2061,18 @@ export type Database = {
           id?: string
           small_business?: boolean | null
           socioeconomic?: string[] | null
+          team_id?: string | null
           uei?: string | null
           vehicle_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicle_awardees_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicle_awardees_vehicle_id_fkey"
             columns: ["vehicle_id"]

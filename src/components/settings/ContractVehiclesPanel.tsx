@@ -557,7 +557,8 @@ function VehicleRegistrySection({ teamId, canEdit }: { teamId: string; canEdit: 
                 expanded={expanded === v.id}
                 onToggle={() => setExpanded((cur) => (cur === v.id ? null : v.id))}
                 teamId={teamId}
-                canEditRow={canEdit && v.team_id === teamId}
+                canEditVehicle={canEdit && v.team_id === teamId}
+                canManageAwardees={canEdit}
                 held={heldNames.has(v.vehicle_name.trim().toLowerCase())}
                 onDeleted={() => qc.invalidateQueries({ queryKey: ["vehicle-registry", teamId] })}
               />
@@ -597,13 +598,14 @@ function registryStatusBadgeClass(status: string | null | undefined): string {
 }
 
 function RegistryVehicleRow({
-  vehicle, expanded, onToggle, teamId, canEditRow, held = false, onDeleted,
+  vehicle, expanded, onToggle, teamId, canEditVehicle, canManageAwardees, held = false, onDeleted,
 }: {
   vehicle: RegistryVehicle;
   expanded: boolean;
   onToggle: () => void;
   teamId: string;
-  canEditRow: boolean;
+  canEditVehicle: boolean;
+  canManageAwardees: boolean;
   held?: boolean;
   onDeleted: () => void;
 }) {
@@ -611,9 +613,10 @@ function RegistryVehicleRow({
   const [addAwardeeOpen, setAddAwardeeOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const { data: awardees = [], isLoading } = useQuery({
-    queryKey: ["vehicle-awardees", vehicle.id],
+    queryKey: ["vehicle-awardees", vehicle.id, teamId],
     enabled: expanded,
     queryFn: async (): Promise<Awardee[]> => {
       const { data, error } = await supabase
@@ -626,7 +629,7 @@ function RegistryVehicleRow({
     },
   });
 
-  const invalidateAwardees = () => qc.invalidateQueries({ queryKey: ["vehicle-awardees", vehicle.id] });
+  const invalidateAwardees = () => qc.invalidateQueries({ queryKey: ["vehicle-awardees", vehicle.id, teamId] });
 
   const deleteVehicle = async () => {
     const { error } = await supabase.from("vehicle_registry").delete().eq("id", vehicle.id);
@@ -657,7 +660,7 @@ function RegistryVehicleRow({
             {vehicle.url && <> · <a href={vehicle.url} target="_blank" rel="noreferrer" className="text-primary underline" onClick={(e) => e.stopPropagation()}>site</a></>}
           </div>
         </button>
-        {canEditRow && (
+        {canEditVehicle && (
           <Button size="sm" variant="ghost" className="text-destructive" onClick={deleteVehicle}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -665,10 +668,11 @@ function RegistryVehicleRow({
       </div>
       {expanded && (
         <div className="mt-3 pt-3 border-t space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-semibold text-muted-foreground">Awardees</div>
-            {canEditRow && (
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="text-xs font-semibold text-muted-foreground">Awardees ({awardees.length})</div>
+            {canManageAwardees && (
               <div className="flex gap-1 flex-wrap">
+                <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>AI research awardees</Button>
                 <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV</Button>
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Bulk paste</Button>
                 <Button size="sm" onClick={() => setAddAwardeeOpen(true)}><Plus className="w-3 h-3 mr-1" /> Add awardee</Button>
@@ -679,34 +683,41 @@ function RegistryVehicleRow({
             <div className="text-xs text-muted-foreground"><Loader2 className="w-3 h-3 inline animate-spin mr-1" /> Loading…</div>
           ) : awardees.length === 0 ? (
             <div className="text-xs text-muted-foreground py-2">
-              No awardees recorded. {vehicle.team_id === null ? "Global vehicles are read-only from the app — add awardees on team-owned vehicles." : "Use \"Add awardee\" or \"Bulk paste\"."}
+              No awardees recorded. Use "Add awardee", "Bulk paste", CSV, or "AI research awardees".
             </div>
           ) : (
             <div className="divide-y">
-              {awardees.map((a) => (
-                <div key={a.id} className="flex items-center gap-2 py-1.5 text-sm">
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate">{a.company_name}</div>
-                    <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
-                      {a.uei && <span className="font-mono">{a.uei}</span>}
-                      {a.small_business && <Badge variant="outline" className="text-[10px]">SB</Badge>}
-                      {(a.socioeconomic ?? []).map((s) => (
-                        <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
-                      ))}
+              {awardees.map((a) => {
+                const isOurTeamRow = (a as any).team_id === teamId;
+                return (
+                  <div key={a.id} className="flex items-center gap-2 py-1.5 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate flex items-center gap-1.5">
+                        {a.company_name}
+                        {(a as any).team_id === null && <Badge variant="outline" className="text-[9px]">global</Badge>}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
+                        {a.uei && <span className="font-mono">{a.uei}</span>}
+                        {a.small_business && <Badge variant="outline" className="text-[10px]">SB</Badge>}
+                        {(a.socioeconomic ?? []).map((s) => (
+                          <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                        ))}
+                      </div>
                     </div>
+                    {canManageAwardees && isOurTeamRow && (
+                      <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => deleteAwardee(a.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
-                  {canEditRow && (
-                    <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => deleteAwardee(a.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {addAwardeeOpen && (
             <AddAwardeeDialog
               vehicleId={vehicle.id}
+              teamId={teamId}
               open={addAwardeeOpen}
               onOpenChange={setAddAwardeeOpen}
               onSaved={() => { invalidateAwardees(); setAddAwardeeOpen(false); }}
@@ -715,6 +726,7 @@ function RegistryVehicleRow({
           {bulkOpen && (
             <BulkAwardeesDialog
               vehicleId={vehicle.id}
+              teamId={teamId}
               open={bulkOpen}
               onOpenChange={setBulkOpen}
               onSaved={() => { invalidateAwardees(); setBulkOpen(false); }}
@@ -723,10 +735,21 @@ function RegistryVehicleRow({
           {csvOpen && (
             <CsvImportAwardeesDialog
               vehicleId={vehicle.id}
+              teamId={teamId}
               existing={awardees}
               open={csvOpen}
               onOpenChange={setCsvOpen}
               onSaved={() => { invalidateAwardees(); setCsvOpen(false); }}
+            />
+          )}
+          {aiOpen && (
+            <AiResearchAwardeesDialog
+              vehicle={vehicle}
+              teamId={teamId}
+              existing={awardees}
+              open={aiOpen}
+              onOpenChange={setAiOpen}
+              onSaved={() => { invalidateAwardees(); setAiOpen(false); }}
             />
           )}
         </div>
@@ -802,9 +825,10 @@ function RegistryVehicleDialog({
 }
 
 function AddAwardeeDialog({
-  vehicleId, open, onOpenChange, onSaved,
+  vehicleId, teamId, open, onOpenChange, onSaved,
 }: {
   vehicleId: string;
+  teamId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
@@ -820,6 +844,7 @@ function AddAwardeeDialog({
     setSaving(true);
     const { error } = await supabase.from("vehicle_awardees").insert({
       vehicle_id: vehicleId,
+      team_id: teamId,
       company_name: name.trim(),
       uei: uei.trim() || null,
       small_business: sb,
@@ -851,9 +876,10 @@ function AddAwardeeDialog({
 }
 
 function BulkAwardeesDialog({
-  vehicleId, open, onOpenChange, onSaved,
+  vehicleId, teamId, open, onOpenChange, onSaved,
 }: {
   vehicleId: string;
+  teamId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
@@ -864,7 +890,7 @@ function BulkAwardeesDialog({
   const save = async () => {
     const rows = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((line) => {
       const [name, uei] = line.split(",").map((s) => s.trim());
-      return { vehicle_id: vehicleId, company_name: name, uei: uei || null };
+      return { vehicle_id: vehicleId, team_id: teamId, company_name: name, uei: uei || null };
     });
     if (rows.length === 0) { toast.error("Paste at least one company"); return; }
     setSaving(true);
@@ -936,9 +962,10 @@ function parseSocio(v: unknown): string[] | null {
 }
 
 function CsvImportAwardeesDialog({
-  vehicleId, existing, open, onOpenChange, onSaved,
+  vehicleId, teamId, existing, open, onOpenChange, onSaved,
 }: {
   vehicleId: string;
+  teamId: string;
   existing: Awardee[];
   open: boolean;
   onOpenChange: (v: boolean) => void;
@@ -998,6 +1025,7 @@ function CsvImportAwardeesDialog({
       }
       toInsert.push({
         vehicle_id: vehicleId,
+        team_id: teamId,
         company_name: m.company_name,
         uei: m.uei,
         small_business: m.small_business,
@@ -1101,6 +1129,228 @@ function CsvImportAwardeesDialog({
             <Button onClick={runImport} disabled={importing || mapping.company_name === NONE}>
               {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : `Import ${mapped.length} awardee${mapped.length === 1 ? "" : "s"}`}
             </Button>
+          )}
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------- AI Research Awardees ----------------
+
+type ResearchCandidate = {
+  company_name: string;
+  uei: string | null;
+  small_business: boolean | null;
+  socioeconomic: string[];
+  confidence: "high" | "medium" | "low";
+  note: string | null;
+};
+
+type ResearchResult = {
+  summary: string;
+  source_urls: string[];
+  candidates: ResearchCandidate[];
+};
+
+function confidenceBadge(c: string) {
+  if (c === "high") return "bg-success text-success-foreground";
+  if (c === "medium") return "bg-warning text-warning-foreground";
+  return "bg-muted text-muted-foreground";
+}
+
+function AiResearchAwardeesDialog({
+  vehicle, teamId, existing, open, onOpenChange, onSaved,
+}: {
+  vehicle: RegistryVehicle;
+  teamId: string;
+  existing: Awardee[];
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+  onSaved: () => void;
+}) {
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<ResearchResult | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  const run = async () => {
+    setLoading(true);
+    setResult(null);
+    setSelected(new Set());
+    try {
+      const { data, error } = await supabase.functions.invoke("vehicle-awardee-research", {
+        body: {
+          vehicleName: vehicle.vehicle_name,
+          managingAgency: vehicle.managing_agency,
+          vehicleType: vehicle.vehicle_type,
+        },
+      });
+      if (error) throw new Error(error.message);
+      const r = (data as any)?.research as ResearchResult | undefined;
+      if (!r) throw new Error("No research returned");
+      setResult(r);
+      // Pre-select high-confidence not-already-present.
+      const existingUei = new Set(existing.map((a) => (a.uei ?? "").toUpperCase()).filter(Boolean));
+      const existingName = new Set(existing.map((a) => a.company_name.trim().toLowerCase()));
+      const preselect = new Set<number>();
+      r.candidates.forEach((c, i) => {
+        const uei = (c.uei ?? "").toUpperCase();
+        const name = c.company_name.trim().toLowerCase();
+        const dup = (uei && existingUei.has(uei)) || existingName.has(name);
+        if (!dup && c.confidence === "high") preselect.add(i);
+      });
+      setSelected(preselect);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Research failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggle = (i: number) => {
+    setSelected((s) => {
+      const n = new Set(s);
+      if (n.has(i)) n.delete(i); else n.add(i);
+      return n;
+    });
+  };
+
+  const saveSelected = async () => {
+    if (!result || selected.size === 0) return;
+    setSaving(true);
+    try {
+      const existingUei = new Set(existing.map((a) => (a.uei ?? "").toUpperCase()).filter(Boolean));
+      const existingName = new Set(existing.map((a) => a.company_name.trim().toLowerCase()));
+      const rows: TablesInsert<"vehicle_awardees">[] = [];
+      let skipped = 0;
+      for (const i of selected) {
+        const c = result.candidates[i];
+        if (!c) continue;
+        const uei = (c.uei ?? "").toUpperCase();
+        const name = c.company_name.trim().toLowerCase();
+        if ((uei && existingUei.has(uei)) || existingName.has(name)) { skipped++; continue; }
+        rows.push({
+          vehicle_id: vehicle.id,
+          team_id: teamId,
+          company_name: c.company_name.trim(),
+          uei: c.uei ?? null,
+          small_business: c.small_business ?? null,
+          socioeconomic: c.socioeconomic?.length ? c.socioeconomic : null,
+        });
+      }
+      if (rows.length === 0) {
+        toast.info("Nothing new to add");
+        setSaving(false);
+        return;
+      }
+      const { error } = await supabase.from("vehicle_awardees").insert(rows);
+      if (error) throw new Error(error.message);
+      toast.success(`Added ${rows.length} awardee${rows.length === 1 ? "" : "s"}${skipped ? ` · skipped ${skipped} duplicate${skipped === 1 ? "" : "s"}` : ""}`);
+      onSaved();
+    } catch (e: any) {
+      toast.error(e?.message ?? "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>AI research awardees — {vehicle.vehicle_name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 py-2">
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">
+            AI-drafted — verify against official sources before relying. Nothing saves until you select candidates and click Add.
+          </div>
+          {!result && !loading && (
+            <div className="text-sm text-muted-foreground">
+              Ask the AI to draft an awardee list for this vehicle based on public sources and model knowledge.
+              <div className="mt-2">
+                <Button onClick={run}>Run research</Button>
+              </div>
+            </div>
+          )}
+          {loading && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground py-4">
+              <Loader2 className="w-4 h-4 animate-spin" /> Researching…
+            </div>
+          )}
+          {result && (
+            <>
+              <div>
+                <div className="briefing-label text-xs mb-1">Summary</div>
+                <div className="text-sm">{result.summary}</div>
+              </div>
+              {result.source_urls?.length > 0 && (
+                <div>
+                  <div className="briefing-label text-xs mb-1">Sources</div>
+                  <ul className="text-xs space-y-0.5">
+                    {result.source_urls.map((u) => (
+                      <li key={u}>
+                        <a href={u} target="_blank" rel="noreferrer" className="text-primary underline inline-flex items-center gap-1">
+                          <ExternalLink className="w-3 h-3" /> {u}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <div>
+                <div className="briefing-label text-xs mb-1">Candidates ({result.candidates.length}) — {selected.size} selected</div>
+                <div className="max-h-96 overflow-y-auto divide-y border rounded">
+                  {result.candidates.map((c, i) => {
+                    const uei = (c.uei ?? "").toUpperCase();
+                    const name = c.company_name.trim().toLowerCase();
+                    const dup = existing.some((a) =>
+                      (uei && (a.uei ?? "").toUpperCase() === uei) ||
+                      a.company_name.trim().toLowerCase() === name,
+                    );
+                    return (
+                      <label key={i} className={`flex items-start gap-2 p-2 text-sm cursor-pointer ${dup ? "opacity-60" : ""}`}>
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={selected.has(i)}
+                          onChange={() => toggle(i)}
+                          disabled={dup}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium flex items-center gap-1.5 flex-wrap">
+                            {c.company_name}
+                            <Badge className={`text-[10px] ${confidenceBadge(c.confidence)}`} variant="outline">
+                              {c.confidence}
+                            </Badge>
+                            {dup && <Badge variant="outline" className="text-[10px]">already present</Badge>}
+                          </div>
+                          <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
+                            {c.uei && <span className="font-mono">{c.uei}</span>}
+                            {c.small_business && <Badge variant="outline" className="text-[10px]">SB</Badge>}
+                            {(c.socioeconomic ?? []).map((s) => (
+                              <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                            ))}
+                          </div>
+                          {c.note && <div className="text-[11px] text-muted-foreground mt-0.5 italic">{c.note}</div>}
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>Close</Button>
+          {result && (
+            <>
+              <Button variant="outline" onClick={run} disabled={loading}>Re-run</Button>
+              <Button onClick={saveSelected} disabled={saving || selected.size === 0}>
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : `Add ${selected.size} selected`}
+              </Button>
+            </>
           )}
         </DialogFooter>
       </DialogContent>
