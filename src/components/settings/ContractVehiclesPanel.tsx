@@ -1089,14 +1089,14 @@ function CsvImportAwardeesDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader><DialogTitle>Import awardees from CSV</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>Import awardees from CSV or Excel</DialogTitle></DialogHeader>
         <div className="space-y-3 py-2">
           {!rows ? (
             <div className="space-y-2">
-              <Label>CSV file</Label>
+              <Label>CSV or Excel file</Label>
               <Input
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv,text/csv,.xlsx,.xls,.xlsm,.ods,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel"
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (f) onFile(f);
