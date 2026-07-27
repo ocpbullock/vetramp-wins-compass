@@ -2346,7 +2346,7 @@ function TeamHubPanel({
       naicsCodes: proposal.naics_code ? [proposal.naics_code as string] : [],
       agency: proposal.agency ?? null,
       setAside: proposal.set_aside ?? null,
-      requiredVehicles: proposal.contract_vehicle ? [proposal.contract_vehicle as string] : [],
+      requiredVehicles: (proposal.opportunity_data as any)?.contract_vehicle ? [(proposal.opportunity_data as any).contract_vehicle as string] : [],
       incumbentName: proposal.known_incumbent ?? null,
       scopeKeywords: typeof proposal.targeted_scope_areas === "string"
         ? proposal.targeted_scope_areas.split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean)
