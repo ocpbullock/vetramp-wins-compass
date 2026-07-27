@@ -505,6 +505,7 @@ export function TeamingSandbox({
             </ScrollArea>
           </TabsContent>
         </Tabs>
+        </div>
       </DialogContent>
     </Dialog>
   );
