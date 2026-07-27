@@ -2535,18 +2535,20 @@ function TeamHubPanel({
         onOpenChange={setSandboxOpen}
         parent={{ kind: "proposal", proposalId, teamId }}
         opportunity={sandboxOpportunity}
-        seedFromProposed={teamingEntries.map((e: TeamingEntry) => ({
-          companyId: e.company_id,
-          role: ((e.role as any) ?? "sub") as any,
-          workShare: Number(e.work_share_pct) || 0,
-          isSelf: false,
-        }))}
+        seedFromProposed={(teamingEntries as TeamingEntry[])
+          .filter((e): e is TeamingEntry => !!e && !!e.company_id)
+          .map((e) => ({
+            companyId: e.company_id,
+            role: ((e.role as any) ?? "sub") as any,
+            workShare: Number(e.work_share_pct) || 0,
+            isSelf: false,
+          }))}
         suggestions={
-          teaming.ready
+          teaming.ready && Array.isArray(teaming.suggestions)
             ? teaming.suggestions
-                .filter((s: PartnerSuggestion) => s?.partnerId)
+                .filter((s): s is PartnerSuggestion => !!s && !!s.partnerId)
                 .slice(0, 8)
-                .map((s: PartnerSuggestion) => ({
+                .map((s) => ({
                   companyId: s.partnerId,
                   name: s.partnerName ?? "Partner",
                   reason: s.reasons?.[0],
