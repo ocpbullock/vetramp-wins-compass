@@ -1634,24 +1634,6 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           </CardContent>
         </Card>
 
-
-
-        <Card className="border-primary/40 bg-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Workflow className="w-4 h-4 text-primary" />
-              Teaming & partner research moved
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Build the team, see suggested partners, and run live PWIN in the Capture Workspace.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <OpenInCaptureWorkspaceButton proposalId={proposalId} />
-          </CardContent>
-        </Card>
-
-
         <RelevantPastPerformanceCard
           teamId={proposal.team_id ?? null}
           naics={proposal.naics_code}
@@ -1659,11 +1641,6 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           opportunityTitle={proposal.opportunity_title}
           selectedIds={proposal.selected_past_performance ?? []}
           onChange={(ids) => onPatch({ selected_past_performance: ids })}
-        />
-
-        <OCIScreeningCard
-          value={(proposal.oci_screening as OciAnswers) ?? {}}
-          onChange={(v) => onPatch({ oci_screening: v as never })}
         />
       </div>
 
