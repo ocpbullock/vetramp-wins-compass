@@ -825,9 +825,10 @@ function RegistryVehicleDialog({
 }
 
 function AddAwardeeDialog({
-  vehicleId, open, onOpenChange, onSaved,
+  vehicleId, teamId, open, onOpenChange, onSaved,
 }: {
   vehicleId: string;
+  teamId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
@@ -843,6 +844,7 @@ function AddAwardeeDialog({
     setSaving(true);
     const { error } = await supabase.from("vehicle_awardees").insert({
       vehicle_id: vehicleId,
+      team_id: teamId,
       company_name: name.trim(),
       uei: uei.trim() || null,
       small_business: sb,
