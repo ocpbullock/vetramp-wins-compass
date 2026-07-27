@@ -876,9 +876,10 @@ function AddAwardeeDialog({
 }
 
 function BulkAwardeesDialog({
-  vehicleId, open, onOpenChange, onSaved,
+  vehicleId, teamId, open, onOpenChange, onSaved,
 }: {
   vehicleId: string;
+  teamId: string;
   open: boolean;
   onOpenChange: (v: boolean) => void;
   onSaved: () => void;
@@ -889,7 +890,7 @@ function BulkAwardeesDialog({
   const save = async () => {
     const rows = text.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).map((line) => {
       const [name, uei] = line.split(",").map((s) => s.trim());
-      return { vehicle_id: vehicleId, company_name: name, uei: uei || null };
+      return { vehicle_id: vehicleId, team_id: teamId, company_name: name, uei: uei || null };
     });
     if (rows.length === 0) { toast.error("Paste at least one company"); return; }
     setSaving(true);
