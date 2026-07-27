@@ -557,7 +557,8 @@ function VehicleRegistrySection({ teamId, canEdit }: { teamId: string; canEdit: 
                 expanded={expanded === v.id}
                 onToggle={() => setExpanded((cur) => (cur === v.id ? null : v.id))}
                 teamId={teamId}
-                canEditRow={canEdit && v.team_id === teamId}
+                canEditVehicle={canEdit && v.team_id === teamId}
+                canManageAwardees={canEdit}
                 held={heldNames.has(v.vehicle_name.trim().toLowerCase())}
                 onDeleted={() => qc.invalidateQueries({ queryKey: ["vehicle-registry", teamId] })}
               />
