@@ -692,7 +692,7 @@ function RegistryVehicleRow({
             <div className="text-xs text-muted-foreground"><Loader2 className="w-3 h-3 inline animate-spin mr-1" /> Loading…</div>
           ) : awardees.length === 0 ? (
             <div className="text-xs text-muted-foreground py-2">
-              No awardees recorded. Use "Add awardee", "Bulk paste", CSV, or "AI research awardees".
+              No awardees recorded. Use "Add awardee", "Bulk paste", CSV/Excel, or "AI research awardees".
             </div>
           ) : (
             <div className="divide-y">
