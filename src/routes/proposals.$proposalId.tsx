@@ -797,7 +797,7 @@ function ProposalPipeline() {
           <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
         )}
 
-        <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
+        
 
         <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_280px] xl:gap-6 xl:items-start">
         <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)} className="min-w-0">
