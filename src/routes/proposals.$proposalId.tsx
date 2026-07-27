@@ -2550,7 +2550,7 @@ function TeamHubPanel({
       {proposal.vehicle_registry_id && (
         <AwardeePoolCard
           vehicleId={proposal.vehicle_registry_id as string}
-          vehicleName={proposal.contract_vehicle ?? "Selected vehicle"}
+          vehicleName={(proposal.opportunity_data as any)?.contract_vehicle ?? "Selected vehicle"}
           teamId={teamId ?? ""}
           existingCompanyKeys={new Set(existingPartnerIds)}
           proposal={proposal}
