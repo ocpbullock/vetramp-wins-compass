@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -9,7 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { AlertTriangle, ArrowRight, Download, Lightbulb, Loader2, RefreshCw, Sparkles, Users } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronRight, Download, Lightbulb, Loader2, Pencil, RefreshCw, Sparkles, Users } from "lucide-react";
 import { toast } from "sonner";
 import {
   rankPartnerSuggestions,
@@ -418,6 +418,39 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
 
   const cd = countdown(proposal?.response_deadline);
 
+  // ---- Section summary strings ----
+  const winThemesCount = analysis.win_themes?.length ?? 0;
+  const staffingCount = analysis.staffing_concerns?.length ?? 0;
+  const nextActions = analysis.next_actions ?? [];
+  const highActions = nextActions.filter((a) => a.priority === "high").length;
+  const matrix = (proposal as any)?.positioning_matrix as { rows?: any[]; dimensions?: string[] } | null;
+  const matrixRows = matrix?.rows?.length ?? 0;
+  const matrixUnknowns = matrix?.rows?.reduce((sum, r: any) => {
+    const ratings = r?.ratings ?? {};
+    return sum + Object.values(ratings).filter((v) => v === "unknown").length;
+  }, 0) ?? 0;
+  const ptw = (proposal as any)?.ptw_analysis as { competitors?: any[] } | null;
+  const ptwCount = ptw?.competitors?.length ?? 0;
+  const strategy = analysis.team_strategy;
+  const gapsCount = teaming.ready ? computeGaps(teaming.pwinResult, proposal ?? {}).length : 0;
+  const teamStrengthValue = pwinValue;
+
+  const assessmentSummary = `${rec.text} · ${analysis.bid_no_bid.confidence} confidence · ${winThemesCount} win theme${winThemesCount === 1 ? "" : "s"}`;
+  const strategySummary = strategy
+    ? `${MODEL_LABEL[strategy.recommended_model]} · ${gapsCount} gap${gapsCount === 1 ? "" : "s"} open`
+    : `No model yet · ${gapsCount} gap${gapsCount === 1 ? "" : "s"} open`;
+  const competitiveSummary = `${ptwCount} competitor${ptwCount === 1 ? "" : "s"} · matrix ${matrixRows ? `${matrixUnknowns} unknown${matrixUnknowns === 1 ? "" : "s"}` : "not yet generated"}`;
+  const executionSummary = `Strength ${teamStrengthValue ?? "—"} · ${staffingCount} staffing flag${staffingCount === 1 ? "" : "s"} · ${nextActions.length} action${nextActions.length === 1 ? "" : "s"} open${highActions ? ` (${highActions} high)` : ""}`;
+  const historySummary = "Related closed pursuits (NAICS / agency)";
+
+  const jumpItems: { id: string; label: string }[] = [
+    { id: "sec-assessment", label: "Assessment" },
+    { id: "sec-strategy", label: "Team strategy" },
+    { id: "sec-competitive", label: "Competitive field" },
+    { id: "sec-execution", label: "Execution" },
+    { id: "sec-history", label: "History" },
+  ];
+
   return (
     <div className="space-y-6">
       {/* --- SUMMARY BAND --- */}
@@ -464,15 +497,6 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
         />
       </div>
 
-      {/* --- PWIN PROBABILITY (drivers + editable inputs) --- */}
-      <PwinProbabilityCard
-        proposal={proposal}
-        proposalId={proposalId}
-        teamStrength={pwinValue}
-        pwinFactors={teaming.ready ? teaming.pwinResult : null}
-        onResult={setPwinProbability}
-      />
-
       {/* --- Toolbar --- */}
       <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground border rounded-md px-3 py-2 bg-card">
         <span>
@@ -506,17 +530,35 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           </Button>
         </div>
       </div>
-      {/* --- RECOMMENDED TEAM STRATEGY --- */}
-      <RecommendedTeamStrategyCard
+
+      {/* --- JUMP BAR --- */}
+      <nav
+        aria-label="Capture analysis sections"
+        className="sticky top-16 z-20 -mx-2 px-2 py-1.5 bg-background/85 backdrop-blur border-b border-border/60 flex flex-wrap items-center gap-1"
+      >
+        {jumpItems.map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            className="text-xs px-2 py-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {s.label}
+          </a>
+        ))}
+      </nav>
+
+      {/* --- PWIN PROBABILITY --- */}
+      <PwinProbabilityCard
+        proposal={proposal}
         proposalId={proposalId}
-        analysis={analysis}
-        teaming={teaming}
+        teamStrength={pwinValue}
+        pwinFactors={teaming.ready ? teaming.pwinResult : null}
+        onResult={setPwinProbability}
       />
 
       {/* --- ASSESSMENT --- */}
-      <section className="space-y-3">
-        <h3 className="briefing-label">Assessment</h3>
-        <div className="grid gap-4 md:grid-cols-2">
+      <CollapsibleSection id="sec-assessment" title="Assessment" summary={assessmentSummary} defaultOpen>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
           <Card className="md:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Bid rationale</CardTitle>
@@ -563,11 +605,19 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
             </CardContent>
           </Card>
         </div>
-      </section>
+      </CollapsibleSection>
+
+      {/* --- TEAM STRATEGY --- */}
+      <CollapsibleSection id="sec-strategy" title="Team strategy" summary={strategySummary} defaultOpen>
+        <RecommendedTeamStrategyCard
+          proposalId={proposalId}
+          analysis={analysis}
+          teaming={teaming}
+        />
+      </CollapsibleSection>
 
       {/* --- COMPETITIVE FIELD --- */}
-      <section className="space-y-3">
-        <h3 className="briefing-label">Competitive field</h3>
+      <CollapsibleSection id="sec-competitive" title="Competitive field" summary={competitiveSummary}>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Competitor assessment</CardTitle>
@@ -576,65 +626,144 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
             <p className="text-sm whitespace-pre-wrap">{analysis.competitor_assessment || "—"}</p>
           </CardContent>
         </Card>
-        <PositioningMatrixCard proposal={proposal} proposalId={proposalId} />
-        <PtwCard proposal={proposal} proposalId={proposalId} />
-      </section>
+        <EditToggleWrapper storageKey="ca:matrix:edit" readLabel="Edit matrix" editLabel="Done editing">
+          {(edit) => <PositioningMatrixCard proposal={proposal} proposalId={proposalId} readOnly={!edit} />}
+        </EditToggleWrapper>
+        <EditToggleWrapper storageKey="ca:ptw:edit" readLabel="Edit inputs" editLabel="Done editing">
+          {(edit) => <PtwCard proposal={proposal} proposalId={proposalId} readOnly={!edit} />}
+        </EditToggleWrapper>
+      </CollapsibleSection>
 
       {/* --- EXECUTION --- */}
-      <section className="space-y-3">
-        <h3 className="briefing-label">Execution</h3>
-        <TeamingRecommendationCard proposal={proposal} proposalId={proposalId} teaming={teaming} />
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-base">Next actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            {analysis.next_actions?.length === 0 ? (
-              <div className="text-xs text-muted-foreground">No next actions.</div>
-            ) : (
-              <ul className="space-y-2">
-                {analysis.next_actions.map((a, i) => (
-                  <li key={i} className="border rounded-md p-2">
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="text-sm font-medium flex-1">{a.action}</div>
-                      <Badge variant={PRIORITY_VARIANT[a.priority]} className="capitalize shrink-0">{a.priority}</Badge>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs shrink-0"
-                        onClick={async () => {
-                          const res = await addActivityFromAnalysis({
-                            proposalId,
-                            teamId: proposal?.team_id ?? null,
-                            title: a.action,
-                            detail: a.why,
-                          });
-                          if (res.ok) toast.success("Added to activities");
-                          else toast.error(res.error ?? "Failed to add activity");
-                        }}
-                      >
-                        <Plus className="w-3 h-3 mr-1" /> Add to activities
-                      </Button>
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-1">{a.why}</div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-      </section>
+      <CollapsibleSection id="sec-execution" title="Execution" summary={executionSummary}>
+        <div className="grid gap-4 xl:grid-cols-2">
+          <TeamingRecommendationCard proposal={proposal} proposalId={proposalId} teaming={teaming} />
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">Next actions</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {nextActions.length === 0 ? (
+                <div className="text-xs text-muted-foreground">No next actions.</div>
+              ) : (
+                <ul className="space-y-2">
+                  {nextActions.map((a, i) => (
+                    <li key={i} className="border rounded-md p-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="text-sm font-medium flex-1">{a.action}</div>
+                        <Badge variant={PRIORITY_VARIANT[a.priority]} className="capitalize shrink-0">{a.priority}</Badge>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-xs shrink-0"
+                          onClick={async () => {
+                            const res = await addActivityFromAnalysis({
+                              proposalId,
+                              teamId: proposal?.team_id ?? null,
+                              title: a.action,
+                              detail: a.why,
+                            });
+                            if (res.ok) toast.success("Added to activities");
+                            else toast.error(res.error ?? "Failed to add activity");
+                          }}
+                        >
+                          <Plus className="w-3 h-3 mr-1" /> Add to activities
+                        </Button>
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">{a.why}</div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </CollapsibleSection>
 
       {/* --- HISTORY --- */}
-      <section className="space-y-3">
-        <h3 className="briefing-label">History</h3>
+      <CollapsibleSection id="sec-history" title="History" summary={historySummary}>
         <SimilarPastPursuitsCard
           proposalId={proposalId}
           teamId={proposal?.team_id ?? null}
           naicsCode={proposal?.naics_code ?? null}
           agency={proposal?.agency ?? null}
         />
-      </section>
+      </CollapsibleSection>
+    </div>
+  );
+}
+
+// ---------- Local UI helpers (visual-only) ----------
+
+function usePersistedBool(key: string, initial: boolean): [boolean, (b: boolean) => void] {
+  const [value, setValue] = useState<boolean>(() => {
+    if (typeof window === "undefined") return initial;
+    try {
+      const raw = window.localStorage.getItem(key);
+      if (raw === "1") return true;
+      if (raw === "0") return false;
+    } catch { /* ignore */ }
+    return initial;
+  });
+  const set = (b: boolean) => {
+    setValue(b);
+    try { window.localStorage.setItem(key, b ? "1" : "0"); } catch { /* ignore */ }
+  };
+  return [value, set];
+}
+
+function CollapsibleSection({
+  id, title, summary, defaultOpen = false, children,
+}: {
+  id: string;
+  title: string;
+  summary: string;
+  defaultOpen?: boolean;
+  children: ReactNode;
+}) {
+  const [open, setOpen] = usePersistedBool(`ca:${id}:open`, defaultOpen);
+  return (
+    <section id={id} className="scroll-mt-32 border-t pt-4 first:border-t-0 first:pt-0">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center gap-2 text-left group"
+        aria-expanded={open}
+        aria-controls={`${id}-body`}
+      >
+        <ChevronRight
+          className={`w-4 h-4 shrink-0 text-muted-foreground transition-transform duration-150 motion-reduce:transition-none ${open ? "rotate-90" : ""}`}
+        />
+        <span className="briefing-label group-hover:text-foreground">{title}</span>
+        <span className="text-xs text-muted-foreground ml-2 truncate">{summary}</span>
+      </button>
+      {open && (
+        <div id={`${id}-body`} className="pt-3 space-y-4">
+          {children}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function EditToggleWrapper({
+  storageKey, readLabel, editLabel, children,
+}: {
+  storageKey: string;
+  readLabel: string;
+  editLabel: string;
+  children: (edit: boolean) => ReactNode;
+}) {
+  const [edit, setEdit] = usePersistedBool(storageKey, false);
+  return (
+    <div className="space-y-1.5">
+      <div className="flex justify-end">
+        <Button size="sm" variant={edit ? "default" : "outline"} onClick={() => setEdit(!edit)}>
+          <Pencil className="w-3.5 h-3.5 mr-1.5" />
+          {edit ? editLabel : readLabel}
+        </Button>
+      </div>
+      {children(edit)}
     </div>
   );
 }
