@@ -687,6 +687,15 @@ function ProposalPipeline() {
   if (loading || !proposal) return <div className="min-h-screen bg-background"><div className="p-8 text-muted-foreground">Loading opportunity…</div></div>;
 
   const cd = countdown(proposal.response_deadline);
+  const stageSignals: StageSignals = {
+    hasNaicsAgency: Boolean(proposal.naics_code && proposal.agency),
+    hasSnapshot: Boolean(proposal.market_snapshot_at),
+    hasAnalysis: Boolean(proposal.capture_analysis_at),
+    teamingCount: teamingCountForSignals,
+    sectionsCount: proposal.sections
+      ? Object.values(proposal.sections).filter((s: any) => s && typeof s === "object" && s.content).length
+      : 0,
+  };
 
   return (
     <div className="min-h-screen bg-background">
