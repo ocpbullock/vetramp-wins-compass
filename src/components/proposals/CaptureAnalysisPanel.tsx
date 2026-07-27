@@ -558,7 +558,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       />
 
       {/* --- ASSESSMENT --- */}
-      <CollapsibleSection id="sec-assessment" title="Assessment" summary={assessmentSummary} defaultOpen>
+      <CollapsibleSection id="sec-assessment" storageKey="ca:sec-assessment:open" title="Assessment" summary={assessmentSummary} defaultOpen>
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-2">
           <Card className="md:col-span-2">
             <CardHeader className="pb-2">
@@ -609,7 +609,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       </CollapsibleSection>
 
       {/* --- TEAM STRATEGY --- */}
-      <CollapsibleSection id="sec-strategy" title="Team strategy" summary={strategySummary} defaultOpen>
+      <CollapsibleSection id="sec-strategy" storageKey="ca:sec-strategy:open" title="Team strategy" summary={strategySummary} defaultOpen>
         <RecommendedTeamStrategyCard
           proposalId={proposalId}
           analysis={analysis}
@@ -618,7 +618,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       </CollapsibleSection>
 
       {/* --- COMPETITIVE FIELD --- */}
-      <CollapsibleSection id="sec-competitive" title="Competitive field" summary={competitiveSummary}>
+      <CollapsibleSection id="sec-competitive" storageKey="ca:sec-competitive:open" title="Competitive field" summary={competitiveSummary}>
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Competitor assessment</CardTitle>
@@ -636,7 +636,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       </CollapsibleSection>
 
       {/* --- EXECUTION --- */}
-      <CollapsibleSection id="sec-execution" title="Execution" summary={executionSummary}>
+      <CollapsibleSection id="sec-execution" storageKey="ca:sec-execution:open" title="Execution" summary={executionSummary}>
         <div className="grid gap-4 xl:grid-cols-2">
           <TeamingRecommendationCard proposal={proposal} proposalId={proposalId} teaming={teaming} />
           <Card>
@@ -682,7 +682,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
       </CollapsibleSection>
 
       {/* --- HISTORY --- */}
-      <CollapsibleSection id="sec-history" title="History" summary={historySummary}>
+      <CollapsibleSection id="sec-history" storageKey="ca:sec-history:open" title="History" summary={historySummary}>
         <SimilarPastPursuitsCard
           proposalId={proposalId}
           teamId={proposal?.team_id ?? null}
