@@ -616,7 +616,8 @@ function registryStatusBadgeClass(status: string | null | undefined): string {
 }
 
 function RegistryVehicleRow({
-  vehicle, expanded, onToggle, teamId, canEditVehicle, canManageAwardees, held = false, onDeleted,
+  vehicle, expanded, onToggle, teamId, canEditVehicle, canManageAwardees, held = false,
+  predecessorName = null, successorName = null, onLineageClick, onDeleted,
 }: {
   vehicle: RegistryVehicle;
   expanded: boolean;
@@ -625,8 +626,12 @@ function RegistryVehicleRow({
   canEditVehicle: boolean;
   canManageAwardees: boolean;
   held?: boolean;
+  predecessorName?: string | null;
+  successorName?: string | null;
+  onLineageClick?: (name: string) => void;
   onDeleted: () => void;
 }) {
+
   const qc = useQueryClient();
   const [addAwardeeOpen, setAddAwardeeOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
