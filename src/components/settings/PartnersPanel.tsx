@@ -240,13 +240,84 @@ export function PartnersPanel({ initialDraft }: { initialDraft?: CompanyDraft } 
       )}
 
 
-      <div className="flex gap-1">
+      <div className="flex gap-1 flex-wrap">
         {(["all", "own", "partner", "other"] as Filter[]).map((f) => (
           <Button key={f} size="sm" variant={filter === f ? "default" : "outline"} onClick={() => setFilter(f)}>
             {f === "all" ? "All" : f === "own" ? "Own" : f === "partner" ? "Partners" : "Other"}
           </Button>
         ))}
       </div>
+
+      {/* Roster toolbar: search, filters, sort */}
+      <div className="rounded-md border bg-muted/20 p-3 space-y-2">
+        <div className="grid grid-cols-1 md:grid-cols-6 gap-2">
+          <div className="md:col-span-2 relative">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+            <Input
+              className="h-8 text-xs pl-7"
+              placeholder="Search name, capabilities, notes…"
+              value={textQuery}
+              onChange={(e) => setTextQuery(e.target.value)}
+            />
+          </div>
+          <Select value={certFilter} onValueChange={setCertFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Certification" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any">Any certification</SelectItem>
+              {distinctCerts.map((c) => (
+                <SelectItem key={c} value={c}>{c}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div>
+            <NaicsCombobox
+              value={naicsFilter || null}
+              onChange={(v) => setNaicsFilter(typeof v === "string" ? v : (v ?? ""))}
+              mode="single"
+              placeholder="Any NAICS"
+              allowClear
+            />
+          </div>
+          <Select value={vehicleFilter} onValueChange={setVehicleFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Vehicle" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any">Any vehicle</SelectItem>
+              {distinctVehicles.map((v) => (
+                <SelectItem key={v} value={v}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Relationship" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__any">Any relationship</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="prospective">Prospective</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Sort by</span>
+          <Select value={sortKey} onValueChange={(v) => setSortKey(v as typeof sortKey)}>
+            <SelectTrigger className="h-8 text-xs w-[180px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="name">Name (A–Z)</SelectItem>
+              <SelectItem value="recent">Recently added</SelectItem>
+              <SelectItem value="status">Relationship status</SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-muted-foreground ml-auto tabular-nums">
+            {filtered.length} of {totalCount}
+          </span>
+          {filtersActive && (
+            <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={resetFilters}>
+              <X className="w-3 h-3 mr-1" /> Reset
+            </Button>
+          )}
+        </div>
+      </div>
+
 
       <Card>
         <div className="overflow-x-auto">
