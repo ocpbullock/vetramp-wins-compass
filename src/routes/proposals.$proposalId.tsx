@@ -2543,11 +2543,14 @@ function TeamHubPanel({
         }))}
         suggestions={
           teaming.ready
-            ? teaming.suggestions.slice(0, 8).map((s: any) => ({
-                companyId: s.company.id,
-                name: s.company.name ?? s.company.company_name ?? "Partner",
-                reason: s.reasons?.[0],
-              }))
+            ? teaming.suggestions
+                .filter((s: PartnerSuggestion) => s?.partnerId)
+                .slice(0, 8)
+                .map((s: PartnerSuggestion) => ({
+                  companyId: s.partnerId,
+                  name: s.partnerName ?? "Partner",
+                  reason: s.reasons?.[0],
+                }))
             : []
         }
       />
