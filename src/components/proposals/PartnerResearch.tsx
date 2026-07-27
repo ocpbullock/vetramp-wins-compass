@@ -119,7 +119,7 @@ export function PartnerResearch({
 
   // ===== EXPERIENCE MODE STATE =====
   const [naicsInput, setNaicsInput] = useState(opportunityNaics ?? "");
-  const [agencyInput, setAgencyInput] = useState(opportunityAgency ?? "");
+  const [agencyInput, setAgencyInput] = useState(canonicalizeAgencyName(opportunityAgency ?? "").canonical || (opportunityAgency ?? ""));
   const [keyword, setKeyword] = useState("");
   const [lookbackYears, setLookbackYears] = useState(5);
   const [agencyOnly, setAgencyOnly] = useState(false);
