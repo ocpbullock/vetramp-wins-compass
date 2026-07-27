@@ -87,7 +87,6 @@ export function AddOpportunityDialog({
       opportunity_source: "manual",
       capture_stage: "intake",
       status: "intake",
-      contract_vehicle: contractVehicleName,
       vehicle_status: vehicleStatus,
       vehicle_registry_id: vehicleRegistryId,
       opportunity_data: {

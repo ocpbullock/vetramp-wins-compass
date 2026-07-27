@@ -855,7 +855,8 @@ function computeGaps(pwinResult: PwinResult | null, proposal: any): GapChip[] {
     });
   }
   const va = byKey("vehicle_access");
-  const vehicles = proposal?.contract_vehicle ? [proposal.contract_vehicle] : [];
+  const vehicleName = proposal?.opportunity_data?.contract_vehicle ?? proposal?.contract_vehicle ?? null;
+  const vehicles = vehicleName ? [vehicleName] : [];
   if (va && va.score < 40 && vehicles.length) {
     chips.push({
       key: "vehicle_access",
@@ -1016,9 +1017,10 @@ function GapChipList({
     queryKey: ["proposal-gaps-src", proposalId],
     queryFn: async () => {
       const { data } = await supabase.from("proposals")
-        .select("set_aside, naics_code, contract_vehicle")
+        .select("set_aside, naics_code, opportunity_data")
         .eq("id", proposalId).maybeSingle();
-      return data;
+      if (!data) return null;
+      return { ...data, contract_vehicle: (data.opportunity_data as any)?.contract_vehicle ?? null };
     },
   });
   const chips = computeGaps(pwinResult, proposal ?? {});

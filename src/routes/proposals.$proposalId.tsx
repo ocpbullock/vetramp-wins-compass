@@ -797,7 +797,7 @@ function ProposalPipeline() {
           <MilestoneTimeline proposalId={proposalId} responseDeadline={proposal.response_deadline} />
         )}
 
-        <OpenInCaptureWorkspaceCard proposal={proposal} proposalId={proposalId} />
+        
 
         <div className="xl:grid xl:grid-cols-[minmax(0,1fr)_280px] xl:gap-6 xl:items-start">
         <Tabs value={hubTab} onValueChange={(v) => setHubTab(v as HubTab)} className="min-w-0">
@@ -1634,24 +1634,6 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           </CardContent>
         </Card>
 
-
-
-        <Card className="border-primary/40 bg-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Workflow className="w-4 h-4 text-primary" />
-              Teaming & partner research moved
-            </CardTitle>
-            <CardDescription className="text-xs">
-              Build the team, see suggested partners, and run live PWIN in the Capture Workspace.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <OpenInCaptureWorkspaceButton proposalId={proposalId} />
-          </CardContent>
-        </Card>
-
-
         <RelevantPastPerformanceCard
           teamId={proposal.team_id ?? null}
           naics={proposal.naics_code}
@@ -1659,11 +1641,6 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
           opportunityTitle={proposal.opportunity_title}
           selectedIds={proposal.selected_past_performance ?? []}
           onChange={(ids) => onPatch({ selected_past_performance: ids })}
-        />
-
-        <OCIScreeningCard
-          value={(proposal.oci_screening as OciAnswers) ?? {}}
-          onChange={(v) => onPatch({ oci_screening: v as never })}
         />
       </div>
 
@@ -2227,8 +2204,9 @@ function OpportunitySummaryCard({ proposal }: { proposal: any }) {
     identified: "Identified vehicle",
     new_vehicle_expected: "New vehicle expected",
   };
-  const vehicleDisplay = proposal.contract_vehicle
-    ? proposal.contract_vehicle
+  const vehicleNameFromData = (proposal.opportunity_data as any)?.contract_vehicle ?? null;
+  const vehicleDisplay = vehicleNameFromData
+    ? vehicleNameFromData
     : vehicleStatusLabel[proposal.vehicle_status as string] ?? "—";
   const items: { label: string; value: React.ReactNode }[] = [
     { label: "Title", value: proposal.opportunity_title || "—" },
@@ -2243,7 +2221,15 @@ function OpportunitySummaryCard({ proposal }: { proposal: any }) {
   ];
 
   const saveVehicle = async (patch: { vehicle_status: string; vehicle_registry_id: string | null; contract_vehicle: string | null }) => {
-    const { error } = await supabase.from("proposals").update(patch as any).eq("id", proposal.id);
+    const { contract_vehicle, ...cols } = patch;
+    const nextOppData = {
+      ...((proposal.opportunity_data as any) ?? {}),
+      contract_vehicle,
+    };
+    const { error } = await supabase
+      .from("proposals")
+      .update({ ...cols, opportunity_data: nextOppData } as any)
+      .eq("id", proposal.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Vehicle updated");
     qc.invalidateQueries({ queryKey: ["proposal", proposal.id] });
@@ -2337,7 +2323,7 @@ function TeamHubPanel({
       naicsCodes: proposal.naics_code ? [proposal.naics_code as string] : [],
       agency: proposal.agency ?? null,
       setAside: proposal.set_aside ?? null,
-      requiredVehicles: proposal.contract_vehicle ? [proposal.contract_vehicle as string] : [],
+      requiredVehicles: (proposal.opportunity_data as any)?.contract_vehicle ? [(proposal.opportunity_data as any).contract_vehicle as string] : [],
       incumbentName: proposal.known_incumbent ?? null,
       scopeKeywords: typeof proposal.targeted_scope_areas === "string"
         ? proposal.targeted_scope_areas.split(/[,;\n]/).map((s: string) => s.trim()).filter(Boolean)
@@ -2541,7 +2527,7 @@ function TeamHubPanel({
       {proposal.vehicle_registry_id && (
         <AwardeePoolCard
           vehicleId={proposal.vehicle_registry_id as string}
-          vehicleName={proposal.contract_vehicle ?? "Selected vehicle"}
+          vehicleName={(proposal.opportunity_data as any)?.contract_vehicle ?? "Selected vehicle"}
           teamId={teamId ?? ""}
           existingCompanyKeys={new Set(existingPartnerIds)}
           proposal={proposal}

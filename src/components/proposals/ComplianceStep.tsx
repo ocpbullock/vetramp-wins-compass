@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ArrowLeft, Download, ShieldCheck, AlertTriangle, ChevronDown, ChevronRight, Search, CheckCircle2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useTeam, type TeamMember } from "@/lib/team";
+import { OCIScreeningCard, type OciAnswers } from "@/components/proposals/OCIScreeningCard";
 
 type ReqStatus = "not_started" | "in_progress" | "drafted" | "reviewed" | "final";
 
@@ -207,6 +208,10 @@ export function ComplianceStep({
 
   return (
     <div className="space-y-4">
+      <OCIScreeningCard
+        value={(proposal.oci_screening as OciAnswers) ?? {}}
+        onChange={(v) => onPatch({ oci_screening: v as never })}
+      />
       {/* Validation summary */}
       {reqs.length > 0 && (
         <Card className="border-primary/30 bg-primary/5">
