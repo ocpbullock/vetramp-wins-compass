@@ -171,7 +171,7 @@ export async function exportCaptureReportDocx(
   const naics = proposal?.naics_code || "—";
   const agency = proposal?.agency || "—";
   const setAside = proposal?.set_aside || "—";
-  const vehicle = proposal?.contract_vehicle || "—";
+  const vehicle = proposal?.opportunity_data?.contract_vehicle || "—";
   const vehicleStatus = proposal?.vehicle_status || "unknown";
   const captureStage = proposal?.capture_stage || "—";
   const dateStr = new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" });
