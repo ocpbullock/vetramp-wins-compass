@@ -55,6 +55,7 @@ import { SimilarPastPursuitsCard } from "@/components/proposals/SimilarPastPursu
 import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
 import { CaptureAnalysisPanel, useTeamingSummary } from "@/components/proposals/CaptureAnalysisPanel";
 import { PwinProbabilityCard } from "@/components/proposals/PwinProbabilityCard";
+import type { PartnerSuggestion } from "@/lib/partner-suggest";
 import { ProposedTeamCard, teamingEntriesKey, fetchTeamingEntries, type TeamingEntry } from "@/components/proposals/ProposedTeamCard";
 import { MetricCard } from "@/components/MetricCard";
 import type { PwinProbabilityResult } from "@/lib/pwin-probability";
