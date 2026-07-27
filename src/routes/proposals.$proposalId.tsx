@@ -46,8 +46,8 @@ import { isStageSatisfied, nextCaptureStage, type StageSignals } from "@/lib/cap
 import { applyCaptureStage } from "@/lib/stage-mutations";
 import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
-import { PartnerResearch } from "@/components/proposals/PartnerResearch";
 import { FindPartnersCard } from "@/components/proposals/FindPartnersCard";
+
 
 import { TeamingOutreachModal, type OutreachPartnerInput } from "@/components/proposals/TeamingOutreachModal";
 import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
@@ -63,7 +63,7 @@ import { ProposedTeamCard, teamingEntriesKey, fetchTeamingEntries, type TeamingE
 import { MetricCard } from "@/components/MetricCard";
 import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
-import { AwardeePoolCard } from "@/components/proposals/AwardeePoolCard";
+
 import { NaicsCombobox } from "@/components/NaicsCombobox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
