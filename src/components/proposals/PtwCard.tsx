@@ -64,7 +64,7 @@ function normalize(a: any | null): PtwAnalysis {
   };
 }
 
-export function PtwCard({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+export function PtwCard({ proposal, proposalId, readOnly = false }: { proposal: any; proposalId: string; readOnly?: boolean }) {
   const qc = useQueryClient();
   const [state, setState] = useState<PtwAnalysis>(() => normalize(proposal?.ptw_analysis));
   const [saving, setSaving] = useState(false);
@@ -197,134 +197,173 @@ export function PtwCard({ proposal, proposalId }: { proposal: any; proposalId: s
             {saving && <span className="ml-1 text-xs">Saving…</span>}
           </CardDescription>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <Button size="sm" variant="outline" onClick={seedFromSources}>
-            <Sparkles className="w-4 h-4 mr-1" /> Seed from matrix/snapshot
-          </Button>
-          <Button size="sm" variant="outline" onClick={addRow}>
-            <Plus className="w-4 h-4 mr-1" /> Add competitor
-          </Button>
-        </div>
+        {!readOnly && (
+          <div className="flex items-center gap-2 shrink-0">
+            <Button size="sm" variant="outline" onClick={seedFromSources}>
+              <Sparkles className="w-4 h-4 mr-1" /> Seed from matrix/snapshot
+            </Button>
+            <Button size="sm" variant="outline" onClick={addRow}>
+              <Plus className="w-4 h-4 mr-1" /> Add competitor
+            </Button>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4">
         {/* Our assumed ratings */}
-        <div className="rounded-md border p-3 space-y-3">
-          <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Our assumed ratings</div>
-          <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
-            <div>
-              <label className="text-xs text-muted-foreground">Technical</label>
-              <Select
-                value={state.ourRatings.technical}
-                onValueChange={(v) => setState((s) => ({ ...s, ourRatings: { ...s.ourRatings, technical: v as EvalRating } }))}
-              >
-                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {RATINGS.map((r) => <SelectItem key={r} value={r}>{RATING_LABEL[r]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Staffing</label>
-              <Select
-                value={state.ourRatings.staffing}
-                onValueChange={(v) => setState((s) => ({ ...s, ourRatings: { ...s.ourRatings, staffing: v as EvalRating } }))}
-              >
-                <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {RATINGS.map((r) => <SelectItem key={r} value={r}>{RATING_LABEL[r]}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Rating premium cap (%)</label>
-              <Input
-                type="number" min={0} max={100} step={0.5}
-                className="h-8"
-                value={state.premiumCapPct}
-                onChange={(e) => setState((s) => ({ ...s, premiumCapPct: Number(e.target.value) || 0 }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs text-muted-foreground">Undercut (%)</label>
-              <Input
-                type="number" min={0} max={100} step={0.1}
-                className="h-8"
-                value={state.undercutPct}
-                onChange={(e) => setState((s) => ({ ...s, undercutPct: Number(e.target.value) || 0 }))}
-              />
+        {!readOnly && (
+          <div className="rounded-md border p-3 space-y-3">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Our assumed ratings</div>
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+              <div>
+                <label className="text-xs text-muted-foreground">Technical</label>
+                <Select
+                  value={state.ourRatings.technical}
+                  onValueChange={(v) => setState((s) => ({ ...s, ourRatings: { ...s.ourRatings, technical: v as EvalRating } }))}
+                >
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {RATINGS.map((r) => <SelectItem key={r} value={r}>{RATING_LABEL[r]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Staffing</label>
+                <Select
+                  value={state.ourRatings.staffing}
+                  onValueChange={(v) => setState((s) => ({ ...s, ourRatings: { ...s.ourRatings, staffing: v as EvalRating } }))}
+                >
+                  <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {RATINGS.map((r) => <SelectItem key={r} value={r}>{RATING_LABEL[r]}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Rating premium cap (%)</label>
+                <Input
+                  type="number" min={0} max={100} step={0.5}
+                  className="h-8"
+                  value={state.premiumCapPct}
+                  onChange={(e) => setState((s) => ({ ...s, premiumCapPct: Number(e.target.value) || 0 }))}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-muted-foreground">Undercut (%)</label>
+                <Input
+                  type="number" min={0} max={100} step={0.1}
+                  className="h-8"
+                  value={state.undercutPct}
+                  onChange={(e) => setState((s) => ({ ...s, undercutPct: Number(e.target.value) || 0 }))}
+                />
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Competitor table */}
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm border-collapse">
-            <thead>
-              <tr className="border-b bg-muted/30">
-                <th className="text-left p-2 min-w-[180px]">Competitor</th>
-                <th className="text-left p-2 w-[110px]">TEP ($M)</th>
-                <th className="text-left p-2 w-[110px]">Proposed FTE</th>
-                <th className="text-left p-2 w-[150px]">Technical</th>
-                <th className="text-left p-2 w-[150px]">Staffing</th>
-                <th className="text-left p-2 min-w-[200px]">Note</th>
-                <th className="p-2 w-[40px]"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {state.competitors.length === 0 && (
-                <tr><td colSpan={7} className="p-6 text-center text-muted-foreground text-xs">
-                  No competitors yet. Add rows manually or seed from matrix/snapshot.
-                </td></tr>
-              )}
-              {state.competitors.map((c, i) => (
-                <tr key={i} className="border-b align-top">
-                  <td className="p-2">
-                    <Input value={c.name} onChange={(e) => updateRow(i, { name: e.target.value })} className="h-8" placeholder="Company" />
-                  </td>
-                  <td className="p-2">
-                    <Input
-                      type="number" min={0} step={0.1} className="h-8"
-                      value={c.tepM ?? ""}
-                      onChange={(e) => updateRow(i, { tepM: e.target.value === "" ? null : Number(e.target.value) })}
-                    />
-                  </td>
-                  <td className="p-2">
-                    <Input
-                      type="number" min={0} step={1} className="h-8"
-                      value={c.fte ?? ""}
-                      onChange={(e) => updateRow(i, { fte: e.target.value === "" ? null : Number(e.target.value) })}
-                    />
-                  </td>
-                  <td className="p-2">
-                    <Select value={c.ratingTechnical} onValueChange={(v) => updateRow(i, { ratingTechnical: v as EvalRating })}>
-                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {RATINGS.map((r) => <SelectItem key={r} value={r}>{RATING_LABEL[r]}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="p-2">
-                    <Select value={c.ratingStaffing} onValueChange={(v) => updateRow(i, { ratingStaffing: v as EvalRating })}>
-                      <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        {RATINGS.map((r) => <SelectItem key={r} value={r}>{RATING_LABEL[r]}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </td>
-                  <td className="p-2">
-                    <Input value={c.note ?? ""} onChange={(e) => updateRow(i, { note: e.target.value })} className="h-8" placeholder="Notes / assumptions" />
-                  </td>
-                  <td className="p-2">
-                    <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeRow(i)} title="Remove">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </td>
+        {readOnly ? (
+          state.competitors.length === 0 ? (
+            <div className="border border-dashed rounded-md p-6 text-center text-sm text-muted-foreground">
+              No competitors yet.
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="border-b bg-muted/30">
+                    <th className="text-left p-2 min-w-[180px]">Competitor</th>
+                    <th className="text-left p-2 w-[110px]">TEP ($M)</th>
+                    <th className="text-left p-2 w-[110px]">FTE</th>
+                    <th className="text-left p-2 w-[80px]">T / S</th>
+                    <th className="text-left p-2 min-w-[200px]">Note</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.competitors.map((c, i) => (
+                    <tr key={i} className="border-b align-top">
+                      <td className="p-2 text-sm font-medium truncate">{c.name || "—"}</td>
+                      <td className="p-2 tabular-nums">{c.tepM == null ? "—" : `$${Number(c.tepM).toFixed(1)}M`}</td>
+                      <td className="p-2 tabular-nums">{c.fte == null ? "—" : c.fte}</td>
+                      <td className="p-2 text-xs text-muted-foreground">
+                        {RATING_ABBR[c.ratingTechnical]} / {RATING_ABBR[c.ratingStaffing]}
+                      </td>
+                      <td className="p-2 text-xs text-muted-foreground">{c.note || "—"}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead>
+                <tr className="border-b bg-muted/30">
+                  <th className="text-left p-2 min-w-[180px]">Competitor</th>
+                  <th className="text-left p-2 w-[110px]">TEP ($M)</th>
+                  <th className="text-left p-2 w-[110px]">Proposed FTE</th>
+                  <th className="text-left p-2 w-[150px]">Technical</th>
+                  <th className="text-left p-2 w-[150px]">Staffing</th>
+                  <th className="text-left p-2 min-w-[200px]">Note</th>
+                  <th className="p-2 w-[40px]"></th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody>
+                {state.competitors.length === 0 && (
+                  <tr><td colSpan={7} className="p-6 text-center text-muted-foreground text-xs">
+                    No competitors yet. Add rows manually or seed from matrix/snapshot.
+                  </td></tr>
+                )}
+                {state.competitors.map((c, i) => (
+                  <tr key={i} className="border-b align-top">
+                    <td className="p-2">
+                      <Input value={c.name} onChange={(e) => updateRow(i, { name: e.target.value })} className="h-8" placeholder="Company" />
+                    </td>
+                    <td className="p-2">
+                      <Input
+                        type="number" min={0} step={0.1} className="h-8"
+                        value={c.tepM ?? ""}
+                        onChange={(e) => updateRow(i, { tepM: e.target.value === "" ? null : Number(e.target.value) })}
+                      />
+                    </td>
+                    <td className="p-2">
+                      <Input
+                        type="number" min={0} step={1} className="h-8"
+                        value={c.fte ?? ""}
+                        onChange={(e) => updateRow(i, { fte: e.target.value === "" ? null : Number(e.target.value) })}
+                      />
+                    </td>
+                    <td className="p-2">
+                      <Select value={c.ratingTechnical} onValueChange={(v) => updateRow(i, { ratingTechnical: v as EvalRating })}>
+                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {RATINGS.map((r) => <SelectItem key={r} value={r}>{RATING_LABEL[r]}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-2">
+                      <Select value={c.ratingStaffing} onValueChange={(v) => updateRow(i, { ratingStaffing: v as EvalRating })}>
+                        <SelectTrigger className="h-8"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          {RATINGS.map((r) => <SelectItem key={r} value={r}>{RATING_LABEL[r]}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </td>
+                    <td className="p-2">
+                      <Input value={c.note ?? ""} onChange={(e) => updateRow(i, { note: e.target.value })} className="h-8" placeholder="Notes / assumptions" />
+                    </td>
+                    <td className="p-2">
+                      <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeRow(i)} title="Remove">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
         {/* Chart + unplotted */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-3">

@@ -75,7 +75,7 @@ function normalize(m: any | null): PositioningMatrix {
   return { updatedAt: m.updatedAt ?? new Date().toISOString(), dimensions: dims, rows };
 }
 
-export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+export function PositioningMatrixCard({ proposal, proposalId, readOnly = false }: { proposal: any; proposalId: string; readOnly?: boolean }) {
   const qc = useQueryClient();
   const [matrix, setMatrix] = useState<PositioningMatrix>(() => normalize(proposal?.positioning_matrix));
   const [prefilling, setPrefilling] = useState(false);
@@ -220,7 +220,7 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
           </CardDescription>
         </div>
         <div className="flex items-center gap-2 shrink-0">
-          {hasContent ? (
+          {!readOnly && (hasContent ? (
             <AlertDialog>
               <AlertDialogTrigger asChild>{PrefillButton}</AlertDialogTrigger>
               <AlertDialogContent>
@@ -237,10 +237,12 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          ) : PrefillButton}
-          <Button size="sm" variant="outline" onClick={addRow}>
-            <Plus className="w-4 h-4 mr-1" /> Add row
-          </Button>
+          ) : PrefillButton)}
+          {!readOnly && (
+            <Button size="sm" variant="outline" onClick={addRow}>
+              <Plus className="w-4 h-4 mr-1" /> Add row
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -256,7 +258,7 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
 
         {!hasContent ? (
           <div className="border border-dashed rounded-md p-6 text-center text-sm text-muted-foreground">
-            No positioning matrix yet. Add rows manually or use AI prefill to seed from the market snapshot.
+            {readOnly ? "No positioning matrix yet." : "No positioning matrix yet. Add rows manually or use AI prefill to seed from the market snapshot."}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -267,100 +269,132 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
                   <th className="text-left p-2 font-medium w-[140px]">Threat</th>
                   {matrix.dimensions.map((dim) => (
                     <th key={dim} className="p-2 font-medium min-w-[130px]">
-                      <div className="flex items-center gap-1">
-                        <Input
-                          value={dim}
-                          onChange={(e) => renameDimension(dim, e.target.value)}
-                          onBlur={(e) => renameDimension(dim, e.target.value)}
-                          className="h-7 text-xs px-1.5"
-                        />
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-6 w-6 shrink-0"
-                          onClick={() => removeDimension(dim)}
-                          title="Remove dimension"
-                        >
-                          <X className="w-3 h-3" />
-                        </Button>
-                      </div>
+                      {readOnly ? (
+                        <span className="text-xs">{dim}</span>
+                      ) : (
+                        <div className="flex items-center gap-1">
+                          <Input
+                            value={dim}
+                            onChange={(e) => renameDimension(dim, e.target.value)}
+                            onBlur={(e) => renameDimension(dim, e.target.value)}
+                            className="h-7 text-xs px-1.5"
+                          />
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6 shrink-0"
+                            onClick={() => removeDimension(dim)}
+                            title="Remove dimension"
+                          >
+                            <X className="w-3 h-3" />
+                          </Button>
+                        </div>
+                      )}
                     </th>
                   ))}
                   <th className="p-2 font-medium min-w-[220px]">Overall Coverage</th>
-                  <th className="p-2 w-[90px]"></th>
+                  {!readOnly && <th className="p-2 w-[90px]"></th>}
                 </tr>
               </thead>
               <tbody>
                 {matrix.rows.map((row, i) => (
                   <tr key={i} className={`border-b align-top ${row.isUs ? "bg-primary/5" : ""}`}>
                     <td className="p-2">
-                      <Input
-                        value={row.company}
-                        onChange={(e) => setRows((rows) => rows.map((r, idx) => idx === i ? { ...r, company: e.target.value } : r))}
-                        className="h-8"
-                        placeholder="Company name"
-                      />
-                      <label className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <input
-                          type="checkbox"
-                          checked={row.isUs}
-                          onChange={(e) => setRows((rows) => rows.map((r, idx) => idx === i ? { ...r, isUs: e.target.checked } : r))}
-                        />
-                        Our team
-                      </label>
+                      {readOnly ? (
+                        <div>
+                          <div className="text-sm font-medium truncate">{row.company || "—"}</div>
+                          {row.isUs && <div className="text-[10px] text-primary mt-0.5">Our team</div>}
+                        </div>
+                      ) : (
+                        <>
+                          <Input
+                            value={row.company}
+                            onChange={(e) => setRows((rows) => rows.map((r, idx) => idx === i ? { ...r, company: e.target.value } : r))}
+                            className="h-8"
+                            placeholder="Company name"
+                          />
+                          <label className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                            <input
+                              type="checkbox"
+                              checked={row.isUs}
+                              onChange={(e) => setRows((rows) => rows.map((r, idx) => idx === i ? { ...r, isUs: e.target.checked } : r))}
+                            />
+                            Our team
+                          </label>
+                        </>
+                      )}
                     </td>
                     <td className="p-2">
-                      <Select
-                        value={row.threat}
-                        onValueChange={(v) => setRows((rows) => rows.map((r, idx) => idx === i ? { ...r, threat: v as MatrixThreat } : r))}
-                      >
-                        <SelectTrigger className={`h-8 text-xs ${THREAT_BADGE[row.threat]} border-0`}>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(["very_high","high","medium","low"] as MatrixThreat[]).map((t) => (
-                            <SelectItem key={t} value={t}>{THREAT_LABEL[t]}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      {readOnly ? (
+                        <span className={`inline-flex text-xs px-2 py-0.5 rounded ${THREAT_BADGE[row.threat]}`}>{THREAT_LABEL[row.threat]}</span>
+                      ) : (
+                        <Select
+                          value={row.threat}
+                          onValueChange={(v) => setRows((rows) => rows.map((r, idx) => idx === i ? { ...r, threat: v as MatrixThreat } : r))}
+                        >
+                          <SelectTrigger className={`h-8 text-xs ${THREAT_BADGE[row.threat]} border-0`}>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(["very_high","high","medium","low"] as MatrixThreat[]).map((t) => (
+                              <SelectItem key={t} value={t}>{THREAT_LABEL[t]}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
                     </td>
                     {matrix.dimensions.map((dim) => {
                       const val = row.ratings[dim] ?? "unknown";
                       return (
                         <td key={dim} className="p-2 text-center">
-                          <button
-                            type="button"
-                            onClick={() => cycleRating(i, dim)}
-                            className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/60 transition-colors"
-                            title={`${dim}: ${RATING_LABEL[val]} (click to cycle)`}
-                            aria-label={`${dim}: ${RATING_LABEL[val]}`}
-                          >
-                            <StoplightDot rating={val} size="lg" ariaLabel={`${dim}: ${RATING_LABEL[val]}`} />
-                          </button>
+                          {readOnly ? (
+                            <span
+                              className="inline-flex items-center justify-center w-8 h-8"
+                              title={`${dim}: ${RATING_LABEL[val]}`}
+                            >
+                              <StoplightDot rating={val} size="lg" ariaLabel={`${dim}: ${RATING_LABEL[val]}`} />
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => cycleRating(i, dim)}
+                              className="inline-flex items-center justify-center w-8 h-8 rounded-full hover:bg-muted/60 transition-colors"
+                              title={`${dim}: ${RATING_LABEL[val]} (click to cycle)`}
+                              aria-label={`${dim}: ${RATING_LABEL[val]}`}
+                            >
+                              <StoplightDot rating={val} size="lg" ariaLabel={`${dim}: ${RATING_LABEL[val]}`} />
+                            </button>
+                          )}
                         </td>
                       );
                     })}
                     <td className="p-2">
-                      <Input
-                        value={row.coverage}
-                        onChange={(e) => setRows((rows) => rows.map((r, idx) => idx === i ? { ...r, coverage: e.target.value } : r))}
-                        className="h-8"
-                        placeholder="Overall coverage narrative"
-                      />
+                      {readOnly ? (
+                        <div className="text-xs text-muted-foreground">{row.coverage || "—"}</div>
+                      ) : (
+                        <Input
+                          value={row.coverage}
+                          onChange={(e) => setRows((rows) => rows.map((r, idx) => idx === i ? { ...r, coverage: e.target.value } : r))}
+                          className="h-8"
+                          placeholder="Overall coverage narrative"
+                        />
+                      )}
                     </td>
-                    <td className="p-2">
-                      <div className="flex items-center gap-0.5">
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moveRow(i, -1)} disabled={i === 0} title="Move up">
-                          <ArrowUp className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moveRow(i, 1)} disabled={i === matrix.rows.length - 1} title="Move down">
-                          <ArrowDown className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeRow(i)} title="Remove row">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </Button>
-                      </div>
-                    </td>
+                    {!readOnly && (
+                      <td className="p-2">
+                        <div className="flex items-center gap-0.5">
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moveRow(i, -1)} disabled={i === 0} title="Move up">
+                            <ArrowUp className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => moveRow(i, 1)} disabled={i === matrix.rows.length - 1} title="Move down">
+                            <ArrowDown className="w-3.5 h-3.5" />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-7 w-7 text-destructive" onClick={() => removeRow(i)} title="Remove row">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </Button>
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -369,9 +403,11 @@ export function PositioningMatrixCard({ proposal, proposalId }: { proposal: any;
         )}
 
         <div className="flex items-center justify-between pt-1">
-          <Button size="sm" variant="ghost" onClick={addDimension} disabled={matrix.dimensions.length >= 8}>
-            <Plus className="w-3.5 h-3.5 mr-1" /> Add dimension
-          </Button>
+          {readOnly ? <span /> : (
+            <Button size="sm" variant="ghost" onClick={addDimension} disabled={matrix.dimensions.length >= 8}>
+              <Plus className="w-3.5 h-3.5 mr-1" /> Add dimension
+            </Button>
+          )}
           {matrix.updatedAt && (
             <span className="text-xs text-muted-foreground">
               Updated {new Date(matrix.updatedAt).toLocaleString()}
