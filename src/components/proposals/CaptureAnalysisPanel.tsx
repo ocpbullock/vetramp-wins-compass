@@ -28,6 +28,8 @@ import {
 import { buildPwinMembers } from "@/lib/pwin-members";
 import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies";
 import { addActivityFromAnalysis } from "./ActivitiesPanel";
+import { getEffectiveIncumbent } from "@/lib/incumbent-source";
+
 import { Plus } from "lucide-react";
 import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { CollapsibleSection, usePersistedBool } from "@/components/CollapsibleSection";
@@ -144,10 +146,8 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
     return { ready: false as const, teamId };
   }
 
-  const incumbentName: string | null =
-    proposal.customer_intel?.predecessor_contract?.incumbent
-    ?? proposal.market_snapshot?.incumbent?.topRecipient
-    ?? null;
+  const incumbentName: string | null = getEffectiveIncumbent(proposal).name;
+
 
   const suggestCtx: SuggestContext = {
     engagementType: proposal.engagement_type === "sub" ? "sub" : "prime",
@@ -304,10 +304,8 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
 
       let teamingSummary: any = null;
       if (self) {
-        const incumbentName: string | null =
-          proposal.customer_intel?.predecessor_contract?.incumbent
-          ?? proposal.market_snapshot?.incumbent?.topRecipient
-          ?? null;
+        const incumbentName: string | null = getEffectiveIncumbent(proposal).name;
+
         const suggestCtx: SuggestContext = {
           engagementType: proposal.engagement_type === "sub" ? "sub" : "prime",
           opportunityNaics: [proposal.naics_code].filter(Boolean) as string[],

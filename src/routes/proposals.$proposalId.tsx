@@ -65,6 +65,8 @@ import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 
 import { NaicsCombobox } from "@/components/NaicsCombobox";
+import { canonicalizeAgencyName } from "@/lib/agency-match";
+
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
@@ -718,7 +720,16 @@ function ProposalPipeline() {
                   {proposal.opportunity_title || "Untitled opportunity"}
                 </h1>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-                  <span><span className="briefing-label mr-1.5">Agency</span>{proposal.agency || "—"}</span>
+                  {(() => {
+                    const raw = proposal.agency ?? "";
+                    const clean = canonicalizeAgencyName(raw).display || raw;
+                    return (
+                      <span title={raw && clean && raw !== clean ? raw : undefined}>
+                        <span className="briefing-label mr-1.5">Agency</span>{clean || "—"}
+                      </span>
+                    );
+                  })()}
+
                   <span className="text-muted-foreground">·</span>
                   <span><span className="briefing-label mr-1.5">NAICS</span><span className="num">{proposal.naics_code || "—"}</span></span>
                   <span className="text-muted-foreground">·</span>

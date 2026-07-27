@@ -14,6 +14,8 @@ import type { TeamingTarget } from "@/lib/teaming-targets";
 import type { CompeteVendor } from "@/lib/api";
 import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
 import { applyCaptureStage } from "@/lib/stage-mutations";
+import { getEffectiveIncumbent, incumbentSourceBadge } from "@/lib/incumbent-source";
+
 
 function fmtUsd(n: number) {
   if (!n) return "$0";
@@ -215,6 +217,7 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
             <>
               <div className="flex items-center gap-2">
                 <Badge>{snapshot.incumbent.confidence}</Badge>
+                <Badge variant="outline" className="text-[10px]">data-derived</Badge>
                 {snapshot.incumbent.popExpiringSoon && <Badge variant="destructive">PoP expiring soon</Badge>}
               </div>
               <div className="font-medium">{snapshot.incumbent.topRecipient ?? "—"}</div>
@@ -224,9 +227,22 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
                 {snapshot.incumbent.latestEndDate && ` · ends ${snapshot.incumbent.latestEndDate.slice(0, 10)}`}
               </div>
             </>
-          ) : (
-            <div className="text-muted-foreground text-xs">No clear incumbent match.</div>
-          )}
+          ) : (() => {
+            const eff = getEffectiveIncumbent(proposal);
+            if (eff.name && eff.source === "user_input") {
+              return (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Badge variant="outline" className="text-[10px]">{incumbentSourceBadge(eff.source)}</Badge>
+                  </div>
+                  <div className="font-medium">{eff.name}</div>
+                  <div className="text-xs text-muted-foreground">Declared on the Overview tab — no matching award in the snapshot.</div>
+                </>
+              );
+            }
+            return <div className="text-muted-foreground text-xs">No clear incumbent match.</div>;
+          })()}
+
         </CardContent>
       </Card>
 

@@ -11,7 +11,7 @@ import {
 import { matchIncumbent, type IncumbentMatch } from "./incumbents";
 import { deriveTeamingTargets, type TeamingTarget } from "./teaming-targets";
 import { rankPartnerExperience, type PartnerExperienceTarget } from "./partner-experience";
-import { agencyMatchesLoose } from "./agency-match";
+import { agencyMatchesLoose, canonicalizeAgencyName } from "./agency-match";
 import { userContextFromProposal } from "./user-context";
 
 export type MarketSnapshot = {
@@ -110,7 +110,7 @@ export async function generateMarketSnapshot(
 ): Promise<MarketSnapshot> {
   const onProgress = opts?.onProgress ?? (() => {});
   const naicsCodes = proposal.naics_code ? [String(proposal.naics_code)] : [];
-  const agency = proposal.agency ?? null;
+  const agency = canonicalizeAgencyName(proposal.agency).canonical || (proposal.agency ?? null);
   const keyword = proposal.opportunity_title ?? null;
 
   const endDate = new Date().toISOString().slice(0, 10);

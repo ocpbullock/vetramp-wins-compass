@@ -2088,6 +2088,7 @@ export type Database = {
           description: string | null
           id: string
           managing_agency: string | null
+          predecessor_id: string | null
           status: string | null
           team_id: string | null
           url: string | null
@@ -2099,6 +2100,7 @@ export type Database = {
           description?: string | null
           id?: string
           managing_agency?: string | null
+          predecessor_id?: string | null
           status?: string | null
           team_id?: string | null
           url?: string | null
@@ -2110,13 +2112,22 @@ export type Database = {
           description?: string | null
           id?: string
           managing_agency?: string | null
+          predecessor_id?: string | null
           status?: string | null
           team_id?: string | null
           url?: string | null
           vehicle_name?: string
           vehicle_type?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "vehicle_registry_predecessor_id_fkey"
+            columns: ["predecessor_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_registry"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {

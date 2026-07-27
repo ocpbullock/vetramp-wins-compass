@@ -29,6 +29,8 @@ import { companyFromTeamingTarget, type TeamingTarget } from "@/lib/teaming-targ
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
 import { NaicsCombobox } from "@/components/NaicsCombobox";
+import { canonicalizeAgencyName } from "@/lib/agency-match";
+
 
 const SB_TYPES = [
   { value: "SDVOSB", label: "SDVOSB" },
@@ -117,7 +119,7 @@ export function PartnerResearch({
 
   // ===== EXPERIENCE MODE STATE =====
   const [naicsInput, setNaicsInput] = useState(opportunityNaics ?? "");
-  const [agencyInput, setAgencyInput] = useState(opportunityAgency ?? "");
+  const [agencyInput, setAgencyInput] = useState(canonicalizeAgencyName(opportunityAgency ?? "").canonical || (opportunityAgency ?? ""));
   const [keyword, setKeyword] = useState("");
   const [lookbackYears, setLookbackYears] = useState(5);
   const [agencyOnly, setAgencyOnly] = useState(false);
