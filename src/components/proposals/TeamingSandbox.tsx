@@ -369,7 +369,7 @@ export function TeamingSandbox({
                   placeholder="Search companies, NAICS, certs…"
                   className="h-8 text-sm mt-1"
                 />
-                <ScrollArea className="h-[44vh] mt-2 border rounded-md">
+                <ScrollArea className="h-[52vh] mt-2 border rounded-md">
                   <div className="p-2 space-y-1">
                     {filteredCompanies.length === 0 && (
                       <div className="text-xs text-muted-foreground py-4 text-center">No more matching companies.</div>
