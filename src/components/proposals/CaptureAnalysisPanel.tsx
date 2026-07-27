@@ -506,6 +506,12 @@ export function CaptureAnalysisPanel({ proposal, proposalId }: { proposal: any; 
           </Button>
         </div>
       </div>
+      {/* --- RECOMMENDED TEAM STRATEGY --- */}
+      <RecommendedTeamStrategyCard
+        proposalId={proposalId}
+        analysis={analysis}
+        teaming={teaming}
+      />
 
       {/* --- ASSESSMENT --- */}
       <section className="space-y-3">
