@@ -208,6 +208,10 @@ export function ComplianceStep({
 
   return (
     <div className="space-y-4">
+      <OCIScreeningCard
+        value={(proposal.oci_screening as OciAnswers) ?? {}}
+        onChange={(v) => onPatch({ oci_screening: v as never })}
+      />
       {/* Validation summary */}
       {reqs.length > 0 && (
         <Card className="border-primary/30 bg-primary/5">
