@@ -28,6 +28,8 @@ import {
 import { buildPwinMembers } from "@/lib/pwin-members";
 import { listPartnerCompanies, getOwnCompanyProfileData } from "@/lib/companies";
 import { addActivityFromAnalysis } from "./ActivitiesPanel";
+import { getEffectiveIncumbent } from "@/lib/incumbent-source";
+
 import { Plus } from "lucide-react";
 import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { CollapsibleSection, usePersistedBool } from "@/components/CollapsibleSection";
