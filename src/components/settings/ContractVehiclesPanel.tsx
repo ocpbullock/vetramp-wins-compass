@@ -598,13 +598,14 @@ function registryStatusBadgeClass(status: string | null | undefined): string {
 }
 
 function RegistryVehicleRow({
-  vehicle, expanded, onToggle, teamId, canEditRow, held = false, onDeleted,
+  vehicle, expanded, onToggle, teamId, canEditVehicle, canManageAwardees, held = false, onDeleted,
 }: {
   vehicle: RegistryVehicle;
   expanded: boolean;
   onToggle: () => void;
   teamId: string;
-  canEditRow: boolean;
+  canEditVehicle: boolean;
+  canManageAwardees: boolean;
   held?: boolean;
   onDeleted: () => void;
 }) {
@@ -612,9 +613,10 @@ function RegistryVehicleRow({
   const [addAwardeeOpen, setAddAwardeeOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [csvOpen, setCsvOpen] = useState(false);
+  const [aiOpen, setAiOpen] = useState(false);
 
   const { data: awardees = [], isLoading } = useQuery({
-    queryKey: ["vehicle-awardees", vehicle.id],
+    queryKey: ["vehicle-awardees", vehicle.id, teamId],
     enabled: expanded,
     queryFn: async (): Promise<Awardee[]> => {
       const { data, error } = await supabase
@@ -627,7 +629,7 @@ function RegistryVehicleRow({
     },
   });
 
-  const invalidateAwardees = () => qc.invalidateQueries({ queryKey: ["vehicle-awardees", vehicle.id] });
+  const invalidateAwardees = () => qc.invalidateQueries({ queryKey: ["vehicle-awardees", vehicle.id, teamId] });
 
   const deleteVehicle = async () => {
     const { error } = await supabase.from("vehicle_registry").delete().eq("id", vehicle.id);
@@ -658,7 +660,7 @@ function RegistryVehicleRow({
             {vehicle.url && <> · <a href={vehicle.url} target="_blank" rel="noreferrer" className="text-primary underline" onClick={(e) => e.stopPropagation()}>site</a></>}
           </div>
         </button>
-        {canEditRow && (
+        {canEditVehicle && (
           <Button size="sm" variant="ghost" className="text-destructive" onClick={deleteVehicle}>
             <Trash2 className="w-3.5 h-3.5" />
           </Button>
@@ -666,10 +668,11 @@ function RegistryVehicleRow({
       </div>
       {expanded && (
         <div className="mt-3 pt-3 border-t space-y-2">
-          <div className="flex items-center justify-between">
-            <div className="text-xs font-semibold text-muted-foreground">Awardees</div>
-            {canEditRow && (
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="text-xs font-semibold text-muted-foreground">Awardees ({awardees.length})</div>
+            {canManageAwardees && (
               <div className="flex gap-1 flex-wrap">
+                <Button size="sm" variant="outline" onClick={() => setAiOpen(true)}>AI research awardees</Button>
                 <Button size="sm" variant="outline" onClick={() => setCsvOpen(true)}>Import CSV</Button>
                 <Button size="sm" variant="outline" onClick={() => setBulkOpen(true)}>Bulk paste</Button>
                 <Button size="sm" onClick={() => setAddAwardeeOpen(true)}><Plus className="w-3 h-3 mr-1" /> Add awardee</Button>
@@ -680,34 +683,41 @@ function RegistryVehicleRow({
             <div className="text-xs text-muted-foreground"><Loader2 className="w-3 h-3 inline animate-spin mr-1" /> Loading…</div>
           ) : awardees.length === 0 ? (
             <div className="text-xs text-muted-foreground py-2">
-              No awardees recorded. {vehicle.team_id === null ? "Global vehicles are read-only from the app — add awardees on team-owned vehicles." : "Use \"Add awardee\" or \"Bulk paste\"."}
+              No awardees recorded. Use "Add awardee", "Bulk paste", CSV, or "AI research awardees".
             </div>
           ) : (
             <div className="divide-y">
-              {awardees.map((a) => (
-                <div key={a.id} className="flex items-center gap-2 py-1.5 text-sm">
-                  <div className="flex-1 min-w-0">
-                    <div className="truncate">{a.company_name}</div>
-                    <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
-                      {a.uei && <span className="font-mono">{a.uei}</span>}
-                      {a.small_business && <Badge variant="outline" className="text-[10px]">SB</Badge>}
-                      {(a.socioeconomic ?? []).map((s) => (
-                        <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
-                      ))}
+              {awardees.map((a) => {
+                const isOurTeamRow = (a as any).team_id === teamId;
+                return (
+                  <div key={a.id} className="flex items-center gap-2 py-1.5 text-sm">
+                    <div className="flex-1 min-w-0">
+                      <div className="truncate flex items-center gap-1.5">
+                        {a.company_name}
+                        {(a as any).team_id === null && <Badge variant="outline" className="text-[9px]">global</Badge>}
+                      </div>
+                      <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
+                        {a.uei && <span className="font-mono">{a.uei}</span>}
+                        {a.small_business && <Badge variant="outline" className="text-[10px]">SB</Badge>}
+                        {(a.socioeconomic ?? []).map((s) => (
+                          <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                        ))}
+                      </div>
                     </div>
+                    {canManageAwardees && isOurTeamRow && (
+                      <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => deleteAwardee(a.id)}>
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </Button>
+                    )}
                   </div>
-                  {canEditRow && (
-                    <Button size="sm" variant="ghost" className="text-destructive h-7 w-7 p-0" onClick={() => deleteAwardee(a.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
           {addAwardeeOpen && (
             <AddAwardeeDialog
               vehicleId={vehicle.id}
+              teamId={teamId}
               open={addAwardeeOpen}
               onOpenChange={setAddAwardeeOpen}
               onSaved={() => { invalidateAwardees(); setAddAwardeeOpen(false); }}
@@ -716,6 +726,7 @@ function RegistryVehicleRow({
           {bulkOpen && (
             <BulkAwardeesDialog
               vehicleId={vehicle.id}
+              teamId={teamId}
               open={bulkOpen}
               onOpenChange={setBulkOpen}
               onSaved={() => { invalidateAwardees(); setBulkOpen(false); }}
@@ -724,10 +735,21 @@ function RegistryVehicleRow({
           {csvOpen && (
             <CsvImportAwardeesDialog
               vehicleId={vehicle.id}
+              teamId={teamId}
               existing={awardees}
               open={csvOpen}
               onOpenChange={setCsvOpen}
               onSaved={() => { invalidateAwardees(); setCsvOpen(false); }}
+            />
+          )}
+          {aiOpen && (
+            <AiResearchAwardeesDialog
+              vehicle={vehicle}
+              teamId={teamId}
+              existing={awardees}
+              open={aiOpen}
+              onOpenChange={setAiOpen}
+              onSaved={() => { invalidateAwardees(); setAiOpen(false); }}
             />
           )}
         </div>
