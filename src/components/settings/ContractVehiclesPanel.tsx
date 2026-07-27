@@ -1332,6 +1332,18 @@ function AiResearchAwardeesDialog({
                             <Badge className={`text-[10px] ${confidenceBadge(c.confidence)}`} variant="outline">
                               {c.confidence}
                             </Badge>
+                            {c.announcement_url && (
+                              <a
+                                href={c.announcement_url}
+                                target="_blank"
+                                rel="noreferrer"
+                                title={`Announcement: ${c.announcement_url}`}
+                                onClick={(e) => e.stopPropagation()}
+                                className="text-primary hover:text-primary/80 inline-flex items-center"
+                              >
+                                <Link2 className="w-3 h-3" />
+                              </a>
+                            )}
                             {dup && <Badge variant="outline" className="text-[10px]">already present</Badge>}
                           </div>
                           <div className="text-[11px] text-muted-foreground flex flex-wrap gap-1 items-center">
