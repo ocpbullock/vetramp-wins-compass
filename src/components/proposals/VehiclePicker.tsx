@@ -148,8 +148,33 @@ export function VehiclePicker({
               </div>
             </PopoverContent>
           </Popover>
+          {selected && (() => {
+            const successor = vehicles.find((v) => v.predecessor_id === selected.id) ?? null;
+            const isExpired = (selected.status ?? "").toLowerCase() === "expired";
+            if (!successor && !isExpired) return null;
+            return (
+              <div className="mt-1.5 flex items-center gap-2 text-[11px] rounded border border-warning/50 bg-warning/10 text-warning-foreground px-2 py-1">
+                <span>
+                  Aging out
+                  {successor && <> — successor: <span className="font-medium">{successor.vehicle_name}</span></>}
+                </span>
+                {successor && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="h-5 px-1.5 text-[11px]"
+                    onClick={() => pickVehicle(successor)}
+                  >
+                    Switch
+                  </Button>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
+
     </div>
   );
 }
