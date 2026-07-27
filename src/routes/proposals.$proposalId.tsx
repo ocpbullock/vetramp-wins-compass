@@ -850,7 +850,7 @@ function ProposalPipeline() {
                 </CardContent>
               </Card>
             )}
-            <OpportunitySummaryCard proposal={proposal} />
+            <OpportunitySummaryCard proposal={proposal} onProposalPatch={(patch) => setProposal((p: any) => ({ ...(p ?? {}), ...patch }))} />
             <Collapsible open={intakeOpen} onOpenChange={setIntakeOpen}>
               <Card>
                 <CollapsibleTrigger asChild>
@@ -2188,7 +2188,7 @@ function OpenInCaptureWorkspaceCard({ proposal, proposalId }: { proposal: any; p
 // Hub helpers — overview summary, placeholder panels, and the Team panel.
 // ---------------------------------------------------------------------------
 
-function OpportunitySummaryCard({ proposal }: { proposal: any }) {
+function OpportunitySummaryCard({ proposal, onProposalPatch }: { proposal: any; onProposalPatch: (patch: any) => void }) {
   const qc = useQueryClient();
   const fmtDate = (d: string | null | undefined) =>
     d ? new Date(d).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" }) : "—";
@@ -2226,6 +2226,8 @@ function OpportunitySummaryCard({ proposal }: { proposal: any }) {
       ...((proposal.opportunity_data as any) ?? {}),
       contract_vehicle,
     };
+    // Optimistic local update so the picker reflects the new status immediately.
+    onProposalPatch({ ...cols, opportunity_data: nextOppData });
     const { error } = await supabase
       .from("proposals")
       .update({ ...cols, opportunity_data: nextOppData } as any)
