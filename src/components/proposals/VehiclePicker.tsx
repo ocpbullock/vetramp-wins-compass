@@ -35,8 +35,9 @@ export function useVehicleRegistry(teamId: string | null) {
     queryFn: async (): Promise<VehicleRegistryRow[]> => {
       let q = supabase
         .from("vehicle_registry")
-        .select("id, team_id, vehicle_name, vehicle_type, managing_agency, url, status")
+        .select("id, team_id, vehicle_name, vehicle_type, managing_agency, url, status, predecessor_id")
         .order("vehicle_name");
+
       const { data, error } = await q;
       if (error) throw new Error(error.message);
       return (data ?? []) as VehicleRegistryRow[];
