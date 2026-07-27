@@ -47,6 +47,8 @@ import { applyCaptureStage } from "@/lib/stage-mutations";
 import { SuggestedPartnersCard } from "@/components/proposals/SuggestedPartnersCard";
 import { TeamingSandbox } from "@/components/proposals/TeamingSandbox";
 import { PartnerResearch } from "@/components/proposals/PartnerResearch";
+import { FindPartnersCard } from "@/components/proposals/FindPartnersCard";
+
 import { TeamingOutreachModal, type OutreachPartnerInput } from "@/components/proposals/TeamingOutreachModal";
 import { CreateOpportunityTeamDialog } from "@/components/dashboard/CreateOpportunityTeamDialog";
 import { HumanIntelPanel } from "@/components/proposals/HumanIntelPanel";
