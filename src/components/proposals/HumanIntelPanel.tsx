@@ -308,26 +308,40 @@ function IntelComposerDialog({
   const [sourceName, setSourceName] = useState(existing?.source_name ?? "");
   const [occurredOn, setOccurredOn] = useState(existing?.occurred_on ?? new Date().toISOString().slice(0, 10));
   const [body, setBody] = useState(existing?.body ?? "");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
+  const isEdit = !!existing;
+  const multi = !isEdit && files.length > 1;
+
+  function addFiles(list: FileList | null) {
+    if (!list) return;
+    setFiles((prev) => [...prev, ...Array.from(list)]);
+  }
+  function removeFile(idx: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function uploadOne(f: File): Promise<string> {
+    const safe = f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `proposals/${proposalId}/intel/${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${safe}`;
+    const { error: upErr } = await supabase.storage.from("proposal-attachments").upload(path, f);
+    if (upErr) throw upErr;
+    return path;
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
-      let filePath: string | null = existing?.file_storage_path ?? null;
-      if (file) {
-        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `proposals/${proposalId}/intel/${Date.now()}-${safe}`;
-        const { error: upErr } = await supabase.storage.from("proposal-attachments").upload(path, file);
-        if (upErr) throw upErr;
-        // Best-effort cleanup of replaced file
-        if (existing?.file_storage_path) {
-          await supabase.storage.from("proposal-attachments").remove([existing.file_storage_path]);
-        }
-        filePath = path;
-      }
-
       if (existing) {
+        let filePath: string | null = existing.file_storage_path ?? null;
+        const f = files[0];
+        if (f) {
+          const path = await uploadOne(f);
+          if (existing.file_storage_path) {
+            await supabase.storage.from("proposal-attachments").remove([existing.file_storage_path]);
+          }
+          filePath = path;
+        }
         const { data, error } = await supabase
           .from("opportunity_intel")
           .update({
@@ -343,7 +357,31 @@ function IntelComposerDialog({
         if (error) throw error;
         if (!data || data.length === 0) throw new Error("You don't have permission to edit this entry");
         toast.success("Intel updated");
+      } else if (files.length > 1) {
+        // Multi-file: one row per file, sharing metadata
+        const baseTitle = title.trim();
+        const rows: any[] = [];
+        for (const f of files) {
+          const path = await uploadOne(f);
+          const fname = f.name.replace(/\.[^.]+$/, "");
+          rows.push({
+            proposal_id: proposalId,
+            team_id: teamId,
+            user_id: userId,
+            intel_type: intelType,
+            title: baseTitle ? `${baseTitle} — ${fname}` : fname,
+            source_name: sourceName.trim() || null,
+            occurred_on: occurredOn || null,
+            body: body.trim() || null,
+            file_storage_path: path,
+          });
+        }
+        const { error } = await supabase.from("opportunity_intel").insert(rows);
+        if (error) throw error;
+        toast.success(`${rows.length} intel entries added`);
       } else {
+        let filePath: string | null = null;
+        if (files[0]) filePath = await uploadOne(files[0]);
         const { error } = await supabase.from("opportunity_intel").insert({
           proposal_id: proposalId,
           team_id: teamId,
@@ -415,9 +453,49 @@ function IntelComposerDialog({
           />
         </div>
         <div>
-          <Label className="text-xs flex items-center gap-1"><Paperclip className="h-3 w-3" /> Attach file (optional)</Label>
-          <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          {existing?.file_storage_path && !file && (
+          <Label className="text-xs flex items-center gap-1">
+            <Paperclip className="h-3 w-3" />
+            {isEdit ? "Replace file (optional)" : "Attach files (optional)"}
+          </Label>
+          <Input
+            type="file"
+            multiple={!isEdit}
+            onChange={(e) => {
+              if (isEdit) {
+                const f = e.target.files?.[0];
+                setFiles(f ? [f] : []);
+              } else {
+                addFiles(e.target.files);
+                e.target.value = "";
+              }
+            }}
+          />
+          {!isEdit && files.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {files.map((f, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+                  <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="truncate flex-1">{f.name}</span>
+                  <span className="text-muted-foreground shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="Remove"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {multi && (
+                <div className="text-[11px] text-muted-foreground">
+                  Will create {files.length} separate intel entries sharing the type, source, and date above.
+                  {title.trim() ? " Title will be suffixed with each filename." : " Titles will use the filenames."}
+                </div>
+              )}
+            </div>
+          )}
+          {isEdit && existing?.file_storage_path && files.length === 0 && (
             <div className="text-xs text-muted-foreground mt-1 truncate">
               Current: {existing.file_storage_path.split("/").pop()}
             </div>
@@ -427,7 +505,7 @@ function IntelComposerDialog({
       <DialogFooter>
         <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
         <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving…" : existing ? "Save changes" : "Add intel"}
+          {saving ? "Saving…" : existing ? "Save changes" : multi ? `Add ${files.length} entries` : "Add intel"}
         </Button>
       </DialogFooter>
     </DialogContent>
