@@ -23,6 +23,7 @@ export type MarketSnapshot = {
     keyword: string | null;
     startDate: string;
     endDate: string;
+    scope?: "naics+agency" | "naics_only";
   };
   historical: {
     totalAwards: number;
@@ -58,6 +59,22 @@ export function isMarketSnapshotInProgress(id: string): boolean {
     if (Date.now() - t > SNAP_MAX_AGE_MS) { sessionStorage.removeItem(SNAP_KEY_PREFIX + id); return false; }
     return true;
   } catch { return false; }
+}
+
+const STOPWORDS = new Set([
+  "the","a","an","and","or","of","for","to","in","on","with","by","from",
+  "services","service","support","supports","system","systems","program","project",
+  "contract","solicitation","rfp","rfi","rfq","task","order","idiq","bpa",
+]);
+function sanitizeKeyword(raw?: string | null): string | null {
+  if (!raw) return null;
+  const tokens = String(raw)
+    .replace(/[()[\]{}"'`,.:;!?/\\]/g, " ")
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 4 && !STOPWORDS.has(t.toLowerCase()) && !/^\d+$/.test(t));
+  const picked = tokens.slice(0, 3).join(" ").trim();
+  return picked.length >= 4 ? picked : null;
 }
 
 function samOppFromProposal(p: any): SamOpportunity {
@@ -106,21 +123,26 @@ function summarizeHistorical(results: HistoricalAward[]) {
  */
 export async function generateMarketSnapshot(
   proposal: any,
-  opts?: { onProgress?: (step: string) => void },
+  opts?: { onProgress?: (step: string) => void; keyword?: string },
 ): Promise<MarketSnapshot> {
   const onProgress = opts?.onProgress ?? (() => {});
   const naicsCodes = proposal.naics_code ? [String(proposal.naics_code)] : [];
   const agency = canonicalizeAgencyName(proposal.agency).canonical || (proposal.agency ?? null);
-  const keyword = proposal.opportunity_title ?? null;
+  // Do NOT derive a keyword from the opportunity title — award descriptions
+  // rarely contain the solicitation title, so it zero-filters the historical
+  // pull. matchIncumbent handles title similarity AFTER awards are fetched.
+  // If a caller explicitly supplies a keyword, cap it to 2-3 distinctive tokens.
+  const keyword = sanitizeKeyword(opts?.keyword);
 
   const endDate = new Date().toISOString().slice(0, 10);
   const startDate = new Date(Date.now() - 5 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
-  // 1) historical awards
+  // 1) historical awards — NAICS + agency + date window define the market.
   onProgress("Pulling award history…");
   let results: HistoricalAward[] = [];
   let pageMeta: any = { total: 0, fetched: 0, hasNext: false, truncated: false };
   let awardsError: string | undefined;
+  let scope: "naics+agency" | "naics_only" = agency ? "naics+agency" : "naics_only";
   if (naicsCodes.length > 0) {
     try {
       const r = await searchUsaspending({
@@ -128,14 +150,31 @@ export async function generateMarketSnapshot(
         startDate,
         endDate,
         keyword: keyword ?? undefined,
+        agency: agency ?? undefined,
         maxResults: 1000,
       });
       results = r.results ?? [];
       pageMeta = r.page_metadata ?? pageMeta;
+      // Retry NAICS-only if agency-scoped pull found nothing.
+      if (agency && results.length === 0) {
+        const r2 = await searchUsaspending({
+          naicsCodes,
+          startDate,
+          endDate,
+          keyword: keyword ?? undefined,
+          maxResults: 1000,
+        });
+        if ((r2.results?.length ?? 0) > 0) {
+          results = r2.results ?? [];
+          pageMeta = r2.page_metadata ?? pageMeta;
+          scope = "naics_only";
+        }
+      }
     } catch (e: any) {
       awardsError = e?.message ?? "Award history request failed";
     }
   }
+
 
   const historicalSummary = summarizeHistorical(results);
 
@@ -195,7 +234,7 @@ export async function generateMarketSnapshot(
   const snapshot: MarketSnapshot = {
     version: 1,
     generatedAt: new Date().toISOString(),
-    inputs: { naicsCodes, agency, keyword, startDate, endDate },
+    inputs: { naicsCodes, agency, keyword, startDate, endDate, scope },
     historical: {
       totalAwards: pageMeta.total ?? results.length,
       totalValue: historicalSummary.totalValue,

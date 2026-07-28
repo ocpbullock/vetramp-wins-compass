@@ -164,6 +164,12 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
           <CardTitle className="text-base">Historical spending</CardTitle>
           <CardDescription>
             NAICS {snapshot.inputs.naicsCodes.join(", ") || "—"} · {snapshot.inputs.startDate} → {snapshot.inputs.endDate}
+            {" · "}
+            {snapshot.inputs.scope === "naics_only"
+              ? (snapshot.inputs.agency
+                  ? "NAICS-wide (no agency-scoped awards found)"
+                  : "NAICS-wide (no agency set)")
+              : "agency-scoped"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-2 text-sm">
