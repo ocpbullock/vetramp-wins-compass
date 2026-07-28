@@ -453,9 +453,49 @@ function IntelComposerDialog({
           />
         </div>
         <div>
-          <Label className="text-xs flex items-center gap-1"><Paperclip className="h-3 w-3" /> Attach file (optional)</Label>
-          <Input type="file" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-          {existing?.file_storage_path && !file && (
+          <Label className="text-xs flex items-center gap-1">
+            <Paperclip className="h-3 w-3" />
+            {isEdit ? "Replace file (optional)" : "Attach files (optional)"}
+          </Label>
+          <Input
+            type="file"
+            multiple={!isEdit}
+            onChange={(e) => {
+              if (isEdit) {
+                const f = e.target.files?.[0];
+                setFiles(f ? [f] : []);
+              } else {
+                addFiles(e.target.files);
+                e.target.value = "";
+              }
+            }}
+          />
+          {!isEdit && files.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {files.map((f, i) => (
+                <div key={i} className="flex items-center gap-2 text-xs bg-muted/50 rounded px-2 py-1">
+                  <Paperclip className="h-3 w-3 shrink-0 text-muted-foreground" />
+                  <span className="truncate flex-1">{f.name}</span>
+                  <span className="text-muted-foreground shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+                  <button
+                    type="button"
+                    onClick={() => removeFile(i)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label="Remove"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+              {multi && (
+                <div className="text-[11px] text-muted-foreground">
+                  Will create {files.length} separate intel entries sharing the type, source, and date above.
+                  {title.trim() ? " Title will be suffixed with each filename." : " Titles will use the filenames."}
+                </div>
+              )}
+            </div>
+          )}
+          {isEdit && existing?.file_storage_path && files.length === 0 && (
             <div className="text-xs text-muted-foreground mt-1 truncate">
               Current: {existing.file_storage_path.split("/").pop()}
             </div>
