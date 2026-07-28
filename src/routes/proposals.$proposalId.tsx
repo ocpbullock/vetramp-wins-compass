@@ -453,7 +453,18 @@ function ProposalPipeline() {
       if (freshAtts) setAttachments(freshAtts);
       if (done) {
         const filled = done.filled_fields?.length ?? 0;
-        toast.success(`Extracted ${done.requirements_count ?? done.matrix?.requirements?.length ?? 0} requirements across ${done.chunks ?? 1} pass${(done.chunks ?? 1) === 1 ? "" : "es"}${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`);
+        toast.success(
+          `Extracted ${done.requirements_count ?? done.matrix?.requirements?.length ?? 0} requirements across ${done.chunks ?? 1} pass${(done.chunks ?? 1) === 1 ? "" : "es"}${filled ? ` · auto-filled ${filled} field${filled === 1 ? "" : "s"}` : ""}`,
+          {
+            action: {
+              label: "Re-run capture analysis",
+              onClick: () => {
+                setHubTab("capture_analysis");
+                window.dispatchEvent(new CustomEvent("capture-analysis:rerun", { detail: { proposalId } }));
+              },
+            },
+          },
+        );
       }
     } catch (e: any) {
       toast.error(friendlyFromError(e));

@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
@@ -243,13 +243,34 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
     },
   });
 
-  const inputsChangedSince = (() => {
-    if (!generatedAt) return false;
+  // "Inputs changed" check — newest proposal_attachments upload timestamp.
+  const { data: latestAttachmentAt } = useQuery({
+    queryKey: ["latest-attachment-at", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposal_attachments")
+        .select("uploaded_at")
+        .eq("proposal_id", proposalId)
+        .order("uploaded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return (data as any)?.uploaded_at ?? null;
+    },
+  });
+
+  const inputsChangedReasons: string[] = (() => {
+    if (!generatedAt) return [];
     const g = new Date(generatedAt).getTime();
-    const ms = proposal?.market_snapshot_at ? new Date(proposal.market_snapshot_at).getTime() : 0;
+    const reasons: string[] = [];
+    const at = latestAttachmentAt ? new Date(latestAttachmentAt).getTime() : 0;
     const il = latestIntelAt ? new Date(latestIntelAt).getTime() : 0;
-    return ms > g || il > g;
+    const ms = proposal?.market_snapshot_at ? new Date(proposal.market_snapshot_at).getTime() : 0;
+    if (at > g) reasons.push("documents");
+    if (il > g) reasons.push("intel");
+    if (ms > g) reasons.push("market snapshot");
+    return reasons;
   })();
+  const inputsChangedSince = inputsChangedReasons.length > 0;
 
   const rerun = async () => {
     setRunning(true);
@@ -276,6 +297,19 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
       setRunning(false);
     }
   };
+
+  // Allow other panels (e.g. the parse-documents toast) to trigger a rerun
+  // by dispatching a window event scoped to this proposal id.
+  const rerunRef = useRef(rerun);
+  useEffect(() => { rerunRef.current = rerun; });
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { proposalId?: string } | undefined;
+      if (!detail || detail.proposalId === proposalId) void rerunRef.current();
+    };
+    window.addEventListener("capture-analysis:rerun", handler);
+    return () => window.removeEventListener("capture-analysis:rerun", handler);
+  }, [proposalId]);
 
   const handleExport = async (variant: "internal" | "partner") => {
     setExporting(variant);
@@ -504,7 +538,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
         </span>
         {inputsChangedSince && (
           <span className="inline-flex items-center gap-1 text-warning">
-            <AlertTriangle className="w-3 h-3" /> inputs changed since last run
+            <AlertTriangle className="w-3 h-3" /> inputs changed since last run ({inputsChangedReasons.join(", ")})
           </span>
         )}
         <div className="ml-auto flex items-center gap-2">
