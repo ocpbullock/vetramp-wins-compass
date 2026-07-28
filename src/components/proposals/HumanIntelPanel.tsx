@@ -505,7 +505,7 @@ function IntelComposerDialog({
       <DialogFooter>
         <Button variant="outline" onClick={onClose} disabled={saving}>Cancel</Button>
         <Button onClick={handleSave} disabled={saving}>
-          {saving ? "Saving…" : existing ? "Save changes" : "Add intel"}
+          {saving ? "Saving…" : existing ? "Save changes" : multi ? `Add ${files.length} entries` : "Add intel"}
         </Button>
       </DialogFooter>
     </DialogContent>
