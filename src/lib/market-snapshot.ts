@@ -107,21 +107,26 @@ function summarizeHistorical(results: HistoricalAward[]) {
  */
 export async function generateMarketSnapshot(
   proposal: any,
-  opts?: { onProgress?: (step: string) => void },
+  opts?: { onProgress?: (step: string) => void; keyword?: string },
 ): Promise<MarketSnapshot> {
   const onProgress = opts?.onProgress ?? (() => {});
   const naicsCodes = proposal.naics_code ? [String(proposal.naics_code)] : [];
   const agency = canonicalizeAgencyName(proposal.agency).canonical || (proposal.agency ?? null);
-  const keyword = proposal.opportunity_title ?? null;
+  // Do NOT derive a keyword from the opportunity title — award descriptions
+  // rarely contain the solicitation title, so it zero-filters the historical
+  // pull. matchIncumbent handles title similarity AFTER awards are fetched.
+  // If a caller explicitly supplies a keyword, cap it to 2-3 distinctive tokens.
+  const keyword = sanitizeKeyword(opts?.keyword);
 
   const endDate = new Date().toISOString().slice(0, 10);
   const startDate = new Date(Date.now() - 5 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
 
-  // 1) historical awards
+  // 1) historical awards — NAICS + agency + date window define the market.
   onProgress("Pulling award history…");
   let results: HistoricalAward[] = [];
   let pageMeta: any = { total: 0, fetched: 0, hasNext: false, truncated: false };
   let awardsError: string | undefined;
+  let scope: "naics+agency" | "naics_only" = agency ? "naics+agency" : "naics_only";
   if (naicsCodes.length > 0) {
     try {
       const r = await searchUsaspending({
@@ -129,14 +134,31 @@ export async function generateMarketSnapshot(
         startDate,
         endDate,
         keyword: keyword ?? undefined,
+        agency: agency ?? undefined,
         maxResults: 1000,
       });
       results = r.results ?? [];
       pageMeta = r.page_metadata ?? pageMeta;
+      // Retry NAICS-only if agency-scoped pull found nothing.
+      if (agency && results.length === 0) {
+        const r2 = await searchUsaspending({
+          naicsCodes,
+          startDate,
+          endDate,
+          keyword: keyword ?? undefined,
+          maxResults: 1000,
+        });
+        if ((r2.results?.length ?? 0) > 0) {
+          results = r2.results ?? [];
+          pageMeta = r2.page_metadata ?? pageMeta;
+          scope = "naics_only";
+        }
+      }
     } catch (e: any) {
       awardsError = e?.message ?? "Award history request failed";
     }
   }
+
 
   const historicalSummary = summarizeHistorical(results);
 
