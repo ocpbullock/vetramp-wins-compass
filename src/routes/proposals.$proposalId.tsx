@@ -66,6 +66,7 @@ import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 
 import { NaicsCombobox } from "@/components/NaicsCombobox";
 import { canonicalizeAgencyName } from "@/lib/agency-match";
+import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
@@ -1507,7 +1508,15 @@ function IntakeStep({ proposal, attachments, onPatch, onUpload, onDelete, onAuto
             <div><div className="text-xs text-muted-foreground">Solicitation #</div><div className="font-mono">{proposal.solicitation_number}</div></div>
             <div><div className="text-xs text-muted-foreground">Notice ID</div><div className="font-mono text-xs">{proposal.notice_id || "—"}</div></div>
             <div className="col-span-2"><div className="text-xs text-muted-foreground">Title</div><div>{proposal.opportunity_title}</div></div>
-            <div><div className="text-xs text-muted-foreground">Agency</div><div>{proposal.agency || "—"}</div></div>
+            <div>
+              <div className="text-xs text-muted-foreground mb-1">Agency</div>
+              <AgencyCombobox
+                value={proposal.agency ?? ""}
+                onChange={(v) => onPatch({ agency: v || null })}
+                teamId={proposal.team_id}
+                placeholder="Search or paste awarding agency…"
+              />
+            </div>
             <div>
               <div className="text-xs text-muted-foreground">NAICS</div>
               <NaicsCombobox
