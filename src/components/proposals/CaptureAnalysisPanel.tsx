@@ -243,13 +243,34 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
     },
   });
 
-  const inputsChangedSince = (() => {
-    if (!generatedAt) return false;
+  // "Inputs changed" check — newest proposal_attachments upload timestamp.
+  const { data: latestAttachmentAt } = useQuery({
+    queryKey: ["latest-attachment-at", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposal_attachments")
+        .select("uploaded_at")
+        .eq("proposal_id", proposalId)
+        .order("uploaded_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      return (data as any)?.uploaded_at ?? null;
+    },
+  });
+
+  const inputsChangedReasons: string[] = (() => {
+    if (!generatedAt) return [];
     const g = new Date(generatedAt).getTime();
-    const ms = proposal?.market_snapshot_at ? new Date(proposal.market_snapshot_at).getTime() : 0;
+    const reasons: string[] = [];
+    const at = latestAttachmentAt ? new Date(latestAttachmentAt).getTime() : 0;
     const il = latestIntelAt ? new Date(latestIntelAt).getTime() : 0;
-    return ms > g || il > g;
+    const ms = proposal?.market_snapshot_at ? new Date(proposal.market_snapshot_at).getTime() : 0;
+    if (at > g) reasons.push("documents");
+    if (il > g) reasons.push("intel");
+    if (ms > g) reasons.push("market snapshot");
+    return reasons;
   })();
+  const inputsChangedSince = inputsChangedReasons.length > 0;
 
   const rerun = async () => {
     setRunning(true);
