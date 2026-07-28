@@ -23,6 +23,7 @@ export type MarketSnapshot = {
     keyword: string | null;
     startDate: string;
     endDate: string;
+    scope?: "naics+agency" | "naics_only";
   };
   historical: {
     totalAwards: number;
