@@ -66,6 +66,7 @@ import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 
 import { NaicsCombobox } from "@/components/NaicsCombobox";
 import { canonicalizeAgencyName } from "@/lib/agency-match";
+import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
