@@ -525,7 +525,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
         </span>
         {inputsChangedSince && (
           <span className="inline-flex items-center gap-1 text-warning">
-            <AlertTriangle className="w-3 h-3" /> inputs changed since last run
+            <AlertTriangle className="w-3 h-3" /> inputs changed since last run ({inputsChangedReasons.join(", ")})
           </span>
         )}
         <div className="ml-auto flex items-center gap-2">
