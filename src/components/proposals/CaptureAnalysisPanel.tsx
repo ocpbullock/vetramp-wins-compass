@@ -298,6 +298,19 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
     }
   };
 
+  // Allow other panels (e.g. the parse-documents toast) to trigger a rerun
+  // by dispatching a window event scoped to this proposal id.
+  const rerunRef = useRef(rerun);
+  useEffect(() => { rerunRef.current = rerun; });
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const detail = (e as CustomEvent).detail as { proposalId?: string } | undefined;
+      if (!detail || detail.proposalId === proposalId) void rerunRef.current();
+    };
+    window.addEventListener("capture-analysis:rerun", handler);
+    return () => window.removeEventListener("capture-analysis:rerun", handler);
+  }, [proposalId]);
+
   const handleExport = async (variant: "internal" | "partner") => {
     setExporting(variant);
     try {
