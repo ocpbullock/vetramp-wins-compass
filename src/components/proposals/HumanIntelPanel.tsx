@@ -308,26 +308,40 @@ function IntelComposerDialog({
   const [sourceName, setSourceName] = useState(existing?.source_name ?? "");
   const [occurredOn, setOccurredOn] = useState(existing?.occurred_on ?? new Date().toISOString().slice(0, 10));
   const [body, setBody] = useState(existing?.body ?? "");
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
+  const isEdit = !!existing;
+  const multi = !isEdit && files.length > 1;
+
+  function addFiles(list: FileList | null) {
+    if (!list) return;
+    setFiles((prev) => [...prev, ...Array.from(list)]);
+  }
+  function removeFile(idx: number) {
+    setFiles((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function uploadOne(f: File): Promise<string> {
+    const safe = f.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const path = `proposals/${proposalId}/intel/${Date.now()}-${Math.random().toString(36).slice(2, 7)}-${safe}`;
+    const { error: upErr } = await supabase.storage.from("proposal-attachments").upload(path, f);
+    if (upErr) throw upErr;
+    return path;
+  }
 
   async function handleSave() {
     setSaving(true);
     try {
-      let filePath: string | null = existing?.file_storage_path ?? null;
-      if (file) {
-        const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `proposals/${proposalId}/intel/${Date.now()}-${safe}`;
-        const { error: upErr } = await supabase.storage.from("proposal-attachments").upload(path, file);
-        if (upErr) throw upErr;
-        // Best-effort cleanup of replaced file
-        if (existing?.file_storage_path) {
-          await supabase.storage.from("proposal-attachments").remove([existing.file_storage_path]);
-        }
-        filePath = path;
-      }
-
       if (existing) {
+        let filePath: string | null = existing.file_storage_path ?? null;
+        const f = files[0];
+        if (f) {
+          const path = await uploadOne(f);
+          if (existing.file_storage_path) {
+            await supabase.storage.from("proposal-attachments").remove([existing.file_storage_path]);
+          }
+          filePath = path;
+        }
         const { data, error } = await supabase
           .from("opportunity_intel")
           .update({
@@ -343,7 +357,31 @@ function IntelComposerDialog({
         if (error) throw error;
         if (!data || data.length === 0) throw new Error("You don't have permission to edit this entry");
         toast.success("Intel updated");
+      } else if (files.length > 1) {
+        // Multi-file: one row per file, sharing metadata
+        const baseTitle = title.trim();
+        const rows: any[] = [];
+        for (const f of files) {
+          const path = await uploadOne(f);
+          const fname = f.name.replace(/\.[^.]+$/, "");
+          rows.push({
+            proposal_id: proposalId,
+            team_id: teamId,
+            user_id: userId,
+            intel_type: intelType,
+            title: baseTitle ? `${baseTitle} — ${fname}` : fname,
+            source_name: sourceName.trim() || null,
+            occurred_on: occurredOn || null,
+            body: body.trim() || null,
+            file_storage_path: path,
+          });
+        }
+        const { error } = await supabase.from("opportunity_intel").insert(rows);
+        if (error) throw error;
+        toast.success(`${rows.length} intel entries added`);
       } else {
+        let filePath: string | null = null;
+        if (files[0]) filePath = await uploadOne(files[0]);
         const { error } = await supabase.from("opportunity_intel").insert({
           proposal_id: proposalId,
           team_id: teamId,
