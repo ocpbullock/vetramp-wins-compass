@@ -234,7 +234,7 @@ export async function generateMarketSnapshot(
   const snapshot: MarketSnapshot = {
     version: 1,
     generatedAt: new Date().toISOString(),
-    inputs: { naicsCodes, agency, keyword, startDate, endDate },
+    inputs: { naicsCodes, agency, keyword, startDate, endDate, scope },
     historical: {
       totalAwards: pageMeta.total ?? results.length,
       totalValue: historicalSummary.totalValue,
