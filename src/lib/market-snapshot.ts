@@ -61,6 +61,22 @@ export function isMarketSnapshotInProgress(id: string): boolean {
   } catch { return false; }
 }
 
+const STOPWORDS = new Set([
+  "the","a","an","and","or","of","for","to","in","on","with","by","from",
+  "services","service","support","supports","system","systems","program","project",
+  "contract","solicitation","rfp","rfi","rfq","task","order","idiq","bpa",
+]);
+function sanitizeKeyword(raw?: string | null): string | null {
+  if (!raw) return null;
+  const tokens = String(raw)
+    .replace(/[()[\]{}"'`,.:;!?/\\]/g, " ")
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter((t) => t.length >= 4 && !STOPWORDS.has(t.toLowerCase()) && !/^\d+$/.test(t));
+  const picked = tokens.slice(0, 3).join(" ").trim();
+  return picked.length >= 4 ? picked : null;
+}
+
 function samOppFromProposal(p: any): SamOpportunity {
   return {
     title: p.opportunity_title ?? undefined,
