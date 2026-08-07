@@ -10,6 +10,7 @@
 //   C. EXTERNAL API canaries — Tango via search-usaspending, SAM key sanity.
 //   D. PLATFORM integrity — cron job alive, stale schema references.
 import { supabase } from "@/integrations/supabase/client";
+import { checkFedSpendHealth } from "@/lib/fedspend.functions";
 
 export type CheckStatus = "pass" | "warn" | "fail";
 export type CheckResult = {
@@ -241,8 +242,36 @@ function buildRegistry(): CheckDefinition[] {
     },
   });
 
+  // Fed-Spend provider health (boot = key present + client callable,
+  // probe = live query returns rows).
+  checks.push({
+    id: "ext:fedspend-boot",
+    group: "external",
+    label: "Fed-Spend API key configured",
+    run: async () => {
+      const health = await checkFedSpendHealth();
+      return health.bootOk
+        ? { status: "pass", detail: "FED_SPEND_API_KEY is configured." }
+        : { status: "fail", detail: health.message };
+    },
+  });
+
+  checks.push({
+    id: "ext:fedspend-probe",
+    group: "external",
+    label: "Fed-Spend live probe (awards search)",
+    run: async () => {
+      const health = await checkFedSpendHealth();
+      if (!health.bootOk) return { status: "warn", detail: "Skipped — API key not configured." };
+      return health.probeOk
+        ? { status: "pass", detail: health.message }
+        : { status: "fail", detail: health.message };
+    },
+  });
+
   return checks;
 }
+
 
 export const DIAGNOSTICS_CHECKS = buildRegistry();
 

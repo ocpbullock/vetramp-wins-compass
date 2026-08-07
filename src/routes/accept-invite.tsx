@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/accept-invite")({
-  validateSearch: (s: Record<string, unknown>) => ({ token: (s.token as string) ?? "" }),
+  validateSearch: (s: Record<string, unknown>): { token?: string } => ({ token: (s.token as string) ?? "" }),
   component: AcceptInvitePage,
 });
 

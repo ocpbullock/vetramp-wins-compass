@@ -9,6 +9,9 @@ import { getVendorProfile } from "@/lib/api";
 import { researchVendor, type VendorResearch } from "@/lib/api";
 import { useTeam } from "@/lib/team";
 import { companyFromVendorLookup, upsertCompany } from "@/lib/companies";
+import { useServerFn } from "@tanstack/react-start";
+import { getFedSpendSubawards } from "@/lib/fedspend.functions";
+import type { SubawardsResponse } from "@/lib/fedspend-types";
 
 // Session-only cache: keyed by UEI when present, else normalized name. Cleared on reload.
 const researchCache = new Map<string, VendorResearch>();
@@ -262,7 +265,13 @@ export function VendorDetailDrawer({
                 </table>
               </div>
             </Section>
+
+            <SubRelationships
+              teamId={currentTeam?.id ?? null}
+              companyName={data?.resolved?.legal_name ?? vendorName ?? null}
+            />
           </div>
+
         )}
       </SheetContent>
     </Sheet>
@@ -400,5 +409,83 @@ function AiResearchBlock({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Prime/sub relationship lists from Fed-Spend. Loaded on demand (the provider
+ * is rate-limited to 10 requests/minute), cached per team for 7 days.
+ */
+function SubRelationships({ teamId, companyName }: { teamId: string | null; companyName: string | null }) {
+  const [loading, setLoading] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [result, setResult] = useState<SubawardsResponse | null>(null);
+  const fetchSubs = useServerFn(getFedSpendSubawards);
+
+  useEffect(() => { setResult(null); setErr(null); }, [companyName]);
+
+  if (!teamId || !companyName) return null;
+
+  const load = async () => {
+    setLoading(true); setErr(null);
+    try {
+      const res = await fetchSubs({ data: { teamId, companyName } });
+      if (res.error) setErr(res.error);
+      setResult(res);
+    } catch (e: any) {
+      setErr(e?.message ?? "Lookup failed");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const list = (rows: SubawardsResponse["asPrime"], emptyLabel: string) =>
+    rows.length === 0 ? (
+      <div className="py-1 opacity-60">{emptyLabel}</div>
+    ) : (
+      rows.slice(0, 10).map((r, i) => (
+        <div key={`${r.partnerName}-${i}`} className="flex justify-between gap-2 py-1 border-t border-border/40 first:border-0">
+          <span className="truncate">
+            {r.partnerName}
+            {r.suspect && (
+              <span title="Reported value looks implausible in FSRS data" className="ml-1 text-warning">⚠</span>
+            )}
+          </span>
+          <span className="whitespace-nowrap font-mono">{fmtUsd(r.amount)}</span>
+        </div>
+      ))
+    );
+
+  return (
+    <Section title="Teaming history (subawards)">
+      {!result ? (
+        <div className="space-y-2">
+          <p className="opacity-70">
+            Look up who this firm subcontracts to, and who it works under, from federal subaward reporting.
+          </p>
+          <Button size="sm" variant="outline" className="gap-1.5" disabled={loading} onClick={load}>
+            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Info className="w-3.5 h-3.5" />}
+            Load sub-relationships
+          </Button>
+          {err && <div className="text-destructive">{err}</div>}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {err && <div className="text-destructive">{err}</div>}
+          <div>
+            <div className="text-[10px] uppercase opacity-60 mb-1">Subcontractors they used</div>
+            {list(result.asPrime, "No subawards found where this firm was the prime.")}
+          </div>
+          <div>
+            <div className="text-[10px] uppercase opacity-60 mb-1">Primes they worked under</div>
+            {list(result.asSub, "No subawards found where this firm was the sub.")}
+          </div>
+          <div className="opacity-60">
+            {result.cached ? "Cached" : "Fresh"} · {new Date(result.fetchedAt).toLocaleDateString()}
+            {result.suspectCount > 0 ? ` · ${result.suspectCount} value(s) flagged as implausible` : ""}
+          </div>
+        </div>
+      )}
+    </Section>
   );
 }

@@ -75,7 +75,7 @@ const HUB_TABS = ["overview", "market_intel", "human_intel", "capture_analysis",
 type HubTab = typeof HUB_TABS[number];
 export const Route = createFileRoute("/proposals/$proposalId")({
   component: ProposalPipeline,
-  validateSearch: (s: Record<string, unknown>) => {
+  validateSearch: (s: Record<string, unknown>): { tab?: HubTab; parseDocs?: 1 } => {
     const tab = typeof s.tab === "string" && (HUB_TABS as readonly string[]).includes(s.tab) ? (s.tab as HubTab) : undefined;
     const parseDocs = s.parseDocs === 1 || s.parseDocs === "1" ? 1 : undefined;
     return { tab, parseDocs };

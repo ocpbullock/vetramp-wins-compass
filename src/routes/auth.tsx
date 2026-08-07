@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import logoUrl from "@/assets/logo-vetramp-pursuit.png";
 
 export const Route = createFileRoute("/auth")({
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { next?: string } => ({
     next: typeof s.next === "string" ? s.next : undefined,
   }),
   component: AuthPage,
