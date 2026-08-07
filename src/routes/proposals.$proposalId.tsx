@@ -181,7 +181,7 @@ function ProposalPipeline() {
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState("intel");
+  const [step, setStep] = useState("compliance");
   const searchParams = Route.useSearch();
   const initialTab = (searchParams.tab ?? "overview") as HubTab;
   const [hubTab, setHubTab] = useState<HubTab>(initialTab);
@@ -922,7 +922,16 @@ function ProposalPipeline() {
 
 
           <TabsContent value="market_intel" className="mt-4">
-            <MarketIntelPanel proposal={proposal} proposalId={proposalId} />
+            <MarketIntelPanel
+              proposal={proposal}
+              proposalId={proposalId}
+              customerIntelSlot={
+                <StepErrorBoundary label="intel">
+                  <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
+                </StepErrorBoundary>
+              }
+            />
+
           </TabsContent>
 
           <TabsContent value="human_intel" className="mt-4">
@@ -946,13 +955,13 @@ function ProposalPipeline() {
             {(() => {
               const isShort = proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement";
               const proposalSteps: { id: string; label: string }[] = [
-                { id: "intel", label: "Customer Intel" },
                 ...(!isShort ? [{ id: "compliance", label: "Compliance" }] : []),
                 { id: "solution", label: isShort ? "Inputs" : (proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design") },
                 { id: "generate", label: "Generate" },
               ];
               const activeIdx = Math.max(0, proposalSteps.findIndex((s) => s.id === step));
-              const currentStepId = proposalSteps[activeIdx]?.id ?? "intel";
+              const currentStepId = proposalSteps[activeIdx]?.id ?? proposalSteps[0]!.id;
+
 
               return (
                 <div className="grid gap-4 md:grid-cols-[220px_1fr]">
@@ -1010,12 +1019,8 @@ function ProposalPipeline() {
 
                   {/* Active step content */}
                   <div className="min-w-0 space-y-4">
-                    {currentStepId === "intel" && (
-                      <StepErrorBoundary label="intel">
-                        <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
-                      </StepErrorBoundary>
-                    )}
                     {currentStepId === "compliance" && (
+
                       <StepErrorBoundary label="compliance">
                         <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
                       </StepErrorBoundary>

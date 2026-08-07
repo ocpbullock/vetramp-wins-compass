@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,14 +10,20 @@ import { Loader2, RefreshCw, Sparkles, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { generateMarketSnapshot, isMarketSnapshotInProgress, type MarketSnapshot } from "@/lib/market-snapshot";
 import { companyFromTeamingTarget } from "@/lib/teaming-targets";
-import { upsertCompany } from "@/lib/companies";
+import { upsertCompany, type CompanyDraft } from "@/lib/companies";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import type { TeamingTarget } from "@/lib/teaming-targets";
-import type { CompeteVendor } from "@/lib/api";
 import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
 import { applyCaptureStage } from "@/lib/stage-mutations";
 import { getEffectiveIncumbent, incumbentSourceBadge } from "@/lib/incumbent-source";
 
+type VehicleAwardee = {
+  id: string;
+  company_name: string;
+  uei: string | null;
+  small_business: boolean | null;
+  socioeconomic: string[] | null;
+};
 
 function fmtUsd(n: number) {
   if (!n) return "$0";
@@ -25,7 +33,15 @@ function fmtUsd(n: number) {
   return `$${n.toLocaleString()}`;
 }
 
-export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+export function MarketIntelPanel({
+  proposal,
+  proposalId,
+  customerIntelSlot,
+}: {
+  proposal: any;
+  proposalId: string;
+  customerIntelSlot?: ReactNode;
+}) {
   const [snapshot, setSnapshot] = useState<MarketSnapshot | null>(
     (proposal?.market_snapshot as MarketSnapshot | null) ?? null,
   );
@@ -35,6 +51,63 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
   const [bgActive, setBgActive] = useState<boolean>(() => isMarketSnapshotInProgress(proposalId));
   const [vendor, setVendor] = useState<{ recipientId: string | null; name: string | null } | null>(null);
   const [savingPartner, setSavingPartner] = useState<string | null>(null);
+
+  const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
+
+  const { data: vehicle } = useQuery({
+    queryKey: ["vehicle-registry-row", vehicleId],
+    enabled: !!vehicleId,
+    staleTime: 30 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("vehicle_registry")
+        .select("id, vehicle_name")
+        .eq("id", vehicleId!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  // RLS returns global (team_id IS NULL) + this team's rows.
+  const { data: awardees = [], isLoading: awardeesLoading } = useQuery({
+    queryKey: ["market-intel-vehicle-awardees", vehicleId],
+    enabled: !!vehicleId,
+    staleTime: 15 * 60 * 1000,
+    queryFn: async (): Promise<VehicleAwardee[]> => {
+      const { data, error } = await supabase
+        .from("vehicle_awardees")
+        .select("id, company_name, uei, small_business, socioeconomic")
+        .eq("vehicle_id", vehicleId!)
+        .order("company_name");
+      if (error) throw new Error(error.message);
+      return (data ?? []) as VehicleAwardee[];
+    },
+  });
+
+  const addAwardee = async (a: VehicleAwardee) => {
+    if (!proposal.team_id) { toast.error("No team on this opportunity"); return; }
+    setSavingPartner(a.uei || a.company_name);
+    try {
+      const draft: CompanyDraft = {
+        team_id: proposal.team_id,
+        name: a.company_name,
+        uei: a.uei,
+        certifications: a.socioeconomic ?? [],
+        contract_vehicles: vehicle?.vehicle_name ? [vehicle.vehicle_name] : [],
+        source: "vehicle_awardees",
+        is_existing_partner: false,
+        relationship_status: "prospective",
+        notes: vehicle?.vehicle_name ? `Added from ${vehicle.vehicle_name} awardee pool` : undefined,
+      };
+      await upsertCompany(draft);
+      toast.success(`Added ${a.company_name} to roster`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to add");
+    } finally {
+      setSavingPartner(null);
+    }
+  };
+
 
   // Low-frequency poll while a background generation is genuinely in flight
   // (sessionStorage key set by kickOffMarketSnapshot, younger than 3 min).
@@ -108,12 +181,14 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
 
   if (!snapshot) {
     return (
+      <>
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Market Intel</CardTitle>
           <CardDescription>
-            Pulls historical awards, incumbent, prior primes/subs, candidate partners, and competitive landscape into one snapshot.
+            Pulls historical awards, incumbent, vendors at this client, and the linked vehicle's vendor pool into one snapshot.
           </CardDescription>
+
         </CardHeader>
         <CardContent className="space-y-3">
           <Button onClick={generate} disabled={loading || !proposal?.naics_code || !proposal?.agency}>
@@ -138,7 +213,18 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
         </CardContent>
 
       </Card>
+      {customerIntelSlot && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="text-base">Customer intelligence (AI research)</CardTitle>
+            <CardDescription>Research the buying organization, mission drivers, and incumbent posture.</CardDescription>
+          </CardHeader>
+          <CardContent>{customerIntelSlot}</CardContent>
+        </Card>
+      )}
+      </>
     );
+
   }
 
   return (
@@ -185,6 +271,29 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
             <div><span className="text-muted-foreground">Total value:</span> <span className="font-mono">{fmtUsd(snapshot.historical.totalValue)}</span></div>
             <div><span className="text-muted-foreground">Fetched:</span> <span className="font-mono">{snapshot.historical.fetched.toLocaleString()}{snapshot.historical.truncated ? " (truncated)" : ""}</span></div>
           </div>
+          {vehicleId && snapshot.historical.onVehicle && (() => {
+            const onV = snapshot.historical.onVehicle!;
+            const total = snapshot.historical.totalValue;
+            const offValue = Math.max(0, total - onV.value);
+            const share = total > 0 ? Math.round((onV.value / total) * 100) : 0;
+            return (
+              <div className="pt-2 space-y-1">
+                <div className="text-xs">
+                  <span className="text-muted-foreground">On-vehicle vendors:</span>{" "}
+                  <span className="font-mono">{fmtUsd(onV.value)} across {onV.awards.toLocaleString()} awards</span>
+                  <span className="text-muted-foreground"> · Off-vehicle: </span>
+                  <span className="font-mono">{fmtUsd(offValue)}</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted overflow-hidden" role="img" aria-label={`On-vehicle share ${share}%`}>
+                  <div className="h-full bg-primary" style={{ width: `${share}%` }} />
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  {share}% of fetched award value went to {vehicle?.vehicle_name ?? "the linked vehicle"} awardees
+                </div>
+              </div>
+            );
+          })()}
+
           {snapshot.historical.byYear.length > 0 && (
             <div className="pt-2">
               <div className="text-xs text-muted-foreground mb-1">By year</div>
@@ -252,11 +361,11 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
         </CardContent>
       </Card>
 
-      {/* Prior primes/subs */}
+      {/* Vendors at this client */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Prior primes & subs</CardTitle>
-          <CardDescription>Large vendors holding significant work in this NAICS at this agency.</CardDescription>
+          <CardTitle className="text-base">Vendors at this client</CardTitle>
+          <CardDescription>Same or adjacent NAICS, any vehicle.</CardDescription>
         </CardHeader>
         <CardContent>
           {snapshot.priorPrimes.length === 0 ? (
@@ -287,36 +396,58 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
         </CardContent>
       </Card>
 
-      {/* Candidate partners */}
+      {/* Contract vehicle vendors */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Candidate partners</CardTitle>
-          <CardDescription>Smaller / set-aside vendors with relevant past performance.</CardDescription>
+          <CardTitle className="text-base">Contract vehicle vendors</CardTitle>
+          <CardDescription>
+            {vehicle?.vehicle_name
+              ? `Awardee pool on ${vehicle.vehicle_name}.`
+              : "Vendors holding the linked contract vehicle."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {snapshot.candidatePartners.length === 0 ? (
-            <div className="text-xs text-muted-foreground">None detected.</div>
+          {!vehicleId ? (
+            <div className="text-xs text-muted-foreground">
+              Link a contract vehicle to see its vendor pool.
+            </div>
+          ) : awardeesLoading ? (
+            <Skeleton className="h-16 w-full" />
+          ) : awardees.length === 0 ? (
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div>No awardees recorded for this vehicle yet.</div>
+              <Link to="/settings" hash="vehicles" className="text-primary hover:underline">
+                Import a list or run AI awardee research in the vehicle registry →
+              </Link>
+            </div>
           ) : (
             <ul className="divide-y">
-              {snapshot.candidatePartners.map((t) => (
-                <li key={(t.uei || t.name) + "-partner"} className="py-2 flex items-center justify-between gap-2">
+              {awardees.map((a) => (
+                <li key={a.id} className="py-2 flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <button
                       className="text-sm font-medium hover:underline text-left truncate"
-                      onClick={() => setVendor({ recipientId: t.uei, name: t.name })}
+                      onClick={() => setVendor({ recipientId: a.uei, name: a.company_name })}
                     >
-                      {t.name}
+                      {a.company_name}
                     </button>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {fmtUsd(t.totalValue)} · {t.awardCount} awards
-                      {t.isSmallBusiness && " · SB"}
-                      {t.latestSetAside && ` · ${t.latestSetAside}`}
-                      {typeof t.relevanceScore === "number" && ` · relevance ${t.relevanceScore}`}
-                      {t.agencyExperience && " · agency ✓"}
+                    <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                      {a.uei && <Badge variant="outline" className="font-mono text-[10px]">{a.uei}</Badge>}
+                      {a.small_business && <Badge variant="secondary" className="text-[10px]">SB</Badge>}
+                      {(a.socioeconomic ?? []).map((s) => (
+                        <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                      ))}
                     </div>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => addPartner(t)} disabled={savingPartner === (t.uei || t.name)}>
-                    {savingPartner === (t.uei || t.name) ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <UserPlus className="w-3 h-3 mr-1" />}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => addAwardee(a)}
+                    disabled={savingPartner === (a.uei || a.company_name)}
+                  >
+                    {savingPartner === (a.uei || a.company_name)
+                      ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      : <UserPlus className="w-3 h-3 mr-1" />}
                     Add to roster
                   </Button>
                 </li>
@@ -326,39 +457,15 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
         </CardContent>
       </Card>
 
-      {/* Likely competitors */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Likely competitors</CardTitle>
-          <CardDescription>From the competitive market landscape (set-aside scope).</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {snapshot.competitiveIntelError ? (
-            <div className="text-xs text-destructive">{snapshot.competitiveIntelError}</div>
-          ) : snapshot.competitors.length === 0 ? (
-            <div className="text-xs text-muted-foreground">No competitor data.</div>
-          ) : (
-            <ul className="divide-y">
-              {snapshot.competitors.map((c: CompeteVendor) => (
-                <li key={(c.recipientId || c.name) + "-comp"} className="py-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <button
-                      className="text-sm font-medium hover:underline text-left truncate"
-                      onClick={() => setVendor({ recipientId: c.recipientId, name: c.name })}
-                    >
-                      {c.name}
-                    </button>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {fmtUsd(c.totalValue)} · {c.awards} awards
-                      {c.setAside && ` · ${c.setAside}`}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {customerIntelSlot && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Customer intelligence (AI research)</CardTitle>
+            <CardDescription>Research the buying organization, mission drivers, and incumbent posture.</CardDescription>
+          </CardHeader>
+          <CardContent>{customerIntelSlot}</CardContent>
+        </Card>
+      )}
 
       <VendorDetailDrawer
         recipientId={vendor?.recipientId ?? null}
@@ -369,3 +476,4 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
     </div>
   );
 }
+
