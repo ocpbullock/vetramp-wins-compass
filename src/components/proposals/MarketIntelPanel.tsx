@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,14 +10,20 @@ import { Loader2, RefreshCw, Sparkles, UserPlus } from "lucide-react";
 import { toast } from "sonner";
 import { generateMarketSnapshot, isMarketSnapshotInProgress, type MarketSnapshot } from "@/lib/market-snapshot";
 import { companyFromTeamingTarget } from "@/lib/teaming-targets";
-import { upsertCompany } from "@/lib/companies";
+import { upsertCompany, type CompanyDraft } from "@/lib/companies";
 import { VendorDetailDrawer } from "@/components/dashboard/VendorDetailDrawer";
 import type { TeamingTarget } from "@/lib/teaming-targets";
-import type { CompeteVendor } from "@/lib/api";
 import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
 import { applyCaptureStage } from "@/lib/stage-mutations";
 import { getEffectiveIncumbent, incumbentSourceBadge } from "@/lib/incumbent-source";
 
+type VehicleAwardee = {
+  id: string;
+  company_name: string;
+  uei: string | null;
+  small_business: boolean | null;
+  socioeconomic: string[] | null;
+};
 
 function fmtUsd(n: number) {
   if (!n) return "$0";
@@ -25,7 +33,15 @@ function fmtUsd(n: number) {
   return `$${n.toLocaleString()}`;
 }
 
-export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; proposalId: string }) {
+export function MarketIntelPanel({
+  proposal,
+  proposalId,
+  customerIntelSlot,
+}: {
+  proposal: any;
+  proposalId: string;
+  customerIntelSlot?: ReactNode;
+}) {
   const [snapshot, setSnapshot] = useState<MarketSnapshot | null>(
     (proposal?.market_snapshot as MarketSnapshot | null) ?? null,
   );
@@ -35,6 +51,63 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
   const [bgActive, setBgActive] = useState<boolean>(() => isMarketSnapshotInProgress(proposalId));
   const [vendor, setVendor] = useState<{ recipientId: string | null; name: string | null } | null>(null);
   const [savingPartner, setSavingPartner] = useState<string | null>(null);
+
+  const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
+
+  const { data: vehicle } = useQuery({
+    queryKey: ["vehicle-registry-row", vehicleId],
+    enabled: !!vehicleId,
+    staleTime: 30 * 60 * 1000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("vehicle_registry")
+        .select("id, vehicle_name")
+        .eq("id", vehicleId!)
+        .maybeSingle();
+      return data;
+    },
+  });
+
+  // RLS returns global (team_id IS NULL) + this team's rows.
+  const { data: awardees = [], isLoading: awardeesLoading } = useQuery({
+    queryKey: ["market-intel-vehicle-awardees", vehicleId],
+    enabled: !!vehicleId,
+    staleTime: 15 * 60 * 1000,
+    queryFn: async (): Promise<VehicleAwardee[]> => {
+      const { data, error } = await supabase
+        .from("vehicle_awardees")
+        .select("id, company_name, uei, small_business, socioeconomic")
+        .eq("vehicle_id", vehicleId!)
+        .order("company_name");
+      if (error) throw new Error(error.message);
+      return (data ?? []) as VehicleAwardee[];
+    },
+  });
+
+  const addAwardee = async (a: VehicleAwardee) => {
+    if (!proposal.team_id) { toast.error("No team on this opportunity"); return; }
+    setSavingPartner(a.uei || a.company_name);
+    try {
+      const draft: CompanyDraft = {
+        team_id: proposal.team_id,
+        name: a.company_name,
+        uei: a.uei,
+        certifications: a.socioeconomic ?? [],
+        contract_vehicles: vehicle?.vehicle_name ? [vehicle.vehicle_name] : [],
+        source: "vehicle_awardees",
+        is_existing_partner: false,
+        relationship_status: "prospective",
+        notes: vehicle?.vehicle_name ? `Added from ${vehicle.vehicle_name} awardee pool` : undefined,
+      };
+      await upsertCompany(draft);
+      toast.success(`Added ${a.company_name} to roster`);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Failed to add");
+    } finally {
+      setSavingPartner(null);
+    }
+  };
+
 
   // Low-frequency poll while a background generation is genuinely in flight
   // (sessionStorage key set by kickOffMarketSnapshot, younger than 3 min).
