@@ -78,27 +78,73 @@ const clampShare = (v: number): number => {
   return Math.max(0, Math.min(100, Math.round(v)));
 };
 
+export type LeadSelection = { companyId: string | null; name: string };
+
+function LeadToggle({
+  isLead,
+  onSelect,
+}: {
+  isLead: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => { if (!isLead) onSelect(); }}
+      title={isLead ? "Team Lead" : "Make team lead"}
+      aria-label={isLead ? "Team Lead" : "Make team lead"}
+      aria-pressed={isLead}
+      className={`shrink-0 rounded p-0.5 transition-colors ${
+        isLead
+          ? "text-[color:var(--brand-brass)]"
+          : "text-muted-foreground/40 hover:text-[color:var(--brand-brass)]"
+      }`}
+    >
+      <Crown className="w-3.5 h-3.5" fill={isLead ? "currentColor" : "none"} />
+    </button>
+  );
+}
+
+function LeadBadge() {
+  return (
+    <Badge
+      variant="outline"
+      className="text-[9px] px-1 h-3.5 border-[color:var(--brand-brass)]/50 text-[color:var(--brand-brass)]"
+    >
+      Team Lead
+    </Badge>
+  );
+}
+
 export function ProposedTeamCard({
   proposalId,
   teamId,
   selfName,
+  selfCompanyId,
   isSelfPrime,
   opportunityNaics,
   primeContractorId,
   primeContractorName,
   selfWorkSharePct,
+  teamLeadCompanyId,
+  teamLeadName,
   onSelfShareChange,
+  onLeadChange,
   onLinkPrime,
 }: {
   proposalId: string;
   teamId: string;
   selfName: string;
+  selfCompanyId?: string | null;
   isSelfPrime: boolean;
   opportunityNaics: string | null;
   primeContractorId?: string | null;
   primeContractorName?: string | null;
   selfWorkSharePct?: number | null;
+  teamLeadCompanyId?: string | null;
+  teamLeadName?: string | null;
   onSelfShareChange?: (pct: number) => void;
+  onLeadChange?: (lead: LeadSelection) => void;
   onLinkPrime?: () => void;
 }) {
   const qc = useQueryClient();
