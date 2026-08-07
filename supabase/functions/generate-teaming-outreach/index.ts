@@ -35,6 +35,7 @@ serve(async (req) => {
       proposedScopeAreas,
       teamId,
       proposalId,
+      teamLeadName,
       skipCache,
     } = await req.json();
 
