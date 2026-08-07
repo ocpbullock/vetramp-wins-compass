@@ -228,20 +228,20 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
 
   const teaming = useTeamingSummary(proposal, proposalId);
 
-  // "Inputs changed" check — newest opportunity_intel timestamp.
-  const { data: latestIntelAt } = useQuery({
-    queryKey: ["latest-intel-at", proposalId],
+  // "Inputs changed" check + incorporation rollup — all intel timestamps.
+  const { data: intelCreatedAts = [] } = useQuery({
+    queryKey: ["intel-created-ats", proposalId],
     queryFn: async () => {
       const { data } = await supabase
         .from("opportunity_intel" as any)
         .select("created_at")
         .eq("proposal_id", proposalId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return (data as any)?.created_at ?? null;
+        .order("created_at", { ascending: false });
+      return ((data ?? []) as any[]).map((r) => ({ created_at: r.created_at as string | null }));
     },
   });
+  const latestIntelAt = intelCreatedAts[0]?.created_at ?? null;
+
 
   // "Inputs changed" check — newest proposal_attachments upload timestamp.
   const { data: latestAttachmentAt } = useQuery({
