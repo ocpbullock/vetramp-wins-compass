@@ -203,6 +203,35 @@ export async function generateMarketSnapshot(
 
   const historicalSummary = summarizeHistorical(results);
 
+  // 1b) vehicle-aware split of the fetched awards
+  const vehicleId: string | null = proposal.vehicle_registry_id ?? null;
+  let onVehicle: { value: number; awards: number } | undefined;
+  if (vehicleId && results.length > 0) {
+    onProgress("Cross-referencing vehicle awardees…");
+    try {
+      const { data: awardees } = await supabase
+        .from("vehicle_awardees")
+        .select("company_name, uei")
+        .eq("vehicle_id", vehicleId);
+      const ueis = new Set(
+        (awardees ?? []).map((a: any) => String(a.uei ?? "").toUpperCase()).filter(Boolean),
+      );
+      const names = new Set(
+        (awardees ?? []).map((a: any) => normVendorName(a.company_name)).filter(Boolean),
+      );
+      if (ueis.size > 0 || names.size > 0) {
+        let value = 0;
+        let awards = 0;
+        for (const a of results) {
+          const uei = String(a["Recipient UEI"] ?? "").toUpperCase();
+          const hit = (uei && ueis.has(uei)) || names.has(normVendorName(a["Recipient Name"]));
+          if (hit) { value += Number(a["Award Amount"]) || 0; awards += 1; }
+        }
+        onVehicle = { value, awards };
+      }
+    } catch { /* non-fatal */ }
+  }
+
   // 2) incumbent
   onProgress("Identifying incumbent…");
   let incumbent: IncumbentMatch | null = null;
@@ -212,18 +241,32 @@ export async function generateMarketSnapshot(
     } catch { /* swallow */ }
   }
 
-  // 3) prior primes & candidate partners
-  onProgress("Ranking prior primes & partners…");
+  // 3) vendors at this client (same or adjacent NAICS, any vehicle) & candidate partners
+  onProgress("Finding vendors at this client…");
+  const family = naicsFamily(proposal.naics_code);
+  let familyResults: HistoricalAward[] = results;
+  if (family.length > 1 && agency) {
+    try {
+      const rf = await searchUsaspending({
+        naicsCodes: family,
+        startDate,
+        endDate,
+        agency,
+        maxResults: 1000,
+      });
+      if ((rf.results?.length ?? 0) > 0) familyResults = rf.results ?? [];
+    } catch { /* fall back to exact-NAICS results */ }
+  }
   // Pre-filter with loose matcher; deriveTeamingTargets' internal substring
   // filter can't match Tango's "PARENT / SUB (ACRONYM)" format.
   const agencyScoped = agency
-    ? results.filter((a) =>
+    ? familyResults.filter((a) =>
         agencyMatchesLoose(a["Awarding Agency"], agency) ||
         agencyMatchesLoose(a["Awarding Sub Agency"], agency),
       )
-    : results;
+    : familyResults;
   const teamingTargets = deriveTeamingTargets(agencyScoped, { agency: null, limit: 40 });
-  const priorPrimes = teamingTargets.filter((t) => t.classification === "prime").slice(0, 15);
+  const priorPrimes = teamingTargets.slice(0, 20);
   const rankedPartners = rankPartnerExperience(
     results,
     { agency, set_aside: proposal.set_aside ?? null },
@@ -232,6 +275,7 @@ export async function generateMarketSnapshot(
   const candidatePartners = rankedPartners
     .filter((t) => t.classification === "partner")
     .slice(0, 25);
+
 
   // 4) competitive intel
   onProgress("Analyzing competitors…");
