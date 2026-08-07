@@ -2449,6 +2449,34 @@ function TeamHubPanel({
   const isSelfPrime = proposal.engagement_type !== "sub";
   const selfName = teaming.ready ? teaming.self.company_name : "Our Company";
 
+  const lead = resolveTeamLead({
+    teamLeadCompanyId: proposal.team_lead_company_id ?? null,
+    teamLeadName: proposal.team_lead_name ?? null,
+    isSelfPrime,
+    selfName,
+    primeContractorId: proposal.prime_contractor_id ?? null,
+    primeContractorName: proposal.prime_contractor_name ?? null,
+  });
+
+  const handleLeadChange = async (sel: LeadSelection) => {
+    const prev = {
+      team_lead_company_id: proposal.team_lead_company_id ?? null,
+      team_lead_name: proposal.team_lead_name ?? null,
+    };
+    const next = { team_lead_company_id: sel.companyId, team_lead_name: sel.name };
+    onProposalPatch?.(next);
+    const { error } = await supabase.from("proposals").update(next as any).eq("id", proposalId);
+    if (error) {
+      onProposalPatch?.(prev);
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${sel.name} is now the team lead.`);
+  };
+
+  const roomLinked = !!proposal.opportunity_team_id;
+
+
   const deltaChip = (d: number, base: number | null) =>
     d === 0 || base == null ? null : (
       <span
