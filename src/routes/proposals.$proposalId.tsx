@@ -832,11 +832,12 @@ function ProposalPipeline() {
                 ["overview", "Overview"],
                 ["market_intel", "Market Intel"],
                 ["human_intel", "Human Intel"],
-                ["capture_analysis", "Capture Analysis"],
                 ["team", "Team"],
+                ["capture_analysis", "Capture Analysis"],
                 ["proposal", "Opportunity"],
                 ["activities", "Activities"],
               ] as [HubTab, string][]).map(([v, label]) => (
+
                 <TabsTrigger
                   key={v}
                   value={v}
