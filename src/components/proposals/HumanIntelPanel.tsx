@@ -187,8 +187,10 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
               <IntelItem
                 key={row.id}
                 row={row}
+                incorporated={isIntelIncorporated(row.created_at, analysisAt)}
                 onEdit={() => setEditing(row)}
                 onDelete={() => handleDelete(row)}
+
               />
             ))}
           </ol>
