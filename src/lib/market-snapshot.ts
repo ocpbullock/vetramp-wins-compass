@@ -13,6 +13,25 @@ import { deriveTeamingTargets, type TeamingTarget } from "./teaming-targets";
 import { rankPartnerExperience, type PartnerExperienceTarget } from "./partner-experience";
 import { agencyMatchesLoose, canonicalizeAgencyName } from "./agency-match";
 import { userContextFromProposal } from "./user-context";
+import { NAICS_2022 } from "./naics-all";
+
+const NAICS_PREFIX_LEN = 4;
+
+/** All 6-digit NAICS sharing the opportunity's 4-digit prefix (the "family"). */
+export function naicsFamily(code?: string | null): string[] {
+  const c = String(code ?? "").trim();
+  if (c.length < NAICS_PREFIX_LEN) return c ? [c] : [];
+  const prefix = c.slice(0, NAICS_PREFIX_LEN);
+  const family = NAICS_2022
+    .map((n) => n.code)
+    .filter((n) => n.slice(0, NAICS_PREFIX_LEN) === prefix);
+  return family.includes(c) ? family : [c, ...family];
+}
+
+function normVendorName(s: string | null | undefined): string {
+  return (s ?? "").toLowerCase().replace(/\b(inc|llc|corp|corporation|company|co|ltd|lp|llp|the)\b/g, "").replace(/[^a-z0-9]/g, "");
+}
+
 
 export type MarketSnapshot = {
   version: 1;
