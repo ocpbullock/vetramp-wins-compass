@@ -922,7 +922,16 @@ function ProposalPipeline() {
 
 
           <TabsContent value="market_intel" className="mt-4">
-            <MarketIntelPanel proposal={proposal} proposalId={proposalId} />
+            <MarketIntelPanel
+              proposal={proposal}
+              proposalId={proposalId}
+              customerIntelSlot={
+                <StepErrorBoundary label="intel">
+                  <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
+                </StepErrorBoundary>
+              }
+            />
+
           </TabsContent>
 
           <TabsContent value="human_intel" className="mt-4">
