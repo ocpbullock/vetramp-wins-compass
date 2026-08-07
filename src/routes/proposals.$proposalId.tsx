@@ -2579,6 +2579,7 @@ function TeamHubPanel({
         onOpenChange={setSandboxOpen}
         parent={{ kind: "proposal", proposalId, teamId }}
         opportunity={sandboxOpportunity}
+        proposal={proposal}
         seedFromProposed={(teamingEntries as TeamingEntry[])
           .filter((e): e is TeamingEntry => !!e && !!e.company_id)
           .map((e) => ({

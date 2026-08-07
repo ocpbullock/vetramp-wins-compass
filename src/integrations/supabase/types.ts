@@ -1122,6 +1122,7 @@ export type Database = {
           pwin_config: Json | null
           readiness_score: number | null
           response_deadline: string | null
+          sandbox_scenarios: Json | null
           sections: Json | null
           selected_past_performance: string[]
           set_aside: string | null
@@ -1189,6 +1190,7 @@ export type Database = {
           pwin_config?: Json | null
           readiness_score?: number | null
           response_deadline?: string | null
+          sandbox_scenarios?: Json | null
           sections?: Json | null
           selected_past_performance?: string[]
           set_aside?: string | null
@@ -1256,6 +1258,7 @@ export type Database = {
           pwin_config?: Json | null
           readiness_score?: number | null
           response_deadline?: string | null
+          sandbox_scenarios?: Json | null
           sections?: Json | null
           selected_past_performance?: string[]
           set_aside?: string | null
