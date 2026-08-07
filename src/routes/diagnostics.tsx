@@ -264,6 +264,9 @@ function DiagnosticsPage() {
             </ul>
           )}
         </Card>
+
+        <FedSpendVerificationSection />
+
       </main>
     </div>
   );
