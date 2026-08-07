@@ -164,7 +164,8 @@ SUB-TO-PRIME REFRAMING (applies to this entire document):
 - Do NOT produce a standalone offeror-led response; produce drop-in content the prime can paste into THEIR cover letter, capability narrative, and past-performance sections with minimal editing.`
       : "";
 
-    const systemPrompt = (templateBlock ? `${baseSystemPrompt}${subAddendum}\n${templateBlock}` : `${baseSystemPrompt}${subAddendum}`) + `\n\n${UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION}`;
+    const teamLeadBlock = renderTeamLeadBlock(teamLeadName, companyIdentity(companyProfile));
+    const systemPrompt = (templateBlock ? `${baseSystemPrompt}${subAddendum}\n${templateBlock}` : `${baseSystemPrompt}${subAddendum}`) + teamLeadBlock + `\n\n${UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION}`;
 
     const docLabel = pursuit === "rfi_sources_sought"
       ? "an RFI / SOURCES SOUGHT RESPONSE"
