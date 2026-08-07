@@ -309,7 +309,7 @@ ${pursuit === "rfi_sources_sought"
 `
       : `ENGAGEMENT MODE: PRIME. The offeror is pursuing this opportunity as the PRIME contractor. Address Section L instructions and Section M evaluation criteria in full.
 `;
-    const modeBlock = pursuitBlock + engagementBlock;
+    const modeBlock = pursuitBlock + engagementBlock + renderTeamLeadBlock(teamLeadName, identity);
 
     const systemPrompt = `You are a senior federal capture manager writing ONE section of a proposal for ${identity}.
 Output MARKDOWN only — no preamble, no closing remarks.
