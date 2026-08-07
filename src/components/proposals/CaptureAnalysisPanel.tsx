@@ -546,6 +546,17 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
             <AlertTriangle className="w-3 h-3" /> inputs changed since last run ({inputsChangedReasons.join(", ")})
           </span>
         )}
+        {intelRollup.label && (
+          <span className="inline-flex items-center gap-1.5">
+            <StoplightDot
+              rating={intelRollup.pending > 0 ? "moderate" : "strong"}
+              size="sm"
+              ariaLabel={intelRollup.pending > 0 ? "Not yet analyzed" : "Incorporated"}
+            />
+            {intelRollup.label}
+          </span>
+        )}
+
         <div className="ml-auto flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
