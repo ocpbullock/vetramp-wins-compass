@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { AlertTriangle, Handshake, Info, Link2, Trash2, Users, X } from "lucide-react";
+import { AlertTriangle, Crown, Handshake, Info, Link2, Trash2, Users, X } from "lucide-react";
 import { listPartnerCompanies, type PartnerView } from "@/lib/companies";
+import { resolveTeamLead } from "@/lib/team-lead";
 import type { PwinRole } from "@/lib/pwin";
 
 const ROLES: { value: PwinRole; label: string }[] = [
