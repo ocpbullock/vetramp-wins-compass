@@ -290,6 +290,7 @@ Return the matrix. Include ${ourCompany ? "one row for our team plus " : ""}up t
       attachmentsHash: attachmentsText ? await hashCacheKey(attachmentsText) : "",
       proprietaryIntelHash: proprietaryIntelBlock ? await hashCacheKey(proprietaryIntelBlock) : "",
       userContext: userContext ?? {},
+      teamLead: (proposal as any).team_lead_name ?? "",
     });
 
     if (!skipCache) {
