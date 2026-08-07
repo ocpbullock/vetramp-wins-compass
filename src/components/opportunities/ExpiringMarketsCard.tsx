@@ -164,6 +164,7 @@ export function ExpiringMarketsCard({ teamId, onTracked }: Props) {
             NAICS {naicsCodes.join(", ")} ·{" "}
             {recompetesQ.data?.cached ? "cached" : "fresh"} as of{" "}
             {new Date(recompetesQ.data?.fetchedAt ?? Date.now()).toLocaleString()}
+            {rows.length > 25 ? ` · showing the 25 nearest expirations of ${rows.length}` : ""}
           </div>
           {rows.slice(0, 25).map((row) => (
             <Card key={row.piid} className="p-3 flex flex-wrap items-center gap-3">
