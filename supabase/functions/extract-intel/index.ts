@@ -10,10 +10,12 @@ const INTEL_TYPES = [
   "partner_conversation",
   "customer_meeting",
   "candidate_interview",
+  "candidate_profile",
   "conference_note",
   "capture_note",
   "other",
 ] as const;
+
 
 const SCHEMA = {
   type: "object",
