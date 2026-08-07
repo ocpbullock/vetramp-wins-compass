@@ -299,9 +299,9 @@ export function CreateOpportunityTeamDialog(props: Props) {
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
           <Button
             onClick={handleCreate}
-            disabled={busy || (mode === "existing" && !selectedProposalId)}
+            disabled={busy || (!preset && mode === "existing" && !selectedProposalId)}
           >
-            {busy ? "Creating…" : mode === "existing" ? "Link & open opportunity" : "Create Capture Room & open opportunity"}
+            {busy ? "Creating…" : preset ? "Create Capture Room" : mode === "existing" ? "Link & open opportunity" : "Create Capture Room & open opportunity"}
           </Button>
         </DialogFooter>
       </DialogContent>
