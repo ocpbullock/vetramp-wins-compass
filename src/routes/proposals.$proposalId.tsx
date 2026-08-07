@@ -59,7 +59,8 @@ import { RecompeteWatchCard } from "@/components/proposals/RecompeteWatchCard";
 import { CaptureAnalysisPanel, useTeamingSummary } from "@/components/proposals/CaptureAnalysisPanel";
 import { PwinProbabilityCard } from "@/components/proposals/PwinProbabilityCard";
 import type { PartnerSuggestion } from "@/lib/partner-suggest";
-import { ProposedTeamCard, teamingEntriesKey, fetchTeamingEntries, type TeamingEntry } from "@/components/proposals/ProposedTeamCard";
+import { ProposedTeamCard, teamingEntriesKey, fetchTeamingEntries, type TeamingEntry, type LeadSelection } from "@/components/proposals/ProposedTeamCard";
+import { resolveTeamLead, teamLeadNameForGeneration } from "@/lib/team-lead";
 import { MetricCard } from "@/components/MetricCard";
 import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
@@ -564,6 +565,14 @@ function ProposalPipeline() {
           pursuitType: proposal.pursuit_type ?? "rfp_rfq",
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
+          teamLeadName: teamLeadNameForGeneration(resolveTeamLead({
+            teamLeadCompanyId: proposal.team_lead_company_id ?? null,
+            teamLeadName: proposal.team_lead_name ?? null,
+            isSelfPrime: proposal.engagement_type !== "sub",
+            selfName: (companyProfile as any)?.legal_name || "Our Company",
+            primeContractorId: proposal.prime_contractor_id ?? null,
+            primeContractorName: proposal.prime_contractor_name ?? null,
+          })),
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
           template: opts?.template ?? undefined,
           userContext: userContextFromProposal(proposal),
@@ -1867,7 +1876,23 @@ function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, 
             {generatedCount} of {SECS.length} drafted
             {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Sub-to-prime inputs{proposal.prime_contractor_name ? ` for ${proposal.prime_contractor_name}` : ""}</span>}
             {followingTemplate && <span className="ml-1 text-primary">· Template-driven</span>}
+            {(() => {
+              const leadName = teamLeadNameForGeneration(resolveTeamLead({
+                teamLeadCompanyId: proposal.team_lead_company_id ?? null,
+                teamLeadName: proposal.team_lead_name ?? null,
+                isSelfPrime: proposal.engagement_type !== "sub",
+                selfName: "Our Company",
+                primeContractorId: proposal.prime_contractor_id ?? null,
+                primeContractorName: proposal.prime_contractor_name ?? null,
+              }));
+              return leadName ? (
+                <span className="block mt-1 text-[color:var(--brand-brass)]">
+                  Sections will be written from {leadName}'s perspective.
+                </span>
+              ) : null;
+            })()}
           </CardDescription>
+
         </CardHeader>
         <CardContent className="p-2 space-y-1">
           <Button size="sm" className="w-full mb-2" onClick={() => onGenerateAll(SECS, { template: templatePayload })} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
@@ -2358,6 +2383,30 @@ function TeamHubPanel({
     [teamingEntries],
   );
 
+  // Capture Room link state + suggested invite list from the proposed team roster.
+  const { data: captureRoom } = useQuery({
+    queryKey: ["capture-room", proposal.opportunity_team_id],
+    enabled: !!proposal.opportunity_team_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("teams").select("id, name").eq("id", proposal.opportunity_team_id).maybeSingle();
+      return data as { id: string; name: string } | null;
+    },
+  });
+
+  const { data: suggestedInvites = [] } = useQuery({
+    queryKey: ["capture-room-invites", proposalId, existingPartnerIds.join(",")],
+    enabled: existingPartnerIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies").select("id, name, poc_email").in("id", existingPartnerIds);
+      return (data ?? [])
+        .filter((c: any) => !!c.poc_email)
+        .map((c: any) => ({ name: c.name as string, email: c.poc_email as string }));
+    },
+  });
+
+
   const sandboxOpportunity = useMemo(
     () => ({
       title: proposal.opportunity_title || "This opportunity",
@@ -2449,6 +2498,34 @@ function TeamHubPanel({
   const isSelfPrime = proposal.engagement_type !== "sub";
   const selfName = teaming.ready ? teaming.self.company_name : "Our Company";
 
+  const lead = resolveTeamLead({
+    teamLeadCompanyId: proposal.team_lead_company_id ?? null,
+    teamLeadName: proposal.team_lead_name ?? null,
+    isSelfPrime,
+    selfName,
+    primeContractorId: proposal.prime_contractor_id ?? null,
+    primeContractorName: proposal.prime_contractor_name ?? null,
+  });
+
+  const handleLeadChange = async (sel: LeadSelection) => {
+    const prev = {
+      team_lead_company_id: proposal.team_lead_company_id ?? null,
+      team_lead_name: proposal.team_lead_name ?? null,
+    };
+    const next = { team_lead_company_id: sel.companyId, team_lead_name: sel.name };
+    onProposalPatch?.(next);
+    const { error } = await supabase.from("proposals").update(next as any).eq("id", proposalId);
+    if (error) {
+      onProposalPatch?.(prev);
+      toast.error(error.message);
+      return;
+    }
+    toast.success(`${sel.name} is now the team lead.`);
+  };
+
+  const roomLinked = !!proposal.opportunity_team_id;
+
+
   const deltaChip = (d: number, base: number | null) =>
     d === 0 || base == null ? null : (
       <span
@@ -2506,6 +2583,9 @@ function TeamHubPanel({
         opportunityNaics={proposal.naics_code ?? null}
         primeContractorId={proposal.prime_contractor_id ?? null}
         primeContractorName={proposal.prime_contractor_name ?? null}
+        teamLeadCompanyId={proposal.team_lead_company_id ?? null}
+        teamLeadName={proposal.team_lead_name ?? null}
+        onLeadChange={handleLeadChange}
         selfWorkSharePct={
           typeof proposal?.pwin_config?.selfWorkSharePct === "number"
             ? proposal.pwin_config.selfWorkSharePct
@@ -2532,20 +2612,39 @@ function TeamHubPanel({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Team actions</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+            <Users className="w-4 h-4" /> Team actions
+            <span className="text-xs font-normal text-muted-foreground">
+              Team Lead: <span className="text-foreground">{lead.name}</span>
+            </span>
+            {roomLinked && captureRoom && (
+              <Link to="/teams" className="text-xs font-normal text-primary hover:underline">
+                Capture Room: {captureRoom.name}
+              </Link>
+            )}
+          </CardTitle>
           <CardDescription className="text-xs">
-            Spin up a Capture Room for partner collaboration, or send a teaming outreach for this pursuit.
+            Push this pursuit into a Capture Room for partner collaboration, or send a teaming outreach.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => setOppTeamDialogOpen(true)} className="gap-1.5">
-            <UserPlus className="w-3.5 h-3.5" /> Create Capture Room
-          </Button>
+          {roomLinked ? (
+            <Button size="sm" asChild className="gap-1.5">
+              <Link to="/teams">
+                <UserPlus className="w-3.5 h-3.5" /> Open Capture Room
+              </Link>
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => setOppTeamDialogOpen(true)} className="gap-1.5">
+              <UserPlus className="w-3.5 h-3.5" /> Push to Capture Room
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => { setOutreachPartner(null); setOutreachOpen(true); }} className="gap-1.5">
             <Mail className="w-3.5 h-3.5" /> Draft teaming outreach
           </Button>
         </CardContent>
       </Card>
+
 
       <SuggestedPartnersCard
         proposal={{
@@ -2613,6 +2712,13 @@ function TeamHubPanel({
         agency={proposal.agency}
         naicsCode={proposal.naics_code}
         responseDeadline={proposal.response_deadline ?? null}
+        presetProposalId={proposalId}
+        suggestedInvites={suggestedInvites}
+        stayOnPage
+        onCreated={(team) => {
+          onProposalPatch?.({ opportunity_team_id: team.id });
+          qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
+        }}
       />
 
       <TeamingOutreachModal
@@ -2625,6 +2731,7 @@ function TeamHubPanel({
           opportunity_data: proposal.opportunity_data,
         }}
         partner={outreachPartner}
+        teamLeadName={teamLeadNameForGeneration(lead) ?? undefined}
         defaultScopeAreas={proposal.targeted_scope_areas ?? undefined}
       />
     </div>

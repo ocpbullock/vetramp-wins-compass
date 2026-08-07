@@ -74,7 +74,7 @@ const STATUS_LABEL: Record<OutreachStatus, string> = {
 
 export function TeamingOutreachModal({
   open, onOpenChange, proposal, partner,
-  defaultProposedRole, defaultProposedWorkSharePct, defaultScopeAreas,
+  defaultProposedRole, defaultProposedWorkSharePct, defaultScopeAreas, teamLeadName,
 }: {
   open: boolean;
   onOpenChange: (b: boolean) => void;
@@ -88,6 +88,7 @@ export function TeamingOutreachModal({
   defaultProposedRole?: string;
   defaultProposedWorkSharePct?: number | null;
   defaultScopeAreas?: string;
+  teamLeadName?: string;
 }) {
   const [loading, setLoading] = useState(false);
   const [outreach, setOutreach] = useState<Outreach | null>(null);
@@ -188,6 +189,7 @@ export function TeamingOutreachModal({
           proposedScopeAreas: scopeAreas,
           teamId: proposal.team_id,
           proposalId: proposal.id,
+          teamLeadName: teamLeadName ?? null,
           skipCache,
         },
       });

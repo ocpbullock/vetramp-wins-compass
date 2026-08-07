@@ -8,6 +8,7 @@ import {
   missingProfileResponse,
   renderCompanyProfileBlock,
 } from "../_shared/company-profile.ts";
+import { renderTeamLeadBlock } from "../_shared/team-lead.ts";
 import { appliedFacts, normalizeUserContext, renderUserContextPrompt } from "../_shared/user-context.ts";
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 
@@ -236,6 +237,7 @@ Deno.serve(async (req) => {
       pursuitType,
       primeContractorName,
       targetedScopeAreas,
+      teamLeadName,
       template,
       userContext: userContextRaw,
     } = body;
@@ -307,7 +309,7 @@ ${pursuit === "rfi_sources_sought"
 `
       : `ENGAGEMENT MODE: PRIME. The offeror is pursuing this opportunity as the PRIME contractor. Address Section L instructions and Section M evaluation criteria in full.
 `;
-    const modeBlock = pursuitBlock + engagementBlock;
+    const modeBlock = pursuitBlock + engagementBlock + renderTeamLeadBlock(teamLeadName, identity);
 
     const systemPrompt = `You are a senior federal capture manager writing ONE section of a proposal for ${identity}.
 Output MARKDOWN only — no preamble, no closing remarks.

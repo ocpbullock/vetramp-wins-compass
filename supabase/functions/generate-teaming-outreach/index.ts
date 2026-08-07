@@ -4,6 +4,7 @@ import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, se
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 import { hasCompanyProfile, missingProfileResponse, renderCompanyProfileBlock, companyIdentity } from "../_shared/company-profile.ts";
+import { renderTeamLeadBlock } from "../_shared/team-lead.ts";
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 
 const SCHEMA = {
@@ -35,6 +36,7 @@ serve(async (req) => {
       proposedScopeAreas,
       teamId,
       proposalId,
+      teamLeadName,
       skipCache,
     } = await req.json();
 
@@ -62,6 +64,7 @@ serve(async (req) => {
       share: proposedWorkSharePct ?? "",
       scope: proposedScopeAreas || "",
       companyKey: companyIdentity(companyProfile),
+      teamLead: typeof teamLeadName === "string" ? teamLeadName : "",
     });
 
     if (!skipCache) {
@@ -73,7 +76,7 @@ serve(async (req) => {
       }
     }
 
-    const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + "You are a business development professional specializing in federal government contracting teaming arrangements. Write professional, compelling outreach messages that clearly articulate mutual benefit and complementary capabilities. Be specific, never generic. Reference concrete facts from the company profiles, certifications, NAICS codes, and opportunity details provided. Never fabricate past performance or relationships.";
+    const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + "You are a business development professional specializing in federal government contracting teaming arrangements. Write professional, compelling outreach messages that clearly articulate mutual benefit and complementary capabilities. Be specific, never generic. Reference concrete facts from the company profiles, certifications, NAICS codes, and opportunity details provided. Never fabricate past performance or relationships." + renderTeamLeadBlock(teamLeadName, companyIdentity(companyProfile));
 
     const direction = engagement === "sub"
       ? `We (the sender) are pursuing this opportunity as a SUBCONTRACTOR and reaching out to the target company as a potential PRIME we could team UNDER. Frame the value we bring as a sub: relevant past performance, certifications, scope we can self-perform.`

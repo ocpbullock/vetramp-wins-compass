@@ -8,8 +8,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
-import { AlertTriangle, Handshake, Info, Link2, Trash2, Users, X } from "lucide-react";
+import { AlertTriangle, Crown, Handshake, Info, Link2, Trash2, Users, X } from "lucide-react";
 import { listPartnerCompanies, type PartnerView } from "@/lib/companies";
+import { resolveTeamLead } from "@/lib/team-lead";
 import type { PwinRole } from "@/lib/pwin";
 
 const ROLES: { value: PwinRole; label: string }[] = [
@@ -78,27 +79,73 @@ const clampShare = (v: number): number => {
   return Math.max(0, Math.min(100, Math.round(v)));
 };
 
+export type LeadSelection = { companyId: string | null; name: string };
+
+function LeadToggle({
+  isLead,
+  onSelect,
+}: {
+  isLead: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={() => { if (!isLead) onSelect(); }}
+      title={isLead ? "Team Lead" : "Make team lead"}
+      aria-label={isLead ? "Team Lead" : "Make team lead"}
+      aria-pressed={isLead}
+      className={`shrink-0 rounded p-0.5 transition-colors ${
+        isLead
+          ? "text-[color:var(--brand-brass)]"
+          : "text-muted-foreground/40 hover:text-[color:var(--brand-brass)]"
+      }`}
+    >
+      <Crown className="w-3.5 h-3.5" fill={isLead ? "currentColor" : "none"} />
+    </button>
+  );
+}
+
+function LeadBadge() {
+  return (
+    <Badge
+      variant="outline"
+      className="text-[9px] px-1 h-3.5 border-[color:var(--brand-brass)]/50 text-[color:var(--brand-brass)]"
+    >
+      Team Lead
+    </Badge>
+  );
+}
+
 export function ProposedTeamCard({
   proposalId,
   teamId,
   selfName,
+  selfCompanyId,
   isSelfPrime,
   opportunityNaics,
   primeContractorId,
   primeContractorName,
   selfWorkSharePct,
+  teamLeadCompanyId,
+  teamLeadName,
   onSelfShareChange,
+  onLeadChange,
   onLinkPrime,
 }: {
   proposalId: string;
   teamId: string;
   selfName: string;
+  selfCompanyId?: string | null;
   isSelfPrime: boolean;
   opportunityNaics: string | null;
   primeContractorId?: string | null;
   primeContractorName?: string | null;
   selfWorkSharePct?: number | null;
+  teamLeadCompanyId?: string | null;
+  teamLeadName?: string | null;
   onSelfShareChange?: (pct: number) => void;
+  onLeadChange?: (lead: LeadSelection) => void;
   onLinkPrime?: () => void;
 }) {
   const qc = useQueryClient();
@@ -301,6 +348,23 @@ export function ProposedTeamCard({
   const memberCount =
     1 + subEntries.length + (!isSelfPrime && (rosterPrime || primeContractorName) ? 1 : 0);
 
+  const lead = resolveTeamLead({
+    teamLeadCompanyId,
+    teamLeadName,
+    isSelfPrime,
+    selfName,
+    selfCompanyId: selfCompanyId ?? null,
+    primeContractorId: rosterPrime?.id ?? primeContractorId ?? null,
+    primeContractorName: rosterPrime?.company_name ?? primeContractorName ?? null,
+  });
+  const primeRowName = rosterPrime?.company_name ?? primeContractorName ?? "";
+  const primeRowId = rosterPrime?.id ?? primeContractorId ?? null;
+  const leadIsSelf = lead.isSelf;
+  const leadIsPrimeRow =
+    !leadIsSelf &&
+    !!primeRowName &&
+    (lead.companyId ? lead.companyId === primeRowId : lead.name === primeRowName);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -311,17 +375,25 @@ export function ProposedTeamCard({
             </CardTitle>
             <CardDescription className="text-xs">
               The team of record for this pursuit. Edit role, work share, and outreach — pWin and
-              Team Strength update live.
+              Team Strength update live. Use the crown to set the team lead.
             </CardDescription>
           </div>
           <div className="text-xs text-muted-foreground text-right shrink-0">
             <div className="tabular-nums">{memberCount} member{memberCount === 1 ? "" : "s"}</div>
+            <div className="flex items-center justify-end gap-1 mt-0.5">
+              <Crown className="w-3 h-3 text-[color:var(--brand-brass)]" fill="currentColor" />
+              <span className="truncate max-w-[160px]">{lead.name}</span>
+            </div>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {!isSelfPrime && (rosterPrime || primeContractorName) && (
           <div className="flex items-center gap-2 rounded-md border border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_10%,transparent)] px-2 py-1.5">
+            <LeadToggle
+              isLead={leadIsPrimeRow}
+              onSelect={() => onLeadChange?.({ companyId: primeRowId, name: primeRowName })}
+            />
             <Badge
               variant="outline"
               className="text-[10px] px-1.5 py-0 h-4 border-[color:var(--brand-brass)]/50 text-[color:var(--brand-brass)]"
@@ -329,8 +401,9 @@ export function ProposedTeamCard({
               Prime
             </Badge>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium truncate">
-                {rosterPrime?.company_name ?? primeContractorName}
+              <div className="text-sm font-medium truncate flex items-center gap-1.5">
+                <span className="truncate">{primeRowName}</span>
+                {leadIsPrimeRow && <LeadBadge />}
               </div>
               {!rosterPrime && (
                 <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
@@ -357,11 +430,18 @@ export function ProposedTeamCard({
         )}
 
         <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
+          <LeadToggle
+            isLead={leadIsSelf}
+            onSelect={() => onLeadChange?.({ companyId: selfCompanyId ?? null, name: selfName })}
+          />
           <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
             {isSelfPrime ? "Us" : "Sub (us)"}
           </Badge>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium truncate">{selfName}</div>
+            <div className="text-sm font-medium truncate flex items-center gap-1.5">
+              <span className="truncate">{selfName}</span>
+              {leadIsSelf && <LeadBadge />}
+            </div>
             {!isSelfPrime && (
               <div className="text-[10px] text-muted-foreground mt-0.5">Our share under the prime</div>
             )}
@@ -393,12 +473,20 @@ export function ProposedTeamCard({
 
         {subEntries.map((e) => {
           const p = partnerById.get(e.company_id);
+          const rowName = p?.company_name ?? "";
+          const isRowLead = !!lead.companyId && lead.companyId === e.company_id;
           return (
             <ProposedRow
               key={e.id}
               entry={e}
               partner={p ?? null}
               opportunityNaics={opportunityNaics}
+              isLead={isRowLead}
+              onSetLead={
+                rowName
+                  ? () => onLeadChange?.({ companyId: e.company_id, name: rowName })
+                  : undefined
+              }
               onRoleChange={(r) => patchMutation.mutate({ id: e.id, patch: { role: r } })}
               onShareType={(n) => setShareOptimistic(e.id, n)}
               onShareCommit={() => commitShare(e.id)}
@@ -467,6 +555,8 @@ function ProposedRow({
   entry,
   partner,
   opportunityNaics,
+  isLead,
+  onSetLead,
   onRoleChange,
   onShareType,
   onShareCommit,
@@ -476,6 +566,8 @@ function ProposedRow({
   entry: TeamingEntry;
   partner: PartnerView | null;
   opportunityNaics: string | null;
+  isLead?: boolean;
+  onSetLead?: () => void;
   onRoleChange: (r: PwinRole) => void;
   onShareType: (n: number) => void;
   onShareCommit: () => void;
@@ -534,7 +626,12 @@ function ProposedRow({
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5">
+    <div
+      className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${
+        isLead ? "border-[color:var(--brand-brass)]/50" : "border-border"
+      }`}
+    >
+      {onSetLead && <LeadToggle isLead={!!isLead} onSelect={onSetLead} />}
       <HoverCard openDelay={150}>
         <HoverCardTrigger asChild>
           <button type="button" className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Why they help">
@@ -556,8 +653,9 @@ function ProposedRow({
       </HoverCard>
 
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium truncate">
-          {partner?.company_name ?? "(unknown company)"}
+        <div className="text-sm font-medium truncate flex items-center gap-1.5">
+          <span className="truncate">{partner?.company_name ?? "(unknown company)"}</span>
+          {isLead && <LeadBadge />}
         </div>
         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
           {naicsHit && <Badge variant="outline" className="text-[9px] px-1 h-3.5">NAICS match</Badge>}

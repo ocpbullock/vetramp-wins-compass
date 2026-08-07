@@ -6,6 +6,7 @@ import { normalizeUserContext, appliedFacts, renderUserContextPrompt } from "../
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 import { loadOpportunityIntelBlock, PROPRIETARY_INTEL_SYSTEM_INSTRUCTION } from "../_shared/opportunity-intel.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { renderTeamLeadBlock } from "../_shared/team-lead.ts";
 
 const SCHEMA = {
   type: "object",
@@ -290,6 +291,7 @@ Return the matrix. Include ${ourCompany ? "one row for our team plus " : ""}up t
       attachmentsHash: attachmentsText ? await hashCacheKey(attachmentsText) : "",
       proprietaryIntelHash: proprietaryIntelBlock ? await hashCacheKey(proprietaryIntelBlock) : "",
       userContext: userContext ?? {},
+      teamLead: (proposal as any).team_lead_name ?? "",
     });
 
     if (!skipCache) {
@@ -303,8 +305,25 @@ Return the matrix. Include ${ourCompany ? "one row for our team plus " : ""}up t
       }
     }
 
+    // Team lead voice: only applies when the designated lead is not our own company.
+    const teamLeadName: string | null = (proposal as any).team_lead_name ?? null;
+    const teamLeadCompanyId: string | null = (proposal as any).team_lead_company_id ?? null;
+    let teamLeadIsSelf = false;
+    if (teamLeadName && teamLeadCompanyId) {
+      try {
+        const { data: leadCompany } = await ctx.userClient
+          .from("companies")
+          .select("is_own_company")
+          .eq("id", teamLeadCompanyId)
+          .maybeSingle();
+        teamLeadIsSelf = !!(leadCompany as any)?.is_own_company;
+      } catch { /* ignore */ }
+    }
+    const teamLeadBlock = teamLeadIsSelf ? "" : renderTeamLeadBlock(teamLeadName, null);
+
     const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + PROPRIETARY_INTEL_SYSTEM_INSTRUCTION + "\n\n" +
-      `You are a senior federal capture manager producing a Capture Analysis for an opportunity. Produce a sober bid/no-bid recommendation, win themes, a synthesized competitor assessment, staffing concerns (clearance, labor categories, incumbent staff retention), a short prioritized next-actions list, and a recommended team_strategy. For team_strategy: pick recommended_model from {prime_with_subs, sub_to_prime, joint_venture, mentor_protege, niche_sub} based on set-aside eligibility, our size/certifications vs the competitive field, the incumbent situation, and any proprietary intel; give a concrete model_rationale; list 2–5 partner_archetypes describing the type of partner to recruit (not specific companies unless supported by market signal), each with a why and an example_signal grounded in the provided data. Be specific. When proprietary human intelligence conflicts with public/market_snapshot signals, defer to the proprietary intel and call out the discrepancy. Never fabricate facts.`;
+      `You are a senior federal capture manager producing a Capture Analysis for an opportunity. Produce a sober bid/no-bid recommendation, win themes, a synthesized competitor assessment, staffing concerns (clearance, labor categories, incumbent staff retention), a short prioritized next-actions list, and a recommended team_strategy. For team_strategy: pick recommended_model from {prime_with_subs, sub_to_prime, joint_venture, mentor_protege, niche_sub} based on set-aside eligibility, our size/certifications vs the competitive field, the incumbent situation, and any proprietary intel; give a concrete model_rationale; list 2–5 partner_archetypes describing the type of partner to recruit (not specific companies unless supported by market signal), each with a why and an example_signal grounded in the provided data. Be specific. When proprietary human intelligence conflicts with public/market_snapshot signals, defer to the proprietary intel and call out the discrepancy. Never fabricate facts.` + teamLeadBlock;
+
 
     const opportunitySummary = {
       title: proposal.opportunity_title,

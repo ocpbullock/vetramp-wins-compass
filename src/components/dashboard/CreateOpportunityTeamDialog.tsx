@@ -32,12 +32,21 @@ type Props = {
   agency?: string | null;
   naicsCode?: string | null;
   responseDeadline?: string | null;
+  /** When set, this proposal is linked directly (no new/existing choice). */
+  presetProposalId?: string;
+  /** Pre-populated invite candidates rendered as editable checkboxes. */
+  suggestedInvites?: { name: string; email: string }[];
+  /** Fired after the room is created, before navigation. */
+  onCreated?: (team: { id: string; name?: string | null }) => void;
+  /** Skip navigating to the proposal after creation (already there). */
+  stayOnPage?: boolean;
 };
 
 type Mode = "new" | "existing";
 
 export function CreateOpportunityTeamDialog(props: Props) {
   const { open, onOpenChange, opportunityTitle, source, sourceId } = props;
+  const preset = props.presetProposalId ?? null;
   const { currentTeam } = useTeam();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -49,12 +58,14 @@ export function CreateOpportunityTeamDialog(props: Props) {
   const [proposalSearch, setProposalSearch] = useState("");
   const [emails, setEmails] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checkedInvites, setCheckedInvites] = useState<Record<string, boolean>>({});
+  const suggestedInvites = props.suggestedInvites ?? [];
 
   const isOrg = !!currentTeam && currentTeam.team_type === "organization";
 
   const proposalsQ = useQuery({
     queryKey: ["linkable-proposals", currentTeam?.id],
-    enabled: open && mode === "existing" && isOrg,
+    enabled: open && !preset && mode === "existing" && isOrg,
     queryFn: () => listLinkable({ data: { parentTeamId: currentTeam!.id } }),
   });
 
@@ -74,7 +85,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
       return;
     }
     if (!user) return;
-    if (mode === "existing" && !selectedProposalId) {
+    if (!preset && mode === "existing" && !selectedProposalId) {
       toast.error("Pick a proposal to link, or switch to 'Start a new proposal'.");
       return;
     }
@@ -82,7 +93,9 @@ export function CreateOpportunityTeamDialog(props: Props) {
     try {
       let proposalId: string;
 
-      if (mode === "new") {
+      if (preset) {
+        proposalId = preset;
+      } else if (mode === "new") {
         const sol = props.solicitationNumber ?? `opp-${sourceId.slice(0, 8)}`;
         const { data: prop, error: pErr } = await supabase
           .from("proposals")
@@ -115,10 +128,14 @@ export function CreateOpportunityTeamDialog(props: Props) {
         },
       });
 
-      const list = emails
+      const typed = emails
         .split(/[\s,;]+/)
         .map((s) => s.trim())
         .filter((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
+      const picked = suggestedInvites
+        .filter((s) => checkedInvites[s.email.toLowerCase()])
+        .map((s) => s.email.trim());
+      const list = Array.from(new Set([...picked, ...typed].map((e) => e.toLowerCase())));
       if (list.length) {
         const origin = typeof window !== "undefined" ? window.location.origin : "";
         for (const email of list) {
@@ -132,8 +149,11 @@ export function CreateOpportunityTeamDialog(props: Props) {
       } else {
         toast.success("Capture Room created.");
       }
+      props.onCreated?.(team as { id: string; name?: string | null });
       onOpenChange(false);
-      navigate({ to: "/proposals/$proposalId", params: { proposalId } });
+      if (!props.stayOnPage) {
+        navigate({ to: "/proposals/$proposalId", params: { proposalId } });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not create Capture Room.");
     } finally {
@@ -156,31 +176,62 @@ export function CreateOpportunityTeamDialog(props: Props) {
             <div className="mt-1 text-sm font-medium">{opportunityTitle}</div>
           </div>
 
-          <div>
-            <Label className="text-xs uppercase tracking-wide text-muted-foreground">Opportunity record</Label>
-            <RadioGroup
-              value={mode}
-              onValueChange={(v) => setMode(v as Mode)}
-              className="mt-2 grid grid-cols-1 gap-2"
-            >
-              <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
-                <RadioGroupItem value="new" className="mt-0.5" />
-                <div className="text-sm">
-                  <div className="font-medium">Start a new opportunity</div>
-                  <div className="text-xs text-muted-foreground">Creates a fresh opportunity stub from this listing.</div>
-                </div>
-              </Label>
-              <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
-                <RadioGroupItem value="existing" className="mt-0.5" />
-                <div className="text-sm flex-1">
-                  <div className="font-medium">Link an existing opportunity</div>
-                  <div className="text-xs text-muted-foreground">Choose one of your organization's opportunities that isn't already linked to a Capture Room.</div>
-                </div>
-              </Label>
-            </RadioGroup>
-          </div>
+          {!preset && (
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">Opportunity record</Label>
+              <RadioGroup
+                value={mode}
+                onValueChange={(v) => setMode(v as Mode)}
+                className="mt-2 grid grid-cols-1 gap-2"
+              >
+                <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
+                  <RadioGroupItem value="new" className="mt-0.5" />
+                  <div className="text-sm">
+                    <div className="font-medium">Start a new opportunity</div>
+                    <div className="text-xs text-muted-foreground">Creates a fresh opportunity stub from this listing.</div>
+                  </div>
+                </Label>
+                <Label className="flex items-start gap-2 border rounded-md p-3 cursor-pointer hover:bg-accent">
+                  <RadioGroupItem value="existing" className="mt-0.5" />
+                  <div className="text-sm flex-1">
+                    <div className="font-medium">Link an existing opportunity</div>
+                    <div className="text-xs text-muted-foreground">Choose one of your organization's opportunities that isn't already linked to a Capture Room.</div>
+                  </div>
+                </Label>
+              </RadioGroup>
+            </div>
+          )}
 
-          {mode === "existing" && (
+          {suggestedInvites.length > 0 && (
+            <div>
+              <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                Invite proposed team partners
+              </Label>
+              <div className="mt-2 border rounded-md divide-y max-h-44 overflow-y-auto">
+                {suggestedInvites.map((s) => {
+                  const key = s.email.toLowerCase();
+                  return (
+                    <label key={key} className="flex items-center gap-2 p-2 text-sm cursor-pointer hover:bg-accent">
+                      <input
+                        type="checkbox"
+                        checked={!!checkedInvites[key]}
+                        onChange={(e) =>
+                          setCheckedInvites((prev) => ({ ...prev, [key]: e.target.checked }))
+                        }
+                      />
+                      <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                      <span className="text-xs text-muted-foreground truncate">{s.email}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Unchecked partners are not invited. Add anyone else below.
+              </p>
+            </div>
+          )}
+
+          {!preset && mode === "existing" && (
             <div className="space-y-2">
               <Input
                 placeholder="Search title, sol #, agency…"
@@ -248,9 +299,9 @@ export function CreateOpportunityTeamDialog(props: Props) {
           <Button variant="ghost" onClick={() => onOpenChange(false)} disabled={busy}>Cancel</Button>
           <Button
             onClick={handleCreate}
-            disabled={busy || (mode === "existing" && !selectedProposalId)}
+            disabled={busy || (!preset && mode === "existing" && !selectedProposalId)}
           >
-            {busy ? "Creating…" : mode === "existing" ? "Link & open opportunity" : "Create Capture Room & open opportunity"}
+            {busy ? "Creating…" : preset ? "Create Capture Room" : mode === "existing" ? "Link & open opportunity" : "Create Capture Room & open opportunity"}
           </Button>
         </DialogFooter>
       </DialogContent>

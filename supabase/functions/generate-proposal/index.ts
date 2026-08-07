@@ -7,6 +7,7 @@ import {
   missingProfileResponse,
   renderCompanyProfileBlock,
 } from "../_shared/company-profile.ts";
+import { renderTeamLeadBlock } from "../_shared/team-lead.ts";
 import { normalizeUserContext, renderUserContextPrompt } from "../_shared/user-context.ts";
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 
@@ -64,7 +65,7 @@ Deno.serve(async (req) => {
     try { ctx = await authenticate(req); }
     catch (e) { const r = authErrorResponse(e, corsHeaders); if (r) return r; throw e; }
 
-    const { opportunity, teamId, companyProfile, engagementType, pursuitType, primeContractorName, targetedScopeAreas, userContext: userContextRaw, template } = await req.json();
+    const { opportunity, teamId, companyProfile, engagementType, pursuitType, primeContractorName, targetedScopeAreas, teamLeadName, userContext: userContextRaw, template } = await req.json();
     const engagement = engagementType === "sub" ? "sub" : "prime";
     const pursuit = pursuitType === "rfi_sources_sought" || pursuitType === "capability_statement" ? pursuitType : "rfp_rfq";
     const userContext = normalizeUserContext(userContextRaw);
@@ -163,7 +164,8 @@ SUB-TO-PRIME REFRAMING (applies to this entire document):
 - Do NOT produce a standalone offeror-led response; produce drop-in content the prime can paste into THEIR cover letter, capability narrative, and past-performance sections with minimal editing.`
       : "";
 
-    const systemPrompt = (templateBlock ? `${baseSystemPrompt}${subAddendum}\n${templateBlock}` : `${baseSystemPrompt}${subAddendum}`) + `\n\n${UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION}`;
+    const teamLeadBlock = renderTeamLeadBlock(teamLeadName, companyIdentity(companyProfile));
+    const systemPrompt = (templateBlock ? `${baseSystemPrompt}${subAddendum}\n${templateBlock}` : `${baseSystemPrompt}${subAddendum}`) + teamLeadBlock + `\n\n${UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION}`;
 
     const docLabel = pursuit === "rfi_sources_sought"
       ? "an RFI / SOURCES SOUGHT RESPONSE"
