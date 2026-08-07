@@ -626,7 +626,12 @@ function ProposedRow({
   };
 
   return (
-    <div className="flex items-center gap-2 rounded-md border border-border px-2 py-1.5">
+    <div
+      className={`flex items-center gap-2 rounded-md border px-2 py-1.5 ${
+        isLead ? "border-[color:var(--brand-brass)]/50" : "border-border"
+      }`}
+    >
+      {onSetLead && <LeadToggle isLead={!!isLead} onSelect={onSetLead} />}
       <HoverCard openDelay={150}>
         <HoverCardTrigger asChild>
           <button type="button" className="text-muted-foreground hover:text-foreground shrink-0" aria-label="Why they help">
@@ -648,8 +653,9 @@ function ProposedRow({
       </HoverCard>
 
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium truncate">
-          {partner?.company_name ?? "(unknown company)"}
+        <div className="text-sm font-medium truncate flex items-center gap-1.5">
+          <span className="truncate">{partner?.company_name ?? "(unknown company)"}</span>
+          {isLead && <LeadBadge />}
         </div>
         <div className="flex items-center gap-1 mt-0.5 flex-wrap">
           {naicsHit && <Badge variant="outline" className="text-[9px] px-1 h-3.5">NAICS match</Badge>}
