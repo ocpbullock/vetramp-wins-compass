@@ -24,6 +24,10 @@ export type MarketSnapshot = {
     startDate: string;
     endDate: string;
     scope?: "naics+agency" | "naics_only";
+    /** Linked contract vehicle (proposals.vehicle_registry_id) if any. */
+    vehicleId?: string | null;
+    /** NAICS family (same 4-digit prefix) used for the "vendors at this client" pull. */
+    naicsFamily?: string[];
   };
   historical: {
     totalAwards: number;
@@ -32,6 +36,8 @@ export type MarketSnapshot = {
     truncated: boolean;
     topVendors: { name: string; value: number; awards: number }[];
     byYear: { year: string; value: number; awards: number }[];
+    /** Split of fetched awards against the linked vehicle's awardee pool. */
+    onVehicle?: { value: number; awards: number };
   };
   incumbent: IncumbentMatch | null;
   priorPrimes: TeamingTarget[];
