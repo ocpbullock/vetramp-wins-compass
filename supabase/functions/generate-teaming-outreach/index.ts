@@ -64,6 +64,7 @@ serve(async (req) => {
       share: proposedWorkSharePct ?? "",
       scope: proposedScopeAreas || "",
       companyKey: companyIdentity(companyProfile),
+      teamLead: typeof teamLeadName === "string" ? teamLeadName : "",
     });
 
     if (!skipCache) {
