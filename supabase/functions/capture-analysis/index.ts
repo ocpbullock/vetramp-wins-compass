@@ -6,6 +6,7 @@ import { normalizeUserContext, appliedFacts, renderUserContextPrompt } from "../
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 import { loadOpportunityIntelBlock, PROPRIETARY_INTEL_SYSTEM_INSTRUCTION } from "../_shared/opportunity-intel.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
+import { renderTeamLeadBlock } from "../_shared/team-lead.ts";
 
 const SCHEMA = {
   type: "object",
