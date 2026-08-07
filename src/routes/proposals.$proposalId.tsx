@@ -2594,11 +2594,7 @@ function TeamHubPanel({
               Team Lead: <span className="text-foreground">{lead.name}</span>
             </span>
             {roomLinked && captureRoom && (
-              <Link
-                to="/proposals/$proposalId"
-                params={{ proposalId }}
-                className="text-xs font-normal text-primary hover:underline"
-              >
+              <Link to="/teams" className="text-xs font-normal text-primary hover:underline">
                 Capture Room: {captureRoom.name}
               </Link>
             )}
@@ -2610,7 +2606,7 @@ function TeamHubPanel({
         <CardContent className="flex flex-wrap gap-2">
           {roomLinked ? (
             <Button size="sm" asChild className="gap-1.5">
-              <Link to="/teams" search={{ team: proposal.opportunity_team_id } as any}>
+              <Link to="/teams">
                 <UserPlus className="w-3.5 h-3.5" /> Open Capture Room
               </Link>
             </Button>
