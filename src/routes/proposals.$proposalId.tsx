@@ -2559,6 +2559,9 @@ function TeamHubPanel({
         opportunityNaics={proposal.naics_code ?? null}
         primeContractorId={proposal.prime_contractor_id ?? null}
         primeContractorName={proposal.prime_contractor_name ?? null}
+        teamLeadCompanyId={proposal.team_lead_company_id ?? null}
+        teamLeadName={proposal.team_lead_name ?? null}
+        onLeadChange={handleLeadChange}
         selfWorkSharePct={
           typeof proposal?.pwin_config?.selfWorkSharePct === "number"
             ? proposal.pwin_config.selfWorkSharePct
@@ -2585,20 +2588,43 @@ function TeamHubPanel({
 
       <Card>
         <CardHeader className="pb-2">
-          <CardTitle className="text-base flex items-center gap-2"><Users className="w-4 h-4" /> Team actions</CardTitle>
+          <CardTitle className="text-base flex items-center gap-2 flex-wrap">
+            <Users className="w-4 h-4" /> Team actions
+            <span className="text-xs font-normal text-muted-foreground">
+              Team Lead: <span className="text-foreground">{lead.name}</span>
+            </span>
+            {roomLinked && captureRoom && (
+              <Link
+                to="/proposals/$proposalId"
+                params={{ proposalId }}
+                className="text-xs font-normal text-primary hover:underline"
+              >
+                Capture Room: {captureRoom.name}
+              </Link>
+            )}
+          </CardTitle>
           <CardDescription className="text-xs">
-            Spin up a Capture Room for partner collaboration, or send a teaming outreach for this pursuit.
+            Push this pursuit into a Capture Room for partner collaboration, or send a teaming outreach.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" onClick={() => setOppTeamDialogOpen(true)} className="gap-1.5">
-            <UserPlus className="w-3.5 h-3.5" /> Create Capture Room
-          </Button>
+          {roomLinked ? (
+            <Button size="sm" asChild className="gap-1.5">
+              <Link to="/teams" search={{ team: proposal.opportunity_team_id } as any}>
+                <UserPlus className="w-3.5 h-3.5" /> Open Capture Room
+              </Link>
+            </Button>
+          ) : (
+            <Button size="sm" onClick={() => setOppTeamDialogOpen(true)} className="gap-1.5">
+              <UserPlus className="w-3.5 h-3.5" /> Push to Capture Room
+            </Button>
+          )}
           <Button size="sm" variant="outline" onClick={() => { setOutreachPartner(null); setOutreachOpen(true); }} className="gap-1.5">
             <Mail className="w-3.5 h-3.5" /> Draft teaming outreach
           </Button>
         </CardContent>
       </Card>
+
 
       <SuggestedPartnersCard
         proposal={{
