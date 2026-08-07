@@ -21,6 +21,7 @@ import {
   type CheckRun,
   type CheckStatus,
 } from "@/lib/diagnostics";
+import { FedSpendVerificationSection } from "@/components/settings/FedSpendVerificationPanel";
 
 export const Route = createFileRoute("/diagnostics")({ component: DiagnosticsPage });
 
@@ -264,6 +265,9 @@ function DiagnosticsPage() {
             </ul>
           )}
         </Card>
+
+        <FedSpendVerificationSection />
+
       </main>
     </div>
   );
