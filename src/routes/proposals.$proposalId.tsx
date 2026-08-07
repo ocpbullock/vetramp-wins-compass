@@ -946,13 +946,13 @@ function ProposalPipeline() {
             {(() => {
               const isShort = proposal.pursuit_type === "rfi_sources_sought" || proposal.pursuit_type === "capability_statement";
               const proposalSteps: { id: string; label: string }[] = [
-                { id: "intel", label: "Customer Intel" },
                 ...(!isShort ? [{ id: "compliance", label: "Compliance" }] : []),
                 { id: "solution", label: isShort ? "Inputs" : (proposal.engagement_type === "sub" ? "Sub Inputs" : "Solution Design") },
                 { id: "generate", label: "Generate" },
               ];
               const activeIdx = Math.max(0, proposalSteps.findIndex((s) => s.id === step));
-              const currentStepId = proposalSteps[activeIdx]?.id ?? "intel";
+              const currentStepId = proposalSteps[activeIdx]?.id ?? proposalSteps[0]!.id;
+
 
               return (
                 <div className="grid gap-4 md:grid-cols-[220px_1fr]">
