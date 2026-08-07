@@ -181,7 +181,7 @@ function ProposalPipeline() {
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const [attachments, setAttachments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [step, setStep] = useState("intel");
+  const [step, setStep] = useState("compliance");
   const searchParams = Route.useSearch();
   const initialTab = (searchParams.tab ?? "overview") as HubTab;
   const [hubTab, setHubTab] = useState<HubTab>(initialTab);
