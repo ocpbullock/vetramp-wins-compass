@@ -380,7 +380,7 @@ export function MarketIntelPanel({
           ) : awardees.length === 0 ? (
             <div className="text-xs text-muted-foreground space-y-1">
               <div>No awardees recorded for this vehicle yet.</div>
-              <Link to="/settings" search={{ tab: "vehicles" }} className="text-primary hover:underline">
+              <Link to="/settings" hash="vehicles" className="text-primary hover:underline">
                 Import a list or run AI awardee research in the vehicle registry →
               </Link>
             </div>
