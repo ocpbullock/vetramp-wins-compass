@@ -181,12 +181,14 @@ export function MarketIntelPanel({
 
   if (!snapshot) {
     return (
+      <>
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Market Intel</CardTitle>
           <CardDescription>
-            Pulls historical awards, incumbent, prior primes/subs, candidate partners, and competitive landscape into one snapshot.
+            Pulls historical awards, incumbent, vendors at this client, and the linked vehicle's vendor pool into one snapshot.
           </CardDescription>
+
         </CardHeader>
         <CardContent className="space-y-3">
           <Button onClick={generate} disabled={loading || !proposal?.naics_code || !proposal?.agency}>
