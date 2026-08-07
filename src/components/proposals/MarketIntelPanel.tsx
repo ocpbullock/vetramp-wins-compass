@@ -258,6 +258,29 @@ export function MarketIntelPanel({
             <div><span className="text-muted-foreground">Total value:</span> <span className="font-mono">{fmtUsd(snapshot.historical.totalValue)}</span></div>
             <div><span className="text-muted-foreground">Fetched:</span> <span className="font-mono">{snapshot.historical.fetched.toLocaleString()}{snapshot.historical.truncated ? " (truncated)" : ""}</span></div>
           </div>
+          {vehicleId && snapshot.historical.onVehicle && (() => {
+            const onV = snapshot.historical.onVehicle!;
+            const total = snapshot.historical.totalValue;
+            const offValue = Math.max(0, total - onV.value);
+            const share = total > 0 ? Math.round((onV.value / total) * 100) : 0;
+            return (
+              <div className="pt-2 space-y-1">
+                <div className="text-xs">
+                  <span className="text-muted-foreground">On-vehicle vendors:</span>{" "}
+                  <span className="font-mono">{fmtUsd(onV.value)} across {onV.awards.toLocaleString()} awards</span>
+                  <span className="text-muted-foreground"> · Off-vehicle: </span>
+                  <span className="font-mono">{fmtUsd(offValue)}</span>
+                </div>
+                <div className="h-2 w-full rounded-full bg-muted overflow-hidden" role="img" aria-label={`On-vehicle share ${share}%`}>
+                  <div className="h-full bg-primary" style={{ width: `${share}%` }} />
+                </div>
+                <div className="text-[11px] text-muted-foreground">
+                  {share}% of fetched award value went to {vehicle?.vehicle_name ?? "the linked vehicle"} awardees
+                </div>
+              </div>
+            );
+          })()}
+
           {snapshot.historical.byYear.length > 0 && (
             <div className="pt-2">
               <div className="text-xs text-muted-foreground mb-1">By year</div>
