@@ -2359,6 +2359,30 @@ function TeamHubPanel({
     [teamingEntries],
   );
 
+  // Capture Room link state + suggested invite list from the proposed team roster.
+  const { data: captureRoom } = useQuery({
+    queryKey: ["capture-room", proposal.opportunity_team_id],
+    enabled: !!proposal.opportunity_team_id,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("teams").select("id, name").eq("id", proposal.opportunity_team_id).maybeSingle();
+      return data as { id: string; name: string } | null;
+    },
+  });
+
+  const { data: suggestedInvites = [] } = useQuery({
+    queryKey: ["capture-room-invites", proposalId, existingPartnerIds.join(",")],
+    enabled: existingPartnerIds.length > 0,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("companies").select("id, name, poc_email").in("id", existingPartnerIds);
+      return (data ?? [])
+        .filter((c: any) => !!c.poc_email)
+        .map((c: any) => ({ name: c.name as string, email: c.poc_email as string }));
+    },
+  });
+
+
   const sandboxOpportunity = useMemo(
     () => ({
       title: proposal.opportunity_title || "This opportunity",
