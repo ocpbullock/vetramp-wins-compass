@@ -4,6 +4,7 @@ import { callAI, aiErrorResponse, pickModel, hashCacheKey, getCachedResponse, se
 import { authenticate, resolveTeamId, assertProposalAccess, authErrorResponse } from "../_shared/auth.ts";
 import { buildCorsHeaders } from "../_shared/cors.ts";
 import { hasCompanyProfile, missingProfileResponse, renderCompanyProfileBlock, companyIdentity } from "../_shared/company-profile.ts";
+import { renderTeamLeadBlock } from "../_shared/team-lead.ts";
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 
 const SCHEMA = {
