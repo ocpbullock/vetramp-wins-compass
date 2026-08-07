@@ -8,6 +8,7 @@ import {
   missingProfileResponse,
   renderCompanyProfileBlock,
 } from "../_shared/company-profile.ts";
+import { renderTeamLeadBlock } from "../_shared/team-lead.ts";
 import { appliedFacts, normalizeUserContext, renderUserContextPrompt } from "../_shared/user-context.ts";
 import { wrapUntrusted, UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION } from "../_shared/untrusted.ts";
 
