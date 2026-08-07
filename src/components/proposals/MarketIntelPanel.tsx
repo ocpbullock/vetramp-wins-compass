@@ -211,7 +211,18 @@ export function MarketIntelPanel({
         </CardContent>
 
       </Card>
+      {customerIntelSlot && (
+        <Card className="mt-4">
+          <CardHeader>
+            <CardTitle className="text-base">Customer intelligence (AI research)</CardTitle>
+            <CardDescription>Research the buying organization, mission drivers, and incumbent posture.</CardDescription>
+          </CardHeader>
+          <CardContent>{customerIntelSlot}</CardContent>
+        </Card>
+      )}
+      </>
     );
+
   }
 
   return (
