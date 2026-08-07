@@ -17,8 +17,8 @@ export interface FedSpendTestResult {
   count: number | null;
   headers: Record<string, string>;
   notes: string[];
-  raw: unknown;
-  extras: Record<string, unknown>;
+  raw: any;
+  extras: Record<string, any>;
 }
 
 export interface FedSpendVerifyResponse {
@@ -204,7 +204,7 @@ export const runFedSpendVerification = createServerFn({ method: "POST" })
       count: null,
       headers: {},
       notes: anyHeaders ? [] : ["no rate-limit headers observed on any call"],
-      raw: { headersByTest, quotaMeta },
+      raw: { headersByTest, quotaMeta } as any,
       extras: { any_rate_limit_headers: anyHeaders, quota_meta_count: quotaMeta.length },
     };
 
