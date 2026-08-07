@@ -188,6 +188,7 @@ export function TeamingOutreachModal({
           proposedScopeAreas: scopeAreas,
           teamId: proposal.team_id,
           proposalId: proposal.id,
+          teamLeadName: teamLeadName ?? null,
           skipCache,
         },
       });
