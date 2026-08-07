@@ -348,6 +348,23 @@ export function ProposedTeamCard({
   const memberCount =
     1 + subEntries.length + (!isSelfPrime && (rosterPrime || primeContractorName) ? 1 : 0);
 
+  const lead = resolveTeamLead({
+    teamLeadCompanyId,
+    teamLeadName,
+    isSelfPrime,
+    selfName,
+    selfCompanyId: selfCompanyId ?? null,
+    primeContractorId: rosterPrime?.id ?? primeContractorId ?? null,
+    primeContractorName: rosterPrime?.company_name ?? primeContractorName ?? null,
+  });
+  const primeRowName = rosterPrime?.company_name ?? primeContractorName ?? "";
+  const primeRowId = rosterPrime?.id ?? primeContractorId ?? null;
+  const leadIsSelf = lead.isSelf;
+  const leadIsPrimeRow =
+    !leadIsSelf &&
+    !!primeRowName &&
+    (lead.companyId ? lead.companyId === primeRowId : lead.name === primeRowName);
+
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -358,17 +375,25 @@ export function ProposedTeamCard({
             </CardTitle>
             <CardDescription className="text-xs">
               The team of record for this pursuit. Edit role, work share, and outreach — pWin and
-              Team Strength update live.
+              Team Strength update live. Use the crown to set the team lead.
             </CardDescription>
           </div>
           <div className="text-xs text-muted-foreground text-right shrink-0">
             <div className="tabular-nums">{memberCount} member{memberCount === 1 ? "" : "s"}</div>
+            <div className="flex items-center justify-end gap-1 mt-0.5">
+              <Crown className="w-3 h-3 text-[color:var(--brand-brass)]" fill="currentColor" />
+              <span className="truncate max-w-[160px]">{lead.name}</span>
+            </div>
           </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {!isSelfPrime && (rosterPrime || primeContractorName) && (
           <div className="flex items-center gap-2 rounded-md border border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_10%,transparent)] px-2 py-1.5">
+            <LeadToggle
+              isLead={leadIsPrimeRow}
+              onSelect={() => onLeadChange?.({ companyId: primeRowId, name: primeRowName })}
+            />
             <Badge
               variant="outline"
               className="text-[10px] px-1.5 py-0 h-4 border-[color:var(--brand-brass)]/50 text-[color:var(--brand-brass)]"
@@ -376,8 +401,9 @@ export function ProposedTeamCard({
               Prime
             </Badge>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-medium truncate">
-                {rosterPrime?.company_name ?? primeContractorName}
+              <div className="text-sm font-medium truncate flex items-center gap-1.5">
+                <span className="truncate">{primeRowName}</span>
+                {leadIsPrimeRow && <LeadBadge />}
               </div>
               {!rosterPrime && (
                 <div className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5">
@@ -404,11 +430,18 @@ export function ProposedTeamCard({
         )}
 
         <div className="flex items-center gap-2 rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5">
+          <LeadToggle
+            isLead={leadIsSelf}
+            onSelect={() => onLeadChange?.({ companyId: selfCompanyId ?? null, name: selfName })}
+          />
           <Badge variant="default" className="text-[10px] px-1.5 py-0 h-4">
             {isSelfPrime ? "Us" : "Sub (us)"}
           </Badge>
           <div className="min-w-0 flex-1">
-            <div className="text-sm font-medium truncate">{selfName}</div>
+            <div className="text-sm font-medium truncate flex items-center gap-1.5">
+              <span className="truncate">{selfName}</span>
+              {leadIsSelf && <LeadBadge />}
+            </div>
             {!isSelfPrime && (
               <div className="text-[10px] text-muted-foreground mt-0.5">Our share under the prime</div>
             )}
@@ -440,12 +473,20 @@ export function ProposedTeamCard({
 
         {subEntries.map((e) => {
           const p = partnerById.get(e.company_id);
+          const rowName = p?.company_name ?? "";
+          const isRowLead = !!lead.companyId && lead.companyId === e.company_id;
           return (
             <ProposedRow
               key={e.id}
               entry={e}
               partner={p ?? null}
               opportunityNaics={opportunityNaics}
+              isLead={isRowLead}
+              onSetLead={
+                rowName
+                  ? () => onLeadChange?.({ companyId: e.company_id, name: rowName })
+                  : undefined
+              }
               onRoleChange={(r) => patchMutation.mutate({ id: e.id, patch: { role: r } })}
               onShareType={(n) => setShareOptimistic(e.id, n)}
               onShareCommit={() => commitShare(e.id)}
