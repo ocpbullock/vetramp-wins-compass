@@ -32,12 +32,21 @@ type Props = {
   agency?: string | null;
   naicsCode?: string | null;
   responseDeadline?: string | null;
+  /** When set, this proposal is linked directly (no new/existing choice). */
+  presetProposalId?: string;
+  /** Pre-populated invite candidates rendered as editable checkboxes. */
+  suggestedInvites?: { name: string; email: string }[];
+  /** Fired after the room is created, before navigation. */
+  onCreated?: (team: { id: string; name?: string | null }) => void;
+  /** Skip navigating to the proposal after creation (already there). */
+  stayOnPage?: boolean;
 };
 
 type Mode = "new" | "existing";
 
 export function CreateOpportunityTeamDialog(props: Props) {
   const { open, onOpenChange, opportunityTitle, source, sourceId } = props;
+  const preset = props.presetProposalId ?? null;
   const { currentTeam } = useTeam();
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -49,6 +58,8 @@ export function CreateOpportunityTeamDialog(props: Props) {
   const [proposalSearch, setProposalSearch] = useState("");
   const [emails, setEmails] = useState("");
   const [busy, setBusy] = useState(false);
+  const [checkedInvites, setCheckedInvites] = useState<Record<string, boolean>>({});
+  const suggestedInvites = props.suggestedInvites ?? [];
 
   const isOrg = !!currentTeam && currentTeam.team_type === "organization";
 
