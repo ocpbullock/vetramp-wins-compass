@@ -125,7 +125,18 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
           <CardDescription>
             Proprietary notes from incumbent interviews, partner calls, and customer meetings.
           </CardDescription>
+          {rollup.label && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <StoplightDot
+                rating={rollup.pending > 0 ? "moderate" : "strong"}
+                size="sm"
+                ariaLabel={rollup.pending > 0 ? "Not yet analyzed" : "Incorporated"}
+              />
+              <span>{rollup.label}</span>
+            </div>
+          )}
         </div>
+
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setExtractOpen(true)}>
             <Sparkles className="h-4 w-4 mr-1" />Extract from transcript
