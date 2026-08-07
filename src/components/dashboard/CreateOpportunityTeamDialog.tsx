@@ -65,7 +65,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
 
   const proposalsQ = useQuery({
     queryKey: ["linkable-proposals", currentTeam?.id],
-    enabled: open && mode === "existing" && isOrg,
+    enabled: open && !preset && mode === "existing" && isOrg,
     queryFn: () => listLinkable({ data: { parentTeamId: currentTeam!.id } }),
   });
 
@@ -85,7 +85,7 @@ export function CreateOpportunityTeamDialog(props: Props) {
       return;
     }
     if (!user) return;
-    if (mode === "existing" && !selectedProposalId) {
+    if (!preset && mode === "existing" && !selectedProposalId) {
       toast.error("Pick a proposal to link, or switch to 'Start a new proposal'.");
       return;
     }
@@ -93,7 +93,9 @@ export function CreateOpportunityTeamDialog(props: Props) {
     try {
       let proposalId: string;
 
-      if (mode === "new") {
+      if (preset) {
+        proposalId = preset;
+      } else if (mode === "new") {
         const sol = props.solicitationNumber ?? `opp-${sourceId.slice(0, 8)}`;
         const { data: prop, error: pErr } = await supabase
           .from("proposals")
