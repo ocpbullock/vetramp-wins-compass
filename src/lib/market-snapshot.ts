@@ -303,7 +303,7 @@ export async function generateMarketSnapshot(
   const snapshot: MarketSnapshot = {
     version: 1,
     generatedAt: new Date().toISOString(),
-    inputs: { naicsCodes, agency, keyword, startDate, endDate, scope },
+    inputs: { naicsCodes, agency, keyword, startDate, endDate, scope, vehicleId, naicsFamily: family },
     historical: {
       totalAwards: pageMeta.total ?? results.length,
       totalValue: historicalSummary.totalValue,
@@ -311,6 +311,7 @@ export async function generateMarketSnapshot(
       truncated: !!pageMeta.truncated,
       topVendors: historicalSummary.topVendors,
       byYear: historicalSummary.byYear,
+      onVehicle,
     },
     incumbent,
     priorPrimes,
