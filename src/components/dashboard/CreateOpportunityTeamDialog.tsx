@@ -128,10 +128,14 @@ export function CreateOpportunityTeamDialog(props: Props) {
         },
       });
 
-      const list = emails
+      const typed = emails
         .split(/[\s,;]+/)
         .map((s) => s.trim())
         .filter((s) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(s));
+      const picked = suggestedInvites
+        .filter((s) => checkedInvites[s.email.toLowerCase()])
+        .map((s) => s.email.trim());
+      const list = Array.from(new Set([...picked, ...typed].map((e) => e.toLowerCase())));
       if (list.length) {
         const origin = typeof window !== "undefined" ? window.location.origin : "";
         for (const email of list) {
@@ -145,8 +149,11 @@ export function CreateOpportunityTeamDialog(props: Props) {
       } else {
         toast.success("Capture Room created.");
       }
+      props.onCreated?.(team as { id: string; name?: string | null });
       onOpenChange(false);
-      navigate({ to: "/proposals/$proposalId", params: { proposalId } });
+      if (!props.stayOnPage) {
+        navigate({ to: "/proposals/$proposalId", params: { proposalId } });
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Could not create Capture Room.");
     } finally {
