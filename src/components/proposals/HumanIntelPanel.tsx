@@ -244,13 +244,16 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
 
 function IntelItem({
   row,
+  incorporated,
   onEdit,
   onDelete,
 }: {
   row: IntelRow;
+  incorporated: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+
   const [expanded, setExpanded] = useState(false);
   const body = row.body ?? "";
   const isLong = body.length > 280;
