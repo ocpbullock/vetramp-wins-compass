@@ -1010,12 +1010,8 @@ function ProposalPipeline() {
 
                   {/* Active step content */}
                   <div className="min-w-0 space-y-4">
-                    {currentStepId === "intel" && (
-                      <StepErrorBoundary label="intel">
-                        <CustomerIntelStep proposal={proposal} proposalId={proposalId} companyProfile={companyProfile} onPatch={patchProposal} aiBusy={aiBusy} setAiBusy={setAiBusy} online={online} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
-                      </StepErrorBoundary>
-                    )}
                     {currentStepId === "compliance" && (
+
                       <StepErrorBoundary label="compliance">
                         <ComplianceStep proposal={proposal} onPatch={patchProposal} onGoToIntake={() => { setHubTab("overview"); setIntakeOpen(true); }} />
                       </StepErrorBoundary>
