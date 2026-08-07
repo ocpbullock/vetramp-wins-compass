@@ -236,6 +236,7 @@ Deno.serve(async (req) => {
       pursuitType,
       primeContractorName,
       targetedScopeAreas,
+      teamLeadName,
       template,
       userContext: userContextRaw,
     } = body;
