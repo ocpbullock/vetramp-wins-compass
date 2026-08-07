@@ -565,6 +565,14 @@ function ProposalPipeline() {
           pursuitType: proposal.pursuit_type ?? "rfp_rfq",
           primeContractorName: proposal.prime_contractor_name ?? null,
           primeContractorId: proposal.prime_contractor_id ?? null,
+          teamLeadName: teamLeadNameForGeneration(resolveTeamLead({
+            teamLeadCompanyId: proposal.team_lead_company_id ?? null,
+            teamLeadName: proposal.team_lead_name ?? null,
+            isSelfPrime: proposal.engagement_type !== "sub",
+            selfName: (companyProfile as any)?.legal_name || "Our Company",
+            primeContractorId: proposal.prime_contractor_id ?? null,
+            primeContractorName: proposal.prime_contractor_name ?? null,
+          })),
           targetedScopeAreas: proposal.targeted_scope_areas ?? null,
           template: opts?.template ?? undefined,
           userContext: userContextFromProposal(proposal),
@@ -2688,6 +2696,13 @@ function TeamHubPanel({
         agency={proposal.agency}
         naicsCode={proposal.naics_code}
         responseDeadline={proposal.response_deadline ?? null}
+        presetProposalId={proposalId}
+        suggestedInvites={suggestedInvites}
+        stayOnPage
+        onCreated={(team) => {
+          onProposalPatch?.({ opportunity_team_id: team.id });
+          qc.invalidateQueries({ queryKey: ["proposal", proposalId] });
+        }}
       />
 
       <TeamingOutreachModal
@@ -2700,6 +2715,7 @@ function TeamHubPanel({
           opportunity_data: proposal.opportunity_data,
         }}
         partner={outreachPartner}
+        teamLeadName={teamLeadNameForGeneration(lead) ?? undefined}
         defaultScopeAreas={proposal.targeted_scope_areas ?? undefined}
       />
     </div>
