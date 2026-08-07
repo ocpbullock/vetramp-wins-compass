@@ -18,7 +18,7 @@ function oauthNS(): OAuthNS {
 
 export const Route = createFileRoute("/.lovable/oauth/consent")({
   ssr: false,
-  validateSearch: (s: Record<string, unknown>) => ({
+  validateSearch: (s: Record<string, unknown>): { authorization_id?: string } => ({
     authorization_id: typeof s.authorization_id === "string" ? s.authorization_id : "",
   }),
   beforeLoad: async ({ search, location }) => {
@@ -59,8 +59,8 @@ function Consent() {
     setError(null);
     const ns = oauthNS();
     const { data, error } = approve
-      ? await ns.approveAuthorization(authorization_id)
-      : await ns.denyAuthorization(authorization_id);
+      ? await ns.approveAuthorization(authorization_id ?? "")
+      : await ns.denyAuthorization(authorization_id ?? "");
     if (error) {
       setBusy(false);
       setError(error.message);

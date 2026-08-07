@@ -439,6 +439,38 @@ export type Database = {
           },
         ]
       }
+      fedspend_cache: {
+        Row: {
+          cache_key: string
+          fetched_at: string
+          id: string
+          payload: Json
+          team_id: string
+        }
+        Insert: {
+          cache_key: string
+          fetched_at?: string
+          id?: string
+          payload?: Json
+          team_id: string
+        }
+        Update: {
+          cache_key?: string
+          fetched_at?: string
+          id?: string
+          payload?: Json
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fedspend_cache_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       knowledge_base: {
         Row: {
           category: string

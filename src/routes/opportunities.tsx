@@ -31,6 +31,7 @@ import { CaptureStageSelect } from "@/components/proposals/CaptureStageSelect";
 import { PageHeader } from "@/components/ui/page-header";
 import { EmptyState } from "@/components/ui/empty-state";
 import { kickOffMarketSnapshotById } from "@/lib/market-snapshot";
+import { ExpiringMarketsCard } from "@/components/opportunities/ExpiringMarketsCard";
 
 export const Route = createFileRoute("/opportunities")({
   component: OpportunitiesPage,
@@ -360,6 +361,13 @@ function OpportunitiesPage() {
           </Button>
         }
       />
+
+      <ExpiringMarketsCard
+        teamId={currentTeam?.id ?? null}
+        onTracked={(proposalId) => void handleCreated(proposalId)}
+      />
+
+
 
       {loading ? (
         <div className="space-y-3">
