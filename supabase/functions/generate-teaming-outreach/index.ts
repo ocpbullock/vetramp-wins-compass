@@ -76,7 +76,7 @@ serve(async (req) => {
       }
     }
 
-    const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + "You are a business development professional specializing in federal government contracting teaming arrangements. Write professional, compelling outreach messages that clearly articulate mutual benefit and complementary capabilities. Be specific, never generic. Reference concrete facts from the company profiles, certifications, NAICS codes, and opportunity details provided. Never fabricate past performance or relationships.";
+    const system = UNTRUSTED_CONTENT_SYSTEM_INSTRUCTION + "\n\n" + "You are a business development professional specializing in federal government contracting teaming arrangements. Write professional, compelling outreach messages that clearly articulate mutual benefit and complementary capabilities. Be specific, never generic. Reference concrete facts from the company profiles, certifications, NAICS codes, and opportunity details provided. Never fabricate past performance or relationships." + renderTeamLeadBlock(teamLeadName, companyIdentity(companyProfile));
 
     const direction = engagement === "sub"
       ? `We (the sender) are pursuing this opportunity as a SUBCONTRACTOR and reaching out to the target company as a potential PRIME we could team UNDER. Frame the value we bring as a sub: relevant past performance, certifications, scope we can self-perform.`
