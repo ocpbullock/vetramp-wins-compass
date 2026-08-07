@@ -271,6 +271,8 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
     return reasons;
   })();
   const inputsChangedSince = inputsChangedReasons.length > 0;
+  const intelRollup = summarizeIntelIncorporation(intelCreatedAts, generatedAt);
+
 
   const rerun = async () => {
     setRunning(true);
