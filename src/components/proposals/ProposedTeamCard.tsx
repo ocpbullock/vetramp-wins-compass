@@ -555,6 +555,8 @@ function ProposedRow({
   entry,
   partner,
   opportunityNaics,
+  isLead,
+  onSetLead,
   onRoleChange,
   onShareType,
   onShareCommit,
@@ -564,6 +566,8 @@ function ProposedRow({
   entry: TeamingEntry;
   partner: PartnerView | null;
   opportunityNaics: string | null;
+  isLead?: boolean;
+  onSetLead?: () => void;
   onRoleChange: (r: PwinRole) => void;
   onShareType: (n: number) => void;
   onShareCommit: () => void;
