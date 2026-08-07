@@ -13,16 +13,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Paperclip, Trash2, Pencil, Download, ChevronDown, ChevronUp, Sparkles, Loader2, X } from "lucide-react";
+import { StoplightDot } from "@/components/StoplightDot";
+import { isIntelIncorporated, summarizeIntelIncorporation } from "@/lib/intel-incorporation";
 
 const INTEL_TYPES = [
   { value: "incumbent_interview", label: "Incumbent interview" },
   { value: "candidate_interview", label: "Candidate interview" },
+  { value: "candidate_profile", label: "Candidate profile" },
   { value: "partner_conversation", label: "Partner conversation" },
   { value: "customer_meeting", label: "Customer meeting" },
   { value: "conference_note", label: "Conference / event note" },
   { value: "capture_note", label: "Capture note" },
   { value: "other", label: "Other" },
 ] as const;
+
 
 type IntelType = typeof INTEL_TYPES[number]["value"];
 
@@ -63,6 +67,21 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
       return (data ?? []) as IntelRow[];
     },
   });
+
+  const { data: analysisAt = null } = useQuery({
+    queryKey: ["capture-analysis-at", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposals")
+        .select("capture_analysis_at")
+        .eq("id", proposalId)
+        .maybeSingle();
+      return data?.capture_analysis_at ?? null;
+    },
+  });
+
+  const rollup = useMemo(() => summarizeIntelIncorporation(items, analysisAt), [items, analysisAt]);
+
 
   const filtered = useMemo(
     () => (filter === "all" ? items : items.filter((i) => i.intel_type === filter)),
@@ -106,7 +125,18 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
           <CardDescription>
             Proprietary notes from incumbent interviews, partner calls, and customer meetings.
           </CardDescription>
+          {rollup.label && (
+            <div className="mt-2 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <StoplightDot
+                rating={rollup.pending > 0 ? "moderate" : "strong"}
+                size="sm"
+                ariaLabel={rollup.pending > 0 ? "Not yet analyzed" : "Incorporated"}
+              />
+              <span>{rollup.label}</span>
+            </div>
+          )}
         </div>
+
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => setExtractOpen(true)}>
             <Sparkles className="h-4 w-4 mr-1" />Extract from transcript
@@ -157,8 +187,10 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
               <IntelItem
                 key={row.id}
                 row={row}
+                incorporated={isIntelIncorporated(row.created_at, analysisAt)}
                 onEdit={() => setEditing(row)}
                 onDelete={() => handleDelete(row)}
+
               />
             ))}
           </ol>
@@ -212,13 +244,16 @@ function FilterChip({ active, onClick, children }: { active: boolean; onClick: (
 
 function IntelItem({
   row,
+  incorporated,
   onEdit,
   onDelete,
 }: {
   row: IntelRow;
+  incorporated: boolean;
   onEdit: () => void;
   onDelete: () => void;
 }) {
+
   const [expanded, setExpanded] = useState(false);
   const body = row.body ?? "";
   const isLong = body.length > 280;
@@ -247,7 +282,13 @@ function IntelItem({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
+              <StoplightDot
+                rating={incorporated ? "strong" : "moderate"}
+                size="sm"
+                ariaLabel={incorporated ? "Incorporated into capture analysis" : "Not yet analyzed — re-run Capture Analysis to incorporate"}
+              />
               <Badge variant="secondary" className="text-xs">{TYPE_LABEL[row.intel_type] ?? row.intel_type}</Badge>
+
               <span className="text-xs text-muted-foreground">{dateLabel}</span>
               {row.source_name && (
                 <span className="text-xs text-muted-foreground">· {row.source_name}</span>

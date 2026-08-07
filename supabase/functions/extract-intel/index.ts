@@ -10,10 +10,12 @@ const INTEL_TYPES = [
   "partner_conversation",
   "customer_meeting",
   "candidate_interview",
+  "candidate_profile",
   "conference_note",
   "capture_note",
   "other",
 ] as const;
+
 
 const SCHEMA = {
   type: "object",
@@ -78,7 +80,7 @@ serve(async (req) => {
       `You are a senior federal capture analyst. Extract capture-relevant intelligence from raw transcripts (interviews, partner/customer calls, conference notes). Rules:
 - Return 1 to 3 draft intel items, grouped by topic (do not force multiple items when the transcript covers one topic).
 - Extract only what the transcript supports; do NOT fabricate names, dates, companies, or facts.
-- Choose intel_type based on who is speaking and the context hint provided.
+- Choose intel_type based on who is speaking and the context hint provided. Allowed values: incumbent_interview (Incumbent interview), partner_conversation (Partner conversation), customer_meeting (Customer meeting), candidate_interview (Candidate interview), candidate_profile (Candidate profile — staffing / key-personnel candidate write-ups), conference_note (Conference / event note), capture_note (Capture note), other (Other).
 - title: short and specific (what this note is actually about).
 - source_name: person or org if clearly identifiable in the transcript, else null.
 - occurred_on: ISO date (YYYY-MM-DD) only if the transcript states one, else null.

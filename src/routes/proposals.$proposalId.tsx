@@ -71,7 +71,7 @@ import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
-const HUB_TABS = ["overview", "market_intel", "human_intel", "capture_analysis", "team", "proposal", "activities"] as const;
+const HUB_TABS = ["overview", "market_intel", "human_intel", "team", "capture_analysis", "proposal", "activities"] as const;
 type HubTab = typeof HUB_TABS[number];
 export const Route = createFileRoute("/proposals/$proposalId")({
   component: ProposalPipeline,
@@ -832,11 +832,12 @@ function ProposalPipeline() {
                 ["overview", "Overview"],
                 ["market_intel", "Market Intel"],
                 ["human_intel", "Human Intel"],
-                ["capture_analysis", "Capture Analysis"],
                 ["team", "Team"],
+                ["capture_analysis", "Capture Analysis"],
                 ["proposal", "Opportunity"],
                 ["activities", "Activities"],
               ] as [HubTab, string][]).map(([v, label]) => (
+
                 <TabsTrigger
                   key={v}
                   value={v}

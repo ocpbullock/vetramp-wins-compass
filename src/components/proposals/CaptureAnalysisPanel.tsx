@@ -2,6 +2,9 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
+import { summarizeIntelIncorporation } from "@/lib/intel-incorporation";
+import { StoplightDot } from "@/components/StoplightDot";
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -228,20 +231,20 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
 
   const teaming = useTeamingSummary(proposal, proposalId);
 
-  // "Inputs changed" check — newest opportunity_intel timestamp.
-  const { data: latestIntelAt } = useQuery({
-    queryKey: ["latest-intel-at", proposalId],
+  // "Inputs changed" check + incorporation rollup — all intel timestamps.
+  const { data: intelCreatedAts = [] } = useQuery({
+    queryKey: ["intel-created-ats", proposalId],
     queryFn: async () => {
       const { data } = await supabase
         .from("opportunity_intel" as any)
         .select("created_at")
         .eq("proposal_id", proposalId)
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      return (data as any)?.created_at ?? null;
+        .order("created_at", { ascending: false });
+      return ((data ?? []) as any[]).map((r) => ({ created_at: r.created_at as string | null }));
     },
   });
+  const latestIntelAt = intelCreatedAts[0]?.created_at ?? null;
+
 
   // "Inputs changed" check — newest proposal_attachments upload timestamp.
   const { data: latestAttachmentAt } = useQuery({
@@ -271,6 +274,8 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
     return reasons;
   })();
   const inputsChangedSince = inputsChangedReasons.length > 0;
+  const intelRollup = summarizeIntelIncorporation(intelCreatedAts, generatedAt);
+
 
   const rerun = async () => {
     setRunning(true);
@@ -541,6 +546,17 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
             <AlertTriangle className="w-3 h-3" /> inputs changed since last run ({inputsChangedReasons.join(", ")})
           </span>
         )}
+        {intelRollup.label && (
+          <span className="inline-flex items-center gap-1.5">
+            <StoplightDot
+              rating={intelRollup.pending > 0 ? "moderate" : "strong"}
+              size="sm"
+              ariaLabel={intelRollup.pending > 0 ? "Not yet analyzed" : "Incorporated"}
+            />
+            {intelRollup.label}
+          </span>
+        )}
+
         <div className="ml-auto flex items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
