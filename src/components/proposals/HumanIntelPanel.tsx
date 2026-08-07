@@ -13,16 +13,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from "@/components/ui/dialog";
 import { Plus, Paperclip, Trash2, Pencil, Download, ChevronDown, ChevronUp, Sparkles, Loader2, X } from "lucide-react";
+import { StoplightDot } from "@/components/StoplightDot";
+import { isIntelIncorporated, summarizeIntelIncorporation } from "@/lib/intel-incorporation";
 
 const INTEL_TYPES = [
   { value: "incumbent_interview", label: "Incumbent interview" },
   { value: "candidate_interview", label: "Candidate interview" },
+  { value: "candidate_profile", label: "Candidate profile" },
   { value: "partner_conversation", label: "Partner conversation" },
   { value: "customer_meeting", label: "Customer meeting" },
   { value: "conference_note", label: "Conference / event note" },
   { value: "capture_note", label: "Capture note" },
   { value: "other", label: "Other" },
 ] as const;
+
 
 type IntelType = typeof INTEL_TYPES[number]["value"];
 
