@@ -282,7 +282,13 @@ function IntelItem({
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
+              <StoplightDot
+                rating={incorporated ? "strong" : "moderate"}
+                size="sm"
+                ariaLabel={incorporated ? "Incorporated into capture analysis" : "Not yet analyzed — re-run Capture Analysis to incorporate"}
+              />
               <Badge variant="secondary" className="text-xs">{TYPE_LABEL[row.intel_type] ?? row.intel_type}</Badge>
+
               <span className="text-xs text-muted-foreground">{dateLabel}</span>
               {row.source_name && (
                 <span className="text-xs text-muted-foreground">· {row.source_name}</span>
