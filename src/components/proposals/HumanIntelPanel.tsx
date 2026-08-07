@@ -68,6 +68,21 @@ export function HumanIntelPanel({ proposalId, teamId }: { proposalId: string; te
     },
   });
 
+  const { data: analysisAt = null } = useQuery({
+    queryKey: ["capture-analysis-at", proposalId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("proposals")
+        .select("capture_analysis_at")
+        .eq("id", proposalId)
+        .maybeSingle();
+      return data?.capture_analysis_at ?? null;
+    },
+  });
+
+  const rollup = useMemo(() => summarizeIntelIncorporation(items, analysisAt), [items, analysisAt]);
+
+
   const filtered = useMemo(
     () => (filter === "all" ? items : items.filter((i) => i.intel_type === filter)),
     [items, filter],
