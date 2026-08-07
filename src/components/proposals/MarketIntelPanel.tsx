@@ -252,11 +252,11 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
         </CardContent>
       </Card>
 
-      {/* Prior primes/subs */}
+      {/* Vendors at this client */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Prior primes & subs</CardTitle>
-          <CardDescription>Large vendors holding significant work in this NAICS at this agency.</CardDescription>
+          <CardTitle className="text-base">Vendors at this client</CardTitle>
+          <CardDescription>Same or adjacent NAICS, any vehicle.</CardDescription>
         </CardHeader>
         <CardContent>
           {snapshot.priorPrimes.length === 0 ? (
@@ -287,36 +287,58 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
         </CardContent>
       </Card>
 
-      {/* Candidate partners */}
+      {/* Contract vehicle vendors */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Candidate partners</CardTitle>
-          <CardDescription>Smaller / set-aside vendors with relevant past performance.</CardDescription>
+          <CardTitle className="text-base">Contract vehicle vendors</CardTitle>
+          <CardDescription>
+            {vehicle?.vehicle_name
+              ? `Awardee pool on ${vehicle.vehicle_name}.`
+              : "Vendors holding the linked contract vehicle."}
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          {snapshot.candidatePartners.length === 0 ? (
-            <div className="text-xs text-muted-foreground">None detected.</div>
+          {!vehicleId ? (
+            <div className="text-xs text-muted-foreground">
+              Link a contract vehicle to see its vendor pool.
+            </div>
+          ) : awardeesLoading ? (
+            <Skeleton className="h-16 w-full" />
+          ) : awardees.length === 0 ? (
+            <div className="text-xs text-muted-foreground space-y-1">
+              <div>No awardees recorded for this vehicle yet.</div>
+              <Link to="/settings" search={{ tab: "vehicles" }} className="text-primary hover:underline">
+                Import a list or run AI awardee research in the vehicle registry →
+              </Link>
+            </div>
           ) : (
             <ul className="divide-y">
-              {snapshot.candidatePartners.map((t) => (
-                <li key={(t.uei || t.name) + "-partner"} className="py-2 flex items-center justify-between gap-2">
+              {awardees.map((a) => (
+                <li key={a.id} className="py-2 flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <button
                       className="text-sm font-medium hover:underline text-left truncate"
-                      onClick={() => setVendor({ recipientId: t.uei, name: t.name })}
+                      onClick={() => setVendor({ recipientId: a.uei, name: a.company_name })}
                     >
-                      {t.name}
+                      {a.company_name}
                     </button>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {fmtUsd(t.totalValue)} · {t.awardCount} awards
-                      {t.isSmallBusiness && " · SB"}
-                      {t.latestSetAside && ` · ${t.latestSetAside}`}
-                      {typeof t.relevanceScore === "number" && ` · relevance ${t.relevanceScore}`}
-                      {t.agencyExperience && " · agency ✓"}
+                    <div className="flex flex-wrap items-center gap-1 pt-0.5">
+                      {a.uei && <Badge variant="outline" className="font-mono text-[10px]">{a.uei}</Badge>}
+                      {a.small_business && <Badge variant="secondary" className="text-[10px]">SB</Badge>}
+                      {(a.socioeconomic ?? []).map((s) => (
+                        <Badge key={s} variant="secondary" className="text-[10px]">{s}</Badge>
+                      ))}
                     </div>
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => addPartner(t)} disabled={savingPartner === (t.uei || t.name)}>
-                    {savingPartner === (t.uei || t.name) ? <Loader2 className="w-3 h-3 mr-1 animate-spin" /> : <UserPlus className="w-3 h-3 mr-1" />}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => addAwardee(a)}
+                    disabled={savingPartner === (a.uei || a.company_name)}
+                  >
+                    {savingPartner === (a.uei || a.company_name)
+                      ? <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      : <UserPlus className="w-3 h-3 mr-1" />}
                     Add to roster
                   </Button>
                 </li>
@@ -326,39 +348,15 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
         </CardContent>
       </Card>
 
-      {/* Likely competitors */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Likely competitors</CardTitle>
-          <CardDescription>From the competitive market landscape (set-aside scope).</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {snapshot.competitiveIntelError ? (
-            <div className="text-xs text-destructive">{snapshot.competitiveIntelError}</div>
-          ) : snapshot.competitors.length === 0 ? (
-            <div className="text-xs text-muted-foreground">No competitor data.</div>
-          ) : (
-            <ul className="divide-y">
-              {snapshot.competitors.map((c: CompeteVendor) => (
-                <li key={(c.recipientId || c.name) + "-comp"} className="py-2 flex items-center justify-between gap-2">
-                  <div className="min-w-0">
-                    <button
-                      className="text-sm font-medium hover:underline text-left truncate"
-                      onClick={() => setVendor({ recipientId: c.recipientId, name: c.name })}
-                    >
-                      {c.name}
-                    </button>
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {fmtUsd(c.totalValue)} · {c.awards} awards
-                      {c.setAside && ` · ${c.setAside}`}
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      {customerIntelSlot && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Customer intelligence (AI research)</CardTitle>
+            <CardDescription>Research the buying organization, mission drivers, and incumbent posture.</CardDescription>
+          </CardHeader>
+          <CardContent>{customerIntelSlot}</CardContent>
+        </Card>
+      )}
 
       <VendorDetailDrawer
         recipientId={vendor?.recipientId ?? null}
@@ -369,3 +367,4 @@ export function MarketIntelPanel({ proposal, proposalId }: { proposal: any; prop
     </div>
   );
 }
+
