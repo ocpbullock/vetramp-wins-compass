@@ -1131,6 +1131,8 @@ export type Database = {
           status: string
           targeted_scope_areas: string | null
           team_id: string | null
+          team_lead_company_id: string | null
+          team_lead_name: string | null
           technical_approach: Json | null
           transition_plan: Json | null
           updated_at: string
@@ -1199,6 +1201,8 @@ export type Database = {
           status?: string
           targeted_scope_areas?: string | null
           team_id?: string | null
+          team_lead_company_id?: string | null
+          team_lead_name?: string | null
           technical_approach?: Json | null
           transition_plan?: Json | null
           updated_at?: string
@@ -1267,6 +1271,8 @@ export type Database = {
           status?: string
           targeted_scope_areas?: string | null
           team_id?: string | null
+          team_lead_company_id?: string | null
+          team_lead_name?: string | null
           technical_approach?: Json | null
           transition_plan?: Json | null
           updated_at?: string
