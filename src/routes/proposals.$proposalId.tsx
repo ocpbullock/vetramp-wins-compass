@@ -1876,7 +1876,23 @@ function GenerateStep({ proposal, attachments, sectionGen, aiBusy, genProgress, 
             {generatedCount} of {SECS.length} drafted
             {proposal.engagement_type === "sub" && <span className="ml-1 text-amber-600">· Sub-to-prime inputs{proposal.prime_contractor_name ? ` for ${proposal.prime_contractor_name}` : ""}</span>}
             {followingTemplate && <span className="ml-1 text-primary">· Template-driven</span>}
+            {(() => {
+              const leadName = teamLeadNameForGeneration(resolveTeamLead({
+                teamLeadCompanyId: proposal.team_lead_company_id ?? null,
+                teamLeadName: proposal.team_lead_name ?? null,
+                isSelfPrime: proposal.engagement_type !== "sub",
+                selfName: "Our Company",
+                primeContractorId: proposal.prime_contractor_id ?? null,
+                primeContractorName: proposal.prime_contractor_name ?? null,
+              }));
+              return leadName ? (
+                <span className="block mt-1 text-[color:var(--brand-brass)]">
+                  Sections will be written from {leadName}'s perspective.
+                </span>
+              ) : null;
+            })()}
           </CardDescription>
+
         </CardHeader>
         <CardContent className="p-2 space-y-1">
           <Button size="sm" className="w-full mb-2" onClick={() => onGenerateAll(SECS, { template: templatePayload })} disabled={lockButtons} title={lockButtons ? "Another AI task is running — please wait." : undefined}><Sparkles className="w-4 h-4 mr-1" />Generate all remaining</Button>
