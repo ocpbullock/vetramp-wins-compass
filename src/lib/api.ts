@@ -217,7 +217,21 @@ export async function getVendorProfile(
   const label = (body.uei || body.recipientId || body.vendorName || "vendor").toString().slice(0, 16);
   logCall(`vendor-profile ${label}`);
   const { data, error } = await supabase.functions.invoke("vendor-profile", { body });
-  if (error) { logErr("vendor-profile", error.message); throw error; }
+  if (error) {
+    // supabase-js surfaces non-2xx as "Edge function returned 404" and hides the
+    // JSON body — unwrap it so "no SAM entity found" reads as a real answer.
+    let detail = (error as any)?.message ?? "Vendor lookup failed";
+    const ctx = (error as any)?.context;
+    if (ctx && typeof ctx.json === "function") {
+      try {
+        const parsed = await ctx.clone().json();
+        if (parsed?.error) detail = String(parsed.error);
+      } catch { /* keep the generic message */ }
+    }
+    logErr("vendor-profile", detail);
+    throw new Error(detail);
+  }
+
   logOk("vendor-profile", data?.multipleMatches
     ? `${data.candidates?.length ?? 0} candidates`
     : `${data?.summary?.totalContracts ?? 0} contracts`);
