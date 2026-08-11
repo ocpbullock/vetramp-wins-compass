@@ -1087,6 +1087,9 @@ export type Database = {
           customer_intel: Json | null
           customer_intel_verified: boolean | null
           customer_notes: string | null
+          ecosystem: Json | null
+          ecosystem_at: string | null
+          ecosystem_config: Json | null
           engagement_type: string
           estimated_value: number | null
           id: string
@@ -1157,6 +1160,9 @@ export type Database = {
           customer_intel?: Json | null
           customer_intel_verified?: boolean | null
           customer_notes?: string | null
+          ecosystem?: Json | null
+          ecosystem_at?: string | null
+          ecosystem_config?: Json | null
           engagement_type?: string
           estimated_value?: number | null
           id?: string
@@ -1227,6 +1233,9 @@ export type Database = {
           customer_intel?: Json | null
           customer_intel_verified?: boolean | null
           customer_notes?: string | null
+          ecosystem?: Json | null
+          ecosystem_at?: string | null
+          ecosystem_config?: Json | null
           engagement_type?: string
           estimated_value?: number | null
           id?: string
