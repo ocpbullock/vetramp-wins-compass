@@ -6,7 +6,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { searchUsaspending, type HistoricalAward } from "./api";
-import { canonicalizeAgencyName } from "./agency-match";
+import { canonicalizeAgencyName, splitAgencyPath } from "./agency-match";
 import { naicsFamily } from "./market-snapshot";
 import { getEffectiveIncumbent } from "./incumbent-source";
 import {
@@ -45,10 +45,10 @@ export function readEcosystemConfig(proposal: any): EcosystemConfig {
   };
 }
 
-export function readEcosystem(proposal: any): BuildEcosystemResult | null {
+export function readEcosystem(proposal: any): StoredEcosystem | null {
   const raw = proposal?.ecosystem;
   if (!raw || !Array.isArray(raw?.companies)) return null;
-  return raw as BuildEcosystemResult;
+  return raw as StoredEcosystem;
 }
 
 const STOPWORDS = new Set([
@@ -95,23 +95,57 @@ function tag(rows: HistoricalAward[] | undefined, scope: "customer" | "agency"):
 
 /** Department-level agency (first path segment) from the proposal agency string. */
 function departmentOf(agency: string | null | undefined): string | null {
-  const s = String(agency ?? "").trim();
-  if (!s) return null;
-  const parts = s.split(/[\.\/>|\\]+/).map((p) => p.trim()).filter(Boolean);
-  return parts.length > 0 ? parts[0] : s;
+  const parts = splitAgencyPath(agency);
+  return parts.length > 0 ? parts[0] : null;
 }
+
+/** Set-aside pools whose membership is itself evidence of the socio status. */
+const VEHICLE_SET_ASIDE_PATTERNS: { re: RegExp; setAside: string }[] = [
+  { re: /sdvosb|service[- ]disabled/i, setAside: "SDVOSB" },
+  { re: /8\s*\(\s*a\s*\)/i, setAside: "8(a)" },
+  { re: /edwosb/i, setAside: "EDWOSB" },
+  { re: /wosb|woman[- ]owned|women[- ]owned/i, setAside: "WOSB" },
+  { re: /hubzone/i, setAside: "HUBZone" },
+  { re: /\bvosb\b|veteran[- ]owned/i, setAside: "VOSB" },
+];
+
+/** Infer a set-aside from a pool/vehicle name, or null when it implies none. */
+export function inferSetAsideFromVehicleName(name: string | null | undefined): string | null {
+  const s = String(name ?? "");
+  if (!s.trim()) return null;
+  for (const p of VEHICLE_SET_ASIDE_PATTERNS) if (p.re.test(s)) return p.setAside;
+  return null;
+}
+
+export type EcosystemInputsMeta = {
+  setAside: string | null;
+  setAsideSource: "opportunity" | "inferred_from_vehicle" | "none";
+  agency: string | null;
+  customerSubAgency: string | null;
+  vehicleName?: string | null;
+};
+
+export type StoredEcosystem = BuildEcosystemResult & { inputs?: EcosystemInputsMeta };
+
+export function readEcosystemInputs(proposal: any): EcosystemInputsMeta | null {
+  const raw = proposal?.ecosystem?.inputs;
+  return raw && typeof raw === "object" ? (raw as EcosystemInputsMeta) : null;
+}
+
 
 export async function generateEcosystem(
   proposal: any,
   opts?: { expand?: EcosystemExpansion },
   onProgress?: (step: string) => void,
-): Promise<BuildEcosystemResult> {
+): Promise<StoredEcosystem> {
   const progress = onProgress ?? (() => {});
   const naics = proposal?.naics_code ? String(proposal.naics_code) : "";
   if (!naics) throw new Error("This opportunity needs a NAICS code before the ecosystem can be built.");
 
   const customerAgency = canonicalizeAgencyName(proposal?.agency).canonical || (proposal?.agency ?? null);
   const department = departmentOf(proposal?.agency);
+  // Evidence lines and the department pull must both use the cleaned name.
+  const departmentDisplay = department ? (canonicalizeAgencyName(department).display || department) : null;
 
   const endDate = new Date().toISOString().slice(0, 10);
   const startDate = new Date(Date.now() - 5 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
@@ -141,7 +175,7 @@ export async function generateEcosystem(
         naicsCodes: [naics],
         startDate,
         endDate,
-        agency: department,
+        agency: departmentDisplay ?? undefined,
         maxResults: 1000,
       });
       awards.push(...tag(b.results, "agency"));
@@ -171,7 +205,7 @@ export async function generateEcosystem(
         naicsCodes: [naics],
         startDate,
         endDate,
-        agency: department ?? undefined,
+        agency: departmentDisplay ?? undefined,
         maxResults: 1000,
       });
       awards.push(...tag(d.results, "agency"));
@@ -185,8 +219,15 @@ export async function generateEcosystem(
   // the roster.
   const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
   let vehicleAwardees: VehicleAwardeeInput[] | null = null;
+  let vehicleName: string | null = (proposal?.opportunity_data as any)?.contract_vehicle ?? null;
   if (vehicleId) {
     progress("Loading vehicle awardees…");
+    const { data: veh } = await supabase
+      .from("vehicle_registry")
+      .select("vehicle_name")
+      .eq("id", vehicleId)
+      .maybeSingle();
+    vehicleName = (veh as any)?.vehicle_name ?? vehicleName;
     const { data } = await supabase
       .from("vehicle_awardees")
       .select("company_name, uei, small_business, socioeconomic, team_id")
@@ -205,6 +246,19 @@ export async function generateEcosystem(
       .filter((v) => !!v.name);
   }
   const vehicleRestricted = proposal?.vehicle_status === "identified" && !!vehicleId;
+
+  // -- Effective set-aside --------------------------------------------------
+  // A pool vehicle (e.g. "Polaris SDVOSB Pool") IS the set-aside for actions
+  // competed under it; an empty proposal field would otherwise grade every
+  // holder as unverifiable.
+  const declaredSetAside = String(proposal?.set_aside ?? "").trim() || null;
+  const inferredSetAside = declaredSetAside ? null : inferSetAsideFromVehicleName(vehicleName);
+  const effectiveSetAside = declaredSetAside ?? inferredSetAside;
+  const setAsideSource: EcosystemInputsMeta["setAsideSource"] = declaredSetAside
+    ? "opportunity"
+    : inferredSetAside
+      ? "inferred_from_vehicle"
+      : "none";
 
   // -- User intel ----------------------------------------------------------
   progress("Folding in your intel…");
@@ -252,9 +306,9 @@ export async function generateEcosystem(
     opportunity: {
       naicsCode: naics,
       adjacentPrefix: naics.slice(0, 4),
-      setAside: proposal?.set_aside ?? null,
+      setAside: effectiveSetAside,
       estimatedValue: proposal?.estimated_value ?? null,
-      agency: department,
+      agency: departmentDisplay,
       customerSubAgency: customerAgency,
       scopeKeywords: extractScopeKeywords(proposal),
     },
@@ -265,13 +319,23 @@ export async function generateEcosystem(
   });
 
   progress("Saving…");
+  const stored: StoredEcosystem = {
+    ...result,
+    inputs: {
+      setAside: effectiveSetAside,
+      setAsideSource,
+      agency: departmentDisplay,
+      customerSubAgency: customerAgency,
+      vehicleName,
+    },
+  };
   const generatedAt = new Date().toISOString();
   await supabase
     .from("proposals")
-    .update({ ecosystem: result as any, ecosystem_at: generatedAt } as any)
+    .update({ ecosystem: stored as any, ecosystem_at: generatedAt } as any)
     .eq("id", proposal.id);
 
-  return result;
+  return stored;
 }
 
 /** Persist ecosystem_config (overrides + weights) without regenerating. */

@@ -19,13 +19,14 @@ import {
   generateEcosystem,
   readEcosystem,
   readEcosystemConfig,
+  readEcosystemInputs,
   saveEcosystemConfig,
   type EcosystemConfig,
   type EcosystemExpansion,
+  type StoredEcosystem,
 } from "@/lib/ecosystem-build";
 import {
   BASE_WEIGHTS,
-  type BuildEcosystemResult,
   type EcosystemCompany,
   type EcosystemRole,
   type EligibilityTier,
@@ -98,7 +99,7 @@ export function EcosystemCard({
   onChanged?: () => void;
 }) {
   const { currentTeam } = useTeam();
-  const [result, setResult] = useState<BuildEcosystemResult | null>(() => readEcosystem(proposal));
+  const [result, setResult] = useState<StoredEcosystem | null>(() => readEcosystem(proposal));
   const [generatedAt, setGeneratedAt] = useState<string | null>(proposal?.ecosystem_at ?? null);
   const [config, setConfig] = useState<EcosystemConfig>(() => readEcosystemConfig(proposal));
   const [busy, setBusy] = useState(false);
@@ -142,6 +143,7 @@ export function EcosystemCard({
     return map;
   }, [result]);
 
+  const inputsMeta = (result as StoredEcosystem | null)?.inputs ?? readEcosystemInputs(proposal);
   const onVehicleCount = (result?.companies ?? []).filter((c) => c.onVehicle).length;
   // Holders present but none reached the prime pool: a validation backlog, not a bug.
   const holdersUnvalidated =
@@ -196,6 +198,27 @@ export function EcosystemCard({
       return updated;
     });
     toast.success(`${company.name} → ${TIER_LABEL[tier]}`);
+  };
+
+  // Bulk validation for the pending-holder backlog: one decision, N rows.
+  const setTierBulk = async (companies: EcosystemCompany[], tier: EligibilityTier) => {
+    if (companies.length === 0) return;
+    const label = TIER_LABEL[tier].toLowerCase();
+    if (!window.confirm(`Mark all ${companies.length} pending vehicle holders as ${label}?`)) return;
+    const overrides = { ...(config.validatedOverrides ?? {}) };
+    for (const c of companies) overrides[c.name] = tier;
+    await persistConfig({ ...config, validatedOverrides: overrides });
+    const names = new Set(companies.map((c) => c.name));
+    setResult((prev) => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        companies: prev.companies.map((c) => (names.has(c.name) ? { ...c, eligibility: tier } : c)),
+      };
+      void supabase.from("proposals").update({ ecosystem: updated as any } as any).eq("id", proposalId);
+      return updated;
+    });
+    toast.success(`${companies.length} holders → ${TIER_LABEL[tier]}`);
   };
 
   const addToMatrix = async (c: EcosystemCompany) => {
@@ -314,6 +337,12 @@ export function EcosystemCard({
               <Badge variant="secondary" className="text-xs">{counts.coalition} coalition</Badge>
               <Badge variant="secondary" className="text-xs">{counts.dark} dark horses</Badge>
             </>
+          )}
+          {inputsMeta?.setAside && (
+            <Badge variant="outline" className="text-xs">
+              set-aside: {inputsMeta.setAside}
+              {inputsMeta.setAsideSource === "inferred_from_vehicle" ? " (inferred from vehicle)" : ""}
+            </Badge>
           )}
           {vehicleId && pool && (
             pool.count > 0 ? (
@@ -449,7 +478,7 @@ export function EcosystemCard({
 
                     {open && (
                       <div className="border-t p-3 space-y-3 text-xs bg-muted/30">
-                        {c.factorBreakdown.length > 0 && (
+                        {c.factorBreakdown.some((f) => f.score > 0) && (
                           <table className="w-full">
                             <thead>
                               <tr className="text-left text-muted-foreground">
@@ -522,6 +551,24 @@ export function EcosystemCard({
                     {pendingOpen[role] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                     {pending.length} vehicle holders pending eligibility validation
                   </button>
+                  <div className="flex flex-wrap gap-2 px-2 pb-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => void setTierBulk(pending, "likely")}
+                    >
+                      Mark all as likely
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-7 text-xs"
+                      onClick={() => void setTierBulk(pending, "validated")}
+                    >
+                      Mark all as validated
+                    </Button>
+                  </div>
                   {pendingOpen[role] && <div className="space-y-1.5 p-2 pt-0">{pending.map(renderRow)}</div>}
                 </div>
               )}
