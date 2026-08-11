@@ -175,7 +175,7 @@ export async function generateEcosystem(
         naicsCodes: [naics],
         startDate,
         endDate,
-        agency: departmentDisplay,
+        agency: departmentDisplay ?? undefined,
         maxResults: 1000,
       });
       awards.push(...tag(b.results, "agency"));
@@ -205,7 +205,7 @@ export async function generateEcosystem(
         naicsCodes: [naics],
         startDate,
         endDate,
-        agency: department ?? undefined,
+        agency: departmentDisplay ?? undefined,
         maxResults: 1000,
       });
       awards.push(...tag(d.results, "agency"));
