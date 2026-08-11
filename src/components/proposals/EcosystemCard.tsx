@@ -107,6 +107,8 @@ export function EcosystemCard({
   const [showWeights, setShowWeights] = useState(false);
   const [vendor, setVendor] = useState<{ name: string; uei: string | null } | null>(null);
   const [pool, setPool] = useState<{ count: number; latest: string | null; name: string | null } | null>(null);
+  const [pendingOpen, setPendingOpen] = useState<Record<string, boolean>>({});
+
 
   const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
 
