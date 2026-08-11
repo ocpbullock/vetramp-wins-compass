@@ -353,6 +353,16 @@ export function EcosystemCard({
           </div>
         )}
 
+        {holdersUnvalidated && !vehicleDropout && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5 text-warning shrink-0" />
+            <span>
+              {onVehicleCount} vehicle holders included — none validated/likely eligible yet. Review their
+              eligibility below to build the prime pool.
+            </span>
+          </div>
+        )}
+
         {rosterStale && !vehicleDropout && (
           <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
             <span>
