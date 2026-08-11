@@ -202,3 +202,57 @@ describe("buildEcosystem", () => {
     expect(res.summary.primeCompetitorCount).toBeGreaterThanOrEqual(0);
   });
 });
+
+describe("vehicle holders", () => {
+  const holders = Array.from({ length: 25 }, (_, i) => ({
+    name: `Holder ${i}`,
+    uei: `UEI-H${i}`,
+    small_business: null as boolean | null,
+    socioeconomic: [] as string[],
+  }));
+
+  it("keeps every vehicle holder despite the default cap", () => {
+    // 25 holders with no award evidence + 20 award-rich non-holders > cap of 18.
+    const awards = Array.from({ length: 20 }, (_, i) =>
+      award({ "Recipient Name": `Bidder ${i}`, "Recipient UEI": `UEI-B${i}` }),
+    );
+    const res = buildEcosystem(base({ awards, vehicleAwardees: holders, vehicleRestricted: true }));
+    for (const h of holders) {
+      const row = res.companies.find((c) => c.name === h.name);
+      expect(row, `${h.name} was dropped by the cap`).toBeTruthy();
+      expect(row!.onVehicle).toBe(true);
+    }
+  });
+
+  it("classifies an SDVOSB-tagged holder as likely on an SDVOSB set-aside and lets it prime", () => {
+    const res = buildEcosystem(
+      base({
+        awards: [award({ "Recipient Name": "Vet Co", "Recipient UEI": "UEI-VET" })],
+        vehicleAwardees: [
+          { name: "Vet Co", uei: "UEI-VET", small_business: true, socioeconomic: ["SDVOSB"] },
+        ],
+        vehicleRestricted: true,
+        opportunity: { ...base().opportunity, setAside: "SDVOSB Set-Aside" },
+      }),
+    );
+    const row = find(res, "Vet Co");
+    expect(row.eligibility).toBe("likely");
+    expect(["likely_prime_competitor", "prime_teaming_partner"]).toContain(row.role);
+  });
+
+  it("treats unknown small_business as requires_validation, never not_eligible", () => {
+    const res = buildEcosystem(
+      base({
+        awards: [award({ "Recipient Name": "Unknown Co", "Recipient UEI": "UEI-UNK" })],
+        vehicleAwardees: [
+          { name: "Unknown Co", uei: "UEI-UNK", small_business: null, socioeconomic: [] },
+        ],
+        vehicleRestricted: true,
+        opportunity: { ...base().opportunity, setAside: "Total Small Business Set-Aside" },
+      }),
+    );
+    const row = find(res, "Unknown Co");
+    expect(row.eligibility).not.toBe("not_eligible");
+    expect(row.eligibility).toBe("requires_validation");
+  });
+});

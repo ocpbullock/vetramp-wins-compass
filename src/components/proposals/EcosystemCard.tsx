@@ -107,6 +107,8 @@ export function EcosystemCard({
   const [showWeights, setShowWeights] = useState(false);
   const [vendor, setVendor] = useState<{ name: string; uei: string | null } | null>(null);
   const [pool, setPool] = useState<{ count: number; latest: string | null; name: string | null } | null>(null);
+  const [pendingOpen, setPendingOpen] = useState<Record<string, boolean>>({});
+
 
   const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
 
@@ -141,6 +143,11 @@ export function EcosystemCard({
   }, [result]);
 
   const onVehicleCount = (result?.companies ?? []).filter((c) => c.onVehicle).length;
+  // Holders present but none reached the prime pool: a validation backlog, not a bug.
+  const holdersUnvalidated =
+    !!result &&
+    onVehicleCount > 0 &&
+    !(result.companies ?? []).some((c) => c.onVehicle && c.role === "likely_prime_competitor");
   const vehicleDropout = !!result && !!pool && pool.count > 0 && onVehicleCount === 0;
   const rosterStale =
     !!result && !!pool?.latest && !!generatedAt && new Date(pool.latest) > new Date(generatedAt);
@@ -346,6 +353,16 @@ export function EcosystemCard({
           </div>
         )}
 
+        {holdersUnvalidated && !vehicleDropout && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm flex items-start gap-2">
+            <AlertTriangle className="w-4 h-4 mt-0.5 text-warning shrink-0" />
+            <span>
+              {onVehicleCount} vehicle holders included — none validated/likely eligible yet. Review their
+              eligibility below to build the prime pool.
+            </span>
+          </div>
+        )}
+
         {rosterStale && !vehicleDropout && (
           <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
             <span>
@@ -371,14 +388,14 @@ export function EcosystemCard({
         )}
 
         {ROLE_ORDER.map((role) => {
-          const rows = grouped.get(role) ?? [];
-          if (rows.length === 0) return null;
-          return (
-            <div key={role} className="space-y-1.5">
-              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                {ROLE_LABEL[role]} ({rows.length})
-              </div>
-              {rows.map((c) => {
+          const allRows = grouped.get(role) ?? [];
+          if (allRows.length === 0) return null;
+          // A long tail of unvalidated vehicle holders shouldn't bury the ranked
+          // companies — fold it away until the human works through it.
+          const pending = allRows.filter((c) => c.onVehicle && c.eligibility === "requires_validation");
+          const foldPending = pending.length > 10;
+          const rows = foldPending ? allRows.filter((c) => !pending.includes(c)) : allRows;
+          const renderRow = (c: EcosystemCompany) => {
                 const open = openRow === c.name;
                 return (
                   <div key={c.name} className="rounded-md border">
@@ -488,7 +505,26 @@ export function EcosystemCard({
                     )}
                   </div>
                 );
-              })}
+          };
+          return (
+            <div key={role} className="space-y-1.5">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {ROLE_LABEL[role]} ({allRows.length})
+              </div>
+              {rows.map(renderRow)}
+              {foldPending && (
+                <div className="rounded-md border border-dashed">
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2 p-2 text-xs font-medium text-muted-foreground"
+                    onClick={() => setPendingOpen((p) => ({ ...p, [role]: !p[role] }))}
+                  >
+                    {pendingOpen[role] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    {pending.length} vehicle holders pending eligibility validation
+                  </button>
+                  {pendingOpen[role] && <div className="space-y-1.5 p-2 pt-0">{pending.map(renderRow)}</div>}
+                </div>
+              )}
             </div>
           );
         })}

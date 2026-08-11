@@ -606,8 +606,13 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
   const max = targetSize?.max ?? DEFAULT_TARGET.max;
   const capped: EcosystemCompany[] = [];
   for (const s of ordered) {
+    // A vehicle holder is a real bidder on this action whether or not the award
+    // pull found evidence for them — never let the cap hide one.
     const alwaysKeep =
-      s.company.role === "known_competitor" || s.company.role === "incumbent" || s.company.userIdentified;
+      s.company.role === "known_competitor" ||
+      s.company.role === "incumbent" ||
+      s.company.userIdentified ||
+      s.company.onVehicle;
     if (capped.length < max || alwaysKeep) capped.push(s.company);
   }
 
