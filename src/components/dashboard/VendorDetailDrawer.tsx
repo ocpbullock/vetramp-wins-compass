@@ -28,10 +28,12 @@ function fmtUsd(n?: number | null) {
 }
 
 export function VendorDetailDrawer({
-  recipientId, vendorName, searchedNaics, onClose,
+  recipientId, vendorName, uei, searchedNaics, onClose,
 }: {
   recipientId: string | null;
   vendorName: string | null;
+  /** Known UEI, when the caller already resolved one. Skips fragile name resolution. */
+  uei?: string | null;
   searchedNaics: string[];
   onClose: () => void;
 }) {
@@ -43,19 +45,21 @@ export function VendorDetailDrawer({
   // and we re-run by UEI.
   const [selectedUei, setSelectedUei] = useState<string | null>(null);
   const [research, setResearch] = useState<VendorResearch | null>(null);
+  const [researchError, setResearchError] = useState<string | null>(null);
   const [researching, setResearching] = useState(false);
   const { currentTeam, userRole } = useTeam();
   const canSave = !!currentTeam && (userRole === "owner" || userRole === "admin" || userRole === "member");
 
   useEffect(() => {
-    if (!recipientId && !vendorName) { setData(null); setError(null); setSelectedUei(null); setResearch(null); return; }
-    setLoading(true); setError(null); setData(null); setSelectedUei(null); setResearch(null);
-    // Pass both signals — the function decides UEI vs name-resolution.
-    getVendorProfile({ recipientId, vendorName })
+    if (!recipientId && !vendorName && !uei) { setData(null); setError(null); setSelectedUei(null); setResearch(null); return; }
+    setLoading(true); setError(null); setData(null); setSelectedUei(null); setResearch(null); setResearchError(null);
+    // Pass every signal we have — the function prefers UEI over name resolution.
+    getVendorProfile({ uei: uei ?? null, recipientId, vendorName })
       .then(setData)
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
-  }, [recipientId, vendorName]);
+  }, [recipientId, vendorName, uei]);
+
 
   // Hydrate cached AI research once the drawer knows the resolved identity.
   useEffect(() => {
