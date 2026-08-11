@@ -203,6 +203,43 @@ describe("buildEcosystem", () => {
   });
 });
 
+describe("vehicle_presence factor", () => {
+  it("scores an on-vehicle holder with zero award evidence above zero", () => {
+    const res = buildEcosystem(
+      base({
+        awards: [],
+        vehicleAwardees: [{ name: "Holder Co", uei: "UEI-H", small_business: true }],
+        vehicleRestricted: true,
+        opportunity: { ...base().opportunity, vehicleName: "Polaris SDVOSB Pool" },
+      }),
+    );
+    const row = find(res, "Holder Co");
+    const f = row.factorBreakdown.find((x) => x.key === "vehicle_presence")!;
+    expect(f).toBeTruthy();
+    expect(f.score).toBe(1);
+    expect(f.evidence).toContain("Polaris SDVOSB Pool");
+    expect(row.score!).toBeGreaterThan(0);
+    expect(row.score!).toBeCloseTo(f.weight, 0);
+  });
+
+  it("gives off-vehicle companies the factor at score 0", () => {
+    const res = buildEcosystem(
+      base({
+        awards: [award({ "Recipient Name": "OffCo", "Recipient UEI": "UEI-OFF" })],
+        vehicleAwardees: [{ name: "Holder Co", uei: "UEI-H", small_business: true }],
+      }),
+    );
+    const f = find(res, "OffCo").factorBreakdown.find((x) => x.key === "vehicle_presence")!;
+    expect(f.score).toBe(0);
+    expect(f.evidence).toBe("Not a vehicle holder");
+  });
+
+  it("omits the factor entirely when no vehicle is linked", () => {
+    const res = buildEcosystem(base({ awards: [award()] }));
+    expect(find(res, "Acme").factorBreakdown.some((f) => f.key === "vehicle_presence")).toBe(false);
+  });
+});
+
 describe("vehicle holders", () => {
   const holders = Array.from({ length: 25 }, (_, i) => ({
     name: `Holder ${i}`,

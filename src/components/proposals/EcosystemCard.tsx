@@ -20,6 +20,7 @@ import {
   readEcosystem,
   readEcosystemConfig,
   readEcosystemInputs,
+  ECOSYSTEM_SCHEMA_VERSION,
   saveEcosystemConfig,
   type EcosystemConfig,
   type EcosystemExpansion,
@@ -73,6 +74,7 @@ const FACTOR_ORDER: FactorKey[] = [
   "contract_size",
   "scope_similarity",
   "agency_experience",
+  "vehicle_presence",
 ];
 
 const FACTOR_LABEL: Record<FactorKey, string> = {
@@ -81,6 +83,7 @@ const FACTOR_LABEL: Record<FactorKey, string> = {
   contract_size: "Similar contract size",
   scope_similarity: "Similar scope",
   agency_experience: "Broader agency experience",
+  vehicle_presence: "On contract vehicle",
 };
 
 function when(ts: string | null | undefined): string {
@@ -151,6 +154,8 @@ export function EcosystemCard({
     onVehicleCount > 0 &&
     !(result.companies ?? []).some((c) => c.onVehicle && c.role === "likely_prime_competitor");
   const vehicleDropout = !!result && !!pool && pool.count > 0 && onVehicleCount === 0;
+  const schemaStale =
+    !!result && (inputsMeta?.schemaVersion ?? 0) < ECOSYSTEM_SCHEMA_VERSION;
   const rosterStale =
     !!result && !!pool?.latest && !!generatedAt && new Date(pool.latest) > new Date(generatedAt);
 
@@ -404,6 +409,18 @@ export function EcosystemCard({
           </div>
         )}
 
+        {schemaStale && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Inputs changed — this ecosystem was scored before contract-vehicle presence became a scored
+              factor. Regenerate for current scores.
+            </span>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void run()}>
+              Regenerate
+            </Button>
+          </div>
+        )}
+
         {result?.needsExpansion && (
           <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
             <span>
@@ -478,7 +495,7 @@ export function EcosystemCard({
 
                     {open && (
                       <div className="border-t p-3 space-y-3 text-xs bg-muted/30">
-                        {c.factorBreakdown.some((f) => f.score > 0) && (
+                        {c.factorBreakdown.some((f) => f.score > 0 && f.key !== "vehicle_presence") ? (
                           <table className="w-full">
                             <thead>
                               <tr className="text-left text-muted-foreground">
@@ -499,7 +516,12 @@ export function EcosystemCard({
                               ))}
                             </tbody>
                           </table>
-                        )}
+                        ) : c.onVehicle ? (
+                          <div className="text-muted-foreground">
+                            On the vehicle — no relevant award history found
+                            {c.score != null ? ` · score ${c.score}` : ""}
+                          </div>
+                        ) : null}
                         {c.evidence.customerAwards + c.evidence.naicsAwards + c.evidence.agencyAwards === 0 ? (
                           <div className="text-muted-foreground">
                             No relevant awards found in the pulled window
