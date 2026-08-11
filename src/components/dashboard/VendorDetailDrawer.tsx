@@ -342,11 +342,22 @@ function VerifyExternally({ uei, name }: { uei: string | null; name: string | nu
   );
 }
 
+/** Compact, labeled inline failure so one dead call never blanks the drawer. */
+function SectionError({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-1.5 rounded border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive">
+      <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+      <span className="break-words">{message}</span>
+    </div>
+  );
+}
+
 function AiResearchBlock({
-  research, researching, onRun,
+  research, researching, error, onRun,
 }: {
   research: VendorResearch | null;
   researching: boolean;
+  error?: string | null;
   onRun: () => void;
 }) {
   return (
@@ -362,6 +373,8 @@ function AiResearchBlock({
         <Info className="w-3 h-3 mt-0.5 shrink-0" />
         <span>Model-generated. May contain errors or omissions — verify each claim against SAM/USAspending/news before acting on it.</span>
       </div>
+      {error && <div className="mt-2"><SectionError message={`AI research unavailable — ${error}`} /></div>}
+
       {research && (
         <div className="mt-3 space-y-2.5 text-xs">
           <div>
