@@ -293,3 +293,82 @@ describe("vehicle holders", () => {
     expect(row.eligibility).toBe("requires_validation");
   });
 });
+
+describe("demonstrated capacity factor", () => {
+  function capacity(res: ReturnType<typeof buildEcosystem>, name: string) {
+    return find(res, name).factorBreakdown.find((f) => f.key === "contract_size")!;
+  }
+
+  it("annualizes a large estimate by the default 5-year assumption", () => {
+    const res = buildEcosystem(
+      base({
+        awards: [award({ "Recipient Name": "MidCo", "Award Amount": 20_000_000 })],
+        opportunity: { ...base().opportunity, estimatedValue: 200_000_000 },
+      }),
+    );
+    const f = capacity(res, "MidCo");
+    // 20M vs 40M/yr => ratio 0.5 => 1.0
+    expect(f.score).toBe(1);
+    expect(f.label).toBe("Demonstrated capacity");
+    expect(f.evidence).toMatch(/run-rate/);
+  });
+
+  it("uses popMonths when provided", () => {
+    const res = buildEcosystem(
+      base({
+        awards: [award({ "Recipient Name": "MidCo", "Award Amount": 20_000_000 })],
+        opportunity: { ...base().opportunity, estimatedValue: 200_000_000, popMonths: 24 },
+      }),
+    );
+    // 20M vs 100M/yr => 0.2 => 0.75
+    expect(capacity(res, "MidCo").score).toBe(0.75);
+  });
+
+  it("gives tiny-award vendors a 0.1 floor instead of 0", () => {
+    const res = buildEcosystem(
+      base({
+        awards: [award({ "Recipient Name": "TinyCo", "Award Amount": 50_000 })],
+        opportunity: { ...base().opportunity, estimatedValue: 200_000_000 },
+      }),
+    );
+    expect(capacity(res, "TinyCo").score).toBe(0.1);
+  });
+
+  it("hits each band threshold", () => {
+    const cases: [number, number][] = [
+      [40_000_000, 1],
+      [6_000_000, 0.75],
+      [2_000_000, 0.5],
+      [400_000, 0.25],
+    ];
+    for (const [amount, expected] of cases) {
+      const res = buildEcosystem(
+        base({
+          awards: [award({ "Recipient Name": "BandCo", "Award Amount": amount })],
+          opportunity: { ...base().opportunity, estimatedValue: 200_000_000 },
+        }),
+      );
+      expect(capacity(res, "BandCo").score, `amount ${amount}`).toBe(expected);
+    }
+  });
+
+  it("does not penalize oversized performers until 20x", () => {
+    const big = buildEcosystem(
+      base({
+        awards: [award({ "Recipient Name": "BigCo", "Award Amount": 400_000_000 })],
+        opportunity: { ...base().opportunity, estimatedValue: 200_000_000 },
+      }),
+    );
+    expect(capacity(big, "BigCo").score).toBe(1);
+
+    const huge = buildEcosystem(
+      base({
+        awards: [award({ "Recipient Name": "HugeCo", "Award Amount": 2_000_000_000 })],
+        opportunity: { ...base().opportunity, estimatedValue: 200_000_000 },
+      }),
+    );
+    const f = capacity(huge, "HugeCo");
+    expect(f.score).toBe(0.8);
+    expect(f.evidence).toMatch(/verify appetite/i);
+  });
+});
