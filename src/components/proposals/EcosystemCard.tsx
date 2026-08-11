@@ -106,6 +106,29 @@ export function EcosystemCard({
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [showWeights, setShowWeights] = useState(false);
   const [vendor, setVendor] = useState<{ name: string; uei: string | null } | null>(null);
+  const [pool, setPool] = useState<{ count: number; latest: string | null; name: string | null } | null>(null);
+
+  const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
+
+  // Live vehicle-holder count — the ecosystem is only as good as this roster.
+  useEffect(() => {
+    let cancelled = false;
+    if (!vehicleId) { setPool(null); return; }
+    void (async () => {
+      const [{ data: rows }, { data: veh }] = await Promise.all([
+        supabase.from("vehicle_awardees").select("created_at").eq("vehicle_id", vehicleId),
+        supabase.from("vehicle_registry").select("vehicle_name").eq("id", vehicleId).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const created = (rows ?? []).map((r: any) => r.created_at).filter(Boolean).sort();
+      setPool({
+        count: rows?.length ?? 0,
+        latest: created.length ? created[created.length - 1] : null,
+        name: (veh as any)?.vehicle_name ?? (proposal?.contract_vehicle ?? null),
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [vehicleId, proposal?.contract_vehicle]);
 
   const grouped = useMemo(() => {
     const map = new Map<EcosystemRole, EcosystemCompany[]>();
@@ -116,6 +139,12 @@ export function EcosystemCard({
     }
     return map;
   }, [result]);
+
+  const onVehicleCount = (result?.companies ?? []).filter((c) => c.onVehicle).length;
+  const vehicleDropout = !!result && !!pool && pool.count > 0 && onVehicleCount === 0;
+  const rosterStale =
+    !!result && !!pool?.latest && !!generatedAt && new Date(pool.latest) > new Date(generatedAt);
+
 
   const run = async (expand?: EcosystemExpansion) => {
     setBusy(true);
