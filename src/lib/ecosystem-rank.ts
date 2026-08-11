@@ -86,6 +86,8 @@ export type EcosystemOpportunity = {
   adjacentPrefix?: string | null;
   setAside?: string | null;
   estimatedValue?: number | null;
+  /** Period of performance in months (base + options), when known. */
+  popMonths?: number | null;
   agency?: string | null;
   customerSubAgency?: string | null;
   /** Precomputed scope keywords (lowercase tokens/phrases). */
@@ -135,7 +137,7 @@ export const BASE_WEIGHTS: Record<FactorKey, number> = {
 const FACTOR_LABELS: Record<FactorKey, string> = {
   customer_experience: "Customer experience",
   naics_experience: "Primary NAICS experience",
-  contract_size: "Similar contract size",
+  contract_size: "Demonstrated capacity",
   scope_similarity: "Similar scope",
   agency_experience: "Broader agency experience",
   vehicle_presence: "On contract vehicle",
@@ -198,11 +200,38 @@ function requiredSocio(setAside: string | null | undefined): { tag: RegExp; labe
   return null;
 }
 
-function median(values: number[]): number | null {
+function percentile(values: number[], p: number): number | null {
   const v = values.filter((x) => Number.isFinite(x) && x > 0).sort((a, b) => a - b);
   if (v.length === 0) return null;
-  const mid = Math.floor(v.length / 2);
-  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
+  const idx = Math.min(v.length - 1, Math.max(0, Math.ceil(p * v.length) - 1));
+  return v[idx];
+}
+
+/** Years the estimated value is spread over, from PoP when known. */
+export function targetYears(estimate: number | null, popMonths?: number | null): number {
+  if (popMonths && popMonths > 0) return Math.max(1, popMonths / 12);
+  if (estimate == null) return 1;
+  if (estimate >= 50_000_000) return 5;
+  if (estimate >= 10_000_000) return 3;
+  return 1;
+}
+
+/** Asymmetric capacity bands on capacity / annualized target. */
+export function capacityScore(ratio: number): number {
+  if (!Number.isFinite(ratio) || ratio <= 0) return 0;
+  if (ratio > 20) return 0.8;
+  if (ratio >= 0.5) return 1;
+  if (ratio >= 0.15) return 0.75;
+  if (ratio >= 0.05) return 0.5;
+  if (ratio >= 0.01) return 0.25;
+  return 0.1;
+}
+
+function usd(n: number): string {
+  if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
+  return `$${Math.round(n).toLocaleString()}`;
 }
 
 function tokenize(s: string | null | undefined): string[] {
@@ -230,6 +259,7 @@ type Bucket = {
   agencyCount: number;
   latestRelevantDate: string | null;
   amounts: number[];
+  weightedAmounts: number[];
   descriptions: string[];
   setAsides: string[];
 };
@@ -289,6 +319,7 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
         agencyCount: 0,
         latestRelevantDate: null,
         amounts: [],
+        weightedAmounts: [],
         descriptions: [],
         setAsides: [],
       };
@@ -348,7 +379,10 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
     }
 
     const amt = Number(a["Award Amount"]) || 0;
-    if (amt > 0) b.amounts.push(amt);
+    if (amt > 0) {
+      b.amounts.push(amt);
+      b.weightedAmounts.push(amt * w);
+    }
     const d = a["Start Date"] || null;
     if (d && (!b.latestRelevantDate || d > b.latestRelevantDate)) b.latestRelevantDate = d;
     if (a.Description && b.descriptions.length < 8) b.descriptions.push(a.Description);
@@ -457,10 +491,23 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
       `${b.naicsCount} award(s) in NAICS ${oppNaics}`,
     );
 
-    const med = median(b.amounts);
-    if (estimate != null && med != null) {
-      const dist = Math.abs(Math.log10(med / estimate));
-      push("contract_size", Math.max(0, 1 - dist / 2), `Median relevant award $${Math.round(med).toLocaleString()} vs estimate $${Math.round(estimate).toLocaleString()}`);
+    const maxWeighted = b.weightedAmounts.length ? Math.max(...b.weightedAmounts) : null;
+    const p90 = percentile(b.amounts, 0.9);
+    const capacity =
+      maxWeighted != null && p90 != null ? Math.min(maxWeighted, p90) : (maxWeighted ?? p90);
+    if (estimate != null && capacity != null && capacity > 0) {
+      const years = targetYears(estimate, opportunity.popMonths);
+      const annualTarget = estimate / years;
+      const ratio = capacity / annualTarget;
+      const score = capacityScore(ratio);
+      const base = `Largest relevant award ${usd(capacity)} vs ~${usd(annualTarget)}/yr program run-rate (est. ${usd(estimate)} over ${years % 1 === 0 ? years : years.toFixed(1)} yrs)`;
+      push(
+        "contract_size",
+        score,
+        ratio > 20
+          ? `${base} — typically performs much larger — verify appetite for this size.`
+          : base,
+      );
     }
 
     if (scopeKeywords.length > 0 && b.descriptions.length > 0) {
@@ -533,8 +580,8 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
             ? Math.round(b.amounts.reduce((s, x) => s + x, 0) / b.amounts.length)
             : null,
           sizeSimilarity:
-            estimate != null && med != null
-              ? Math.max(0, 1 - Math.abs(Math.log10(med / estimate)) / 2)
+            estimate != null && capacity != null && capacity > 0
+              ? capacityScore(capacity / (estimate / targetYears(estimate, opportunity.popMonths)))
               : null,
         },
         userIdentified,
