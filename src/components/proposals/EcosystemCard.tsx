@@ -265,7 +265,7 @@ export function EcosystemCard({
             )}
             <Button size="sm" onClick={() => void run()} disabled={busy}>
               {busy ? <Loader2 className="w-3.5 h-3.5 mr-1 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 mr-1" />}
-              {result ? "Regenerate" : "Generate"}
+              {result ? "Regenerate" : "Generate competitive ecosystem"}
             </Button>
           </div>
         </div>
@@ -282,7 +282,8 @@ export function EcosystemCard({
       <CardContent className="space-y-4">
         {!result && (
           <p className="text-sm text-muted-foreground">
-            No ecosystem built yet. Generate one to map who can credibly bid this opportunity.
+            No ecosystem built yet. Generate one to map who can credibly bid this opportunity — the primes
+            you'll face and the partners you'll recruit.
           </p>
         )}
 

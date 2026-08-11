@@ -18,9 +18,17 @@ import {
   type VehicleAwardeeInput,
 } from "./ecosystem-rank";
 
+export type EcosystemUserIntel = {
+  /** Manually entered competitor names (merged with positioning-matrix rows). */
+  knownCompetitors?: string[];
+  /** Manually entered teammate names (merged with proposal_teaming rows). */
+  knownTeammates?: string[];
+};
+
 export type EcosystemConfig = {
   validatedOverrides?: Record<string, EligibilityTier>;
   weights?: Partial<Record<FactorKey, number>>;
+  userIntel?: EcosystemUserIntel;
 };
 
 export type EcosystemExpansion = "adjacent_naics" | "parent_agency";
@@ -30,6 +38,10 @@ export function readEcosystemConfig(proposal: any): EcosystemConfig {
   return {
     validatedOverrides: (raw?.validatedOverrides ?? {}) as Record<string, EligibilityTier>,
     weights: (raw?.weights ?? {}) as Partial<Record<FactorKey, number>>,
+    userIntel: {
+      knownCompetitors: Array.isArray(raw?.userIntel?.knownCompetitors) ? raw.userIntel.knownCompetitors : [],
+      knownTeammates: Array.isArray(raw?.userIntel?.knownTeammates) ? raw.userIntel.knownTeammates : [],
+    },
   };
 }
 
@@ -58,6 +70,21 @@ export function extractScopeKeywords(proposal: any, max = 8): string[] {
     seen.add(t);
     out.push(t);
     if (out.length >= max) break;
+  }
+  return out;
+}
+
+/** Case-insensitive dedupe preserving first-seen casing. */
+function dedupeNames(names: (string | null | undefined)[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const n of names) {
+    const t = String(n ?? "").trim();
+    if (!t) continue;
+    const k = t.toLowerCase();
+    if (seen.has(k)) continue;
+    seen.add(k);
+    out.push(t);
   }
   return out;
 }
@@ -175,7 +202,7 @@ export async function generateEcosystem(
   const matrixRows: any[] = Array.isArray(proposal?.positioning_matrix?.rows)
     ? proposal.positioning_matrix.rows
     : [];
-  const knownCompetitors = matrixRows
+  const matrixCompetitors = matrixRows
     .filter((r) => !r?.isUs && r?.company)
     .map((r) => String(r.company).trim())
     .filter(Boolean);
@@ -184,13 +211,22 @@ export async function generateEcosystem(
     .from("proposal_teaming")
     .select("company_id, companies:company_id ( name )")
     .eq("proposal_id", proposal.id);
-  const knownTeammates = (teamingRows ?? [])
+  const teamingNames = (teamingRows ?? [])
     .map((r: any) => r?.companies?.name)
     .filter(Boolean) as string[];
 
+  const config = readEcosystemConfig(proposal);
+  const knownCompetitors = dedupeNames([
+    ...matrixCompetitors,
+    ...(config.userIntel?.knownCompetitors ?? []),
+  ]);
+  const knownTeammates = dedupeNames([
+    ...teamingNames,
+    ...(config.userIntel?.knownTeammates ?? []),
+  ]);
+
   // -- Rank ----------------------------------------------------------------
   progress("Ranking the ecosystem…");
-  const config = readEcosystemConfig(proposal);
   const result = buildEcosystem({
     awards,
     vehicleAwardees,

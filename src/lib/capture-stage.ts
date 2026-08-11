@@ -176,6 +176,8 @@ export function nextCaptureStage(current: CaptureStage | string | null | undefin
 export type StageSignals = {
   hasNaicsAgency: boolean;
   hasSnapshot: boolean;
+  /** Competitive ecosystem generated (ecosystem_at set). */
+  hasEcosystem?: boolean;
   hasAnalysis: boolean;
   teamingCount: number;
   sectionsCount: number;
@@ -186,7 +188,7 @@ export function isStageSatisfied(stage: CaptureStage | string | null | undefined
     case "intake":
       return s.hasNaicsAgency;
     case "researching":
-      return s.hasSnapshot;
+      return Boolean(s.hasSnapshot || s.hasEcosystem);
     case "analyzing":
       return s.hasAnalysis;
     case "pursuing":
@@ -201,9 +203,9 @@ export function isStageSatisfied(stage: CaptureStage | string | null | undefined
 export function stageHint(stage: CaptureStage | string | null | undefined): string | null {
   switch (stage) {
     case "intake":
-      return "Add & parse documents or set NAICS/agency";
+      return "Set NAICS/agency and generate your competitive ecosystem";
     case "researching":
-      return "Generate the market snapshot";
+      return "Generate the market snapshot and competitive ecosystem";
     case "analyzing":
       return "Run capture analysis";
     case "pursuing":

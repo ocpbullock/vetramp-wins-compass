@@ -66,13 +66,14 @@ import type { PwinProbabilityResult } from "@/lib/pwin-probability";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 
 import { NaicsCombobox } from "@/components/NaicsCombobox";
+import { EcosystemPanel } from "@/components/proposals/EcosystemPanel";
 import { canonicalizeAgencyName } from "@/lib/agency-match";
 import { AgencyCombobox } from "@/components/dashboard/AgencyCombobox";
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Lightbulb, Swords, Users, UserPlus, Mail } from "lucide-react";
 
-const HUB_TABS = ["overview", "market_intel", "human_intel", "team", "capture_analysis", "proposal", "activities"] as const;
+const HUB_TABS = ["overview", "ecosystem", "market_intel", "human_intel", "team", "capture_analysis", "proposal", "activities"] as const;
 type HubTab = typeof HUB_TABS[number];
 export const Route = createFileRoute("/proposals/$proposalId")({
   component: ProposalPipeline,
@@ -716,6 +717,7 @@ function ProposalPipeline() {
   const stageSignals: StageSignals = {
     hasNaicsAgency: Boolean(proposal.naics_code && proposal.agency),
     hasSnapshot: Boolean(proposal.market_snapshot_at),
+    hasEcosystem: Boolean((proposal as any).ecosystem_at),
     hasAnalysis: Boolean(proposal.capture_analysis_at),
     teamingCount: teamingCountForSignals,
     sectionsCount: proposal.sections
@@ -839,6 +841,7 @@ function ProposalPipeline() {
             <TabsList className="w-max bg-transparent p-0 h-auto rounded-none gap-1">
               {([
                 ["overview", "Overview"],
+                ["ecosystem", "Ecosystem"],
                 ["market_intel", "Market Intel"],
                 ["human_intel", "Human Intel"],
                 ["team", "Team"],
@@ -931,6 +934,25 @@ function ProposalPipeline() {
           </TabsContent>
 
 
+          <TabsContent value="ecosystem" className="mt-4">
+            <StepErrorBoundary label="ecosystem">
+              <EcosystemPanel
+                proposal={proposal}
+                proposalId={proposalId}
+                onPatch={patchProposal}
+                onProposalPatch={(patch) => setProposal((p: any) => ({ ...(p ?? {}), ...patch }))}
+                onChanged={async () => {
+                  const { data: fresh } = await supabase
+                    .from("proposals")
+                    .select("ecosystem, ecosystem_at, ecosystem_config, positioning_matrix, pwin_config")
+                    .eq("id", proposalId)
+                    .maybeSingle();
+                  if (fresh) setProposal((p: any) => ({ ...p, ...fresh }));
+                }}
+              />
+            </StepErrorBoundary>
+          </TabsContent>
+
           <TabsContent value="market_intel" className="mt-4">
             <MarketIntelPanel
               proposal={proposal}
@@ -949,7 +971,7 @@ function ProposalPipeline() {
           </TabsContent>
 
           <TabsContent value="capture_analysis" className="mt-4">
-            <CaptureAnalysisPanel proposal={proposal} proposalId={proposalId} onPwinProbability={setPwinProbability} />
+            <CaptureAnalysisPanel proposal={proposal} proposalId={proposalId} onPwinProbability={setPwinProbability} onNavigateTab={(t) => setHubTab(t as HubTab)} />
           </TabsContent>
 
           <TabsContent value="team" className="mt-4">

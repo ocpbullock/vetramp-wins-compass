@@ -38,7 +38,7 @@ import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { CollapsibleSection, usePersistedBool } from "@/components/CollapsibleSection";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
-import { EcosystemCard } from "./EcosystemCard";
+import { EcosystemSummaryStrip } from "./EcosystemSummaryStrip";
 import { PtwCard } from "./PtwCard";
 import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
 import { applyCaptureStage } from "@/lib/stage-mutations";
@@ -214,7 +214,7 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
   return { ready: true as const, teamId, self, partners, entries, suggestions, pwinResult };
 }
 
-export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }: { proposal: any; proposalId: string; onPwinProbability?: (r: PwinProbabilityResult | null) => void }) {
+export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability, onNavigateTab }: { proposal: any; proposalId: string; onPwinProbability?: (r: PwinProbabilityResult | null) => void; onNavigateTab?: (tab: string) => void }) {
   const [analysis, setAnalysis] = useState<CaptureAnalysis | null>(
     (proposal?.capture_analysis as CaptureAnalysis | null) ?? null,
   );
@@ -670,7 +670,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
 
       {/* --- COMPETITIVE FIELD --- */}
       <CollapsibleSection id="sec-competitive" storageKey="ca:sec-competitive:open" title="Competitive field" summary={competitiveSummary}>
-        <EcosystemCard proposal={proposal} proposalId={proposalId} />
+        <EcosystemSummaryStrip proposal={proposal} onOpenEcosystem={() => onNavigateTab?.("ecosystem")} />
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Competitor assessment</CardTitle>
