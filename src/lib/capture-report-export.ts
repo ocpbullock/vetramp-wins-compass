@@ -149,6 +149,8 @@ export type CaptureReportInputs = {
     }>;
   } | null;
   pwinProbability?: PwinProbabilityResult | null;
+  /** proposals.ecosystem — BuildEcosystemResult, rendered when present. */
+  ecosystem?: { companies?: any[]; summary?: { primeCompetitorCount?: number } } | null;
 };
 
 export type CaptureReportOptions = {
@@ -161,7 +163,7 @@ export async function exportCaptureReportDocx(
 ) {
   const variant = options.variant ?? "internal";
   const isInternal = variant === "internal";
-  const { proposal, marketSnapshot, captureAnalysis, intelItems, teamingSummary, darkHorses, positioningMatrix, ptwAnalysis, pwinProbability } = inputs;
+  const { proposal, marketSnapshot, captureAnalysis, intelItems, teamingSummary, darkHorses, positioningMatrix, ptwAnalysis, pwinProbability, ecosystem } = inputs;
 
   const children: (Paragraph | Table)[] = [];
 
@@ -291,6 +293,42 @@ export async function exportCaptureReportDocx(
         c.setAside || "—",
       ]),
       [2600, 900, 1400, 1400, 1400, 1660],
+    ));
+  }
+
+  // Competitive ecosystem (deterministic ranking)
+  const ecoCompanies: any[] = Array.isArray(ecosystem?.companies) ? ecosystem!.companies! : [];
+  if (ecoCompanies.length > 0) {
+    children.push(h2("Competitive Ecosystem"));
+    const ROLE_LABEL: Record<string, string> = {
+      known_competitor: "Known competitor",
+      incumbent: "Incumbent",
+      likely_prime_competitor: "Likely prime competitor",
+      prime_teaming_partner: "Prime teaming partner",
+      coalition_partner: "Coalition partner",
+      dark_horse: "Dark horse",
+    };
+    const TIER_LABEL: Record<string, string> = {
+      validated: "Validated",
+      likely: "Likely eligible",
+      requires_validation: "Needs validation",
+      not_eligible: "Not eligible",
+    };
+    children.push(buildTable(
+      ["Role", "Company", "On vehicle", "Eligibility", "Score", "Confidence"],
+      ecoCompanies.slice(0, 25).map((c: any) => [
+        ROLE_LABEL[String(c?.role)] ?? String(c?.role ?? "—"),
+        String(c?.name ?? "—"),
+        c?.onVehicle ? "Yes" : "No",
+        TIER_LABEL[String(c?.eligibility)] ?? String(c?.eligibility ?? "—"),
+        c?.score == null ? "—" : String(c.score),
+        String(c?.confidence ?? "—"),
+      ]),
+      [2200, 2600, 1100, 1700, 800, 960],
+    ));
+    children.push(p(
+      "Deterministic ranking from award data, vehicle rosters, and capture-team intel. Eligibility tiers require human validation — holding awards or a vehicle does not mean a company is bidding.",
+      { italic: true, size: 18 },
     ));
   }
 
