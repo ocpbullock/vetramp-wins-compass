@@ -214,7 +214,7 @@ export function useTeamingSummary(proposal: any, proposalId: string) {
   return { ready: true as const, teamId, self, partners, entries, suggestions, pwinResult };
 }
 
-export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }: { proposal: any; proposalId: string; onPwinProbability?: (r: PwinProbabilityResult | null) => void }) {
+export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability, onNavigateTab }: { proposal: any; proposalId: string; onPwinProbability?: (r: PwinProbabilityResult | null) => void; onNavigateTab?: (tab: string) => void }) {
   const [analysis, setAnalysis] = useState<CaptureAnalysis | null>(
     (proposal?.capture_analysis as CaptureAnalysis | null) ?? null,
   );
