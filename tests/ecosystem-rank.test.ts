@@ -155,7 +155,12 @@ describe("buildEcosystem", () => {
             Description: "",
           }),
         ],
-        userIntel: { knownCompetitors: ["Rival Corp"] },
+        userIntel: {
+          knownCompetitors: [
+            "Rival Corp",
+            ...Array.from({ length: 19 }, (_, i) => `Known ${i}`),
+          ],
+        },
       }),
     );
     expect(res.companies.length).toBeGreaterThan(18);
