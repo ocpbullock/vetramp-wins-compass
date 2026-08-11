@@ -457,7 +457,7 @@ function SubRelationships({ teamId, companyName }: { teamId: string | null; comp
       if (res.error) setErr(res.error);
       setResult(res);
     } catch (e: any) {
-      setErr(e?.message ?? "Lookup failed");
+      setErr(e?.message ?? "fedspend-subawards: lookup failed");
     } finally {
       setLoading(false);
     }
@@ -491,11 +491,11 @@ function SubRelationships({ teamId, companyName }: { teamId: string | null; comp
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Info className="w-3.5 h-3.5" />}
             Load sub-relationships
           </Button>
-          {err && <div className="text-destructive">{err}</div>}
+          {err && <SectionError message={`Sub-relationships unavailable — fedspend-subawards: ${err}`} />}
         </div>
       ) : (
         <div className="space-y-3">
-          {err && <div className="text-destructive">{err}</div>}
+          {err && <SectionError message={`Sub-relationships unavailable — fedspend-subawards: ${err}`} />}
           <div>
             <div className="text-[10px] uppercase opacity-60 mb-1">Subcontractors they used</div>
             {list(result.asPrime, "No subawards found where this firm was the prime.")}
