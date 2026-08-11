@@ -174,13 +174,19 @@ export function VendorDetailDrawer({
           <AiResearchBlock
             research={research}
             researching={researching}
+            error={researchError}
             onRun={runResearch}
           />
         )}
 
-
-        {error && <div className="text-xs text-destructive mt-3">{error}</div>}
+        {error && (
+          <div className="mt-4 border border-border rounded-md p-2.5">
+            <div className="text-[10px] uppercase opacity-60 mb-1">Vendor profile</div>
+            <SectionError message={`Profile unavailable — ${error}`} />
+          </div>
+        )}
         {loading && <div className="space-y-3 mt-4"><Skeleton className="h-20" /><Skeleton className="h-32" /></div>}
+
 
         {data?.multipleMatches && (
           <div className="mt-4 space-y-2">
