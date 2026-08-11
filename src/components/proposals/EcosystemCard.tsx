@@ -299,14 +299,30 @@ export function EcosystemCard({
             </Button>
           </div>
         </div>
-        {summary && (
-          <div className="flex flex-wrap gap-1.5 pt-2">
-            <Badge variant="secondary" className="text-xs">{result!.companies.length} companies</Badge>
-            <Badge variant="secondary" className="text-xs">{counts.primes} likely primes</Badge>
-            <Badge variant="secondary" className="text-xs">{counts.coalition} coalition</Badge>
-            <Badge variant="secondary" className="text-xs">{counts.dark} dark horses</Badge>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-1.5 pt-2">
+          {summary && (
+            <>
+              <Badge variant="secondary" className="text-xs">{result!.companies.length} companies</Badge>
+              <Badge variant="secondary" className="text-xs">{counts.primes} likely primes</Badge>
+              <Badge variant="secondary" className="text-xs">{counts.coalition} coalition</Badge>
+              <Badge variant="secondary" className="text-xs">{counts.dark} dark horses</Badge>
+            </>
+          )}
+          {vehicleId && pool && (
+            pool.count > 0 ? (
+              <Badge variant="outline" className="text-xs">
+                {pool.name ?? "Vehicle pool"} — {pool.count} holders loaded
+              </Badge>
+            ) : (
+              <Link to="/settings" search={{ tab: "vehicles" } as any} className="no-underline">
+                <Badge variant="outline" className="text-xs bg-warning/15 text-warning border-warning/30">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  0 holders loaded — import or research the holder list
+                </Badge>
+              </Link>
+            )
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -315,6 +331,31 @@ export function EcosystemCard({
             No ecosystem built yet. Generate one to map who can credibly bid this opportunity — the primes
             you'll face and the partners you'll recruit.
           </p>
+        )}
+
+        {vehicleDropout && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 text-destructive shrink-0" />
+              None of the {pool!.count} vehicle holders made it into the ecosystem — likely a data problem,
+              not a market reality. Regenerate after this update.
+            </span>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void run()}>
+              Regenerate
+            </Button>
+          </div>
+        )}
+
+        {rosterStale && !vehicleDropout && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Inputs changed — vehicle holders were imported after this ecosystem was generated
+              ({when(pool!.latest)}).
+            </span>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void run()}>
+              Regenerate
+            </Button>
+          </div>
         )}
 
         {result?.needsExpansion && (
