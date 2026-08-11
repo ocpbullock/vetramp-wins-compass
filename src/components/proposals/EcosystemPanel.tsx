@@ -13,6 +13,7 @@ import { NaicsCombobox } from "@/components/NaicsCombobox";
 import { VehiclePicker } from "@/components/proposals/VehiclePicker";
 import { EcosystemCard } from "@/components/proposals/EcosystemCard";
 import {
+  inferSetAsideFromVehicleName,
   readEcosystemConfig,
   saveEcosystemConfig,
   type EcosystemConfig,
@@ -159,6 +160,31 @@ export function EcosystemPanel({
     onChanged?.();
   };
 
+  // Pool vehicles imply a set-aside; surface it rather than silently inferring.
+  const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
+  const [vehicleName, setVehicleName] = useState<string | null>(
+    (proposal?.opportunity_data as any)?.contract_vehicle ?? null,
+  );
+  useEffect(() => {
+    let cancelled = false;
+    if (!vehicleId) {
+      setVehicleName((proposal?.opportunity_data as any)?.contract_vehicle ?? null);
+      return;
+    }
+    void (async () => {
+      const { data } = await supabase
+        .from("vehicle_registry")
+        .select("vehicle_name")
+        .eq("id", vehicleId)
+        .maybeSingle();
+      if (!cancelled && (data as any)?.vehicle_name) setVehicleName((data as any).vehicle_name);
+    })();
+    return () => { cancelled = true; };
+  }, [vehicleId, proposal?.opportunity_data]);
+
+  const suggestedSetAside =
+    String(proposal?.set_aside ?? "").trim() ? null : inferSetAsideFromVehicleName(vehicleName);
+
   const neverGenerated = !proposal?.ecosystem_at;
 
   return (
@@ -238,6 +264,23 @@ export function EcosystemPanel({
               />
             </div>
           </div>
+
+          {suggestedSetAside && (
+            <div className="rounded-md border border-[color:var(--brand-brass)]/40 bg-[color:color-mix(in_oklab,var(--brand-brass)_10%,transparent)] p-2.5 text-xs flex flex-wrap items-center justify-between gap-2">
+              <span>
+                Vehicle is an {suggestedSetAside} pool — set opportunity set-aside to {suggestedSetAside}?
+              </span>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs"
+                onClick={() => void onPatch({ set_aside: suggestedSetAside })}
+              >
+                Apply
+              </Button>
+            </div>
+          )}
 
           <div className="grid gap-3 md:grid-cols-3">
             <ChipInput
