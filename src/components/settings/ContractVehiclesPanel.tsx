@@ -1101,6 +1101,7 @@ function CsvImportAwardeesDialog({
     const toInsert: TablesInsert<"vehicle_awardees">[] = [];
     for (const m of mapped) {
       if (!m.company_name) { invalid++; continue; }
+      if (isHeaderEcho(m.company_name, m.uei)) { invalid++; continue; }
       const ueiKey = (m.uei ?? "").trim().toUpperCase();
       const nameKey = m.company_name.trim().toLowerCase();
       if (ueiKey) {
