@@ -237,6 +237,14 @@ export async function generateEcosystem(
 
   // -- Rank ----------------------------------------------------------------
   progress("Ranking the ecosystem…");
+  // When the action is locked to a vehicle, every holder must survive the cap —
+  // a holder with no award history is still a real bidder on this action.
+  const holderCount = vehicleAwardees?.length ?? 0;
+  const targetSize =
+    vehicleRestricted && holderCount > 0
+      ? { min: 10, max: Math.max(18, holderCount + 12) }
+      : undefined;
+
   const result = buildEcosystem({
     awards,
     vehicleAwardees,
@@ -253,6 +261,7 @@ export async function generateEcosystem(
     userIntel: { knownCompetitors, knownIncumbent, knownTeammates },
     validatedOverrides: config.validatedOverrides ?? {},
     weights: config.weights ?? {},
+    ...(targetSize ? { targetSize } : {}),
   });
 
   progress("Saving…");
