@@ -38,6 +38,7 @@ import { SimilarPastPursuitsCard } from "./SimilarPastPursuitsCard";
 import { CollapsibleSection, usePersistedBool } from "@/components/CollapsibleSection";
 import { exportCaptureReportDocx } from "@/lib/capture-report-export";
 import { PositioningMatrixCard } from "./PositioningMatrixCard";
+import { EcosystemCard } from "./EcosystemCard";
 import { PtwCard } from "./PtwCard";
 import { nextCaptureStage, CAPTURE_STAGE_LABEL } from "@/lib/capture-stage";
 import { applyCaptureStage } from "@/lib/stage-mutations";
@@ -410,6 +411,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
         darkHorses: (proposal?.market_snapshot as any)?.darkHorses ?? null,
         positioningMatrix: (proposal as any)?.positioning_matrix ?? null,
         ptwAnalysis: (proposal as any)?.ptw_analysis ?? null,
+        ecosystem: (proposal as any)?.ecosystem ?? null,
       }, { variant });
       toast.success(variant === "internal" ? "Internal capture report downloaded" : "Partner-facing brief downloaded");
     } catch (e: any) {
@@ -668,6 +670,7 @@ export function CaptureAnalysisPanel({ proposal, proposalId, onPwinProbability }
 
       {/* --- COMPETITIVE FIELD --- */}
       <CollapsibleSection id="sec-competitive" storageKey="ca:sec-competitive:open" title="Competitive field" summary={competitiveSummary}>
+        <EcosystemCard proposal={proposal} proposalId={proposalId} />
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-base">Competitor assessment</CardTitle>
