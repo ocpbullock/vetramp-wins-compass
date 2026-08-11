@@ -454,12 +454,19 @@ export function EcosystemCard({
                             </tbody>
                           </table>
                         )}
-                        <div className="text-muted-foreground">
-                          {c.evidence.customerAwards} customer award(s) · {c.evidence.naicsAwards} in NAICS ·{" "}
-                          {c.evidence.agencyAwards} at the department · latest{" "}
-                          {c.evidence.latestRelevantDate?.slice(0, 10) ?? "—"} · avg award{" "}
-                          {c.evidence.avgAwardSize ? `$${c.evidence.avgAwardSize.toLocaleString()}` : "—"}
-                        </div>
+                        {c.evidence.customerAwards + c.evidence.naicsAwards + c.evidence.agencyAwards === 0 ? (
+                          <div className="text-muted-foreground">
+                            No relevant awards found in the pulled window
+                            {c.onVehicle ? " — included because they hold the required vehicle." : "."}
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">
+                            {c.evidence.customerAwards} customer award(s) · {c.evidence.naicsAwards} in NAICS ·{" "}
+                            {c.evidence.agencyAwards} at the department · latest{" "}
+                            {c.evidence.latestRelevantDate?.slice(0, 10) ?? "—"} · avg award{" "}
+                            {c.evidence.avgAwardSize ? `$${c.evidence.avgAwardSize.toLocaleString()}` : "—"}
+                          </div>
+                        )}
                         {c.eligibilityReasons.length > 0 && (
                           <div>
                             <div className="font-medium">Eligibility</div>
