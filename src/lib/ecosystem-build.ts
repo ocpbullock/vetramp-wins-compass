@@ -6,7 +6,7 @@
 
 import { supabase } from "@/integrations/supabase/client";
 import { searchUsaspending, type HistoricalAward } from "./api";
-import { canonicalizeAgencyName } from "./agency-match";
+import { canonicalizeAgencyName, splitAgencyPath } from "./agency-match";
 import { naicsFamily } from "./market-snapshot";
 import { getEffectiveIncumbent } from "./incumbent-source";
 import {
