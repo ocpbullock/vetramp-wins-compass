@@ -60,6 +60,43 @@ export function agencyMatchesLoose(
  * segment, cleans it, and if a suggestion vocabulary is provided fuzzy-matches
  * it to the canonical form so downstream searches hit.
  */
+/**
+ * Split an agency path into its segments, most general first.
+ *
+ * A naive split on "." shreds abbreviations: "U.S. SPECIAL OPERATIONS COMMAND"
+ * becomes ["U", "S", "SPECIAL …"] and the department pull then queries "U".
+ * A dot only ends a segment when the text before it ends in a token of at
+ * least 3 characters; segments shorter than 3 characters are never emitted.
+ */
+export function splitAgencyPath(raw: string | null | undefined): string[] {
+  const s = (raw ?? "").toString().trim();
+  if (!s) return [];
+
+  const coarse = s.split(/[\/>\|\\]+/).map((p) => p.trim()).filter(Boolean);
+
+  const out: string[] = [];
+  for (const chunk of coarse) {
+    const dotted = chunk.split(".");
+    let cur = "";
+    for (let i = 0; i < dotted.length; i++) {
+      cur = cur ? `${cur}.${dotted[i]}` : dotted[i];
+      const next = dotted[i + 1];
+      if (next === undefined) break;
+      const lastToken = cur.trim().split(/[\s.]+/).pop() ?? "";
+      // Only break when the dot terminates a real word (not "U." or "St.")
+      // and something substantive follows.
+      if (lastToken.length >= 3 && next.trim().length >= 3) {
+        out.push(cur.trim());
+        cur = "";
+      }
+    }
+    if (cur.trim()) out.push(cur.trim());
+  }
+
+  const kept = out.map((p) => p.trim()).filter((p) => p.length >= 3);
+  return kept.length > 0 ? kept : [s];
+}
+
 export function canonicalizeAgencyName(
   raw: string | null | undefined,
   suggestions?: readonly string[],
@@ -67,13 +104,9 @@ export function canonicalizeAgencyName(
   const s = (raw ?? "").toString().trim();
   if (!s) return { canonical: "", display: "", matched: false };
 
-  // Split on path separators (., /, >, |, \) and take the deepest non-empty
-  // segment as the sub-tier candidate.
-  const parts = s
-    .split(/[\.\/>\|\\]+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
+  const parts = splitAgencyPath(s);
   let seg = parts.length > 0 ? parts[parts.length - 1] : s;
+
 
   // Strip trailing bare codes like " - 123" or " (0000)" numeric-only groups,
   // and collapse whitespace.
