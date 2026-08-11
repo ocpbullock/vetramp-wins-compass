@@ -50,6 +50,26 @@ function logErr(name: string, msg: string) {
   useLogStore.getState().log("error", `✗ ${name}: ${msg}`);
 }
 
+/**
+ * supabase-js reports any non-2xx edge response as the anonymous
+ * "Edge Function returned a non-2xx status code" and hides the JSON body.
+ * Unwrap it so callers can show the server's real message, prefixed with the
+ * function name so a UI banner is never anonymous.
+ */
+export async function edgeErrorMessage(fnName: string, error: unknown): Promise<string> {
+  let detail = (error as any)?.message ?? "Request failed";
+  const ctx = (error as any)?.context;
+  if (ctx && typeof ctx.clone === "function") {
+    try {
+      const parsed = await ctx.clone().json();
+      if (parsed?.error) detail = String(parsed.error);
+      else if (parsed?.message) detail = String(parsed.message);
+    } catch { /* keep the generic message */ }
+  }
+  return `${fnName}: ${detail}`;
+}
+
+
 export async function searchSam(input: {
   naicsCodes: string[];
   postedFrom: string;
