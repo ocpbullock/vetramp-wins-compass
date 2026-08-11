@@ -117,7 +117,12 @@ export function inferSetAsideFromVehicleName(name: string | null | undefined): s
   return null;
 }
 
+/** Bumped when the scoring model changes in a way that stales stored results. */
+export const ECOSYSTEM_SCHEMA_VERSION = 2;
+
 export type EcosystemInputsMeta = {
+  /** Absent on ecosystems generated before the six-factor model. */
+  schemaVersion?: number;
   setAside: string | null;
   setAsideSource: "opportunity" | "inferred_from_vehicle" | "none";
   agency: string | null;
@@ -311,6 +316,7 @@ export async function generateEcosystem(
       agency: departmentDisplay,
       customerSubAgency: customerAgency,
       scopeKeywords: extractScopeKeywords(proposal),
+      vehicleName,
     },
     userIntel: { knownCompetitors, knownIncumbent, knownTeammates },
     validatedOverrides: config.validatedOverrides ?? {},
@@ -322,6 +328,7 @@ export async function generateEcosystem(
   const stored: StoredEcosystem = {
     ...result,
     inputs: {
+      schemaVersion: ECOSYSTEM_SCHEMA_VERSION,
       setAside: effectiveSetAside,
       setAsideSource,
       agency: departmentDisplay,

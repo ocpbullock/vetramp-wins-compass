@@ -2,7 +2,7 @@
 //
 // No fetching, no Supabase, no side effects. The caller supplies award pulls
 // (customer-scoped and agency-scoped), vehicle awardee rosters, and human
-// intel; this module classifies eligibility, scores five weighted factors,
+// intel; this module classifies eligibility, scores six weighted factors,
 // and assigns one ecosystem role per company.
 
 import type { HistoricalAward } from "./api";
