@@ -50,6 +50,26 @@ function logErr(name: string, msg: string) {
   useLogStore.getState().log("error", `✗ ${name}: ${msg}`);
 }
 
+/**
+ * supabase-js reports any non-2xx edge response as the anonymous
+ * "Edge Function returned a non-2xx status code" and hides the JSON body.
+ * Unwrap it so callers can show the server's real message, prefixed with the
+ * function name so a UI banner is never anonymous.
+ */
+export async function edgeErrorMessage(fnName: string, error: unknown): Promise<string> {
+  let detail = (error as any)?.message ?? "Request failed";
+  const ctx = (error as any)?.context;
+  if (ctx && typeof ctx.clone === "function") {
+    try {
+      const parsed = await ctx.clone().json();
+      if (parsed?.error) detail = String(parsed.error);
+      else if (parsed?.message) detail = String(parsed.message);
+    } catch { /* keep the generic message */ }
+  }
+  return `${fnName}: ${detail}`;
+}
+
+
 export async function searchSam(input: {
   naicsCodes: string[];
   postedFrom: string;
@@ -137,7 +157,8 @@ export async function researchVendor(input: {
   knownContracts?: Array<{ piid?: string; naics?: string; agency?: string; amount?: number; end?: string }>;
 }) {
   const { data, error } = await supabase.functions.invoke("vendor-research", { body: input });
-  if (error) throw error;
+  if (error) throw new Error(await edgeErrorMessage("vendor-research", error));
+
   return data as { research: VendorResearch };
 }
 
@@ -218,19 +239,11 @@ export async function getVendorProfile(
   logCall(`vendor-profile ${label}`);
   const { data, error } = await supabase.functions.invoke("vendor-profile", { body });
   if (error) {
-    // supabase-js surfaces non-2xx as "Edge function returned 404" and hides the
-    // JSON body — unwrap it so "no SAM entity found" reads as a real answer.
-    let detail = (error as any)?.message ?? "Vendor lookup failed";
-    const ctx = (error as any)?.context;
-    if (ctx && typeof ctx.json === "function") {
-      try {
-        const parsed = await ctx.clone().json();
-        if (parsed?.error) detail = String(parsed.error);
-      } catch { /* keep the generic message */ }
-    }
+    const detail = await edgeErrorMessage("vendor-profile", error);
     logErr("vendor-profile", detail);
     throw new Error(detail);
   }
+
 
   logOk("vendor-profile", data?.multipleMatches
     ? `${data.candidates?.length ?? 0} candidates`
@@ -246,8 +259,9 @@ export async function getAnalytics(input: {
   logCall("USAspending analytics");
   const { data, error } = await supabase.functions.invoke("usaspending-analytics", { body: input });
   if (error) {
-    logErr("usaspending-analytics", error.message);
-    throw error;
+    const detail = await edgeErrorMessage("usaspending-analytics", error);
+    logErr("usaspending-analytics", detail);
+    throw new Error(detail);
   }
   logOk("usaspending-analytics", "ok");
   return data;

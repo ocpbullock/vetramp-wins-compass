@@ -28,10 +28,12 @@ function fmtUsd(n?: number | null) {
 }
 
 export function VendorDetailDrawer({
-  recipientId, vendorName, searchedNaics, onClose,
+  recipientId, vendorName, uei, searchedNaics, onClose,
 }: {
   recipientId: string | null;
   vendorName: string | null;
+  /** Known UEI, when the caller already resolved one. Skips fragile name resolution. */
+  uei?: string | null;
   searchedNaics: string[];
   onClose: () => void;
 }) {
@@ -43,19 +45,21 @@ export function VendorDetailDrawer({
   // and we re-run by UEI.
   const [selectedUei, setSelectedUei] = useState<string | null>(null);
   const [research, setResearch] = useState<VendorResearch | null>(null);
+  const [researchError, setResearchError] = useState<string | null>(null);
   const [researching, setResearching] = useState(false);
   const { currentTeam, userRole } = useTeam();
   const canSave = !!currentTeam && (userRole === "owner" || userRole === "admin" || userRole === "member");
 
   useEffect(() => {
-    if (!recipientId && !vendorName) { setData(null); setError(null); setSelectedUei(null); setResearch(null); return; }
-    setLoading(true); setError(null); setData(null); setSelectedUei(null); setResearch(null);
-    // Pass both signals — the function decides UEI vs name-resolution.
-    getVendorProfile({ recipientId, vendorName })
+    if (!recipientId && !vendorName && !uei) { setData(null); setError(null); setSelectedUei(null); setResearch(null); return; }
+    setLoading(true); setError(null); setData(null); setSelectedUei(null); setResearch(null); setResearchError(null);
+    // Pass every signal we have — the function prefers UEI over name resolution.
+    getVendorProfile({ uei: uei ?? null, recipientId, vendorName })
       .then(setData)
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
-  }, [recipientId, vendorName]);
+  }, [recipientId, vendorName, uei]);
+
 
   // Hydrate cached AI research once the drawer knows the resolved identity.
   useEffect(() => {
@@ -66,8 +70,8 @@ export function VendorDetailDrawer({
   const runResearch = async () => {
     const displayName = data?.resolved?.legal_name ?? vendorName ?? null;
     const ueiVal = data?.resolved?.uei ?? null;
-    if (!displayName && !ueiVal) { toast.error("No vendor identity to research."); return; }
-    setResearching(true);
+    if (!displayName && !ueiVal) { setResearchError("No vendor identity to research."); return; }
+    setResearching(true); setResearchError(null);
     try {
       const knownContracts = (data?.contracts ?? []).slice(0, 5).map((c: any) => ({
         piid: c["Award ID"], naics: c.NAICS, agency: c["Awarding Agency"] ?? c["Awarding Sub Agency"],
@@ -78,20 +82,21 @@ export function VendorDetailDrawer({
       const key = cacheKeyFor(ueiVal, displayName);
       if (key) researchCache.set(key, r);
     } catch (e: any) {
-      toast.error(e?.message ?? "Research failed");
+      setResearchError(e?.message ?? "vendor-research: research failed");
     } finally {
       setResearching(false);
     }
   };
 
-  const pickCandidate = (uei: string) => {
-    setSelectedUei(uei);
+  const pickCandidate = (pickedUei: string) => {
+    setSelectedUei(pickedUei);
     setLoading(true); setError(null); setData(null);
-    getVendorProfile({ uei })
+    getVendorProfile({ uei: pickedUei })
       .then(setData)
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
   };
+
 
   const saveAsCompany = async () => {
     if (!currentTeam || !data) return;
@@ -169,13 +174,19 @@ export function VendorDetailDrawer({
           <AiResearchBlock
             research={research}
             researching={researching}
+            error={researchError}
             onRun={runResearch}
           />
         )}
 
-
-        {error && <div className="text-xs text-destructive mt-3">{error}</div>}
+        {error && (
+          <div className="mt-4 border border-border rounded-md p-2.5">
+            <div className="text-[10px] uppercase opacity-60 mb-1">Vendor profile</div>
+            <SectionError message={`Profile unavailable — ${error}`} />
+          </div>
+        )}
         {loading && <div className="space-y-3 mt-4"><Skeleton className="h-20" /><Skeleton className="h-32" /></div>}
+
 
         {data?.multipleMatches && (
           <div className="mt-4 space-y-2">
@@ -331,11 +342,22 @@ function VerifyExternally({ uei, name }: { uei: string | null; name: string | nu
   );
 }
 
+/** Compact, labeled inline failure so one dead call never blanks the drawer. */
+function SectionError({ message }: { message: string }) {
+  return (
+    <div className="flex items-start gap-1.5 rounded border border-destructive/40 bg-destructive/10 p-2 text-[11px] text-destructive">
+      <AlertTriangle className="w-3 h-3 mt-0.5 shrink-0" />
+      <span className="break-words">{message}</span>
+    </div>
+  );
+}
+
 function AiResearchBlock({
-  research, researching, onRun,
+  research, researching, error, onRun,
 }: {
   research: VendorResearch | null;
   researching: boolean;
+  error?: string | null;
   onRun: () => void;
 }) {
   return (
@@ -351,6 +373,8 @@ function AiResearchBlock({
         <Info className="w-3 h-3 mt-0.5 shrink-0" />
         <span>Model-generated. May contain errors or omissions — verify each claim against SAM/USAspending/news before acting on it.</span>
       </div>
+      {error && <div className="mt-2"><SectionError message={`AI research unavailable — ${error}`} /></div>}
+
       {research && (
         <div className="mt-3 space-y-2.5 text-xs">
           <div>
@@ -433,7 +457,7 @@ function SubRelationships({ teamId, companyName }: { teamId: string | null; comp
       if (res.error) setErr(res.error);
       setResult(res);
     } catch (e: any) {
-      setErr(e?.message ?? "Lookup failed");
+      setErr(e?.message ?? "fedspend-subawards: lookup failed");
     } finally {
       setLoading(false);
     }
@@ -467,11 +491,11 @@ function SubRelationships({ teamId, companyName }: { teamId: string | null; comp
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Info className="w-3.5 h-3.5" />}
             Load sub-relationships
           </Button>
-          {err && <div className="text-destructive">{err}</div>}
+          {err && <SectionError message={`Sub-relationships unavailable — fedspend-subawards: ${err}`} />}
         </div>
       ) : (
         <div className="space-y-3">
-          {err && <div className="text-destructive">{err}</div>}
+          {err && <SectionError message={`Sub-relationships unavailable — fedspend-subawards: ${err}`} />}
           <div>
             <div className="text-[10px] uppercase opacity-60 mb-1">Subcontractors they used</div>
             {list(result.asPrime, "No subawards found where this firm was the prime.")}
