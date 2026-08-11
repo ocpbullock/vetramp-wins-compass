@@ -143,6 +143,11 @@ export function EcosystemCard({
   }, [result]);
 
   const onVehicleCount = (result?.companies ?? []).filter((c) => c.onVehicle).length;
+  // Holders present but none reached the prime pool: a validation backlog, not a bug.
+  const holdersUnvalidated =
+    !!result &&
+    onVehicleCount > 0 &&
+    !(result.companies ?? []).some((c) => c.onVehicle && c.role === "likely_prime_competitor");
   const vehicleDropout = !!result && !!pool && pool.count > 0 && onVehicleCount === 0;
   const rosterStale =
     !!result && !!pool?.latest && !!generatedAt && new Date(pool.latest) > new Date(generatedAt);
