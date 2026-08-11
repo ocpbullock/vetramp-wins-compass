@@ -70,8 +70,8 @@ export function VendorDetailDrawer({
   const runResearch = async () => {
     const displayName = data?.resolved?.legal_name ?? vendorName ?? null;
     const ueiVal = data?.resolved?.uei ?? null;
-    if (!displayName && !ueiVal) { toast.error("No vendor identity to research."); return; }
-    setResearching(true);
+    if (!displayName && !ueiVal) { setResearchError("No vendor identity to research."); return; }
+    setResearching(true); setResearchError(null);
     try {
       const knownContracts = (data?.contracts ?? []).slice(0, 5).map((c: any) => ({
         piid: c["Award ID"], naics: c.NAICS, agency: c["Awarding Agency"] ?? c["Awarding Sub Agency"],
@@ -82,20 +82,21 @@ export function VendorDetailDrawer({
       const key = cacheKeyFor(ueiVal, displayName);
       if (key) researchCache.set(key, r);
     } catch (e: any) {
-      toast.error(e?.message ?? "Research failed");
+      setResearchError(e?.message ?? "vendor-research: research failed");
     } finally {
       setResearching(false);
     }
   };
 
-  const pickCandidate = (uei: string) => {
-    setSelectedUei(uei);
+  const pickCandidate = (pickedUei: string) => {
+    setSelectedUei(pickedUei);
     setLoading(true); setError(null); setData(null);
-    getVendorProfile({ uei })
+    getVendorProfile({ uei: pickedUei })
       .then(setData)
       .catch((e) => setError(e.message ?? "Failed to load"))
       .finally(() => setLoading(false));
   };
+
 
   const saveAsCompany = async () => {
     if (!currentTeam || !data) return;
