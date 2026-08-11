@@ -320,7 +320,6 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
         latestRelevantDate: null,
         amounts: [],
         weightedAmounts: [],
-        weightedAmounts: [],
         descriptions: [],
         setAsides: [],
       };
