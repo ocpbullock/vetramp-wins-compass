@@ -641,6 +641,7 @@ export function EcosystemCard({
       {vendor && (
         <VendorDetailDrawer
           recipientId={null}
+          uei={vendor.uei}
           vendorName={vendor.name}
           searchedNaics={[proposal?.naics_code].filter(Boolean) as string[]}
           onClose={() => setVendor(null)}
