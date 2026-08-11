@@ -580,8 +580,8 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
             ? Math.round(b.amounts.reduce((s, x) => s + x, 0) / b.amounts.length)
             : null,
           sizeSimilarity:
-            estimate != null && med != null
-              ? Math.max(0, 1 - Math.abs(Math.log10(med / estimate)) / 2)
+            estimate != null && capacity != null && capacity > 0
+              ? capacityScore(capacity / (estimate / targetYears(estimate, opportunity.popMonths)))
               : null,
         },
         userIdentified,
