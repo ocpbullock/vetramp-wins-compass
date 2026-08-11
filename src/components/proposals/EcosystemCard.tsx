@@ -407,34 +407,6 @@ export function EcosystemCard({
                       )}
                       <span className="text-[10px] text-muted-foreground uppercase">{c.confidence} confidence</span>
 
-                const open = openRow === c.name;
-                return (
-                  <div key={c.name} className="rounded-md border">
-                    <div className="flex flex-wrap items-center gap-2 p-2">
-                      <button
-                        type="button"
-                        className="p-0.5 text-muted-foreground"
-                        aria-label={open ? "Collapse" : "Expand"}
-                        onClick={() => setOpenRow(open ? null : c.name)}
-                      >
-                        {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
-                      </button>
-                      <button
-                        type="button"
-                        className="text-sm font-medium text-left hover:underline"
-                        onClick={() => setVendor({ name: c.name, uei: c.uei })}
-                      >
-                        {c.name}
-                      </button>
-                      {c.onVehicle && <Badge variant="outline" className="text-[10px]">On vehicle</Badge>}
-                      <Badge variant="outline" className={`text-[10px] ${TIER_CLASS[c.eligibility]}`}>
-                        {TIER_LABEL[c.eligibility]}
-                      </Badge>
-                      {c.score != null && (
-                        <span className="text-xs text-muted-foreground">score {c.score}</span>
-                      )}
-                      <span className="text-[10px] text-muted-foreground uppercase">{c.confidence} confidence</span>
-
                       <div className="ml-auto flex flex-wrap items-center gap-1.5">
                         <Select value={c.eligibility} onValueChange={(v) => void setTier(c, v as EligibilityTier)}>
                           <SelectTrigger className="h-7 w-[150px] text-xs"><SelectValue /></SelectTrigger>
