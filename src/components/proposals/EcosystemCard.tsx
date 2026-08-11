@@ -516,7 +516,26 @@ export function EcosystemCard({
                     )}
                   </div>
                 );
-              })}
+          };
+          return (
+            <div key={role} className="space-y-1.5">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                {ROLE_LABEL[role]} ({allRows.length})
+              </div>
+              {rows.map(renderRow)}
+              {foldPending && (
+                <div className="rounded-md border border-dashed">
+                  <button
+                    type="button"
+                    className="w-full flex items-center gap-2 p-2 text-xs font-medium text-muted-foreground"
+                    onClick={() => setPendingOpen((p) => ({ ...p, [role]: !p[role] }))}
+                  >
+                    {pendingOpen[role] ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
+                    {pending.length} vehicle holders pending eligibility validation
+                  </button>
+                  {pendingOpen[role] && <div className="space-y-1.5 p-2 pt-0">{pending.map(renderRow)}</div>}
+                </div>
+              )}
             </div>
           );
         })}
