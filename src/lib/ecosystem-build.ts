@@ -95,11 +95,43 @@ function tag(rows: HistoricalAward[] | undefined, scope: "customer" | "agency"):
 
 /** Department-level agency (first path segment) from the proposal agency string. */
 function departmentOf(agency: string | null | undefined): string | null {
-  const s = String(agency ?? "").trim();
-  if (!s) return null;
-  const parts = s.split(/[\.\/>|\\]+/).map((p) => p.trim()).filter(Boolean);
-  return parts.length > 0 ? parts[0] : s;
+  const parts = splitAgencyPath(agency);
+  return parts.length > 0 ? parts[0] : null;
 }
+
+/** Set-aside pools whose membership is itself evidence of the socio status. */
+const VEHICLE_SET_ASIDE_PATTERNS: { re: RegExp; setAside: string }[] = [
+  { re: /sdvosb|service[- ]disabled/i, setAside: "SDVOSB" },
+  { re: /8\s*\(\s*a\s*\)/i, setAside: "8(a)" },
+  { re: /edwosb/i, setAside: "EDWOSB" },
+  { re: /wosb|woman[- ]owned|women[- ]owned/i, setAside: "WOSB" },
+  { re: /hubzone/i, setAside: "HUBZone" },
+  { re: /\bvosb\b|veteran[- ]owned/i, setAside: "VOSB" },
+];
+
+/** Infer a set-aside from a pool/vehicle name, or null when it implies none. */
+export function inferSetAsideFromVehicleName(name: string | null | undefined): string | null {
+  const s = String(name ?? "");
+  if (!s.trim()) return null;
+  for (const p of VEHICLE_SET_ASIDE_PATTERNS) if (p.re.test(s)) return p.setAside;
+  return null;
+}
+
+export type EcosystemInputsMeta = {
+  setAside: string | null;
+  setAsideSource: "opportunity" | "inferred_from_vehicle" | "none";
+  agency: string | null;
+  customerSubAgency: string | null;
+  vehicleName?: string | null;
+};
+
+export type StoredEcosystem = BuildEcosystemResult & { inputs?: EcosystemInputsMeta };
+
+export function readEcosystemInputs(proposal: any): EcosystemInputsMeta | null {
+  const raw = proposal?.ecosystem?.inputs;
+  return raw && typeof raw === "object" ? (raw as EcosystemInputsMeta) : null;
+}
+
 
 export async function generateEcosystem(
   proposal: any,
