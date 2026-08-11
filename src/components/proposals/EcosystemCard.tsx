@@ -314,7 +314,7 @@ export function EcosystemCard({
                 {pool.name ?? "Vehicle pool"} — {pool.count} holders loaded
               </Badge>
             ) : (
-              <Link to="/settings" search={{ tab: "vehicles" } as any} className="no-underline">
+              <Link to="/settings" hash="vehicles" className="no-underline">
                 <Badge variant="outline" className="text-xs bg-warning/15 text-warning border-warning/30">
                   <AlertTriangle className="w-3 h-3 mr-1" />
                   0 holders loaded — import or research the holder list
