@@ -157,7 +157,8 @@ export async function researchVendor(input: {
   knownContracts?: Array<{ piid?: string; naics?: string; agency?: string; amount?: number; end?: string }>;
 }) {
   const { data, error } = await supabase.functions.invoke("vendor-research", { body: input });
-  if (error) throw error;
+  if (error) throw new Error(await edgeErrorMessage("vendor-research", error));
+
   return data as { research: VendorResearch };
 }
 
