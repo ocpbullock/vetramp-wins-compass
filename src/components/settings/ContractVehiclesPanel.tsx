@@ -993,12 +993,27 @@ function guessMapping(headers: string[]): Record<CsvFieldKey, string> {
   };
 }
 
-function parseBool(v: unknown): boolean {
+// Tri-state on purpose: a blank / unrecognised cell is UNKNOWN, not "other than
+// small". A literal false hard-disqualifies the holder on a set-aside action.
+function parseBool(v: unknown): boolean | null {
   if (v === true) return true;
-  if (typeof v !== "string") return false;
+  if (v === false) return false;
+  if (typeof v !== "string") return null;
   const s = v.trim().toLowerCase();
-  return s === "true" || s === "yes" || s === "y" || s === "x" || s === "1";
+  if (!s) return null;
+  if (s === "true" || s === "yes" || s === "y" || s === "x" || s === "1") return true;
+  if (s === "false" || s === "no" || s === "n" || s === "0") return false;
+  return null;
 }
+
+const HEADER_ECHO_NAMES = new Set(["contractor name", "company", "name", "company name", "vendor", "vendor name"]);
+
+// CSV exports frequently repeat their header inside the data range.
+function isHeaderEcho(name: string, uei: string | null): boolean {
+  if (HEADER_ECHO_NAMES.has(name.trim().toLowerCase())) return true;
+  return (uei ?? "").trim().toLowerCase() === "uei";
+}
+
 
 function parseSocio(v: unknown): string[] | null {
   if (typeof v !== "string") return null;
