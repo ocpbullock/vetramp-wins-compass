@@ -259,7 +259,11 @@ export async function getAnalytics(input: {
   logCall("USAspending analytics");
   const { data, error } = await supabase.functions.invoke("usaspending-analytics", { body: input });
   if (error) {
-    logErr("usaspending-analytics", error.message);
+    const detail = await edgeErrorMessage("usaspending-analytics", error);
+    logErr("usaspending-analytics", detail);
+    throw new Error(detail);
+  }
+
     throw error;
   }
   logOk("usaspending-analytics", "ok");
