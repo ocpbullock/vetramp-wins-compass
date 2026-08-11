@@ -1068,7 +1068,9 @@ function CsvImportAwardeesDialog({
   const mapped = (rows ?? []).map((r) => ({
     company_name: mapping.company_name !== NONE ? String(r[mapping.company_name] ?? "").trim() : "",
     uei: mapping.uei !== NONE ? String(r[mapping.uei] ?? "").trim() || null : null,
-    small_business: mapping.small_business !== NONE ? parseBool(r[mapping.small_business]) : false,
+    // Unknown when the source file has no size column — never a literal false,
+    // which downstream eligibility logic reads as "other than small".
+    small_business: mapping.small_business !== NONE ? parseBool(r[mapping.small_business]) : null,
     socioeconomic: mapping.socioeconomic !== NONE ? parseSocio(r[mapping.socioeconomic]) : null,
   }));
 

@@ -179,20 +179,30 @@ export async function generateEcosystem(
   }
 
   // -- Vehicle roster ------------------------------------------------------
+  // NOTE: no team filter here on purpose — the RLS SELECT policy on
+  // vehicle_awardees already returns BOTH global rows (team_id IS NULL) and the
+  // caller's own team rows, so filtering client-side would silently drop half
+  // the roster.
   const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
   let vehicleAwardees: VehicleAwardeeInput[] | null = null;
   if (vehicleId) {
     progress("Loading vehicle awardees…");
     const { data } = await supabase
       .from("vehicle_awardees")
-      .select("company_name, uei, small_business, socioeconomic")
+      .select("company_name, uei, small_business, socioeconomic, team_id")
       .eq("vehicle_id", vehicleId);
-    vehicleAwardees = (data ?? []).map((r: any) => ({
-      name: r.company_name,
-      uei: r.uei ?? null,
-      small_business: r.small_business ?? null,
-      socioeconomic: Array.isArray(r.socioeconomic) ? r.socioeconomic : [],
-    }));
+    vehicleAwardees = (data ?? [])
+      .map((r: any) => ({
+        name: String(r.company_name ?? "").trim(),
+        uei: r.uei ?? null,
+        // Only `true` is authoritative. Bulk imports default this column to
+        // false when the source file has no size column, and a literal false
+        // makes the engine hard-disqualify the holder on a small-business
+        // set-aside. Treat anything but an explicit true as "unknown".
+        small_business: r.small_business === true ? true : null,
+        socioeconomic: Array.isArray(r.socioeconomic) ? r.socioeconomic : [],
+      }))
+      .filter((v) => !!v.name);
   }
   const vehicleRestricted = proposal?.vehicle_status === "identified" && !!vehicleId;
 
@@ -227,6 +237,14 @@ export async function generateEcosystem(
 
   // -- Rank ----------------------------------------------------------------
   progress("Ranking the ecosystem…");
+  // When the action is locked to a vehicle, every holder must survive the cap —
+  // a holder with no award history is still a real bidder on this action.
+  const holderCount = vehicleAwardees?.length ?? 0;
+  const targetSize =
+    vehicleRestricted && holderCount > 0
+      ? { min: 10, max: Math.max(18, holderCount + 12) }
+      : undefined;
+
   const result = buildEcosystem({
     awards,
     vehicleAwardees,
@@ -243,6 +261,7 @@ export async function generateEcosystem(
     userIntel: { knownCompetitors, knownIncumbent, knownTeammates },
     validatedOverrides: config.validatedOverrides ?? {},
     weights: config.weights ?? {},
+    ...(targetSize ? { targetSize } : {}),
   });
 
   progress("Saving…");

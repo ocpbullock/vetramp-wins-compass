@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import {
-  ChevronDown, ChevronRight, Loader2, Network, RefreshCw, Target, Users, UserPlus, Grid3x3,
+  AlertTriangle, ChevronDown, ChevronRight, Loader2, Network, RefreshCw, Target, Users, UserPlus, Grid3x3,
 } from "lucide-react";
 import { useTeam } from "@/lib/team";
 import { upsertCompany } from "@/lib/companies";
@@ -105,6 +106,29 @@ export function EcosystemCard({
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [showWeights, setShowWeights] = useState(false);
   const [vendor, setVendor] = useState<{ name: string; uei: string | null } | null>(null);
+  const [pool, setPool] = useState<{ count: number; latest: string | null; name: string | null } | null>(null);
+
+  const vehicleId: string | null = proposal?.vehicle_registry_id ?? null;
+
+  // Live vehicle-holder count — the ecosystem is only as good as this roster.
+  useEffect(() => {
+    let cancelled = false;
+    if (!vehicleId) { setPool(null); return; }
+    void (async () => {
+      const [{ data: rows }, { data: veh }] = await Promise.all([
+        supabase.from("vehicle_awardees").select("created_at").eq("vehicle_id", vehicleId),
+        supabase.from("vehicle_registry").select("vehicle_name").eq("id", vehicleId).maybeSingle(),
+      ]);
+      if (cancelled) return;
+      const created = (rows ?? []).map((r: any) => r.created_at).filter(Boolean).sort();
+      setPool({
+        count: rows?.length ?? 0,
+        latest: created.length ? created[created.length - 1] : null,
+        name: (veh as any)?.vehicle_name ?? (proposal?.contract_vehicle ?? null),
+      });
+    })();
+    return () => { cancelled = true; };
+  }, [vehicleId, proposal?.contract_vehicle]);
 
   const grouped = useMemo(() => {
     const map = new Map<EcosystemRole, EcosystemCompany[]>();
@@ -115,6 +139,12 @@ export function EcosystemCard({
     }
     return map;
   }, [result]);
+
+  const onVehicleCount = (result?.companies ?? []).filter((c) => c.onVehicle).length;
+  const vehicleDropout = !!result && !!pool && pool.count > 0 && onVehicleCount === 0;
+  const rosterStale =
+    !!result && !!pool?.latest && !!generatedAt && new Date(pool.latest) > new Date(generatedAt);
+
 
   const run = async (expand?: EcosystemExpansion) => {
     setBusy(true);
@@ -269,14 +299,30 @@ export function EcosystemCard({
             </Button>
           </div>
         </div>
-        {summary && (
-          <div className="flex flex-wrap gap-1.5 pt-2">
-            <Badge variant="secondary" className="text-xs">{result!.companies.length} companies</Badge>
-            <Badge variant="secondary" className="text-xs">{counts.primes} likely primes</Badge>
-            <Badge variant="secondary" className="text-xs">{counts.coalition} coalition</Badge>
-            <Badge variant="secondary" className="text-xs">{counts.dark} dark horses</Badge>
-          </div>
-        )}
+        <div className="flex flex-wrap gap-1.5 pt-2">
+          {summary && (
+            <>
+              <Badge variant="secondary" className="text-xs">{result!.companies.length} companies</Badge>
+              <Badge variant="secondary" className="text-xs">{counts.primes} likely primes</Badge>
+              <Badge variant="secondary" className="text-xs">{counts.coalition} coalition</Badge>
+              <Badge variant="secondary" className="text-xs">{counts.dark} dark horses</Badge>
+            </>
+          )}
+          {vehicleId && pool && (
+            pool.count > 0 ? (
+              <Badge variant="outline" className="text-xs">
+                {pool.name ?? "Vehicle pool"} — {pool.count} holders loaded
+              </Badge>
+            ) : (
+              <Link to="/settings" hash="vehicles" className="no-underline">
+                <Badge variant="outline" className="text-xs bg-warning/15 text-warning border-warning/30">
+                  <AlertTriangle className="w-3 h-3 mr-1" />
+                  0 holders loaded — import or research the holder list
+                </Badge>
+              </Link>
+            )
+          )}
+        </div>
       </CardHeader>
 
       <CardContent className="space-y-4">
@@ -285,6 +331,31 @@ export function EcosystemCard({
             No ecosystem built yet. Generate one to map who can credibly bid this opportunity — the primes
             you'll face and the partners you'll recruit.
           </p>
+        )}
+
+        {vehicleDropout && (
+          <div className="rounded-md border border-destructive/40 bg-destructive/10 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+            <span className="flex items-start gap-2">
+              <AlertTriangle className="w-4 h-4 mt-0.5 text-destructive shrink-0" />
+              None of the {pool!.count} vehicle holders made it into the ecosystem — likely a data problem,
+              not a market reality. Regenerate after this update.
+            </span>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void run()}>
+              Regenerate
+            </Button>
+          </div>
+        )}
+
+        {rosterStale && !vehicleDropout && (
+          <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-sm flex flex-wrap items-center justify-between gap-2">
+            <span>
+              Inputs changed — vehicle holders were imported after this ecosystem was generated
+              ({when(pool!.latest)}).
+            </span>
+            <Button size="sm" variant="outline" disabled={busy} onClick={() => void run()}>
+              Regenerate
+            </Button>
+          </div>
         )}
 
         {result?.needsExpansion && (
@@ -383,12 +454,19 @@ export function EcosystemCard({
                             </tbody>
                           </table>
                         )}
-                        <div className="text-muted-foreground">
-                          {c.evidence.customerAwards} customer award(s) · {c.evidence.naicsAwards} in NAICS ·{" "}
-                          {c.evidence.agencyAwards} at the department · latest{" "}
-                          {c.evidence.latestRelevantDate?.slice(0, 10) ?? "—"} · avg award{" "}
-                          {c.evidence.avgAwardSize ? `$${c.evidence.avgAwardSize.toLocaleString()}` : "—"}
-                        </div>
+                        {c.evidence.customerAwards + c.evidence.naicsAwards + c.evidence.agencyAwards === 0 ? (
+                          <div className="text-muted-foreground">
+                            No relevant awards found in the pulled window
+                            {c.onVehicle ? " — included because they hold the required vehicle." : "."}
+                          </div>
+                        ) : (
+                          <div className="text-muted-foreground">
+                            {c.evidence.customerAwards} customer award(s) · {c.evidence.naicsAwards} in NAICS ·{" "}
+                            {c.evidence.agencyAwards} at the department · latest{" "}
+                            {c.evidence.latestRelevantDate?.slice(0, 10) ?? "—"} · avg award{" "}
+                            {c.evidence.avgAwardSize ? `$${c.evidence.avgAwardSize.toLocaleString()}` : "—"}
+                          </div>
+                        )}
                         {c.eligibilityReasons.length > 0 && (
                           <div>
                             <div className="font-medium">Eligibility</div>
