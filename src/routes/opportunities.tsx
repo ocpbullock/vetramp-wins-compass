@@ -53,6 +53,7 @@ type ProposalRow = {
   notice_id: string | null;
   watch_enabled: boolean | null;
   market_snapshot_at: string | null;
+  ecosystem_at: string | null;
   capture_analysis_at: string | null;
   sections: Record<string, { content?: string | null }> | null;
   outcome: string | null;
@@ -125,7 +126,7 @@ function OpportunitiesPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("proposals")
-        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id,watch_enabled,market_snapshot_at,capture_analysis_at,sections,outcome")
+        .select("id,opportunity_title,agency,naics_code,set_aside,status,capture_stage,response_deadline,updated_at,opportunity_source,opportunity_source_id,solicitation_number,notice_id,watch_enabled,market_snapshot_at,ecosystem_at,capture_analysis_at,sections,outcome")
         .order("updated_at", { ascending: false });
       if (error) throw new Error(error.message);
       return (data ?? []) as unknown as ProposalRow[];
@@ -217,6 +218,7 @@ function OpportunitiesPage() {
       const signals: StageSignals = {
         hasNaicsAgency: Boolean(p.naics_code && p.agency),
         hasSnapshot: Boolean(p.market_snapshot_at),
+        hasEcosystem: Boolean(p.ecosystem_at),
         hasAnalysis: Boolean(p.capture_analysis_at),
         teamingCount,
         sectionsCount,
