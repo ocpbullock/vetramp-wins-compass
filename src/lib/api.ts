@@ -263,9 +263,6 @@ export async function getAnalytics(input: {
     logErr("usaspending-analytics", detail);
     throw new Error(detail);
   }
-
-    throw error;
-  }
   logOk("usaspending-analytics", "ok");
   return data;
 }
