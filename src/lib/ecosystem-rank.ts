@@ -31,7 +31,8 @@ export type FactorKey =
   | "naics_experience"
   | "contract_size"
   | "scope_similarity"
-  | "agency_experience";
+  | "agency_experience"
+  | "vehicle_presence";
 
 export type FactorBreakdown = {
   key: FactorKey;
@@ -89,6 +90,8 @@ export type EcosystemOpportunity = {
   customerSubAgency?: string | null;
   /** Precomputed scope keywords (lowercase tokens/phrases). */
   scopeKeywords?: string[];
+  /** Display name of the linked contract vehicle, used in factor evidence. */
+  vehicleName?: string | null;
 };
 
 export type EcosystemUserIntel = {
@@ -126,6 +129,7 @@ export const BASE_WEIGHTS: Record<FactorKey, number> = {
   contract_size: 15,
   scope_similarity: 15,
   agency_experience: 10,
+  vehicle_presence: 10,
 };
 
 const FACTOR_LABELS: Record<FactorKey, string> = {
@@ -134,6 +138,7 @@ const FACTOR_LABELS: Record<FactorKey, string> = {
   contract_size: "Similar contract size",
   scope_similarity: "Similar scope",
   agency_experience: "Broader agency experience",
+  vehicle_presence: "On contract vehicle",
 };
 
 const DEFAULT_TARGET = { min: 12, max: 18 };
@@ -467,6 +472,17 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
         "scope_similarity",
         hits.length / scopeKeywords.length,
         hits.length ? `Scope overlap: ${hits.join(", ")}` : "No scope keyword overlap in award descriptions",
+      );
+    }
+
+    // Vehicle access is a scored factor, not just a role qualifier: a holder
+    // with no award history still has a real, weighted advantage on this action.
+    if (vehicleAwardees != null) {
+      const vehicleLabel = opportunity.vehicleName?.trim() || "the required vehicle";
+      push(
+        "vehicle_presence",
+        onVehicle ? 1 : 0,
+        onVehicle ? `Holds ${vehicleLabel}` : "Not a vehicle holder",
       );
     }
 
