@@ -200,13 +200,6 @@ function requiredSocio(setAside: string | null | undefined): { tag: RegExp; labe
   return null;
 }
 
-function median(values: number[]): number | null {
-  const v = values.filter((x) => Number.isFinite(x) && x > 0).sort((a, b) => a - b);
-  if (v.length === 0) return null;
-  const mid = Math.floor(v.length / 2);
-  return v.length % 2 ? v[mid] : (v[mid - 1] + v[mid]) / 2;
-}
-
 function percentile(values: number[], p: number): number | null {
   const v = values.filter((x) => Number.isFinite(x) && x > 0).sort((a, b) => a - b);
   if (v.length === 0) return null;
@@ -266,6 +259,7 @@ type Bucket = {
   agencyCount: number;
   latestRelevantDate: string | null;
   amounts: number[];
+  weightedAmounts: number[];
   descriptions: string[];
   setAsides: string[];
 };
@@ -325,6 +319,7 @@ export function buildEcosystem(inputs: BuildEcosystemInputs): BuildEcosystemResu
         agencyCount: 0,
         latestRelevantDate: null,
         amounts: [],
+        weightedAmounts: [],
         weightedAmounts: [],
         descriptions: [],
         setAsides: [],
