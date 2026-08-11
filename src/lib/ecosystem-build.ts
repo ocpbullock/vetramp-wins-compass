@@ -118,7 +118,7 @@ export function inferSetAsideFromVehicleName(name: string | null | undefined): s
 }
 
 /** Bumped when the scoring model changes in a way that stales stored results. */
-export const ECOSYSTEM_SCHEMA_VERSION = 2;
+export const ECOSYSTEM_SCHEMA_VERSION = 3;
 
 export type EcosystemInputsMeta = {
   /** Absent on ecosystems generated before the six-factor model. */
@@ -313,6 +313,8 @@ export async function generateEcosystem(
       adjacentPrefix: naics.slice(0, 4),
       setAside: effectiveSetAside,
       estimatedValue: proposal?.estimated_value ?? null,
+      popMonths:
+        (Number(proposal?.pop_base_months) || 0) + (Number(proposal?.pop_option_months) || 0) || null,
       agency: departmentDisplay,
       customerSubAgency: customerAgency,
       scopeKeywords: extractScopeKeywords(proposal),
