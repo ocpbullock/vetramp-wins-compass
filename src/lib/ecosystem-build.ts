@@ -45,10 +45,10 @@ export function readEcosystemConfig(proposal: any): EcosystemConfig {
   };
 }
 
-export function readEcosystem(proposal: any): BuildEcosystemResult | null {
+export function readEcosystem(proposal: any): StoredEcosystem | null {
   const raw = proposal?.ecosystem;
   if (!raw || !Array.isArray(raw?.companies)) return null;
-  return raw as BuildEcosystemResult;
+  return raw as StoredEcosystem;
 }
 
 const STOPWORDS = new Set([

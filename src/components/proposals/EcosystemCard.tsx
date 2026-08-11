@@ -27,7 +27,6 @@ import {
 } from "@/lib/ecosystem-build";
 import {
   BASE_WEIGHTS,
-  type BuildEcosystemResult,
   type EcosystemCompany,
   type EcosystemRole,
   type EligibilityTier,
