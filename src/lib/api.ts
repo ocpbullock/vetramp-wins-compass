@@ -89,14 +89,17 @@ export async function searchSam(input: {
 }
 
 export async function searchUsaspending(input: {
-  naicsCodes: string[];
+  naicsCodes?: string[];
   startDate: string;
   endDate: string;
   keyword?: string;
   agency?: string;
   maxResults?: number;
   forceRefresh?: boolean;
+  /** UEIs or vendor names — recipient-scoped pull (USAspending recipient_search_text). */
+  recipientSearchText?: string[];
 }) {
+
   logCall(`USAspending awards (up to ${input.maxResults ?? 1000})`);
   const { data, error } = await supabase.functions.invoke("search-usaspending", { body: input });
   if (error) {

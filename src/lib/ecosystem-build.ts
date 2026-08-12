@@ -11,12 +11,14 @@ import { naicsFamily } from "./market-snapshot";
 import { getEffectiveIncumbent } from "./incumbent-source";
 import {
   buildEcosystem,
+  looseNameKey,
   type BuildEcosystemResult,
   type EligibilityTier,
   type FactorKey,
   type ScopedAward,
   type VehicleAwardeeInput,
 } from "./ecosystem-rank";
+
 
 export type EcosystemUserIntel = {
   /** Manually entered competitor names (merged with positioning-matrix rows). */
@@ -118,7 +120,49 @@ export function inferSetAsideFromVehicleName(name: string | null | undefined): s
 }
 
 /** Bumped when the scoring model changes in a way that stales stored results. */
-export const ECOSYSTEM_SCHEMA_VERSION = 3;
+export const ECOSYSTEM_SCHEMA_VERSION = 4;
+
+/** Split holder UEIs into batches for recipient_search_text (OR/union) calls. */
+export function batchUeis(ueis: (string | null | undefined)[], size = 10): string[][] {
+  const seen = new Set<string>();
+  const clean: string[] = [];
+  for (const u of ueis) {
+    const t = String(u ?? "").trim().toUpperCase();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    clean.push(t);
+  }
+  const out: string[][] = [];
+  for (let i = 0; i < clean.length; i += size) out.push(clean.slice(i, i + size));
+  return out;
+}
+
+function awardKey(a: ScopedAward): string {
+  const gid = String(a?.generated_internal_id ?? "").trim();
+  if (gid) return `g:${gid}`;
+  return `p:${String(a?.["Award ID"] ?? "").trim()}|${String(a?.["Recipient UEI"] ?? "").trim()}`;
+}
+
+/**
+ * Pulls A/B/C can return the same award. Keep one copy per award, preferring
+ * the scope-tagged copy so customer/agency attribution survives.
+ */
+export function dedupeAwards(awards: ScopedAward[]): ScopedAward[] {
+  const byKey = new Map<string, ScopedAward>();
+  const order: string[] = [];
+  for (const a of awards) {
+    const k = awardKey(a);
+    const prev = byKey.get(k);
+    if (!prev) {
+      byKey.set(k, a);
+      order.push(k);
+      continue;
+    }
+    if (!prev.scope && a.scope) byKey.set(k, a);
+  }
+  return order.map((k) => byKey.get(k)!);
+}
+
 
 export type EcosystemInputsMeta = {
   /** Absent on ecosystems generated before the six-factor model. */
@@ -252,6 +296,54 @@ export async function generateEcosystem(
   }
   const vehicleRestricted = proposal?.vehicle_status === "identified" && !!vehicleId;
 
+  // -- PULL C: per-holder / incumbent award evidence -----------------------
+  // Pulls A/B are NAICS-at-customer; vehicle holders rarely appear there, so
+  // without this every holder scores vehicle-only. Recency bands run to 8y.
+  const holderStart = new Date(Date.now() - 8 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const holderUeis = (vehicleAwardees ?? []).map((v) => v.uei).filter(Boolean) as string[];
+  const holderKeys = new Set((vehicleAwardees ?? []).map((v) => looseNameKey(v.name)));
+
+  if (vehicleRestricted && holderUeis.length > 0) {
+    const batches = batchUeis(holderUeis, 10);
+    for (let i = 0; i < batches.length; i++) {
+      progress(`Pulling award history for vehicle holders (batch ${i + 1} of ${batches.length})…`);
+      try {
+        const r = await searchUsaspending({
+          recipientSearchText: batches[i],
+          startDate: holderStart,
+          endDate,
+          maxResults: 300,
+        });
+        // Untagged on purpose: the engine's loose agency match classifies
+        // customer/agency membership per award.
+        awards.push(...(r.results ?? []));
+      } catch { /* non-fatal */ }
+    }
+  }
+
+  const incumbentName = getEffectiveIncumbent(proposal).name;
+  if (incumbentName) {
+    const incKey = looseNameKey(incumbentName);
+    const coveredByHolder = holderKeys.has(incKey);
+    if (!coveredByHolder) {
+      progress("Pulling award history for the incumbent…");
+      try {
+        const r = await searchUsaspending({
+          recipientSearchText: [incumbentName],
+          startDate: holderStart,
+          endDate,
+          maxResults: 300,
+        });
+        // Name search matches the recipient hierarchy — keep only same-name rows.
+        const rows = (r.results ?? []).filter(
+          (row) => looseNameKey(row["Recipient Name"]) === incKey,
+        );
+        awards.push(...rows);
+      } catch { /* non-fatal */ }
+    }
+  }
+
+
   // -- Effective set-aside --------------------------------------------------
   // A pool vehicle (e.g. "Polaris SDVOSB Pool") IS the set-aside for actions
   // competed under it; an empty proposal field would otherwise grade every
@@ -305,7 +397,7 @@ export async function generateEcosystem(
       : undefined;
 
   const result = buildEcosystem({
-    awards,
+    awards: dedupeAwards(awards),
     vehicleAwardees,
     vehicleRestricted,
     opportunity: {

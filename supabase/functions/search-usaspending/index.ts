@@ -22,6 +22,108 @@ function fmt(iso: string) {
   return isNaN(d.getTime()) ? iso : d.toISOString().slice(0, 10);
 }
 
+// ---- USAspending recipient-scoped award search ---------------------------
+const USASPENDING_URL = "https://api.usaspending.gov/api/v2/search/spending_by_award/";
+const USASPENDING_PAGE_SIZE = 100; // API hard max
+const UEI_RE = /^[A-Z0-9]{12}$/i;
+
+/** NAICS / PSC arrive as {code, description}; the rest of the app expects the code string. */
+function codeOf(v: any): string | null {
+  if (v == null) return null;
+  if (typeof v === "object") return v.code != null ? String(v.code) : null;
+  const s = String(v).trim();
+  return s || null;
+}
+
+function usaspendingRowToShape(r: any) {
+  return {
+    "Award ID": r["Award ID"] ?? null,
+    "Recipient Name": r["Recipient Name"] ?? null,
+    "Recipient UEI": r["Recipient UEI"] ?? null,
+    "Award Amount": Number(r["Award Amount"] ?? 0) || null,
+    "Awarding Agency": r["Awarding Agency"] ?? null,
+    "Awarding Sub Agency": r["Awarding Sub Agency"] ?? null,
+    "Start Date": r["Start Date"] ?? null,
+    "End Date": r["End Date"] ?? null,
+    NAICS: codeOf(r["NAICS"]),
+    Description: r["Description"] ?? null,
+    generated_internal_id: r["generated_internal_id"] ?? null,
+    "Type of Set Aside": r["Type of Set Aside"] ?? null,
+    "Contract Award Type": r["Contract Award Type"] ?? null,
+    "Parent Award ID": r["Parent Award ID"] ?? null,
+    "Product or Service Code": codeOf(r["Product or Service Code"]),
+    psc_description: typeof r["Product or Service Code"] === "object"
+      ? (r["Product or Service Code"]?.description ?? null)
+      : null,
+    "Place of Performance State Code": r["Place of Performance State Code"] ?? null,
+    "Place of Performance City Code": r["Place of Performance City Code"] ?? null,
+  };
+}
+
+const USASPENDING_FIELDS = [
+  "Award ID", "Recipient Name", "Recipient UEI", "Award Amount",
+  "Awarding Agency", "Awarding Sub Agency", "Start Date", "End Date",
+  "NAICS", "Description", "Contract Award Type", "Parent Award ID",
+  "Product or Service Code", "Place of Performance State Code",
+];
+
+async function recipientAwardSearch(opts: {
+  terms: string[];
+  naicsCodes: string[];
+  fromIso: string;
+  toIso: string;
+  maxResults: number;
+}) {
+  const { terms, naicsCodes, fromIso, toIso, maxResults } = opts;
+  const filters: Record<string, unknown> = {
+    // Contracts group only. Task orders are "C"; IDV_* codes belong to a
+    // different group and mixing groups is a 422 (IDV base awards are $0).
+    award_type_codes: ["A", "B", "C", "D"],
+    recipient_search_text: terms,
+    time_period: [{ start_date: fromIso, end_date: toIso }],
+  };
+  if (Array.isArray(naicsCodes) && naicsCodes.length) filters.naics_codes = naicsCodes;
+
+  const rows: any[] = [];
+  let page = 1;
+  while (rows.length < maxResults && page <= 20) {
+    const resp = await fetch(USASPENDING_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filters,
+        fields: USASPENDING_FIELDS,
+        page,
+        limit: USASPENDING_PAGE_SIZE,
+        sort: "Award Amount",
+        order: "desc",
+        subawards: false,
+      }),
+    });
+    if (!resp.ok) {
+      const text = await resp.text();
+      throw new Error(`usaspending ${resp.status}: ${text.slice(0, 300)}`);
+    }
+    const json = await resp.json();
+    rows.push(...(json?.results ?? []));
+    if (!json?.page_metadata?.hasNext) break;
+    page++;
+  }
+
+  const mapped = rows.slice(0, maxResults).map(usaspendingRowToShape);
+
+  // CRITICAL: recipient_search_text matches the recipient HIERARCHY, so a UEI
+  // query can return parent/sibling entities (HALVIK's UEI also returns
+  // SP SYSTEMS, INC). Drop rows outside the requested UEI set.
+  const ueis = new Set(terms.filter((t) => UEI_RE.test(t)).map((t) => t.toUpperCase()));
+  if (ueis.size === 0) return mapped;
+  return mapped.filter((r) => {
+    const u = String(r["Recipient UEI"] ?? "").toUpperCase();
+    return u && ueis.has(u);
+  });
+}
+
+
 Deno.serve(async (req) => {
   const corsHeaders = buildCorsHeaders(req);
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -31,7 +133,7 @@ Deno.serve(async (req) => {
     const admin = ctx.admin;
 
     const body = await req.json();
-    const { naicsCodes = [], startDate, endDate, keyword, agency, vendorName, maxResults = MAX_RESULTS, teamId, forceRefresh = false } = body;
+    const { naicsCodes = [], startDate, endDate, keyword, agency, vendorName, maxResults = MAX_RESULTS, teamId, forceRefresh = false, recipientSearchText } = body;
 
     let team_id: string | null;
     try { team_id = await resolveTeamId(ctx, teamId ?? null); }
@@ -41,7 +143,31 @@ Deno.serve(async (req) => {
     const fromIso = fmt(startDate);
     const toIso = fmt(endDate);
 
+    // ---- Recipient-scoped mode (USAspending direct) ------------------------
+    // `recipient_search_text` is the ONLY filter USAspending honours for UEIs;
+    // recipient_uei / recipient / recipient_id variants are silently ignored
+    // (HTTP 200 with unfiltered data), so they are never used here.
+    if (Array.isArray(recipientSearchText) && recipientSearchText.length > 0) {
+      const terms = recipientSearchText.map((t: any) => String(t ?? "").trim()).filter(Boolean);
+      if (!terms.length) return jsonError(400, "recipientSearchText is empty", corsHeaders);
+      const results = await recipientAwardSearch({
+        terms,
+        naicsCodes,
+        fromIso,
+        toIso,
+        maxResults: Math.min(Number(maxResults) || MAX_RESULTS, 1000),
+      });
+      return new Response(JSON.stringify({
+        results,
+        page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: false },
+        _cached: false,
+        _debug: { source: "usaspending:recipient_search_text", terms: terms.length, fetched: results.length },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const AGENCY_MIN_CACHE_ROWS = 10;
+
+
 
     // Cache check (skipped when forceRefresh)
     if (!forceRefresh) {
