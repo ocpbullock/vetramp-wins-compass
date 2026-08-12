@@ -120,7 +120,49 @@ export function inferSetAsideFromVehicleName(name: string | null | undefined): s
 }
 
 /** Bumped when the scoring model changes in a way that stales stored results. */
-export const ECOSYSTEM_SCHEMA_VERSION = 3;
+export const ECOSYSTEM_SCHEMA_VERSION = 4;
+
+/** Split holder UEIs into batches for recipient_search_text (OR/union) calls. */
+export function batchUeis(ueis: (string | null | undefined)[], size = 10): string[][] {
+  const seen = new Set<string>();
+  const clean: string[] = [];
+  for (const u of ueis) {
+    const t = String(u ?? "").trim().toUpperCase();
+    if (!t || seen.has(t)) continue;
+    seen.add(t);
+    clean.push(t);
+  }
+  const out: string[][] = [];
+  for (let i = 0; i < clean.length; i += size) out.push(clean.slice(i, i + size));
+  return out;
+}
+
+function awardKey(a: ScopedAward): string {
+  const gid = String(a?.generated_internal_id ?? "").trim();
+  if (gid) return `g:${gid}`;
+  return `p:${String(a?.["Award ID"] ?? "").trim()}|${String(a?.["Recipient UEI"] ?? "").trim()}`;
+}
+
+/**
+ * Pulls A/B/C can return the same award. Keep one copy per award, preferring
+ * the scope-tagged copy so customer/agency attribution survives.
+ */
+export function dedupeAwards(awards: ScopedAward[]): ScopedAward[] {
+  const byKey = new Map<string, ScopedAward>();
+  const order: string[] = [];
+  for (const a of awards) {
+    const k = awardKey(a);
+    const prev = byKey.get(k);
+    if (!prev) {
+      byKey.set(k, a);
+      order.push(k);
+      continue;
+    }
+    if (!prev.scope && a.scope) byKey.set(k, a);
+  }
+  return order.map((k) => byKey.get(k)!);
+}
+
 
 export type EcosystemInputsMeta = {
   /** Absent on ecosystems generated before the six-factor model. */
