@@ -11,12 +11,14 @@ import { naicsFamily } from "./market-snapshot";
 import { getEffectiveIncumbent } from "./incumbent-source";
 import {
   buildEcosystem,
+  looseNameKey,
   type BuildEcosystemResult,
   type EligibilityTier,
   type FactorKey,
   type ScopedAward,
   type VehicleAwardeeInput,
 } from "./ecosystem-rank";
+
 
 export type EcosystemUserIntel = {
   /** Manually entered competitor names (merged with positioning-matrix rows). */
