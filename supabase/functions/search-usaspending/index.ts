@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     const admin = ctx.admin;
 
     const body = await req.json();
-    const { naicsCodes = [], startDate, endDate, keyword, agency, vendorName, maxResults = MAX_RESULTS, teamId, forceRefresh = false } = body;
+    const { naicsCodes = [], startDate, endDate, keyword, agency, vendorName, maxResults = MAX_RESULTS, teamId, forceRefresh = false, recipientSearchText } = body;
 
     let team_id: string | null;
     try { team_id = await resolveTeamId(ctx, teamId ?? null); }
@@ -41,7 +41,31 @@ Deno.serve(async (req) => {
     const fromIso = fmt(startDate);
     const toIso = fmt(endDate);
 
+    // ---- Recipient-scoped mode (USAspending direct) ------------------------
+    // `recipient_search_text` is the ONLY filter USAspending honours for UEIs;
+    // recipient_uei / recipient / recipient_id variants are silently ignored
+    // (HTTP 200 with unfiltered data), so they are never used here.
+    if (Array.isArray(recipientSearchText) && recipientSearchText.length > 0) {
+      const terms = recipientSearchText.map((t: any) => String(t ?? "").trim()).filter(Boolean);
+      if (!terms.length) return jsonError(400, "recipientSearchText is empty", corsHeaders);
+      const results = await recipientAwardSearch({
+        terms,
+        naicsCodes,
+        fromIso,
+        toIso,
+        maxResults: Math.min(Number(maxResults) || MAX_RESULTS, 1000),
+      });
+      return new Response(JSON.stringify({
+        results,
+        page_metadata: { total: results.length, fetched: results.length, hasNext: false, truncated: false },
+        _cached: false,
+        _debug: { source: "usaspending:recipient_search_text", terms: terms.length, fetched: results.length },
+      }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
+
     const AGENCY_MIN_CACHE_ROWS = 10;
+
+
 
     // Cache check (skipped when forceRefresh)
     if (!forceRefresh) {
