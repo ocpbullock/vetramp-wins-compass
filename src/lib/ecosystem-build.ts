@@ -397,7 +397,7 @@ export async function generateEcosystem(
       : undefined;
 
   const result = buildEcosystem({
-    awards,
+    awards: dedupeAwards(awards),
     vehicleAwardees,
     vehicleRestricted,
     opportunity: {
