@@ -296,6 +296,56 @@ export async function generateEcosystem(
   }
   const vehicleRestricted = proposal?.vehicle_status === "identified" && !!vehicleId;
 
+  // -- PULL C: per-holder / incumbent award evidence -----------------------
+  // Pulls A/B are NAICS-at-customer; vehicle holders rarely appear there, so
+  // without this every holder scores vehicle-only. Recency bands run to 8y.
+  const holderStart = new Date(Date.now() - 8 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+  const holderUeis = (vehicleAwardees ?? []).map((v) => v.uei).filter(Boolean) as string[];
+  const holderUeiSet = new Set(holderUeis.map((u) => u.trim().toUpperCase()));
+  const holderKeys = new Set((vehicleAwardees ?? []).map((v) => looseNameKey(v.name)));
+
+  if (vehicleRestricted && holderUeis.length > 0) {
+    const batches = batchUeis(holderUeis, 10);
+    for (let i = 0; i < batches.length; i++) {
+      progress(`Pulling award history for vehicle holders (batch ${i + 1} of ${batches.length})…`);
+      try {
+        const r = await searchUsaspending({
+          recipientSearchText: batches[i],
+          startDate: holderStart,
+          endDate,
+          maxResults: 300,
+        });
+        // Untagged on purpose: the engine's loose agency match classifies
+        // customer/agency membership per award.
+        awards.push(...(r.results ?? []));
+      } catch { /* non-fatal */ }
+    }
+  }
+
+  const incumbentName = getEffectiveIncumbent(proposal).name;
+  if (incumbentName) {
+    const incKey = looseNameKey(incumbentName);
+    const coveredByHolder = holderKeys.has(incKey);
+    if (!coveredByHolder) {
+      progress("Pulling award history for the incumbent…");
+      try {
+        const r = await searchUsaspending({
+          recipientSearchText: [incumbentName],
+          startDate: holderStart,
+          endDate,
+          maxResults: 300,
+        });
+        // Name search matches the recipient hierarchy — keep only same-name rows.
+        const rows = (r.results ?? []).filter(
+          (row) => looseNameKey(row["Recipient Name"]) === incKey,
+        );
+        awards.push(...rows);
+      } catch { /* non-fatal */ }
+    }
+  }
+  void holderUeiSet;
+
+
   // -- Effective set-aside --------------------------------------------------
   // A pool vehicle (e.g. "Polaris SDVOSB Pool") IS the set-aside for actions
   // competed under it; an empty proposal field would otherwise grade every
