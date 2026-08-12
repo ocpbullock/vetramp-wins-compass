@@ -301,7 +301,6 @@ export async function generateEcosystem(
   // without this every holder scores vehicle-only. Recency bands run to 8y.
   const holderStart = new Date(Date.now() - 8 * 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
   const holderUeis = (vehicleAwardees ?? []).map((v) => v.uei).filter(Boolean) as string[];
-  const holderUeiSet = new Set(holderUeis.map((u) => u.trim().toUpperCase()));
   const holderKeys = new Set((vehicleAwardees ?? []).map((v) => looseNameKey(v.name)));
 
   if (vehicleRestricted && holderUeis.length > 0) {
@@ -343,7 +342,6 @@ export async function generateEcosystem(
       } catch { /* non-fatal */ }
     }
   }
-  void holderUeiSet;
 
 
   // -- Effective set-aside --------------------------------------------------
